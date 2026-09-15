@@ -1,0 +1,11 @@
+{
+  "tests/fixtures/ensemble/raw_ohlcv.parquet": "347bcd67af43bcb961deda9bb4738d726a4ba4176004ed10dc4edb10f00eda73",
+  "tests/fixtures/ensemble/reference.parquet": "9633d3b56cb1b854b198882b114d4d7c944ff5c4ac1175f6f62a39448ad30427",
+  "tests/fixtures/ensemble/windows.npz": "67ea2dcad0f239fd90869d4118cf10eeafd5e705adc5894502c3c3310a3e8da9",
+  "docs/validation/chart_metadata.json": "1428eb7ddb24a2db81e8c3c17c2e9436d0cf465186659341c430b91f7b212893",
+  "docs/validation/daily_bars.parquet": "08693ccff2135becab1d629191a70f101fb249405dd03cd2024867c64faedda9",
+  "docs/validation/models_vs_kospi200.png": "fe77a1fb8a8c5f1ee0584aef490f9477f26bed0999ba03572dc3b1111e5dc7bb",
+  "docs/validation/results.json": "14aa059232171e70ce0d8d9f38bc6917606dd7ddfde3822f6fd0cd3769c76db1",
+  "docs/validation/signals_huber_ensemble.parquet": "7c8093567c25bc14904bedb3b240bdf2ea33174dbd0b4263651efdba315245dd",
+  "docs/validation/signals_original_transformer.parquet": "e63ccba955c029c78b529322865ea525079aa7e49b3d0575db57ab3df6041c51"
+}

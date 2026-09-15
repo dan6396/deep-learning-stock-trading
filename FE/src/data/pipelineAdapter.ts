@@ -62,8 +62,8 @@ export function rowToCandidate(row: PipelineOutputRow): AiCandidate {
     rank: Math.round(num(input.pred_rank)) || 0,
     poolSize: Math.round(num(input.pred_pool_size)) || 0,
     pUp,
-    baseDate: String(input.transformer_base_date ?? input.lstm_base_date ?? ""),
-    ensemblePredReturn: num(input.ensemble_pred_return),
+    baseDate: String(input.prediction_base_date ?? input.transformer_base_date ?? input.lstm_base_date ?? ""),
+    ensemblePredReturn: input.prediction_target === "next_session_open_to_close" && input.ensemble_pred_return != null ? num(input.ensemble_pred_return) : null,
     foreignNetBuy: num(input.foreign_net_buy_sum),
     instNetBuy: num(input.inst_net_buy_sum),
     totalSupplyNetBuy: num(input.total_supply_net_buy),
@@ -118,7 +118,8 @@ export function overlayLiveAnalysis(base: MarketDashboardData, rows: PipelineOut
         aiSummary: result.summary || stock.aiSummary,
         sentimentLabel: result.label ?? stock.sentimentLabel,
         confidence: result.confidence || stock.confidence,
-        upProbability: num(row.input_row?.p_up) || stock.upProbability,
+        upProbability: row.input_row?.p_up == null ? null : num(row.input_row.p_up),
+        predictedReturn: row.input_row?.prediction_target === "next_session_open_to_close" ? num(row.input_row.ensemble_pred_return) : null,
       };
     })
     .sort((a, b) => orderOf(a.code) - orderOf(b.code));

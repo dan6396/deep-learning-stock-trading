@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-predict.py -- Inference with a saved transformer checkpoint.
+predict.py -- Default: frozen Huber regression ensemble; explicit .pt: legacy inference.
 
 Usage (CLI):
-    python predict.py --ckpt transformer_5y.pt --data shared_test_raw.parquet --ticker 005930
+    python predict.py --data shared_test_raw.parquet --ticker 005930 --as-of 2026-05-29
 
 Usage (Python):
     from predict import predict_next_return, predict_multiple
@@ -22,7 +22,7 @@ Usage (Python):
 Input DataFrame requirements:
     - Index: Date (datetime)
     - Columns: Open, High, Low, Close, Volume (int)
-    - Minimum rows: 60+ recommended (covers MACD/BB/RSI warmup + 20-day window)
+    - Minimum rows: 60+ recommended (prefer full available history to stabilize exponential indicators)
     - Single-ticker data (Ticker column may be present; auto-dropped)
 """
 
@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from data import _compute_indicators, FEATURE_COLS, SEQ_LEN, FeatureScaler, N_FEATURES
 from model import StockTransformer
+from ensemble import DEFAULT_MANIFEST, HuberEnsemble
 
 
 def _load_inference_bundle(
@@ -49,6 +50,8 @@ def _load_inference_bundle(
 ) -> dict[str, Any]:
     """Load checkpoint/model/scaler once for one inference batch."""
     device = torch.device(device_str)
+    if Path(ckpt_path).suffix.lower() == ".json":
+        return {"device": device, "ensemble": HuberEnsemble(ckpt_path, device_str), "task": "regression"}
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     sa = ckpt.get("args", {})
 
@@ -82,6 +85,10 @@ def _build_window(df_ohlcv: pd.DataFrame) -> np.ndarray:
     Raises ValueError if data is insufficient or contains NaN/inf.
     """
     df = df_ohlcv.copy()
+    if not isinstance(df.index, pd.DatetimeIndex) or df.index.has_duplicates:
+        raise ValueError("Expected unique daily DatetimeIndex for one ticker")
+    if "Ticker" in df and df["Ticker"].nunique() > 1:
+        raise ValueError("Provide only one ticker per DataFrame")
     if "Ticker" in df.columns:
         df = df.drop(columns=["Ticker"])
 
@@ -117,6 +124,8 @@ def predict_next_return(
 def _predict_with_bundle(bundle: dict[str, Any], df_ohlcv: pd.DataFrame) -> float:
     """Run inference using an already-loaded model bundle."""
     device = bundle["device"]
+    if "ensemble" in bundle:
+        return float(bundle["ensemble"].predict_windows(_build_window(df_ohlcv)[None])[0])
     model = bundle["model"]
     scaler = bundle["scaler"]
     task = bundle["task"]
@@ -152,6 +161,22 @@ def predict_multiple(
     results = {}
     errors = {}
     bundle = _load_inference_bundle(ckpt_path, device_str)
+    if "ensemble" in bundle:
+        windows, valid_tickers = [], []
+        for ticker, df in ticker_dfs.items():
+            try:
+                windows.append(_build_window(df))
+                valid_tickers.append(ticker)
+                errors[ticker] = ""
+            except (ValueError, KeyError, TypeError) as exc:
+                results[ticker] = float("nan")
+                errors[ticker] = f"{type(exc).__name__}: {exc}"
+        if windows:
+            scores = bundle["ensemble"].predict_windows(np.stack(windows))
+            results.update(zip(valid_tickers, map(float, scores)))
+        results = dict(sorted(results.items(), key=lambda item: (
+            -item[1] if np.isfinite(item[1]) else float("inf"), str(item[0]))))
+        return (results, errors) if return_errors else results
     for ticker, df in ticker_dfs.items():
         try:
             results[ticker] = _predict_with_bundle(bundle, df)
@@ -178,14 +203,19 @@ def predict_multiple(
 # ---------------------------------------------------------------------------
 
 def main():
-    p = argparse.ArgumentParser(description="Stock transformer inference")
-    p.add_argument("--ckpt",   required=True)
+    p = argparse.ArgumentParser(description="Frozen Huber ensemble: next-session open-to-close return")
+    p.add_argument("--ckpt", default=str(DEFAULT_MANIFEST))
     p.add_argument("--data",   required=True)
     p.add_argument("--ticker", default=None)
     p.add_argument("--device", default="cpu")
+    p.add_argument("--as-of", help="Use only observations on/before this closed session (YYYY-MM-DD)")
     args = p.parse_args()
 
     df = pd.read_parquet(args.data)
+    if "Date" in df.columns:
+        df = df.set_index("Date")
+    if args.as_of:
+        df = df.loc[df.index <= pd.Timestamp(args.as_of)]
     if "Ticker" in df.columns:
         tickers = df["Ticker"].unique()
         ticker  = args.ticker if args.ticker else tickers[0]
@@ -197,16 +227,17 @@ def main():
         df = df[df["Ticker"] == ticker]
 
     # Detect task from checkpoint
-    ckpt = torch.load(args.ckpt, map_location="cpu", weights_only=False)
-    task = ckpt.get("args", {}).get("task", "regression")
+    bundle = _load_inference_bundle(args.ckpt, args.device)
+    task = bundle["task"]
 
-    score = predict_next_return(args.ckpt, df, device_str=args.device)
+    score = _predict_with_bundle(bundle, df)
 
     if task == "classification":
         print(f"\nP(up) = {score*100:.2f}%  (logit={float(torch.logit(torch.tensor(score))):.4f})")
     else:
         sign = "+" if score >= 0 else ""
-        print(f"\nExpected next-day return: {sign}{score*100:.2f}%  ({score:.6f})")
+        target = "next-session open-to-close" if "ensemble" in bundle else "legacy next-day"
+        print(f"\nPredicted {target} return: {sign}{score*100:.2f}%  ({score:.6f}); not P(up)")
 
 
 if __name__ == "__main__":

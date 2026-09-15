@@ -1,0 +1,66 @@
+{
+  "format": "huber-return-ensemble-v1",
+  "model_id": "base_huber_h1_seeds_42_43_44",
+  "features": [
+    "f_open",
+    "f_high",
+    "f_low",
+    "f_close",
+    "f_volume",
+    "f_rsi",
+    "f_macd",
+    "f_macd_signal",
+    "f_pct_b",
+    "f_norm_bw",
+    "f_rel_bw"
+  ],
+  "sequence_length": 20,
+  "model_args": {
+    "n_features": 11,
+    "d_model": 64,
+    "nhead": 4,
+    "num_layers": 2,
+    "dim_feedforward": 128,
+    "dropout": 0.3,
+    "time2vec_dim": 4,
+    "conv_kernel": 3
+  },
+  "members": [
+    {
+      "seed": 42,
+      "file": "seed_42.pt",
+      "sha256": "8dd34a684f6d3453342043345c269483dee18f1ec0a336c3f4c1f5975df0e4cd",
+      "source_checkpoint_sha256": "88b2a6b922fcc017045ad95610c3caed939c6321ceec11b1fd0ed74dccccfdae",
+      "selected_epoch": 13,
+      "validation_rank_ic": 0.060608471188530584
+    },
+    {
+      "seed": 43,
+      "file": "seed_43.pt",
+      "sha256": "ac078512b66f9e91256bf2df9bc86efcdc38fa60c1e5669824cbb6e0efa13733",
+      "source_checkpoint_sha256": "619e9474fec48ab0dce1eb6359c9db51cdb5fe8418893dece7bdbe533e6e524c",
+      "selected_epoch": 7,
+      "validation_rank_ic": 0.046259316652603334
+    },
+    {
+      "seed": 44,
+      "file": "seed_44.pt",
+      "sha256": "c8a383e9a56e26e9dda363dc4cbba093fde6127f0b80993f5f2899a1836689d8",
+      "source_checkpoint_sha256": "32539509d83d851465d6b62210b42508354a8937e0d9a5d50115c8c0153012a6",
+      "selected_epoch": 4,
+      "validation_rank_ic": 0.04420232768565407
+    }
+  ],
+  "scaler": {
+    "file": "scaler.npz",
+    "sha256": "990d8756820d4441caf451f269c10b12cb18c9e73f468cd2bdd93cee07545c55"
+  },
+  "target": "next_session_close / next_session_open - 1",
+  "aggregation": "arithmetic mean of three inverse-standardized return predictions; no sigmoid",
+  "train_start": "2023-03-01",
+  "train_end": "2026-02-27",
+  "validation_start": "2026-03-02",
+  "validation_end": "2026-05-29",
+  "export_note": "Unchanged stock weights. Bias-free context MLP removed because the adopted base arm always received all-zero context; output exactly zero. No refitting.",
+  "validation_note": "June-September 2026 is a previously inspected review period, not an untouched prospective test."
+}

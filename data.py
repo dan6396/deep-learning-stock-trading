@@ -19,7 +19,8 @@ DATE-SPLIT ALIGNMENT (agreed with friend):
   Train window          : target date in [TRAIN_START[years], EVAL_END]
   Input 20-day window may reach before EVAL_START/TRAIN_START -- only target date
   is filtered, so the very first eval day is never dropped due to warmup.
-  Train/val/test tickers are fully disjoint -> no leakage even though date ranges overlap.
+  Legacy ticker splits have overlapping dates: these are not chronological future holdouts.
+  The adopted ensemble uses separate chronological train/validation ranges; see its manifest.
 """
 
 import logging

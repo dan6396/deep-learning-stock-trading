@@ -165,7 +165,7 @@ function stringValue(value: unknown, fallback = ""): string {
   return text || fallback;
 }
 
-function transformerCsvToPipelineRow(record: Record<string, string>): PipelineOutputRow | null {
+function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutputRow | null {
   const ticker = stringValue(record.ticker ?? record["종목코드"]).padStart(6, "0");
   if (!ticker || ticker === "000000") {
     return null;
@@ -173,15 +173,21 @@ function transformerCsvToPipelineRow(record: Record<string, string>): PipelineOu
 
   const companyName = stringValue(record.company_name ?? record["종목명"], ticker);
   const pUp = toFiniteOrNull(record.p_up);
+  const predictedReturn = record.prediction_target === "next_session_open_to_close"
+    ? toFiniteOrNull(record.ensemble_pred_return) : null;
   const predRank = toFiniteOrNull(record.pred_rank);
   const supplyPass = boolFromCsv(record.supply_pass);
   const supplyStatus = stringValue(record.supply_status);
   const supplyChecked = supplyStatus !== "" && supplyStatus !== "not_checked";
-  const label = supplyPass || (pUp !== null && pUp >= 0.5) ? "POSITIVE" : "NEGATIVE";
+  const modelDirection = predictedReturn === null ? (pUp === null ? 0 : pUp - 0.5) : predictedReturn;
+  const label = modelDirection > 0 ? "POSITIVE" : modelDirection < 0 ? "NEGATIVE" : "NEUTRAL";
+  const modelDescription = predictedReturn === null
+    ? (pUp === null ? "예측값 없음" : `기존 모델 상승확률 ${(pUp * 100).toFixed(2)}%`)
+    : `앙상블 다음 거래일 시가→종가 예측수익률 ${(predictedReturn * 100).toFixed(2)}%`;
   const pUpPercent = pUp === null ? null : Number((pUp * 100).toFixed(2));
   const status = stringValue(record.prediction_status, "unknown");
   const keyDataPoints = [
-    pUpPercent === null ? undefined : `Transformer P(up): ${pUpPercent}%`,
+    modelDescription,
     predRank === null ? undefined : `Prediction rank: ${predRank}`,
     supplyChecked && record.supply_score ? `Supply score: ${record.supply_score}` : undefined,
     supplyChecked && record.supply_base_end_date ? `Supply base date: ${record.supply_base_end_date}` : undefined,
@@ -209,20 +215,20 @@ function transformerCsvToPipelineRow(record: Record<string, string>): PipelineOu
       confidence: 0,
       key_data_points: keyDataPoints,
       label,
-      label_ko: label === "POSITIVE" ? "긍정" : "부정",
+      label_ko: label === "POSITIVE" ? "긍정" : label === "NEGATIVE" ? "부정" : "중립",
       negative_factors: [
+        predictedReturn !== null && predictedReturn < 0 ? modelDescription : undefined,
         pUp !== null && pUp < 0.5 ? `Transformer 상승 확률이 ${pUpPercent}%로 50% 미만입니다.` : undefined,
         supplyChecked && !supplyPass ? "최근 수급 조건을 충족하지 못했습니다." : undefined,
       ].filter((value): value is string => Boolean(value)),
       positive_factors: [
+        predictedReturn !== null && predictedReturn > 0 ? modelDescription : undefined,
         pUp !== null && pUp >= 0.5 ? `Transformer 상승 확률이 ${pUpPercent}%로 50% 이상입니다.` : undefined,
         supplyPass ? "최근 수급 조건을 충족했습니다." : undefined,
       ].filter((value): value is string => Boolean(value)),
-      sentiment_score: pUp === null ? 0 : Number(((pUp - 0.5) * 2).toFixed(4)),
+      sentiment_score: 0, // No news sentiment or calibrated confidence in a model-only result.
       summary:
-        pUpPercent === null
-          ? `Transformer prediction status is ${status}.`
-          : `Transformer 상승 확률 ${pUpPercent}%, 전체 예측 순위 ${predRank ?? "미산출"}위입니다${
+          `${modelDescription}, 전체 예측 순위 ${predRank ?? "미산출"}위입니다${
               supplyChecked ? `; 수급 조건은 ${supplyPass ? "통과" : "미통과"}입니다` : ""
             }.`,
       ticker,
@@ -266,7 +272,7 @@ async function loadCsvRows(
 
     try {
       const rows = parseCsv(await readFile(path, "utf8"))
-        .map(transformerCsvToPipelineRow)
+        .map(ensembleCsvToPipelineRow)
         .filter((row): row is PipelineOutputRow => row !== null);
       if (rows.length > 0) {
         const mtimeMs = (await stat(path)).mtimeMs;
@@ -276,7 +282,7 @@ async function loadCsvRows(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to load Transformer candidate CSV ${path}: ${message}`);
+      throw new Error(`Failed to load ensemble candidate CSV ${path}: ${message}`);
     }
   }
 
@@ -453,7 +459,7 @@ function toPipelineNews(value: unknown, evaluation: GeminiEvaluation = {}): Pipe
 }
 
 /**
- * Overlays one Gemini news entry onto a Transformer candidate row: attaches the
+ * Overlays one Gemini news entry onto an ensemble candidate row: attaches the
  * crawled news and, when the LLM evaluation is present, rewrites the sentiment
  * label, confidence (from `impact_score`), summary and trading insight so the
  * frontend's news-sentiment view lights up. A positive `confidence` is what
@@ -651,7 +657,7 @@ export async function getCandidatesPayload(): Promise<PipelineOutputRow[]> {
 }
 
 /**
- * Returns one stock's latest Transformer result from the full KOSPI200 ranking.
+ * Returns one stock's latest ensemble result from the full KOSPI200 ranking.
  * News/Gemini evidence is overlaid when that ticker has been analyzed.
  */
 export async function getStockAnalysisPayload(ticker: string): Promise<PipelineOutputRow | null> {

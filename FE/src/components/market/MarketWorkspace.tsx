@@ -232,7 +232,7 @@ function buildMarketRegime(index: MarketDashboardData["indices"][number]): Marke
   return {
     action: "보수적 선별",
     label: "중립 장세",
-    note: "지수 방향성이 뚜렷하지 않을 때는 상승 확률보다 뉴스와 수급 근거의 일치 여부를 더 엄격하게 확인합니다.",
+    note: "지수 방향성이 뚜렷하지 않을 때는 예측수익률보다 뉴스와 수급 근거의 일치 여부를 더 엄격하게 확인합니다.",
     reasons: [
       `${index.symbol} 전일 대비 ${formatRate(displayChangeRate)}`,
       flowText,
@@ -560,7 +560,7 @@ function MarketOverview({
           </h1>
           <div className="brief-intro">
             <p>
-              <strong>Transformer</strong>가 KOSPI200 전체 종목을 분석하고, 상승 가능성이 높은 종목을 1차 선별합니다.
+              <strong>Huber 앙상블</strong>가 KOSPI200 전체 종목을 분석하고, 상승 가능성이 높은 종목을 1차 선별합니다.
             </p>
             <p>
               이후 뉴스 감정, 수급, 거래량 변화를 함께 반영해 <strong>LLM 통합 분석</strong>으로 최종 후보를 정리합니다.
@@ -573,7 +573,7 @@ function MarketOverview({
             </li>
             <li>
               <span>1차 모델</span>
-              <strong>Transformer 상승 확률 예측</strong>
+              <strong>앙상블 시가→종가 수익률 예측</strong>
             </li>
             <li>
               <span>보조 데이터</span>
@@ -930,7 +930,7 @@ function WatchlistRail({
 const analysisStages = [
   "실행 준비",
   "KOSPI200 후보 풀 로드",
-  "OHLCV 수집·Transformer 예측",
+  "OHLCV 수집·Huber 앙상블 예측",
   "외국인·기관 수급 조회",
   "뉴스 크롤링",
   "Gemini LLM 종합 판단",

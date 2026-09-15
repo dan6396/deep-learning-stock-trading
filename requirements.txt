@@ -3,11 +3,9 @@
 # 맞추려면:  pip freeze 결과와 대조해 수정하세요.
 
 # --- 코어 (모델/백테스트) ---
-torch==2.3.1
-numpy==1.26.4
-pandas==2.2.2
-scikit-learn==1.4.2
-matplotlib==3.8.4
+-r requirements-inference.txt
+scikit-learn>=1.4,<2
+matplotlib>=3.8,<4
 
 # --- 데이터 / API ---
 pykrx==1.0.45

@@ -126,10 +126,10 @@ def evaluate_stock_news_group(ticker: str, company_name: str, aggregated_content
         priority_keys = [
             "ticker",
             "company_name",
-            "p_up",
+            "ensemble_pred_return",
             "pred_rank",
             "pred_pool_size",
-            "transformer_base_date",
+            "prediction_base_date",
             "prediction_status",
             "foreign_net_buy_sum",
             "inst_net_buy_sum",
@@ -165,9 +165,9 @@ def evaluate_stock_news_group(ticker: str, company_name: str, aggregated_content
     반드시 다른 설명 없이 JSON 형식만 출력해주세요.
 
     [판단 기준]
-    - 반드시 STEP2의 p_up, pred_rank, pred_pool_size, 외국인/기관 순매수, 매수 우위 일수, supply_pass/supply_score와 최신 뉴스를 함께 사용한다.
+    - 반드시 STEP2의 ensemble_pred_return, pred_rank, pred_pool_size, 외국인/기관 순매수, 매수 우위 일수, supply_pass/supply_score와 최신 뉴스를 함께 사용한다.
     - final_sentiment는 "Bullish", "Neutral", "Bearish" 중 하나만 사용한다.
-    - "Bullish"는 STEP2 모델 상승확률과 뉴스/수급 근거를 종합했을 때 단기 상승 우위가 명확한 경우에만 선택한다.
+    - "Bullish"는 STEP2 모델 다음 거래일 시가→종가 예측수익률 (소수 단위이며 확률 아님)과 뉴스/수급 근거를 종합했을 때 단기 상승 우위가 명확한 경우에만 선택한다.
     - 모델은 강하지만 수급 또는 뉴스가 강하게 충돌하면 Neutral로 낮춘다.
     - 뉴스가 없거나 근거가 약하면 점수와 확신을 낮추고, summary/trading_insight에 그 한계를 명시한다.
     - final_combined_score는 모델 45%, 수급 25%, 뉴스 25%, 리스크 5%를 기준으로 100점 만점으로 산정한다.
@@ -515,7 +515,7 @@ def crawl_stocks_from_kis_top(
         stocks.append({
             "ticker": str(row["종목코드"]).zfill(6),
             "company_name": str(row["종목명"]),
-            "tech_data": row.to_dict()  # 💡 추가: DataFrame의 모든 열(MACD, RSI, p_up 등)을 딕셔너리로 저장
+            "tech_data": row.to_dict()  # 💡 추가: DataFrame의 모든 열(MACD, RSI, ensemble_pred_return 등)을 딕셔너리로 저장
         })
     
     if not stocks:

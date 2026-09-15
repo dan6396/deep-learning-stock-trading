@@ -1,0 +1,51 @@
+{
+  "period": [
+    "2026-06-01",
+    "2026-09-14"
+  ],
+  "days": 73,
+  "initial_capital": 10000000,
+  "original_transformer": {
+    "initial_capital": 10000000,
+    "final_equity": 8916409.091165487,
+    "net_profit": -1083590.9088345133,
+    "net_return": -0.1083590908834513,
+    "mdd": -0.2162016270346534,
+    "total_fees": 1353100.3590810266,
+    "buy_orders": 280,
+    "sell_orders": 280,
+    "overnight_pnl": 1471415.4481893145,
+    "intraday_pnl": -1201905.9979428037,
+    "days": 73,
+    "independent_ledger_max_error": 0.0
+  },
+  "huber_ensemble": {
+    "initial_capital": 10000000,
+    "final_equity": 11807394.477698974,
+    "net_profit": 1807394.4776989743,
+    "net_return": 0.18073944776989737,
+    "mdd": -0.11723664244619625,
+    "total_fees": 424780.8757039939,
+    "buy_orders": 80,
+    "sell_orders": 80,
+    "overnight_pnl": -1290161.8624463733,
+    "intraday_pnl": 3522337.21584934,
+    "days": 73,
+    "independent_ledger_max_error": 0.0
+  },
+  "kospi200": {
+    "start_open": 1344.09,
+    "final_close": 1050.83,
+    "price_return": -0.2181847941730093,
+    "normalized_final": 7818152.058269908,
+    "normalization": "10,000,000 * each day Close / June 1 Open",
+    "dividends_and_costs": "Excluded; price index reference, not an ETF or an executable portfolio."
+  },
+  "source_sha256": {
+    "work\\execution_study\\KPI200.parquet": "6444b888601d8e4bb3dfc97c3e7895752845d2e9482228b5e03c7bdac0758c02",
+    "work\\relation_study\\fresh_sealed\\KPI200.parquet": "6c8739c1adef37c46e4247d93f0e3441f70dcbd194731c2f24dbce63da07ea8a",
+    "outputs\\models_keep_comparison\\results.json": "14aa059232171e70ce0d8d9f38bc6917606dd7ddfde3822f6fd0cd3769c76db1",
+    "outputs\\models_keep_comparison\\fractional_daily_original_transformer.parquet": "4850f6c839cae0dce910c6078a14a3482a50d683d77230d0dcca61cac2207e00",
+    "outputs\\models_keep_comparison\\fractional_daily_huber_ensemble.parquet": "68ac5cf0bc6728fe73a3efda898abb180a5c3d06dd30e54460f591f638a2981d"
+  }
+}

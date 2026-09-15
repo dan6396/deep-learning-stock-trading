@@ -20,7 +20,7 @@ export type AiCandidate = {
   poolSize: number;
   pUp: number;
   baseDate: string;
-  ensemblePredReturn: number;
+  ensemblePredReturn: number | null;
   foreignNetBuy: number;
   instNetBuy: number;
   totalSupplyNetBuy: number;
@@ -46,7 +46,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.792696,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.792696,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 117980000000.0,
     "instNetBuy": -108830000000.0,
     "totalSupplyNetBuy": 9150000000.0,
@@ -111,7 +111,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.789487,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.789487,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 34175000000.0,
     "instNetBuy": -124908000000.0,
     "totalSupplyNetBuy": -90733000000.0,
@@ -144,7 +144,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.759411,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.759411,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 36355000000.0,
     "instNetBuy": -52458000000.0,
     "totalSupplyNetBuy": -16103000000.0,
@@ -209,7 +209,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.754394,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.754394,
+    "ensemblePredReturn": null,
     "foreignNetBuy": -53951000000.0,
     "instNetBuy": -32456000000.0,
     "totalSupplyNetBuy": -86407000000.0,
@@ -250,7 +250,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.749361,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.749361,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 164160000000.0,
     "instNetBuy": -622917000000.0,
     "totalSupplyNetBuy": -458757000000.0,
@@ -315,7 +315,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.746615,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.746615,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 60924000000.0,
     "instNetBuy": -103513000000.0,
     "totalSupplyNetBuy": -42589000000.0,
@@ -380,7 +380,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.737253,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.737253,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 26636000000.0,
     "instNetBuy": 28675000000.0,
     "totalSupplyNetBuy": 55311000000.0,
@@ -445,7 +445,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.71088,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.71088,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 5119000000.0,
     "instNetBuy": -32245000000.0,
     "totalSupplyNetBuy": -27126000000.0,
@@ -510,7 +510,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.701252,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.701252,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 24532000000.0,
     "instNetBuy": -22089000000.0,
     "totalSupplyNetBuy": 2443000000.0,
@@ -534,7 +534,7 @@ export const aiCandidates: AiCandidate[] = [
     "poolSize": 199,
     "pUp": 0.700647,
     "baseDate": "2026-06-19",
-    "ensemblePredReturn": 0.700647,
+    "ensemblePredReturn": null,
     "foreignNetBuy": 53012000000.0,
     "instNetBuy": -12898000000.0,
     "totalSupplyNetBuy": 40114000000.0,

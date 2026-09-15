@@ -33,7 +33,7 @@ export function AnalysisResults({
         </p>
         <h2>AI가 선정한 단기 후보 {stocks.length}종목</h2>
         <p className="analysis-results__sub">
-          순위는 Transformer 상승확률·수급·뉴스 근거를 합산한 종합점수 순입니다. 상승 예측 후보는 주황색, 중립 후보는 검정색 번호로 표시합니다. 각 종목의
+          순위는 앙상블 예측수익률·수급·뉴스 근거를 합산한 종합점수 순입니다. 상승 예측 후보는 주황색, 중립 후보는 검정색 번호로 표시합니다. 각 종목의
           <strong> 선정근거</strong>에서 왜 추천했는지 확인하세요.
         </p>
       </header>

@@ -256,9 +256,9 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
   const supplyParticipationScore = clampPercent((supplyDays / supplyDayTotal) * 100);
   const signalBars = [
     {
-      label: "Transformer",
-      value: candidate.pUp * 100,
-      tone: candidate.pUp >= 0.5 ? "up" : "down",
+      label: "모델 순위 백분위",
+      value: candidate.rank > 0 && candidate.poolSize > 1 ? 100 * (candidate.poolSize - candidate.rank) / (candidate.poolSize - 1) : 0,
+      tone: (candidate.ensemblePredReturn ?? 0) >= 0 ? "up" : "down",
     },
     {
       label: "뉴스",
@@ -297,10 +297,10 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
         />
         <ReportKpiCard
           icon="P"
-          label="상승확률"
-          value={`${(candidate.pUp * 100).toFixed(1)}%`}
+          label="예측수익률"
+          value={candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
           sub={`${candidate.rank}위 / ${candidate.poolSize}개`}
-          tone={candidate.pUp >= 0.5 ? "is-positive-text" : "is-negative-text"}
+          tone={(candidate.ensemblePredReturn ?? 0) >= 0 ? "is-positive-text" : "is-negative-text"}
         />
         <ReportKpiCard
           icon="N"
@@ -450,10 +450,10 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
           <ScoreGauge score={candidate.finalCombinedScore} tone={tone} />
           <div className="metric-tiles">
             <MetricTile
-              label="익일 상승확률"
-              value={`${(candidate.pUp * 100).toFixed(1)}%`}
-              sub="Transformer 예측"
-              tone={candidate.pUp >= 0.5 ? "is-positive-text" : "is-negative-text"}
+              label="다음 거래일 예측수익률"
+              value={candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
+              sub="시가→종가 · Huber 앙상블"
+              tone={(candidate.ensemblePredReturn ?? 0) >= 0 ? "is-positive-text" : "is-negative-text"}
             />
             <MetricTile
               label="전체 예측순위"
@@ -656,7 +656,7 @@ export function StockDetailPage() {
       <footer className="detail-sources">
         <h2>데이터 출처 및 유의사항</h2>
         <ul>
-          <li>익일 상승 확률·예측 순위: 자체 학습 Transformer 모델{candidate?.baseDate ? ` (기준일 ${candidate.baseDate})` : ""}.</li>
+          <li>다음 거래일 시가→종가 예측수익률·순위: Huber 회귀 앙상블{candidate?.baseDate ? ` (기준일 ${candidate.baseDate})` : ""}.</li>
           <li>수급(외국인·기관 순매수): 최근 거래일 누적 순매수 금액.</li>
           <li>뉴스·감성 점수: 네이버 뉴스 + Gemini 구조화 분석(integrated_pipeline.py · step3).</li>
         </ul>

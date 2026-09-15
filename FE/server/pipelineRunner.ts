@@ -33,7 +33,7 @@ export type CandidateAnalysisProgress = {
 const CANDIDATE_PROGRESS_STAGES = [
   "실행 준비",
   "KOSPI200 후보 풀 로드",
-  "OHLCV 수집·Transformer 예측",
+  "OHLCV 수집·앙상블 예측",
   "외국인·기관 수급 조회",
   "뉴스 크롤링",
   "Gemini LLM 종합 판단",
@@ -99,7 +99,7 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
   } else if (log.includes("로드 완료")) {
     advance(1, 20, "KOSPI200 후보 풀 로드가 완료되었습니다.");
   } else if (log.includes("[STEP 2]")) {
-    advance(2, 26, "OHLCV를 수집하고 Transformer 상승 확률을 계산하는 중입니다.");
+    advance(2, 26, "OHLCV를 수집하고 앙상블 예측수익률을 계산하는 중입니다.");
   } else if (log.includes("[OHLCV 조회]")) {
     const ohlcvMatch = log.match(/OHLCV 조회\]\s*([0-9]+)\/([0-9]+)/);
     if (ohlcvMatch) {
@@ -108,16 +108,16 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
       const ohlcvProgress = 26 + Math.min(18, Math.round((current / total) * 18));
       advance(2, ohlcvProgress, `KOSPI200 OHLCV를 수집하는 중입니다. (${current}/${total})`);
     }
-  } else if (log.includes("[Transformer 예측]")) {
-    advance(2, 46, "Transformer 배치 추론을 실행하는 중입니다.");
-  } else if (log.includes("P(up) 예측 성공")) {
-    const countMatch = log.match(/P\(up\) 예측 성공:\s*([0-9]+)\/([0-9]+)개/);
+  } else if (log.includes("[Huber 앙상블 예측]")) {
+    advance(2, 46, "앙상블 배치 추론을 실행하는 중입니다.");
+  } else if (log.includes("예측수익률 예측 성공")) {
+    const countMatch = log.match(/예측수익률 예측 성공:\s*([0-9]+)\/([0-9]+)개/);
     advance(
       2,
       50,
       countMatch
-        ? `Transformer 예측 완료: ${countMatch[1]}/${countMatch[2]}개 종목`
-        : "Transformer 예측이 완료되었습니다.",
+        ? `앙상블 예측 완료: ${countMatch[1]}/${countMatch[2]}개 종목`
+        : "앙상블 예측이 완료되었습니다.",
     );
   } else if (log.includes("[수급 조회]")) {
     const supplyMatch = log.match(/수급 조회\]\s*([0-9]+)\/([0-9]+)/);
@@ -127,7 +127,7 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
       const supplyProgress = 60 + Math.min(8, Math.round((current / total) * 8));
       advance(3, supplyProgress, `상위 후보의 외국인·기관 수급을 확인하는 중입니다. (${current}/${total})`);
     }
-  } else if (log.includes("Transformer 최종")) {
+  } else if (log.includes("앙상블 최종")) {
     advance(3, 68, "수급 확인을 반영해 최종 후보를 구성하는 중입니다.");
   } else if (log.includes("[STEP 3]")) {
     advance(4, 72, "STEP2 Top10을 기반으로 뉴스·LLM 분석을 시작합니다.");
@@ -229,14 +229,14 @@ async function requireFreshFile(path: string, label: string, startedAt: number):
 type PipelineInputs = {
   mainModulePath: string;
   predictModulePath: string;
-  transformerCkptPath: string;
+  modelManifestPath: string;
 };
 
 function resolvePipelineInputs(root: string, env: Record<string, string | undefined>): PipelineInputs {
   return {
     mainModulePath: resolve(env.PIPELINE_MAIN_MODULE ?? join(root, "main.py")),
     predictModulePath: resolve(env.PIPELINE_PREDICT_MODULE ?? join(root, "predict.py")),
-    transformerCkptPath: resolve(env.PIPELINE_TRANSFORMER_CKPT ?? join(root, "transformer_5y.pt")),
+    modelManifestPath: resolve(env.PIPELINE_MODEL_MANIFEST ?? join(root, "models", "huber_ensemble", "manifest.json")),
   };
 }
 
@@ -244,8 +244,8 @@ function pipelineInputArgs(inputs: PipelineInputs): string[] {
   return [
     "--main-module",
     inputs.mainModulePath,
-    "--transformer-ckpt",
-    inputs.transformerCkptPath,
+    "--model-manifest",
+    inputs.modelManifestPath,
     "--predict-module",
     inputs.predictModulePath,
   ];
@@ -291,7 +291,7 @@ function pipelineEnv(env: Record<string, string | undefined>): Record<string, st
 async function preparePipelineInputs(inputs: PipelineInputs): Promise<PipelineInputs> {
   await requireExistingFile(inputs.mainModulePath, "Pipeline main module");
   await requireExistingFile(inputs.predictModulePath, "Pipeline predict module");
-  await requireExistingFile(inputs.transformerCkptPath, "Pipeline Transformer checkpoint");
+  await requireExistingFile(inputs.modelManifestPath, "Pipeline 앙상블 checkpoint");
   return inputs;
 }
 
@@ -398,7 +398,7 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
 
   try {
     const inputs = await preparePipelineInputs(resolvePipelineInputs(root, env));
-    const args = [scriptPath, "--output-dir", outputDir, ...pipelineInputArgs(inputs)];
+    const args = [scriptPath, "--run-news", "--output-dir", outputDir, ...pipelineInputArgs(inputs)];
 
     optionalNumericArg(args, "--candidate-pool", env.PIPELINE_CANDIDATE_POOL);
     optionalNumericArg(args, "--final-max", env.PIPELINE_FINAL_MAX ?? env.PIPELINE_RUN_TOP);
@@ -410,7 +410,7 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
     await runProcess(python, args, root, pipelineEnv(env), timeoutMs, recordCandidateAnalysisOutput);
 
     updateCandidateAnalysisProgress((current) => progressSnapshot(6, 95, "생성된 step2·step3 결과 파일을 검증하는 중입니다.", current));
-    await requireFreshFile(top10CsvPath, "Transformer Top10 CSV", startedAt);
+    await requireFreshFile(top10CsvPath, "앙상블 Top10 CSV", startedAt);
     await requireFreshFile(step3CsvPath, "STEP3 LLM CSV result", startedAt);
     await requireFreshFile(step3JsonPath, "STEP3 LLM JSON result", startedAt);
     await writePipelineRunMarker({
@@ -643,7 +643,7 @@ async function executeStockNewsAnalysis(
   const timeoutMs = Number(env.PIPELINE_RUN_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
 
   await requireExistingFile(scriptPath, "News analysis script");
-  await requireExistingFile(inputPath, "Full Transformer ranking");
+  await requireExistingFile(inputPath, "Full 앙상블 ranking");
 
   const args = [
     scriptPath,

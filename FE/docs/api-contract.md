@@ -6,8 +6,8 @@ This contract maps the Python pipeline outputs to frontend-facing landing and da
 
 The current Python project writes final analysis results to:
 
-- `outputs/final_stock_lstm_news_llm_result.json`
-- `outputs/final_stock_lstm_news_llm_result.csv`
+- `outputs/final_stock_transformer_news_llm_result.json` (when the optional news step is run)
+- `outputs/step2_all_transformer_rank.csv` and `outputs/step2_final_top10.csv`
 
 The JSON output is preferred because it preserves nested LLM result, original input row, and news items.
 
@@ -40,10 +40,14 @@ type PipelineAnalysisResult = {
 type PipelineInputRow = {
   ticker?: string;
   company_name?: string;
-  lstm_status?: string;
-  lstm_pred_return?: number;
+  model_id?: string;
+  prediction_target?: "next_session_open_to_close" | string;
+  prediction_base_date?: string;
   ensemble_pred_return?: number;
-  lstm_base_date?: string;
+  pred_rank?: number;
+  pred_pool_size?: number;
+  // Legacy classification output only; absent for the adopted ensemble.
+  p_up?: number;
   [key: string]: unknown;
 };
 
