@@ -180,14 +180,14 @@ function groupedNews(news: AiNews[]) {
 }
 
 /** Circular 0-100 conviction gauge — the headline "how strong is this pick" signal. */
-function ScoreGauge({ score, tone }: { score: number; tone: string }) {
+function ScoreGauge({ score, tone, label = "종합점수" }: { score: number; tone: string; label?: string }) {
   const pct = Math.max(0, Math.min(100, score)) / 100;
   const radius = 52;
   const circ = 2 * Math.PI * radius;
   const dash = circ * pct;
 
   return (
-    <div className={`score-gauge score-gauge--${tone}`} role="img" aria-label={`종합 점수 ${Math.round(score)}점`}>
+    <div className={`score-gauge score-gauge--${tone}`} role="img" aria-label={`${label} ${Math.round(score)}점`}>
       <svg viewBox="0 0 120 120">
         <circle className="score-gauge__track" cx="60" cy="60" r={radius} />
         <circle
@@ -201,7 +201,7 @@ function ScoreGauge({ score, tone }: { score: number; tone: string }) {
       </svg>
       <div className="score-gauge__center">
         <strong>{Math.round(score)}</strong>
-        <span>종합점수</span>
+        <span>{label}</span>
       </div>
     </div>
   );
@@ -260,18 +260,18 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
       value: candidate.rank > 0 && candidate.poolSize > 1 ? 100 * (candidate.poolSize - candidate.rank) / (candidate.poolSize - 1) : 0,
       tone: (candidate.ensemblePredReturn ?? 0) >= 0 ? "up" : "down",
     },
-    {
+    ...(candidate.finalPredReturn != null ? [] : [{
       label: "뉴스",
       value: candidate.newsOverallScore * 10,
       tone: candidate.newsOverallScore >= 5 ? "up" : "down",
-    },
+    }]),
     {
       label: "수급",
       value: supplyParticipationScore,
       tone: candidate.totalSupplyNetBuy >= 0 ? "up" : "down",
     },
     {
-      label: "최종",
+      label: candidate.finalPredReturn != null ? "최종 상대순위" : "최종",
       value: candidate.finalCombinedScore,
       tone,
     },
@@ -290,9 +290,9 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
       <div className="report-kpi-grid">
         <ReportKpiCard
           icon="AI"
-          label="최종 결합 점수"
+          label={candidate.finalPredReturn != null ? "전체 상대순위" : "최종 결합 점수"}
           value={`${Math.round(candidate.finalCombinedScore)}점`}
-          sub="모델+뉴스+수급"
+          sub={candidate.finalPredReturn != null ? "예상수익률 순위 · 상승확률 아님" : "모델+뉴스+수급"}
           tone={tone === "up" ? "is-positive-text" : tone === "down" ? "is-negative-text" : undefined}
         />
         <ReportKpiCard
@@ -306,7 +306,9 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
           icon="N"
           label="뉴스 분석"
           value={`${candidate.newsCount}건`}
-          sub={`${candidate.newsOverallScore.toFixed(1)} / 10`}
+          sub={candidate.finalPredReturn != null
+            ? (candidate.newsApplied ? `보정 ${(candidate.newsAdjustment ?? 0) * 100}%p 적용` : "뉴스 보정 미적용")
+            : `${candidate.newsOverallScore.toFixed(1)} / 10`}
           tone={candidate.newsOverallScore >= 5 ? "is-positive-text" : "is-negative-text"}
         />
         <ReportKpiCard
@@ -322,7 +324,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
         <article className="report-chart-card">
           <div className="report-chart-card__head">
             <strong>뉴스 감성 비율</strong>
-            <span>{candidate.newsOverallScore.toFixed(1)} / 10</span>
+            <span>{candidate.finalPredReturn != null ? `본문 ${candidate.newsCount}건` : `${candidate.newsOverallScore.toFixed(1)} / 10`}</span>
           </div>
           <div className="sentiment-donut-wrap">
             <div
@@ -447,7 +449,8 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
         </div>
 
         <div className="reco-grid">
-          <ScoreGauge score={candidate.finalCombinedScore} tone={tone} />
+          <ScoreGauge score={candidate.finalCombinedScore} tone={tone}
+            label={candidate.finalPredReturn != null ? "상대순위" : "종합점수"} />
           <div className="metric-tiles">
             <MetricTile
               label="다음 거래일 예측수익률"
@@ -461,8 +464,10 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
               sub={candidate.poolSize > 0 ? `${candidate.poolSize}개 중` : undefined}
             />
             <MetricTile
-              label="뉴스 점수"
-              value={`${candidate.newsOverallScore.toFixed(1)} / 10`}
+              label={candidate.finalPredReturn != null ? "뉴스 보정" : "뉴스 점수"}
+              value={candidate.finalPredReturn != null
+                ? (candidate.newsApplied ? `${((candidate.newsAdjustment ?? 0) * 100).toFixed(2)}%p` : "미적용")
+                : `${candidate.newsOverallScore.toFixed(1)} / 10`}
               sub={candidate.newsSentimentTally || `뉴스 ${candidate.newsCount}건`}
             />
           </div>

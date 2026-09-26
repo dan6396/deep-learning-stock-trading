@@ -1,0 +1,7 @@
+-r requirements-inference.txt
+requests>=2.32,<3
+scipy>=1.13,<2
+beautifulsoup4>=4.12,<5
+trafilatura==2.2.0
+googlenewsdecoder==0.2.1
+matplotlib>=3.9,<4

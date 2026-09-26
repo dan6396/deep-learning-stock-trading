@@ -732,6 +732,22 @@ def run_news_crawling_and_llm(
         traceback.print_exc()
 
 
+def run_news_event_fusion(rank_df: pd.DataFrame, output_dir: Path,
+                          days: int = 3, max_news: int = 1) -> None:
+    """Publish bounded article evidence and the validated final Top-5 ranking."""
+    import json
+
+    from news_fusion.live import rank_with_news
+
+    final_top5, evidence = rank_with_news(rank_df, output_dir, days=days, max_news=max_news)
+    top_path = output_dir / "step3_final_top5.csv"
+    evidence_path = output_dir / "step3_final_news_event_analysis.json"
+    final_top5.to_csv(top_path, index=False, encoding="utf-8-sig")
+    evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"  사건 근거: {evidence_path}")
+    print(f"  검증 게이트 적용 최종 Top-5: {top_path}")
+
+
 def run(args: argparse.Namespace) -> int:
     output_dir = Path(args.output_dir)
 
@@ -780,21 +796,16 @@ def run(args: argparse.Namespace) -> int:
     print(f"  저장: {step2_final_csv}")
     print(f"  저장: {step2_top10_supply_csv}")
 
-    # ── STEP 3 : 뉴스 크롤링 + LLM 분석 ──
+    # ── STEP 3 : 본문 사건 추출 + 검증 게이트를 거친 최종 순위 ──
     if args.run_news:
-        run_news_crawling_and_llm(
-            step2_final_csv=step2_final_csv,
-            output_dir=output_dir,
-            days=args.news_days,
-            max_news=args.max_news,
-        )
+        run_news_event_fusion(all_rank_df, output_dir, days=args.news_days, max_news=args.max_news)
 
     print(f"\n{'='*60}")
     print("[ALL DONE] 전체 파이프라인 완료")
     print(f"  STEP 1 (후보 풀)      : {step1_csv}")
     print(f"  STEP 2 (Huber 앙상블) : {step2_final_csv}")
     print(f"  STEP 2 (수급 정보)   : {step2_top10_supply_csv}")
-    print(f"  STEP 3 (뉴스+LLM)    : {output_dir / 'step3_final_news_llm_analysis.csv'}")
+    print(f"  STEP 3 (사건 근거)    : {output_dir / 'step3_final_news_event_analysis.json'}")
     return 0
 
 
@@ -804,7 +815,7 @@ def run(args: argparse.Namespace) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="KOSPI200 후보 풀 → Huber 앙상블 예측수익률 전체 랭킹 → Top10 수급 데이터 + 뉴스 크롤링 + LLM 분석"
+        description="KOSPI200 → Huber 전체 랭킹 → 본문 사건 추출 → 검증 게이트를 거친 Top-5"
     )
     p.add_argument("--main-module",            default=str(DEFAULT_MAIN_MODULE),
                    help="main.py 경로 (기본: 같은 폴더의 main.py)")
@@ -824,11 +835,11 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="수급 경향 조회 거래일 수 (기본 최근 5거래일)")
     p.add_argument("--supply-min-positive-days", type=int, default=3,
                    help="외국인/기관 각각 순매수 양수여야 하는 최소 일수 (기본 3)")
-    p.add_argument("--run-news", action="store_true", help="뉴스 수집과 Gemini 분석 실행 (API 키 필요)")
-    p.add_argument("--news-days",              type=int, default=1,
-                   help="뉴스 조회 기간(일) (기본 1)")
-    p.add_argument("--max-news",               type=int, default=5,
-                   help="종목당 최대 뉴스 수 (기본 5)")
+    p.add_argument("--run-news", action="store_true", help="제한된 뉴스 본문 수집·Gemini 사건 추출 후 검증 게이트 적용")
+    p.add_argument("--news-days",              type=int, default=3,
+                   help="뉴스 조회 기간(일, 상한 3; 기본 3)")
+    p.add_argument("--max-news",               type=int, default=1,
+                   help="종목당 본문 분석 기사 수(상한 1; 기본 1)")
     return p
 
 

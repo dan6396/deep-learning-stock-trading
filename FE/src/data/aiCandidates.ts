@@ -21,6 +21,10 @@ export type AiCandidate = {
   pUp: number;
   baseDate: string;
   ensemblePredReturn: number | null;
+  finalPredReturn?: number | null;
+  newsAdjustment?: number;
+  newsApplied?: boolean;
+  newsAnalysisStatus?: string;
   foreignNetBuy: number;
   instNetBuy: number;
   totalSupplyNetBuy: number;

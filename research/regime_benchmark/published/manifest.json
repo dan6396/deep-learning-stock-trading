@@ -1,0 +1,24 @@
+{
+  "version": "regime-benchmark-derived-v1",
+  "rows": {
+    "numeric_features": 5992,
+    "model_scores": 4992,
+    "daily_equity": 200
+  },
+  "files_sha256": {
+    "numeric_features.csv.gz": "0a9672578cde5288af31e7782a3c2d949ed4a737f9a6e06753175349173f736b",
+    "model_scores.csv.gz": "54e484d657c30cc4778640e47a10846980e25843af704c11b119fce350df78c1",
+    "metrics.csv": "1986470103cb4410bcc233b397299bce812f5a1318f52eefa3661dec8c189038",
+    "daily_equity.csv": "429e6b5abd402c782038d14db6fb7620f7214381c5a71f3d23a9944bd4e0f1e3",
+    "regime_dates.csv": "be61cc9d110262227b70ecc281011e5f26065a3d747fe704afac97f2a748e54d"
+  },
+  "excluded": [
+    "raw OHLCV",
+    "realized per-stock returns",
+    "news text",
+    "headlines",
+    "URLs",
+    "API credentials"
+  ],
+  "interpretation": "Exploratory reused dates; first five sideways sessions used for training"
+}

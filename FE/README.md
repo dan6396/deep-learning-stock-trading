@@ -109,6 +109,12 @@ Action·OS cron)는 `POST`에 `?key=` 또는 `x-refresh-key` 헤더로 호출하
 `npm run build` 결과물(`dist/`)을 정적 호스팅에 올립니다. SPA 라우팅을 위해
 모든 경로를 `index.html`로 보내는 fallback이 필요하며, 다음 설정이 포함되어 있습니다.
 
+뉴스 사건 분석 버튼은 `integrated_pipeline.py`와 로컬 모델 파일, 기사 API 키,
+쓰기 가능한 `outputs/`를 사용하는 **지속 실행 백엔드**에서 동작하도록 연결돼 있습니다.
+Vercel 서버리스 함수는 응답 후 백그라운드 작업 지속이나 함수 간 로컬 파일 공유를
+보장하지 않으므로, 프론트엔드만 Vercel에 배포해도 전체 분석 버튼의 실제 실행은
+보장되지 않습니다. 운영 시 별도 Python 작업 서버와 결과 저장소를 연결해야 합니다.
+
 - Vercel: `vercel.json` (rewrites)
 - Netlify: `public/_redirects`
 

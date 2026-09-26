@@ -43,6 +43,7 @@ export function rowToCandidate(row: PipelineOutputRow): AiCandidate {
     pick(points, /결합\s*점수:\s*([\d.]+)\s*\/\s*100/) ??
     (result.confidence ? Math.round(result.confidence * 100) : Math.round(((result.sentiment_score ?? 0) + 1) * 50));
   const newsScore = pick(points, /뉴스\s*종합\s*점수:\s*([\d.]+)\s*\/\s*10/);
+  const eventPipeline = input.final_pred_return != null;
 
   const news: AiNews[] = (row.news ?? []).map((item, index) => ({
     title: item.title,
@@ -64,6 +65,10 @@ export function rowToCandidate(row: PipelineOutputRow): AiCandidate {
     pUp,
     baseDate: String(input.prediction_base_date ?? input.transformer_base_date ?? input.lstm_base_date ?? ""),
     ensemblePredReturn: input.prediction_target === "next_session_open_to_close" && input.ensemble_pred_return != null ? num(input.ensemble_pred_return) : null,
+    finalPredReturn: eventPipeline ? num(input.final_pred_return) : undefined,
+    newsAdjustment: eventPipeline ? num(input.news_adjustment) : undefined,
+    newsApplied: eventPipeline ? input.news_applied === true : undefined,
+    newsAnalysisStatus: eventPipeline ? String(input.news_analysis_status ?? "") : undefined,
     foreignNetBuy: num(input.foreign_net_buy_sum),
     instNetBuy: num(input.inst_net_buy_sum),
     totalSupplyNetBuy: num(input.total_supply_net_buy),
@@ -75,7 +80,7 @@ export function rowToCandidate(row: PipelineOutputRow): AiCandidate {
     newsSentimentTally: findTally(points),
     finalSentiment: result.label ?? "NEUTRAL",
     finalSentimentKo: sentimentKo(result.label ?? "NEUTRAL"),
-    finalCombinedScore: Math.max(0, Math.min(100, combined)),
+    finalCombinedScore: Math.max(0, Math.min(100, eventPipeline ? num(input.final_rank_percentile) : combined)),
     summary: result.summary ?? "",
     tradingInsight: result.trading_insight ?? "",
     news,

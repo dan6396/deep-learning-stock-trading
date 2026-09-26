@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 690" role="img" aria-labelledby="title desc">
+  <title id="title">KOSPI200 Huber price model and bounded news evidence pipeline</title>
+  <desc id="desc">Price prediction and bounded news article analysis feed a frozen residual correction. The validation gate is currently disabled, so live Top-5 ranking equals the price model.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#53657e"/></marker>
+    <style>
+      text{font-family:Arial,'Noto Sans KR',sans-serif;fill:#17283f}
+      .title{font-size:28px;font-weight:700}.sub{font-size:16px;fill:#52637c}
+      .box{fill:#fff;stroke:#cbd5e1;stroke-width:2;rx:14}.price{stroke:#3776cf}.news{stroke:#e99b4b}.gate{stroke:#d34545;fill:#fff7f7}.final{stroke:#39865c;fill:#f4fbf6}
+      .label{font-size:19px;font-weight:700;text-anchor:middle}.note{font-size:14px;fill:#53657e;text-anchor:middle}.flow{stroke:#53657e;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+      .lane{font-size:16px;font-weight:700;fill:#45546d}
+    </style>
+  </defs>
+  <rect width="1240" height="690" fill="#f8fafc"/>
+  <text x="55" y="53" class="title">가격 예측 + 뉴스 근거 분석 → 최종 Top-5</text>
+  <text x="55" y="81" class="sub">LLM은 기사에서 사건을 추출하고, 순위는 검증된 수치 규칙으로 계산</text>
+  <text x="55" y="127" class="lane">가격 경로</text>
+  <text x="55" y="304" class="lane">뉴스 경로 · 후보 30개 이내 / 본문 1건씩 / Gemini 최대 30회</text>
+  <rect x="55" y="147" width="210" height="104" class="box price"/><text x="160" y="187" class="label">KOSPI200</text><text x="160" y="214" class="note">OHLCV · 기술지표</text>
+  <rect x="325" y="147" width="240" height="104" class="box price"/><text x="445" y="183" class="label">Huber Ensemble</text><text x="445" y="210" class="note">다음날 시가→종가 예측수익률</text>
+  <rect x="55" y="325" width="210" height="118" class="box news"/><text x="160" y="362" class="label">뉴스 후보 수집</text><text x="160" y="391" class="note">가격 상위 20 + 독립 10</text><text x="160" y="414" class="note">시각 확인 · 제목 중복 제거</text>
+  <rect x="325" y="325" width="240" height="118" class="box news"/><text x="445" y="362" class="label">기사 본문 확보</text><text x="445" y="391" class="note">결정 시각 이전 기사만</text><text x="445" y="414" class="note">본문 없으면 분석 제외</text>
+  <rect x="625" y="325" width="240" height="118" class="box news"/><text x="745" y="360" class="label">Gemini 사건 추출</text><text x="745" y="389" class="note">직접 관련 · 긍/부정 · 유형</text><text x="745" y="412" class="note">기사 근거 문장 표시</text>
+  <rect x="925" y="325" width="260" height="118" class="box news"/><text x="1055" y="359" class="label">수치 특징 + 보정</text><text x="1055" y="389" class="note">고정 Ridge 잔차 모델</text><text x="1055" y="412" class="note">최대 ±0.3%p</text>
+  <rect x="625" y="146" width="240" height="104" class="box gate"/><text x="745" y="182" class="label">검증 게이트: 꺼짐</text><text x="745" y="209" class="note">뉴스 개선 근거 부족</text>
+  <rect x="925" y="146" width="260" height="104" class="box final"/><text x="1055" y="182" class="label">최종 점수 = 가격 예측</text><text x="1055" y="209" class="note">현재 뉴스 보정 0</text>
+  <rect x="354" y="532" width="245" height="96" class="box final"/><text x="476" y="570" class="label">최종 Top-5</text><text x="476" y="596" class="note">기존 순위·보유/교체 규칙</text>
+  <rect x="670" y="532" width="265" height="96" class="box final"/><text x="802" y="570" class="label">웹 결과 화면</text><text x="802" y="596" class="note">예측순위 + 뉴스 근거·상태</text>
+  <path d="M265 199H325 M565 199H625 M865 199H925 M265 384H325 M565 384H625 M865 384H925 M1055 325V252" class="flow"/>
+  <path d="M1055 250V476H476V532 M599 580H670" class="flow"/>
+  <text x="55" y="670" class="sub">연구 결과: 세 구간 모두 뉴스 보정의 Rank IC·기본 Top-5 최종 자산이 가격 단독보다 낮았음. 과거 기사 원문 시점 검증도 제한적.</text>
+</svg>

@@ -563,7 +563,7 @@ function MarketOverview({
               <strong>Huber 앙상블</strong>가 KOSPI200 전체 종목을 분석하고, 상승 가능성이 높은 종목을 1차 선별합니다.
             </p>
             <p>
-              이후 뉴스 감정, 수급, 거래량 변화를 함께 반영해 <strong>LLM 통합 분석</strong>으로 최종 후보를 정리합니다.
+              뉴스 본문에서 추출한 사건을 함께 보여줍니다. 뉴스 보정은 검증 기준을 통과한 경우에만 최종 순위에 반영합니다.
             </p>
           </div>
           <ol className="brief-flow" aria-label="AI 후보 선정 순서">
@@ -581,7 +581,7 @@ function MarketOverview({
             </li>
             <li>
               <span>2차 판단</span>
-              <strong>뉴스 감정 + LLM 통합 분석</strong>
+              <strong>기사 사건·근거 추출</strong>
             </li>
             <li>
               <span>최종 후보</span>
@@ -933,7 +933,7 @@ const analysisStages = [
   "OHLCV 수집·Huber 앙상블 예측",
   "외국인·기관 수급 조회",
   "뉴스 크롤링",
-  "Gemini LLM 종합 판단",
+  "뉴스 사건 추출·검증 게이트",
   "결과 파일 검증",
 ];
 

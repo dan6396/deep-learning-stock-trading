@@ -36,7 +36,7 @@ const CANDIDATE_PROGRESS_STAGES = [
   "OHLCV 수집·앙상블 예측",
   "외국인·기관 수급 조회",
   "뉴스 크롤링",
-  "Gemini LLM 종합 판단",
+  "Gemini 기사 사건 추출",
   "결과 파일 검증",
 ] as const;
 
@@ -130,13 +130,13 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
   } else if (log.includes("앙상블 최종")) {
     advance(3, 68, "수급 확인을 반영해 최종 후보를 구성하는 중입니다.");
   } else if (log.includes("[STEP 3]")) {
-    advance(4, 72, "STEP2 Top10을 기반으로 뉴스·LLM 분석을 시작합니다.");
+    advance(4, 72, "가격 상위 후보와 독립 뉴스 후보의 본문 분석을 시작합니다.");
   } else if (log.includes("뉴스 크롤링")) {
     advance(4, 78, "최신 뉴스를 수집하는 중입니다.");
   } else if (log.includes("Gemini") || log.includes("LLM") || log.includes("API 호출")) {
-    advance(5, 84, "Gemini가 모델·수급·뉴스 근거를 종합 판단하는 중입니다.");
+    advance(5, 84, "Gemini가 기사에서 사건과 근거 문장을 추출하는 중입니다.");
   } else if (log.includes("[최종 결과]")) {
-    advance(5, 90, "종목별 LLM 판단 결과를 정리하는 중입니다.");
+    advance(5, 90, "종목별 기사 사건 근거를 정리하는 중입니다.");
   } else if (log.includes("저장:") && log.includes("step3")) {
     advance(6, 94, "STEP3 결과 파일을 저장하고 검증하는 중입니다.");
   } else if (log.includes("[ALL DONE]")) {
@@ -386,8 +386,8 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
   const scriptPath = join(root, "integrated_pipeline.py");
   const outputDir = pipelineOutputDir(env);
   const top10CsvPath = join(outputDir, "step2_final_top10.csv");
-  const step3CsvPath = join(outputDir, "step3_final_news_llm_analysis.csv");
-  const step3JsonPath = join(outputDir, "step3_final_news_llm_analysis.json");
+  const step3CsvPath = join(outputDir, "step3_final_top5.csv");
+  const step3JsonPath = join(outputDir, "step3_final_news_event_analysis.json");
   const timeoutMs = Number(env.PIPELINE_RUN_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
   const python = await pythonExecutable(root, env);
 
@@ -411,8 +411,8 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
 
     updateCandidateAnalysisProgress((current) => progressSnapshot(6, 95, "생성된 step2·step3 결과 파일을 검증하는 중입니다.", current));
     await requireFreshFile(top10CsvPath, "앙상블 Top10 CSV", startedAt);
-    await requireFreshFile(step3CsvPath, "STEP3 LLM CSV result", startedAt);
-    await requireFreshFile(step3JsonPath, "STEP3 LLM JSON result", startedAt);
+    await requireFreshFile(step3CsvPath, "STEP3 final Top-5 CSV", startedAt);
+    await requireFreshFile(step3JsonPath, "STEP3 news event evidence", startedAt);
     await writePipelineRunMarker({
       finishedAt: Date.now(),
       startedAt,

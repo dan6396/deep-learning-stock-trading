@@ -11,9 +11,34 @@ declare const process: {
 
 const JSON_RESULT_FILES = ["final_stock_transformer_news_llm_result.json"];
 const LEGACY_JSON_RESULT_FILES = ["final_stock_lstm_news_llm_result.json"];
-const CSV_RESULT_FILES = ["step2_final_top10.csv"];
+const CSV_RESULT_FILES = ["step3_final_top5.csv", "step2_final_top10.csv"];
 const FULL_RANK_CSV_RESULT_FILES = ["step2_all_transformer_rank.csv"];
 const NEWS_RESULT_FILES = ["news_gemini_result.json", "step3_final_news_llm_analysis.json"];
+const EVENT_RESULT_FILES = ["step3_final_news_event_analysis.json"];
+
+type EventNewsItem = {
+  title?: unknown;
+  url?: unknown;
+  source?: unknown;
+  pub_date?: unknown;
+  sentiment?: unknown;
+  reason?: unknown;
+  evidence_quote?: unknown;
+};
+
+type EventEntry = {
+  ticker?: unknown;
+  company_name?: unknown;
+  news?: EventNewsItem[];
+  status?: unknown;
+  accepted_events?: unknown;
+  applied?: unknown;
+  news_delta?: unknown;
+  final_score?: unknown;
+  final_rank?: unknown;
+  final_rank_percentile?: unknown;
+  activation_reason?: unknown;
+};
 
 type GeminiEvaluation = {
   sentiment?: unknown;
@@ -533,6 +558,90 @@ function applyNewsToRow(row: PipelineOutputRow, entry: GeminiNewsEntry): Pipelin
   };
 }
 
+function applyEventToRow(row: PipelineOutputRow, entry: EventEntry): PipelineOutputRow {
+  const finalScore = toFiniteOrNull(entry.final_score) ?? toFiniteOrNull(row.input_row.ensemble_pred_return) ?? 0;
+  const newsDelta = toFiniteOrNull(entry.news_delta) ?? 0;
+  const rank = toFiniteOrNull(entry.final_rank);
+  const percentile = toFiniteOrNull(entry.final_rank_percentile);
+  const applied = entry.applied === true;
+  const accepted = toFiniteOrNull(entry.accepted_events) ?? 0;
+  const articles = Array.isArray(entry.news) ? entry.news : [];
+  const news = articles.map((item, index) => {
+    const sentiment = stringValue(item.sentiment);
+    const mapped = sentimentLabelFromGemini(sentiment);
+    return {
+      index: index + 1,
+      title: stringValue(item.title),
+      url: stringValue(item.url),
+      source: stringValue(item.source),
+      pub_date: stringValue(item.pub_date),
+      sentiment: mapped.label,
+      sentiment_ko: mapped.label_ko,
+      sentiment_reason: stringValue(item.reason) || stringValue(item.evidence_quote),
+    };
+  });
+  const positiveCount = news.filter((item) => item.sentiment === "POSITIVE").length;
+  const negativeCount = news.filter((item) => item.sentiment === "NEGATIVE").length;
+  const neutralCount = news.length - positiveCount - negativeCount;
+  const direction = finalScore > 0 ? { label: "POSITIVE", label_ko: "상승 예상" }
+    : finalScore < 0 ? { label: "NEGATIVE", label_ko: "하락 예상" }
+      : { label: "NEUTRAL", label_ko: "중립" };
+  const status = stringValue(entry.status);
+  const summary = `Huber 예상수익률 ${(Number(row.input_row.ensemble_pred_return ?? 0) * 100).toFixed(2)}%. ` +
+    (applied ? `검증된 뉴스 보정 ${newsDelta >= 0 ? "+" : ""}${(newsDelta * 100).toFixed(2)}%p를 적용했습니다.`
+      : `${accepted}건의 직접 관련 사건을 확인했으며, 뉴스 보정은 검증 기준 미통과로 적용하지 않았습니다.`);
+  return {
+    ...row,
+    input_row: {
+      ...row.input_row,
+      final_pred_return: finalScore,
+      news_adjustment: newsDelta,
+      news_applied: applied,
+      news_analysis_status: status,
+      final_rank_percentile: percentile ?? undefined,
+      pred_rank: rank ?? row.input_row.pred_rank,
+    },
+    news,
+    result: {
+      ...row.result,
+      label: direction.label,
+      label_ko: direction.label_ko,
+      confidence: 0,
+      summary,
+      trading_insight: applied ? "뉴스 사건 보정이 순위에 반영됐습니다." : "뉴스 분석은 참고 근거이며 현재 매매 순위에는 반영되지 않습니다.",
+      key_data_points: [
+        ...row.result.key_data_points,
+        `최종 예상수익률: ${(finalScore * 100).toFixed(2)}%`,
+        `뉴스 보정: ${(newsDelta * 100).toFixed(2)}%p`,
+        `본문 분석 ${news.length}건 · 직접 관련 사건 ${accepted}건`,
+        `긍정 ${positiveCount}건 · 중립 ${neutralCount}건 · 부정 ${negativeCount}건`,
+      ],
+      caution: stringValue(entry.activation_reason),
+    },
+  };
+}
+
+async function loadEventResult(): Promise<Map<string, EventEntry> | null> {
+  let latest: { mtimeMs: number; map: Map<string, EventEntry> } | null = null;
+  for (const path of candidatePaths(EVENT_RESULT_FILES, false)) {
+    try {
+      const parsed = JSON.parse(await readFile(path, "utf8")) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      const mtimeMs = (await stat(path)).mtimeMs;
+      if (latest && mtimeMs <= latest.mtimeMs) continue;
+      const map = new Map<string, EventEntry>();
+      for (const [ticker, value] of Object.entries(parsed as Record<string, unknown>)) {
+        if (value && typeof value === "object") map.set(ticker.padStart(6, "0"), value as EventEntry);
+      }
+      latest = { mtimeMs, map };
+    } catch {
+      // Try the next output location.
+    }
+  }
+  const marker = await readPipelineRunMarker();
+  return latest && markerAllowsLoadedFile(marker, latest.mtimeMs) ? latest.map : null;
+}
+
 /** Loads the latest Gemini news result keyed by 6-digit ticker, or null if absent. */
 async function loadNewsResult(): Promise<Map<string, GeminiNewsEntry> | null> {
   let latest: { mtimeMs: number; map: Map<string, GeminiNewsEntry> } | null = null;
@@ -571,6 +680,13 @@ async function loadNewsResult(): Promise<Map<string, GeminiNewsEntry> | null> {
 
 /** Overlays the Gemini news result onto candidate rows, matched by ticker. */
 async function overlayNewsResult(rows: PipelineOutputRow[]): Promise<PipelineOutputRow[]> {
+  const events = await loadEventResult();
+  if (events) {
+    return rows.map((row) => {
+      const entry = events.get(tickerFromRow(row));
+      return entry ? applyEventToRow(row, entry) : row;
+    });
+  }
   const news = await loadNewsResult();
   if (!news) {
     return rows;
@@ -643,6 +759,15 @@ export async function getCandidatesPayload(): Promise<PipelineOutputRow[]> {
   const rows = await loadPipelineRows();
   if (!rows) {
     return [];
+  }
+
+  const events = await loadEventResult();
+  if (events) {
+    return [...rows].sort((a, b) => {
+      const aScore = toFiniteOrNull(a.input_row?.final_pred_return) ?? toFiniteOrNull(a.input_row?.ensemble_pred_return) ?? -Infinity;
+      const bScore = toFiniteOrNull(b.input_row?.final_pred_return) ?? toFiniteOrNull(b.input_row?.ensemble_pred_return) ?? -Infinity;
+      return bScore - aScore || tickerFromRow(a).localeCompare(tickerFromRow(b));
+    });
   }
 
   const news = await loadNewsResult();
