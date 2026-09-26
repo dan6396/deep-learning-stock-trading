@@ -1,0 +1,38 @@
+{
+  "version": "text-free-event-replay-v1",
+  "panel_rows": 5992,
+  "accepted_events": 394,
+  "article_request_rows": 1634,
+  "body_link_rows": 1191,
+  "required_price_rows": 5992,
+  "required_price_columns": [
+    "date",
+    "ticker",
+    "Open",
+    "Close",
+    "Volume"
+  ],
+  "required_prices_canonical_sha256": "2d9f2ca4eed06e346683e3796b964be4dc970f8030853965380de2811ba81d6a",
+  "frozen_files_sha256": {
+    "scored_panel.parquet": "18a9f2edfc5ac61650f923c03c7546ada76d92da1ef0ef04485d5748c6271df5",
+    "article_requests.json": "478b9fe9dbcecbc98399cea103e5a7f3d1d918badae79141a89c8475abe8fb51",
+    "body_articles.json": "1b9468e93b5595109cf20fecc1ae05267518b80baa1ff76dd8d70e6478447075",
+    "protocol.json": "0607211c14b1b0ff969dbaf367055d546bcc7ccac8569e4a0a9361a7e7f1ff5c"
+  },
+  "original_source_sha256": {
+    "scored_panel.parquet": "d456f73a400d4a625e8fefdd903f8eb313034ae67225dcc7a4c6b73076e60bdf",
+    "protocol.json": "9724a66c4ce2850d155954cdcaa8ea9897bf03d2e81f4d7d745e4aace2267a4e",
+    "article_requests.json": "00f48a2f70531793c1b858010780bd73a80af04e54ef5e30a38a96efb8843378",
+    "body_articles.json": "d8fbdc23cbbcec24a9443f1d7c99a600551c8ef94c23ee3f582043c7e0995c66",
+    "daily_bars.parquet": "34ee260abf66a38ae28810783503a90e7a3ffc76ac4b9658bdfbba0cb2ac1e1a"
+  },
+  "exclusions": [
+    "article text",
+    "headlines",
+    "URLs",
+    "raw prices",
+    "per-stock realized returns",
+    "API keys"
+  ],
+  "scope": "Exact numeric fusion and portfolio replay with identical authorized prices; not raw-news extraction"
+}

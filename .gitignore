@@ -16,6 +16,7 @@ fresh_ohlcv.parquet
 
 # 가상환경 / OS
 venv-timesfm/
+.venv/
 .DS_Store
 
 # 주의: shared_*.parquet 은 재현성 위해 커밋 유지 → .gitignore에 넣지 않는다.

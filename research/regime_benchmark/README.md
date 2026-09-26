@@ -2,6 +2,8 @@
 
 This folder records the fixed dates and published **model-derived** numeric tables for the exploratory sideways/down/up news experiment. It deliberately contains no market-price files, realized per-stock returns, article text, headlines, URLs, or API credentials.
 
+**팀원이 같은 숫자를 재현하려면 [한국어 재현 가이드](REPRODUCE_KO.md)를 먼저 보세요.** 공개 파일의 무결성 검사와, 각자 이용 권한이 있는 시세를 넣어 25일·전략×구간 24개 결과를 재계산하는 명령을 제공합니다. `published/frozen_replay/`에는 기사 본문 없이 사건 라벨과 요청 연결 정보만 보관합니다. 원본 기사의 수집·Gemini 추출 단계까지 완전히 재현하는 자료는 아닙니다.
+
 ## Published files
 
 | File | Contents |
@@ -12,6 +14,7 @@ This folder records the fixed dates and published **model-derived** numeric tabl
 | [`published/daily_equity.csv`](published/daily_equity.csv) | Daily portfolio equity and fee series for the identical replay engine |
 | [`published/regime_dates.csv`](published/regime_dates.csv) | Dates and retrospective market regime labels |
 | [`published/manifest.json`](published/manifest.json) | Row counts, SHA-256 checksums and exclusions |
+| [`published/frozen_replay/`](published/frozen_replay/) | Text-free article event labels and linkage metadata for exact downstream replay with authorized local bars |
 
 ![Same 10m KRW Top-5 strategy: price only versus news events](../../figures/news_event_regime_comparison.png)
 

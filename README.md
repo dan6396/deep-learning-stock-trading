@@ -10,7 +10,7 @@ KOSPI200 종목의 **다음 거래일 시가→종가 수익률**을 예측하�
 
 가격 모델이 KOSPI200 종목의 예상수익률을 계산합니다. 뉴스 경로는 후보를 제한해 **결정 시각 이전의 기사 본문**을 수집하고, Gemini가 종목 직접 관련성·사건 유형·긍정/부정·근거 문장을 추출합니다. 두 경로가 만나는 **작은 Ridge 잔차 모델**이 가격 순위 맥락과 뉴스 사건 특징으로 수익률 보정 후보를 계산합니다. LLM은 종목을 직접 선정하지 않습니다. **현재 뉴스 보정 게이트는 꺼져 있어 웹의 최종 Top-5는 가격 모델 순위와 같습니다.** 뉴스는 근거 자료로만 표시됩니다. 세 구간의 탐색 실험에서 사건 보정이 가격 단독을 이기지 못했기 때문입니다.
 
-[가격 단독 vs 뉴스 추가 그래프](figures/news_event_regime_comparison.png) · [상세 실험 보고서](docs/news_event_residual.md) · [팀원용 숫자 자료와 재현 안내](research/regime_benchmark/README.md)
+[가격 단독 vs 뉴스 추가 그래프](figures/news_event_regime_comparison.png) · [상세 실험 보고서](docs/news_event_residual.md) · [팀원용 재현 가이드](research/regime_benchmark/REPRODUCE_KO.md) · [공개 실험 자료](research/regime_benchmark/published/)
 
 | 구간 (별도 1,000만 원 시작) | 평가일 | 가격 단독 최종 자산 | 뉴스 사건 보정 최종 자산 | 가격/뉴스 Rank IC |
 |---|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ Gemini는 기사 감정·사건·근거 추출만 담당합니다. 현재 작은
 
 2026-09-26 [논문 기반 뉴스 추가 예측력 연구](docs/news_research_conclusion.md)에서는 공개 E5 제목·본문 표현과 두 종류의 가격 오차 보정 목표를 비교했습니다. 본문 의미를 넣은 작은 Rank IC 상승은 기사 내용 없이 본문 유무만 넣은 대조군보다 작았습니다. 날짜별 수집 계획 밖의 본문 사용 문제를 발견해 수정 재실험했으며, 개선된 서비스 전략을 채택할 근거는 아직 없습니다. [연구 설계·출처](docs/news_research_design.md), [모든 순위 보정 결과](docs/news_residual_results.md)를 함께 공개합니다.
 
-상승·하락·횡보 구간 실험의 날짜 정의와 팀원용 로컬 데이터 생성 방법은 [재현 안내](research/regime_benchmark/README.md)를 참고하세요. 원천 시세와 기사 자료는 배포 권한을 확인할 수 없어 저장소에 넣지 않으며, 허가된 로컬 파일로 실험 표를 만들 수 있습니다.
+상승·하락·횡보 구간의 입력·날짜·결과 검증은 [한국어 재현 가이드](research/regime_benchmark/REPRODUCE_KO.md)를 참고하세요. 이번 뉴스 실험의 사건 라벨은 본문을 제거해 공개했고, 필요한 전체 시세와 기사 원문은 추가로 올리지 않았습니다. 과거 검증용으로 이미 저장소에 있는 `docs/validation/daily_bars.parquet`는 이번 실험 필요 행 중 1,761개가 부족해 단독 재현에는 쓸 수 없습니다.
 
 | 항목 | 기존 모델 | 현재 기본 모델 |
 |---|---|---|
