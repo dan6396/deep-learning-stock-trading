@@ -6,7 +6,7 @@ KOSPI200 종목의 **다음 거래일 시가→종가 수익률**을 예측하�
 
 ## 한눈에 보는 현재 구조
 
-![Huber 가격 예측과 뉴스 사건 근거 분석 구조도](figures/price_news_architecture.svg)
+<p align="center"><a href="figures/price_news_architecture.svg"><img src="figures/price_news_architecture.svg" alt="Huber 가격 예측과 뉴스 사건 근거 분석 구조도" width="680"></a></p>
 
 가격 모델이 KOSPI200 종목의 예상수익률을 계산합니다. 뉴스 경로는 후보를 제한해 **결정 시각 이전의 기사 본문**을 수집하고, Gemini가 종목 직접 관련성·사건 유형·긍정/부정·근거 문장을 추출합니다. 최종 순위는 코드의 수치 점수로 계산하며 LLM에 종목 선정을 맡기지 않습니다. **현재 뉴스 보정 게이트는 꺼져 있어 웹의 최종 Top-5는 가격 모델 순위와 같습니다.** 뉴스는 근거 자료로만 표시됩니다. 세 구간의 탐색 실험에서 사건 보정이 가격 단독을 이기지 못했기 때문입니다.
 
