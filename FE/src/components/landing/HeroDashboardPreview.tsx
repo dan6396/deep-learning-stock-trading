@@ -33,7 +33,7 @@ export function HeroDashboardPreview({ data }: HeroDashboardPreviewProps) {
           <small>파이프라인 분석 결과</small>
         </article>
         <article>
-          <span>평균 신뢰도</span>
+          <span>LLM 평균 확신도</span>
           <strong>{Math.round(marketSummary.averageConfidence * 100)}%</strong>
           <small>
             긍정 {marketSummary.positiveCount} / 중립 {marketSummary.neutralCount} / 경계{" "}
@@ -49,7 +49,7 @@ export function HeroDashboardPreview({ data }: HeroDashboardPreviewProps) {
 
       {topCandidate ? (
         <div className="top-candidate">
-          <span>Top Candidate</span>
+          <span>예측 1순위 후보</span>
           <strong>
             {topCandidate.companyName} {topCandidate.ticker}
           </strong>

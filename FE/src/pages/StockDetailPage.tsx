@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { MarketTopBar } from "../components/market/MarketTopBar";
 import { StockChartPanel } from "../components/market/stock-chart";
 import { usePageTitle } from "../hooks/usePageTitle";
 import {
@@ -181,7 +182,7 @@ function groupedNews(news: AiNews[]) {
       items: classified.filter((item) => item.tone === tone),
     }))
     .filter((group) => group.items.length > 0);
-  return { groups, keywordCount: classified.filter((item) => item.toneSource === "keyword").length };
+  return { groups, items: classified, keywordCount: classified.filter((item) => item.toneSource === "keyword").length };
 }
 
 /** News adjustment arrives as a fraction (0.003 = 0.30%p). */
@@ -189,32 +190,78 @@ function formatAdjustmentPp(value: number | null | undefined) {
   return `${((value ?? 0) * 100).toFixed(2)}%p`;
 }
 
-/** Circular 0-100 conviction gauge — the headline "how strong is this pick" signal. */
-function ScoreGauge({ score, tone, label = "종합점수" }: { score: number; tone: string; label?: string }) {
-  const pct = Math.max(0, Math.min(100, score)) / 100;
-  const radius = 52;
-  const circ = 2 * Math.PI * radius;
-  const dash = circ * pct;
+/**
+ * The headline signal: where the stock ranks among the pool on predicted
+ * next-day return. A rank is a relative comparison, so it is shown as one
+ * instead of a gauge that reads like a probability.
+ */
+function RankSummary({ candidate }: { candidate: AiCandidate }) {
+  const hasRank = candidate.rank > 0 && candidate.poolSize > 1;
+  const topPercent = hasRank ? Math.max(1, Math.round((candidate.rank / candidate.poolSize) * 100)) : null;
 
   return (
-    <div className={`score-gauge score-gauge--${tone}`} role="img" aria-label={`${label} ${Math.round(score)}점`}>
-      <svg viewBox="0 0 120 120">
-        <circle className="score-gauge__track" cx="60" cy="60" r={radius} />
-        <circle
-          className="score-gauge__value"
-          cx="60"
-          cy="60"
-          r={radius}
-          strokeDasharray={`${dash} ${circ - dash}`}
-          strokeDashoffset={circ / 4}
-        />
-      </svg>
-      <div className="score-gauge__center">
-        <strong>{Math.round(score)}</strong>
-        <span>{label}</span>
-      </div>
+    <div className="rank-summary">
+      {hasRank ? (
+        <>
+          <span className="rank-summary__label">예측수익률 순위</span>
+          <strong className="rank-summary__value">
+            {candidate.rank}
+            <small>위</small>
+          </strong>
+          <span className="rank-summary__sub">
+            {candidate.poolSize}종목 중 · 상위 {topPercent}%
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="rank-summary__label">결합 점수</span>
+          <strong className="rank-summary__value">
+            {Math.round(candidate.finalCombinedScore)}
+            <small>/100</small>
+          </strong>
+          <span className="rank-summary__sub">모델·뉴스·수급 합산 · 확률 아님</span>
+        </>
+      )}
     </div>
   );
+}
+
+/**
+ * Donut counts, most authoritative source first: per-article LLM labels, then
+ * the pipeline's LLM tally, and only then the keyword guesses. The caption
+ * names the basis so it never silently disagrees with other numbers.
+ */
+function newsToneCounts(candidate: AiCandidate) {
+  const classified = candidate.news.map(classifyNews);
+  const fromArticles = (basis: string) => {
+    const count = (tone: NewsTone) => classified.filter((item) => item.tone === tone).length;
+    return {
+      positive: count("positive"),
+      neutral: count("neutral"),
+      negative: count("negative"),
+      total: classified.length,
+      basis,
+    };
+  };
+
+  if (classified.length > 0 && classified.every((item) => item.toneSource === "llm")) {
+    return fromArticles(`기사 ${classified.length}건 · LLM 판정`);
+  }
+
+  const parsed = parseSentimentTally(candidate.newsSentimentTally);
+  const parsedTotal = parsed.positive + parsed.neutral + parsed.negative;
+  if (parsedTotal > 0) {
+    const neutral = parsed.neutral + Math.max(candidate.newsCount - parsedTotal, 0);
+    return {
+      positive: parsed.positive,
+      neutral,
+      negative: parsed.negative,
+      total: parsed.positive + neutral + parsed.negative,
+      basis: "LLM 집계 기준",
+    };
+  }
+
+  return fromArticles(`기사 ${classified.length}건 · 키워드 추정`);
 }
 
 function MetricTile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) {
@@ -251,14 +298,10 @@ function ReportKpiCard({
 }
 
 function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
-  const parsed = parseSentimentTally(candidate.newsSentimentTally);
-  const parsedTotal = parsed.positive + parsed.neutral + parsed.negative;
-  const uncategorized = Math.max(candidate.newsCount - parsedTotal, 0);
-  const neutralCount = parsed.neutral + uncategorized;
-  const total = parsed.positive + neutralCount + parsed.negative || candidate.newsCount;
-  const positivePct = total > 0 ? (parsed.positive / total) * 100 : 0;
-  const neutralPct = total > 0 ? (neutralCount / total) * 100 : 0;
-  const negativePct = total > 0 ? (parsed.negative / total) * 100 : 0;
+  const tones = newsToneCounts(candidate);
+  const total = tones.total;
+  const positivePct = total > 0 ? (tones.positive / total) * 100 : 0;
+  const neutralPct = total > 0 ? (tones.neutral / total) * 100 : 0;
   const tone = sentimentTone(candidate.finalSentiment);
   const supplyMaxAbs = Math.max(Math.abs(candidate.foreignNetBuy), Math.abs(candidate.instNetBuy), Math.abs(candidate.totalSupplyNetBuy), 1);
   const supplyDays = candidate.foreignPositiveDays + candidate.instPositiveDays;
@@ -288,7 +331,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
   ];
 
   return (
-    <section className="detail-card report-dashboard reco-reveal" style={{ animationDelay: "240ms" }}>
+    <section className="detail-card report-dashboard reco-reveal" style={{ animationDelay: "80ms" }}>
       <header className="report-dashboard__head">
         <div>
           <h2>AI 근거 리포트 대시보드</h2>
@@ -334,7 +377,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
         <article className="report-chart-card">
           <div className="report-chart-card__head">
             <strong>뉴스 감성 비율</strong>
-            <span>{candidate.finalPredReturn != null ? `본문 ${candidate.newsCount}건` : `${candidate.newsOverallScore.toFixed(1)} / 10`}</span>
+            <span>{tones.basis}</span>
           </div>
           <div className="sentiment-donut-wrap">
             <div
@@ -345,15 +388,15 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
                 }%, var(--news-sentiment-negative) ${positivePct + neutralPct}% 100%)`,
               }}
               role="img"
-              aria-label={`긍정 ${parsed.positive}건, 중립 ${parsed.neutral}건, 부정 ${parsed.negative}건`}
+              aria-label={`긍정 ${tones.positive}건, 중립 ${tones.neutral}건, 부정 ${tones.negative}건`}
             >
-              <span>{candidate.newsCount}</span>
-              <small>뉴스</small>
+              <span>{total}</span>
+              <small>기사</small>
             </div>
             <div className="sentiment-legend">
-              <span><i className="is-positive" />긍정 {parsed.positive}건 · {formatRatio(parsed.positive, total)}</span>
-              <span><i className="is-neutral" />중립 {neutralCount}건 · {formatRatio(neutralCount, total)}</span>
-              <span><i className="is-negative" />부정 {parsed.negative}건 · {formatRatio(parsed.negative, total)}</span>
+              <span><i className="is-positive" />긍정 {tones.positive}건 · {formatRatio(tones.positive, total)}</span>
+              <span><i className="is-neutral" />중립 {tones.neutral}건 · {formatRatio(tones.neutral, total)}</span>
+              <span><i className="is-negative" />부정 {tones.negative}건 · {formatRatio(tones.negative, total)}</span>
             </div>
           </div>
         </article>
@@ -446,21 +489,44 @@ function SupplyRow({
 
 function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
   const tone = sentimentTone(candidate.finalSentiment);
-  const { groups: newsGroups, keywordCount } = groupedNews(candidate.news);
+  const supplyDays = candidate.foreignPositiveDays + candidate.instPositiveDays;
+  const supplyDayTotal = Math.max(candidate.supplyWindow * 2, 1);
+  const { groups: newsGroups, items: newsItems, keywordCount } = groupedNews(candidate.news);
+
+  const renderNewsItem = (item: ClassifiedNews) => (
+    <li key={item.index}>
+      <a className={`ai-news-list__link is-${item.tone}`} href={item.url} target="_blank" rel="noopener noreferrer">
+        <span className="ai-news-list__top">
+          <span className="ai-news-list__title">{item.title}</span>
+          <span
+            className={`ai-news-badge is-${item.tone}`}
+            title={item.toneSource === "keyword" ? "LLM 분석 없이 키워드로 추정한 분류" : undefined}
+          >
+            {item.toneLabel}
+            {item.toneSource === "keyword" ? " · 추정" : null}
+          </span>
+        </span>
+        {item.description ? <span className="ai-news-list__desc">{item.description}</span> : null}
+        {item.toneReason ? <span className="ai-news-list__reason">{item.toneReason}</span> : null}
+        <small className="ai-news-list__meta">
+          {item.source} · {item.pubDate?.slice(0, 10)}
+        </small>
+      </a>
+    </li>
+  );
 
   return (
     <>
-      <section className="detail-card ai-reco reco-reveal" style={{ animationDelay: "40ms" }}>
+      <section className="detail-card ai-reco reco-reveal">
         <div className="ai-reco__head">
-          <span className="ai-reco__eyebrow">왜 이 종목을 추천했나</span>
+          <span className="ai-reco__eyebrow">선정 근거 요약</span>
           <h2>
             AI는 이 종목을 <em className={`tone-${tone}`}>{candidate.finalSentimentKo}</em> 후보로 선정했습니다
           </h2>
         </div>
 
         <div className="reco-grid">
-          <ScoreGauge score={candidate.finalCombinedScore} tone={tone}
-            label={candidate.finalPredReturn != null ? "상대순위" : "종합점수"} />
+          <RankSummary candidate={candidate} />
           <div className="metric-tiles">
             <MetricTile
               label="다음 거래일 예측수익률"
@@ -469,16 +535,17 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
               tone={(candidate.ensemblePredReturn ?? 0) >= 0 ? "is-positive-text" : "is-negative-text"}
             />
             <MetricTile
-              label="전체 예측순위"
-              value={candidate.rank > 0 ? `${candidate.rank}위` : "—"}
-              sub={candidate.poolSize > 0 ? `${candidate.poolSize}개 중` : undefined}
-            />
-            <MetricTile
               label={candidate.finalPredReturn != null ? "뉴스 보정" : "뉴스 점수"}
               value={candidate.finalPredReturn != null
                 ? (candidate.newsApplied ? formatAdjustmentPp(candidate.newsAdjustment) : "미적용")
                 : `${candidate.newsOverallScore.toFixed(1)} / 10`}
               sub={candidate.newsSentimentTally || `뉴스 ${candidate.newsCount}건`}
+            />
+            <MetricTile
+              label="외국인·기관 수급"
+              value={formatEok(candidate.totalSupplyNetBuy)}
+              sub={`매수 우위 ${supplyDays}/${supplyDayTotal}일`}
+              tone={candidate.totalSupplyNetBuy >= 0 ? "is-positive-text" : "is-negative-text"}
             />
           </div>
         </div>
@@ -489,19 +556,27 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
             {[candidate.summary, candidate.tradingInsight].filter(Boolean).join(" ")}
           </p>
         </div>
+
+        <p className="reco-disclaimer">
+          순위는 KOSPI200 종목 사이에서 다음 거래일 예측수익률을 비교한 상대 순위입니다. 상승 확률이나 수익을 뜻하지
+          않으며, 투자 판단과 그 결과의 책임은 투자자 본인에게 있습니다.
+        </p>
       </section>
 
       <EvidenceReportDashboard candidate={candidate} />
 
-      <section className="detail-card reco-reveal" style={{ animationDelay: "440ms" }}>
+      <section className="detail-card reco-reveal" style={{ animationDelay: "160ms" }}>
         <h2>분석에 사용한 뉴스 ({candidate.news.length})</h2>
         {keywordCount > 0 ? (
           <p className="detail-card-sub">
-            {keywordCount === candidate.news.length ? "모든" : `${keywordCount}건의`} 기사는 LLM 분석 결과가 없어 제목·요약의
-            키워드로 긍정·부정을 추정했습니다. "추정" 표시가 붙은 분류는 참고용입니다.
+            {keywordCount === candidate.news.length ? "모든" : `${keywordCount}건의`} 기사는 기사별 LLM 판정이 없어 제목·요약의
+            키워드로 긍정·부정을 추정했습니다. "추정" 배지는 참고용이며 위 감성 비율(LLM 집계)과 다를 수 있습니다.
           </p>
         ) : null}
-        {candidate.news.length > 0 ? (
+        {candidate.news.length > 0 && keywordCount > 0 ? (
+          // Guessed tones aren't authoritative enough to group by: list in source order.
+          <ul className="ai-news-list ai-news-list--flat">{newsItems.map(renderNewsItem)}</ul>
+        ) : candidate.news.length > 0 ? (
           <div className="ai-news-groups">
             {newsGroups.map((group) => (
               <section className={`ai-news-group ai-news-group--${group.tone}`} key={group.tone}>
@@ -509,29 +584,7 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
                   <strong>{group.label}</strong>
                   <span>{group.items.length}건</span>
                 </div>
-                <ul className="ai-news-list">
-                  {group.items.map((item) => (
-                    <li key={`${group.tone}-${item.index}`}>
-                      <a className={`ai-news-list__link is-${item.tone}`} href={item.url} target="_blank" rel="noopener noreferrer">
-                        <span className="ai-news-list__top">
-                          <span className="ai-news-list__title">{item.title}</span>
-                          <span
-                            className={`ai-news-badge is-${item.tone}`}
-                            title={item.toneSource === "keyword" ? "LLM 분석 없이 키워드로 추정한 분류" : undefined}
-                          >
-                            {item.toneLabel}
-                            {item.toneSource === "keyword" ? " · 추정" : null}
-                          </span>
-                        </span>
-                        {item.description ? <span className="ai-news-list__desc">{item.description}</span> : null}
-                        {item.toneReason ? <span className="ai-news-list__reason">{item.toneReason}</span> : null}
-                        <small className="ai-news-list__meta">
-                          {item.source} · {item.pubDate?.slice(0, 10)}
-                        </small>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <ul className="ai-news-list">{group.items.map(renderNewsItem)}</ul>
               </section>
             ))}
           </div>
@@ -619,21 +672,24 @@ export function StockDetailPage() {
 
   if (!candidate && !stock) {
     return (
-      <main className="page-status">
-        <div className="status-view">
-          <strong>분석 데이터가 없습니다</strong>
-          <p>종목코드 {normalized || "(없음)"}에 대한 AI 분석 결과를 찾을 수 없습니다.</p>
-        </div>
-        <p className="detail-back-row">
-          <Link className="detail-back-link" to="/dashboard">
-            ← 실시간 대시보드로 돌아가기
-          </Link>
-        </p>
-      </main>
+      <>
+        <MarketTopBar stocks={dashboard.stocks} />
+        <main className="page-status">
+          <div className="status-view">
+            <strong>분석 데이터가 없습니다</strong>
+            <p>종목코드 {normalized || "(없음)"}에 대한 시세나 AI 분석 결과를 찾을 수 없습니다.</p>
+            <Link className="detail-back-link" to="/dashboard">
+              ← 대시보드로 돌아가기
+            </Link>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
+    <>
+    <MarketTopBar stocks={dashboard.stocks} />
     <main className="stock-detail-page">
       <div className="detail-back-row">
         <Link className="detail-back-link" to="/dashboard">
@@ -646,7 +702,7 @@ export function StockDetailPage() {
 
       <header className="detail-hero">
         <div className="detail-hero__id">
-          <span className="detail-hero__eyebrow">AI 추천 종목 리포트</span>
+          <span className="detail-hero__eyebrow">AI 후보 리포트</span>
           <h1>
             {displayName} <small>{normalized}</small>
           </h1>
@@ -665,27 +721,27 @@ export function StockDetailPage() {
         </button>
       </header>
 
-      {candidate ? (
-        <AiRecommendation candidate={candidate} />
-      ) : (
-        <section className="detail-card">
-          <p className="factor-empty">이 종목의 AI 분석 결과가 아직 없습니다.</p>
-        </section>
-      )}
-
       {stock ? (
-        <section className="detail-card reco-reveal" style={{ animationDelay: "440ms" }}>
+        <section className="detail-card">
           <h2>가격 차트</h2>
           <StockChartPanel stock={stock} />
         </section>
       ) : null}
+
+      {candidate ? (
+        <AiRecommendation candidate={candidate} />
+      ) : (
+        <section className="detail-card">
+          <p className="factor-empty">이 종목은 이번 AI 분석의 후보에 포함되지 않았습니다.</p>
+        </section>
+      )}
 
       <footer className="detail-sources">
         <h2>데이터 출처 및 유의사항</h2>
         <ul>
           <li>다음 거래일 시가→종가 예측수익률·순위: Huber 회귀 앙상블{candidate?.baseDate ? ` (기준일 ${candidate.baseDate})` : ""}.</li>
           <li>수급(외국인·기관 순매수): 최근 거래일 누적 순매수 금액.</li>
-          <li>뉴스·감성 점수: 네이버 뉴스 + Gemini 구조화 분석(integrated_pipeline.py · step3).</li>
+          <li>뉴스·감성: 네이버 뉴스 기사를 Gemini로 구조화 분석한 결과. LLM 결과가 없는 기사는 키워드로 추정합니다.</li>
         </ul>
         <p className="panel-note">
           현재 시세는 KIS quote API를 우선 조회하며, 조회 실패 시 최근 대시보드 캐시를 표시합니다. 본 리포트는
@@ -693,5 +749,6 @@ export function StockDetailPage() {
         </p>
       </footer>
     </main>
+    </>
   );
 }

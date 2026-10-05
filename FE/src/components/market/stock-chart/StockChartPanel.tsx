@@ -131,9 +131,6 @@ export function StockChartPanel({ stock }: StockChartPanelProps) {
       <StockPriceHeader
         changeAmount={performance.changeAmount}
         changeRate={performance.changeRate}
-        code={bundle.chartData.code}
-        currentPrice={bundle.chartData.currentPrice}
-        name={bundle.chartData.name}
         performanceLabel={performance.label}
         tone={tone}
       />

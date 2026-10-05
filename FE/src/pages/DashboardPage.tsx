@@ -35,7 +35,7 @@ function describeAnalysisStatus(status: CandidateAnalysisStatus, fallbackStarted
     return `${status.progress.message} · ${status.progress.progressPercent}% · ${elapsed}`;
   }
 
-  return `integrated_pipeline.py 실행 중… ${elapsed}`;
+  return `AI 후보 분석 실행 중… ${elapsed}`;
 }
 
 /** A pipeline row is "real" output (vs the bundled fallback) when it carries a transformer rank. */
@@ -202,7 +202,7 @@ export function DashboardPage() {
     setAnalysisStatus(undefined);
 
     const startedAt = Date.now();
-    setAnalysisMessage(`integrated_pipeline.py 실행 중… ${elapsedLabel(startedAt)}`);
+    setAnalysisMessage(`AI 후보 분석 실행 중… ${elapsedLabel(startedAt)}`);
 
     try {
       const result = await runCandidateAnalysis(undefined, (status) => {

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { MarketDashboardData, StockQuote } from "../../types/trading";
 import { readWatchlistCodes, writeWatchlistCodes } from "../../services/tradingData";
 import type { CandidateAnalysisProgress, DashboardDataSource } from "../../services/tradingData";
 import { AnalysisResults } from "./AnalysisResults";
+import { MarketTopBar, marketNavItems } from "./MarketTopBar";
 
 type AnalysisPhase = "idle" | "running" | "done";
 
@@ -24,11 +25,6 @@ export type DashboardCandidateAnalysisStatus = {
   onRun: () => void;
   progress?: CandidateAnalysisProgress;
 };
-
-const navItems = [
-  { id: "market-home", label: "홈" },
-  { id: "market-table", label: "AI 후보" },
-] as const;
 
 function formatWon(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
@@ -218,146 +214,6 @@ function buildMarketRegime(index: IndexSnapshot): MarketRegimeView {
     score,
     tone: "neutral",
   };
-}
-
-function normalizeSearch(value: string) {
-  return value.replace(/\s+/g, "").toLowerCase();
-}
-
-function MarketTopBar({
-  activeSection,
-  isSearchExpanded,
-  isSearchOpen,
-  query,
-  searchResults,
-  onClearSearch,
-  onDismissSearch,
-  onNavigate,
-  onQueryChange,
-  onSearchFocus,
-  onSearchSubmit,
-  onSelectSearchResult,
-  onToggleSearch,
-}: {
-  activeSection: string;
-  /** Narrow screens only: the search field is revealed by the toggle button. */
-  isSearchExpanded: boolean;
-  isSearchOpen: boolean;
-  query: string;
-  searchResults: StockQuote[];
-  onClearSearch: () => void;
-  onDismissSearch: () => void;
-  onNavigate: (sectionId: string) => void;
-  onQueryChange: (value: string) => void;
-  onSearchFocus: () => void;
-  onSearchSubmit: () => void;
-  onSelectSearchResult: (stock: StockQuote) => void;
-  onToggleSearch: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isSearchExpanded) {
-      inputRef.current?.focus();
-    }
-  }, [isSearchExpanded]);
-
-  return (
-    <header className={`market-topbar ${isSearchExpanded ? "market-topbar--search-open" : ""}`}>
-      <Link className="market-brand" to="/" aria-label="KOSPI AI Trading Desk 홈">
-        <span className="market-brand__mark" aria-hidden="true">
-          <svg viewBox="0 0 28 28" focusable="false">
-            <path d="M6 19.5L11 14l4 3.5 7-9" />
-            <circle cx="6" cy="19.5" r="1.6" />
-            <circle cx="11" cy="14" r="1.6" />
-            <circle cx="15" cy="17.5" r="1.6" />
-            <circle cx="22" cy="8.5" r="1.6" />
-          </svg>
-        </span>
-        <strong>KOSPI AI Trading Desk</strong>
-      </Link>
-      <nav className="market-tabs" aria-label="주요 메뉴">
-        {navItems.map((item) => (
-          <a
-            aria-current={activeSection === item.id ? "page" : undefined}
-            href={`#${item.id}`}
-            key={item.id}
-            onClick={(event) => {
-              event.preventDefault();
-              onNavigate(item.id);
-            }}
-          >
-            {item.label}
-          </a>
-        ))}
-      </nav>
-      <button
-        aria-controls="market-search"
-        aria-expanded={isSearchExpanded}
-        aria-label={isSearchExpanded ? "종목 검색 닫기" : "종목 검색 열기"}
-        className="market-search-toggle"
-        onClick={onToggleSearch}
-        type="button"
-      >
-        <span aria-hidden="true">{isSearchExpanded ? "×" : "⌕"}</span>
-      </button>
-      <div className="market-search-wrap" id="market-search">
-        <form
-          className="market-search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSearchSubmit();
-          }}
-          role="search"
-        >
-          <span aria-hidden="true">⌕</span>
-          <input
-            aria-label="국내 종목 검색"
-            autoComplete="off"
-            onChange={(event) => onQueryChange(event.target.value)}
-            onFocus={onSearchFocus}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                onDismissSearch();
-              }
-            }}
-            placeholder="종목명 또는 종목코드 검색"
-            ref={inputRef}
-            type="search"
-            value={query}
-          />
-          {query ? (
-            <button className="search-clear" onClick={onClearSearch} type="button" aria-label="검색어 지우기">
-              ×
-            </button>
-          ) : null}
-        </form>
-        {query && isSearchOpen ? (
-          <div className="search-results" role="listbox" aria-label="종목 검색 결과">
-            {searchResults.length > 0 ? (
-              searchResults.slice(0, 6).map((stock) => (
-                <button
-                  className="search-result-button"
-                  key={stock.code}
-                  onClick={() => onSelectSearchResult(stock)}
-                  role="option"
-                  type="button"
-                >
-                  <span>{stock.name}</span>
-                  <strong>{stock.code}</strong>
-                  <small className={`market-change market-change--${stock.direction}`}>
-                    {formatRate(stock.changeRate)}
-                  </small>
-                </button>
-              ))
-            ) : (
-              <p className="search-empty">일치하는 KOSPI 종목이 없습니다.</p>
-            )}
-          </div>
-        ) : null}
-      </div>
-    </header>
-  );
 }
 
 function IndexCard({ index, isLive }: { index: IndexSnapshot; isLive: boolean }) {
@@ -782,10 +638,7 @@ export function MarketWorkspace({
 }) {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("market-home");
-  const [isSearchOpen, setSearchOpen] = useState(false);
-  const [isSearchExpanded, setSearchExpanded] = useState(false);
   const [isWatchRailOpen, setWatchRailOpen] = useState(true);
-  const [query, setQuery] = useState("");
   const [selectedCode, setSelectedCode] = useState(data.focusedStockCode);
   // The persisted watchlist survives reloads; the server's default list only
   // seeds first-time visitors (or storage-unavailable sessions).
@@ -798,19 +651,6 @@ export function MarketWorkspace({
   }, [watchCodes]);
 
   const selectedStock = data.stocks.find((stock) => stock.code === selectedCode) ?? data.stocks[0] ?? data.watchlist[0];
-  const normalizedQuery = normalizeSearch(query);
-
-  const searchResults = useMemo(() => {
-    if (!normalizedQuery) {
-      return [];
-    }
-
-    return data.stocks.filter((stock) => {
-      const searchable = normalizeSearch(`${stock.name}${stock.code}`);
-      return searchable.includes(normalizedQuery);
-    });
-  }, [data.stocks, normalizedQuery]);
-
   const watchlist = useMemo(
     () =>
       watchCodes
@@ -830,7 +670,7 @@ export function MarketWorkspace({
   // mount, after the workspace and its section anchors have rendered.
   useEffect(() => {
     const sectionId = window.location.hash.replace(/^#/, "");
-    if (!sectionId || !navItems.some((item) => item.id === sectionId)) {
+    if (!sectionId || !marketNavItems.some((item) => item.id === sectionId)) {
       return;
     }
 
@@ -843,17 +683,11 @@ export function MarketWorkspace({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Clicking any stock (results, watchlist, search) navigates to its dedicated
-  // analysis page (/stock/:code). We still track the selected code so the
-  // watchlist highlight stays in sync if the user returns to the dashboard.
-  function selectStock(stock: StockQuote, syncSearch = false) {
+  // Clicking any stock (results, watchlist) navigates to its dedicated analysis
+  // page (/stock/:code). We still track the selected code so the watchlist
+  // highlight stays in sync.
+  function selectStock(stock: StockQuote) {
     setSelectedCode(stock.code);
-
-    if (syncSearch) {
-      setQuery(`${stock.name} ${stock.code}`);
-      setSearchOpen(false);
-    }
-
     navigate(`/stock/${stock.code}`);
   }
 
@@ -871,41 +705,9 @@ export function MarketWorkspace({
     setWatchCodes((current) => current.filter((item) => item !== code));
   }
 
-  function submitSearch() {
-    if (searchResults[0]) {
-      selectStock(searchResults[0], true);
-    }
-  }
-
   return (
     <div className="market-workspace">
-      <MarketTopBar
-        activeSection={activeSection}
-        isSearchExpanded={isSearchExpanded}
-        isSearchOpen={isSearchOpen}
-        onClearSearch={() => {
-          setQuery("");
-          setSearchOpen(false);
-        }}
-        onDismissSearch={() => {
-          setSearchOpen(false);
-          setSearchExpanded(false);
-        }}
-        onNavigate={navigateTo}
-        onQueryChange={(value) => {
-          setQuery(value);
-          setSearchOpen(true);
-        }}
-        onSearchFocus={() => setSearchOpen(true)}
-        onSearchSubmit={submitSearch}
-        onSelectSearchResult={(stock) => selectStock(stock, true)}
-        onToggleSearch={() => {
-          setSearchExpanded((value) => !value);
-          setSearchOpen(false);
-        }}
-        query={query}
-        searchResults={searchResults}
-      />
+      <MarketTopBar activeSection={activeSection} onNavigate={navigateTo} stocks={data.stocks} />
       <main className={`market-shell ${isWatchRailOpen ? "" : "market-shell--watch-collapsed"}`}>
         <div className="market-main">
           <MarketOverview
