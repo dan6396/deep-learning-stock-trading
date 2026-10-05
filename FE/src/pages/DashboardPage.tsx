@@ -6,13 +6,13 @@ import {
   fetchMarketIndicesData,
   fetchMarketDashboardData,
   fetchPipelineCandidates,
-  getMarketDashboardData,
+  getMarketDashboardSnapshot,
   mergeMarketIndices,
   runCandidateAnalysis,
 } from "../services/tradingData";
 import { overlayLiveAnalysis } from "../data/pipelineAdapter";
-import type { CandidateAnalysisStatus } from "../services/tradingData";
-import type { MarketDashboardData, PipelineOutputRow } from "../types/trading";
+import type { CandidateAnalysisStatus, DashboardDataSource } from "../services/tradingData";
+import type { MarketDashboardData, MarketIndexSnapshot, PipelineOutputRow } from "../types/trading";
 
 type AnalysisPhase = "idle" | "running" | "done";
 
@@ -86,10 +86,15 @@ export function DashboardPage() {
 
     return readCachedAnalysisRows();
   });
-  const [data, setData] = useState<MarketDashboardData>(() => {
-    const base = getMarketDashboardData();
-    return cachedRows ? overlayLiveAnalysis(base, cachedRows) : base;
-  });
+  const [initialSnapshot] = useState(getMarketDashboardSnapshot);
+  const [data, setData] = useState<MarketDashboardData>(() =>
+    cachedRows ? overlayLiveAnalysis(initialSnapshot.data, cachedRows) : initialSnapshot.data,
+  );
+  const [dataSource, setDataSource] = useState<DashboardDataSource>(initialSnapshot.source);
+  // Live index snapshots fetched this session; re-applied whenever the board
+  // resets to a stored snapshot so the index card doesn't regress to stale values.
+  const liveIndicesRef = useRef<MarketIndexSnapshot[]>([]);
+  const [hasLiveIndices, setHasLiveIndices] = useState(false);
   const [analysisPhase, setAnalysisPhase] = useState<AnalysisPhase>(cachedRows ? "done" : "idle");
   const [isAnalysisRunning, setAnalysisRunning] = useState(false);
   const [analysisMessage, setAnalysisMessage] = useState<string | undefined>(
@@ -114,6 +119,8 @@ export function DashboardPage() {
 
     fetchMarketIndicesData(controller.signal)
       .then((indices) => {
+        liveIndicesRef.current = indices;
+        setHasLiveIndices(indices.length > 0);
         setData((current) => mergeMarketIndices(current, indices));
       })
       .catch((error) => {
@@ -127,6 +134,13 @@ export function DashboardPage() {
 
     return () => controller.abort();
   }, []);
+
+  /** Resets the board to the latest stored snapshot (dropping any analysis overlay). */
+  function resetToSnapshot() {
+    const snapshot = getMarketDashboardSnapshot();
+    setDataSource(snapshot.source);
+    setData(mergeMarketIndices(snapshot.data, liveIndicesRef.current));
+  }
 
   /** Loads the freshly generated outputs and reveals the board. Returns true on success. */
   async function revealResults(note: string): Promise<boolean> {
@@ -153,13 +167,19 @@ export function DashboardPage() {
     setAnalysisMessage(undefined);
     setAnalysisErrorMessage(undefined);
     setAnalysisStatus(undefined);
-    setData(getMarketDashboardData());
+    resetToSnapshot();
 
     setRefreshing(true);
     setRefreshErrorMessage(undefined);
     try {
       const refreshed = await fetchMarketDashboardData();
-      setData(refreshed);
+      if (refreshed.liveIndices.length > 0) {
+        liveIndicesRef.current = refreshed.liveIndices;
+        setHasLiveIndices(true);
+      }
+      setData(refreshed.data);
+      setDataSource(refreshed.source);
+      setRefreshErrorMessage(refreshed.errorMessage);
     } catch (cause) {
       setRefreshErrorMessage(cause instanceof Error ? cause.message : "대시보드 새로고침에 실패했습니다.");
     } finally {
@@ -175,7 +195,7 @@ export function DashboardPage() {
     const runId = analysisRunRef.current + 1;
     analysisRunRef.current = runId;
     clearCachedAnalysisRows();
-    setData(getMarketDashboardData());
+    resetToSnapshot();
     setAnalysisRunning(true);
     setAnalysisPhase("running");
     setAnalysisErrorMessage(undefined);
@@ -236,7 +256,9 @@ export function DashboardPage() {
         progress: analysisStatus?.progress,
       }}
       syncStatus={{
+        dataSource,
         errorMessage: refreshErrorMessage,
+        hasLiveIndices,
         isRefreshing,
         onRefresh: handleRefreshDashboard,
       }}

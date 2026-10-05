@@ -87,6 +87,8 @@ export type Candidate = {
 export type LandingData = {
   marketSummary: MarketSummary;
   candidates: Candidate[];
+  /** True when the pipeline API was unavailable and bundled sample output is shown. */
+  isSample?: boolean;
 };
 
 export type MarketDirection = "up" | "down" | "flat";

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { MarketDashboardData, StockQuote } from "../../types/trading";
 import { readWatchlistCodes, writeWatchlistCodes } from "../../services/tradingData";
-import type { CandidateAnalysisProgress } from "../../services/tradingData";
+import type { CandidateAnalysisProgress, DashboardDataSource } from "../../services/tradingData";
 import { describeAiSummary } from "../../utils/aiSignal";
 import { AnalysisResults } from "./AnalysisResults";
 
@@ -19,7 +19,10 @@ const MAX_PAGE_COUNT = 20;
 const PAGE_SIZE = 10;
 
 export type DashboardSyncStatus = {
+  dataSource: DashboardDataSource;
   errorMessage?: string;
+  /** Index values were fetched live this session, even if stocks are a snapshot. */
+  hasLiveIndices: boolean;
   isRefreshing: boolean;
   onRefresh: () => void;
 };
@@ -35,7 +38,7 @@ export type DashboardCandidateAnalysisStatus = {
 
 const navItems = [
   { id: "market-home", label: "홈" },
-  { id: "market-table", label: "주식 골라보기" },
+  { id: "market-table", label: "AI 후보" },
 ] as const;
 
 const boardFilterOptions: Array<{ value: MarketFilter; label: string }> = [
@@ -113,6 +116,30 @@ function buildSmoothPath(points: Array<{ x: number; y: number }>) {
   return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)} ${segments.join(" ")}`;
 }
 
+type IndexSnapshot = MarketDashboardData["indices"][number];
+
+/**
+ * The index history series when it's on the same scale as the current value.
+ * Otherwise (bundled sample shapes, failed history fetch) fall back to just
+ * previous close → now, rather than drawing a fabricated intraday path.
+ */
+function resolveIndexSeries(index: IndexSnapshot): { fromHistory: boolean; values: number[] } {
+  const series = index.miniSeries;
+  const last = series[series.length - 1];
+  const onScale =
+    series.length > 1 &&
+    last !== undefined &&
+    index.value > 0 &&
+    series.every((value) => Number.isFinite(value) && value > index.value * 0.5 && value < index.value * 1.5) &&
+    Math.abs(last - index.value) / index.value <= 0.05;
+
+  if (onScale) {
+    return { fromHistory: true, values: series };
+  }
+
+  return { fromHistory: false, values: [index.value - index.change, index.value] };
+}
+
 function buildIndexChartGeometry(
   series: number[],
   direction: MarketDashboardData["indices"][number]["direction"],
@@ -188,8 +215,8 @@ function describeTrend(changeRate: number, slope: number) {
   return "단기 추세 혼조";
 }
 
-function buildMarketRegime(index: MarketDashboardData["indices"][number]): MarketRegimeView {
-  const series = index.miniSeries.length > 1 ? index.miniSeries : [index.value - index.change, index.value];
+function buildMarketRegime(index: IndexSnapshot): MarketRegimeView {
+  const series = resolveIndexSeries(index).values;
   const slope = normalizedSeriesSlope(series);
   const previousValue = index.value - index.change;
   const valueChangeRate = percentChange(previousValue, index.value);
@@ -393,23 +420,23 @@ function MarketTopBar({
   );
 }
 
-function IndexCard({ index }: { index: MarketDashboardData["indices"][number] }) {
+function IndexCard({ index, isLive }: { index: IndexSnapshot; isLive: boolean }) {
+  const series = useMemo(() => resolveIndexSeries(index), [index]);
   const chart = useMemo(
-    () => buildIndexChartGeometry(index.miniSeries, index.direction, index.value),
-    [index.direction, index.miniSeries, index.value],
+    () => buildIndexChartGeometry(series.values, index.direction, index.value),
+    [index.direction, index.value, series.values],
   );
   const gradientKey = index.symbol.replace(/[^a-z0-9]/gi, "").toLowerCase();
   const areaGradientId = `index-area-${gradientKey}`;
   const lineGradientId = `index-line-${gradientKey}`;
-  const previousValue = index.value - index.change;
-  const chartStartValue = index.miniSeries[0] ?? previousValue;
+  const chartStartValue = series.values[0] ?? index.value - index.change;
 
   return (
     <article className={`index-card index-card--${index.direction}`}>
       <div className="index-card__title">
         <span>
           대표 지수
-          <em>KIS INDEX</em>
+          <em>{isLive ? "KIS INDEX" : "샘플"}</em>
         </span>
         <strong>{index.value.toLocaleString("ko-KR")}</strong>
       </div>
@@ -441,18 +468,20 @@ function IndexCard({ index }: { index: MarketDashboardData["indices"][number] })
           <path className="index-card__line" d={chart.linePath} stroke={`url(#${lineGradientId})`} />
         </svg>
         <div className="index-card__chart-labels" aria-hidden="true">
-          <span>Start {chartStartValue.toLocaleString("ko-KR")}</span>
-          <span>Now {index.value.toLocaleString("ko-KR")}</span>
+          <span>
+            {series.fromHistory ? "시작" : "전일 종가"} {chartStartValue.toLocaleString("ko-KR")}
+          </span>
+          <span>현재 {index.value.toLocaleString("ko-KR")}</span>
         </div>
       </div>
       <p className="index-card__caption">
-        KIS 현재값 · 최근 일봉 흐름
+        {isLive ? "KIS 현재값" : "샘플 지수"} · {series.fromHistory ? "최근 일봉 흐름" : "전일 종가 대비 (일봉 시계열 없음)"}
       </p>
     </article>
   );
 }
 
-function MarketRegimeCard({ index }: { index: MarketDashboardData["indices"][number] }) {
+function MarketRegimeCard({ index, isLive }: { index: IndexSnapshot; isLive: boolean }) {
   const regime = buildMarketRegime(index);
 
   return (
@@ -462,7 +491,7 @@ function MarketRegimeCard({ index }: { index: MarketDashboardData["indices"][num
           <span>KOSPI 시장 국면</span>
           <strong>{regime.label}</strong>
         </div>
-        <em>KIS INDEX</em>
+        <em>{isLive ? "KIS INDEX" : "샘플"}</em>
       </div>
 
       <div className="regime-card__action">
@@ -496,20 +525,29 @@ function MarketOverview({
 }) {
   const featuredIndices = data.indices.filter((index) => index.symbol === "KOSPI200");
   const indices = featuredIndices.length > 0 ? featuredIndices : data.indices.slice(0, 1);
+  const indicesLive = syncStatus.dataSource === "live" || syncStatus.hasLiveIndices;
   const syncLabel = syncStatus.isRefreshing
     ? "KIS 동기화 중"
-    : syncStatus.errorMessage
-      ? "기본 데이터 표시 중"
-      : "KIS 동기화 완료";
+    : syncStatus.dataSource === "live"
+      ? "KIS 실시간 시세"
+      : syncStatus.dataSource === "cache"
+        ? "이 기기의 최근 동기화 시세"
+        : "샘플 데이터";
+  const scopeNote =
+    syncStatus.dataSource === "live"
+      ? "한국시장 전용 · 종목·지수 KIS 시세"
+      : indicesLive
+        ? "한국시장 전용 · 지수만 KIS 실시간, 종목 시세는 새로고침 필요"
+        : "한국시장 전용 · 새로고침하면 KIS 시세를 불러옵니다";
 
   return (
     <section className="market-overview" id="market-home">
       <div className="session-row">
         <span className="session-dot" aria-hidden="true" />
         <span>{data.sessionLabel}</span>
-        <span className="session-muted">한국시장 전용 · 현재가/지수 KIS 연동</span>
+        <span className="session-muted">{scopeNote}</span>
         <span
-          className={`session-sync ${syncStatus.errorMessage ? "session-sync--warning" : ""}`}
+          className={`session-sync ${syncStatus.dataSource !== "live" && !syncStatus.isRefreshing ? "session-sync--warning" : ""}`}
           role="status"
           aria-live="polite"
         >
@@ -539,17 +577,17 @@ function MarketOverview({
         ) : null}
         {syncStatus.errorMessage ? (
           <span className="session-error" title={syncStatus.errorMessage}>
-            실시간 시세를 불러오지 못해 최근 기준 데이터를 표시합니다.
+            실시간 시세를 불러오지 못해 {syncStatus.dataSource === "sample" ? "샘플" : "이 기기의 최근 동기화"} 데이터를 표시합니다.
           </span>
         ) : null}
       </div>
 
       <div className="overview-grid">
-        <MarketRegimeCard index={indices[0]} />
+        <MarketRegimeCard index={indices[0]} isLive={indicesLive} />
 
         <div className="index-grid">
           {indices.map((index) => (
-            <IndexCard index={index} key={index.symbol} />
+            <IndexCard index={index} isLive={indicesLive} key={index.symbol} />
           ))}
         </div>
 
@@ -939,59 +977,75 @@ const analysisStages = [
 
 /**
  * Gates the stock list behind the AI analysis action. Before analysis it shows a
- * clear call to action; while running it shows scanning motion; once done the
- * caller swaps in the real table.
+ * clear call to action; while running it shows only the progress the server has
+ * actually reported; once done the caller swaps in the real results.
  */
 function AnalysisGate({
+  elapsedMs,
   isRunning,
   onRun,
   phase,
   progress,
 }: {
+  elapsedMs?: number;
   isRunning: boolean;
   onRun: () => void;
   phase: "idle" | "running" | "done";
   progress?: CandidateAnalysisProgress;
 }) {
-  const [stage, setStage] = useState(0);
-
-  useEffect(() => {
-    if (phase !== "running") {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setStage((current) => (current + 1) % analysisStages.length);
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [phase]);
-
   if (phase === "running") {
-    const activeStage = progress?.stageIndex ?? stage;
-    const progressPercent = progress?.progressPercent ?? Math.min(94, Math.round(((stage + 1) / analysisStages.length) * 100));
-    const stageMessage = progress?.message ?? `${analysisStages[stage]}…`;
+    // Without a server progress report we don't know the stage, so show an
+    // indeterminate bar instead of inventing a percentage.
+    const progressPercent = progress ? clamp(Math.round(progress.progressPercent), 0, 100) : undefined;
+    const activeStage = progress?.stageIndex;
+    const elapsedText = elapsedMs !== undefined ? ` · ${Math.floor(elapsedMs / 60000)}분 ${String(Math.floor(elapsedMs / 1000) % 60).padStart(2, "0")}초 경과` : "";
 
     return (
-      <section className="analysis-gate analysis-gate--running" aria-live="polite" aria-busy="true">
+      <section className="analysis-gate analysis-gate--running" aria-busy="true">
         <div className="gate-scan" aria-hidden="true">
           <span />
           <span />
           <span />
         </div>
         <p className="gate-title">AI가 후보 종목을 분석하고 있습니다</p>
-        <p className="gate-stage" key={progress?.updatedAt ?? stage}>
-          {stageMessage}
+        <p className="gate-stage" key={progress?.updatedAt ?? "pending"}>
+          {progress?.message ?? "진행 단계 정보를 기다리는 중입니다"}
+          {elapsedText}
         </p>
-        <div className="gate-progress" role="status" aria-label={`분석 진행률 ${progressPercent}%`}>
-          <i style={{ width: `${progressPercent}%` }} />
-          <span>{progressPercent}%</span>
-        </div>
-        <ol className="gate-steps">
-          {analysisStages.map((label, index) => (
-            <li key={label} className={index < activeStage ? "is-done" : index === activeStage ? "is-active" : "is-pending"}>
-              <span aria-hidden="true" />
-              {label.replace(/하는 중$/, "")}
-            </li>
-          ))}
+        {progressPercent !== undefined ? (
+          <div
+            className="gate-progress"
+            role="progressbar"
+            aria-label="분석 진행률"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercent}
+          >
+            <i style={{ width: `${progressPercent}%` }} />
+            <span>{progressPercent}%</span>
+          </div>
+        ) : (
+          <div className="gate-progress gate-progress--indeterminate" role="progressbar" aria-label="분석 진행 중, 진행률 미확인">
+            <i />
+          </div>
+        )}
+        <ol className="gate-steps" aria-label="분석 단계">
+          {analysisStages.map((label, index) => {
+            const state =
+              activeStage === undefined
+                ? "is-pending"
+                : index < activeStage
+                  ? "is-done"
+                  : index === activeStage
+                    ? "is-active"
+                    : "is-pending";
+            return (
+              <li key={label} className={state} aria-current={state === "is-active" ? "step" : undefined}>
+                <span aria-hidden="true" />
+                {label}
+              </li>
+            );
+          })}
         </ol>
       </section>
     );
@@ -1232,18 +1286,23 @@ export function MarketWorkspace({
             data={data}
             syncStatus={syncStatus}
           />
-          {analysisPhase === "done" ? (
-            <div className="market-content-grid">
-              <AnalysisResults stocks={data.stocks} onSelect={(stock) => selectStock(stock)} />
-            </div>
-          ) : (
-            <AnalysisGate
-              phase={analysisPhase}
-              isRunning={candidateAnalysis.isRunning}
-              onRun={candidateAnalysis.onRun}
-              progress={candidateAnalysis.progress}
-            />
-          )}
+          {/* Stable anchor for the "AI 후보" tab and /dashboard#market-table deep
+              links: it exists both before analysis (gate) and after (results). */}
+          <div id="market-table">
+            {analysisPhase === "done" ? (
+              <div className="market-content-grid">
+                <AnalysisResults stocks={data.stocks} onSelect={(stock) => selectStock(stock)} />
+              </div>
+            ) : (
+              <AnalysisGate
+                elapsedMs={candidateAnalysis.elapsedMs}
+                phase={analysisPhase}
+                isRunning={candidateAnalysis.isRunning}
+                onRun={candidateAnalysis.onRun}
+                progress={candidateAnalysis.progress}
+              />
+            )}
+          </div>
         </div>
         <WatchlistRail
           isOpen={isWatchRailOpen}

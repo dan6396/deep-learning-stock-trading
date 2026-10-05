@@ -20,10 +20,10 @@ export function HeroDashboardPreview({ data }: HeroDashboardPreviewProps) {
     <section className="dashboard-preview" aria-label="AI 자동매매 대시보드 미리보기">
       <div className="dashboard-preview__header">
         <div>
-          <p className="dashboard-kicker">Today Market State</p>
+          <p className="dashboard-kicker">{data.isSample ? "Sample Output · 샘플 데이터" : "Today Market State"}</p>
           <h2>{marketSummary.marketState}</h2>
         </div>
-        <span className="status-pill">Risk {marketSummary.riskState}</span>
+        <span className="status-pill">{data.isSample ? "샘플" : `Risk ${marketSummary.riskState}`}</span>
       </div>
 
       <div className="metric-grid">

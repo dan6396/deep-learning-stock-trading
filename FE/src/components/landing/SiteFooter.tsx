@@ -9,7 +9,7 @@ const sectionLinks: Array<{ label: string; href: string }> = [
 
 const dashboardLinks: Array<{ label: string; to: string }> = [
   { label: "시장 보드", to: "/dashboard#market-home" },
-  { label: "종목 골라보기", to: "/dashboard#market-table" },
+  { label: "AI 후보", to: "/dashboard#market-table" },
 ];
 
 export function SiteFooter() {

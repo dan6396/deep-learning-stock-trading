@@ -149,7 +149,7 @@ export function normalizePipelineResults(rows: PipelineOutputRow[]): LandingData
 }
 
 export function getLandingData(): LandingData {
-  return normalizePipelineResults(mockPipelineResults);
+  return { ...normalizePipelineResults(mockPipelineResults), isSample: true };
 }
 
 /**
@@ -157,7 +157,8 @@ export function getLandingData(): LandingData {
  * Bump the version if `MarketDashboardData` changes shape so stale payloads from
  * an older build are ignored rather than rendered with missing fields.
  */
-const DASHBOARD_CACHE_KEY = "kospi-dashboard-cache.v1";
+// v2: v1 payloads could contain bundled sample stocks merged with live indices.
+const DASHBOARD_CACHE_KEY = "kospi-dashboard-cache.v2";
 
 function getLocalStorage(): Storage | null {
   try {
@@ -222,6 +223,17 @@ export function getMarketDashboardData(): MarketDashboardData {
   return readCachedMarketDashboardData() ?? mockMarketDashboard;
 }
 
+/**
+ * Where the rendered dashboard stocks came from: a sync in this session, the
+ * last successful sync persisted on this device, or the bundled sample.
+ */
+export type DashboardDataSource = "live" | "cache" | "sample";
+
+export function getMarketDashboardSnapshot(): { data: MarketDashboardData; source: DashboardDataSource } {
+  const cached = readCachedMarketDashboardData();
+  return cached ? { data: cached, source: "cache" } : { data: mockMarketDashboard, source: "sample" };
+}
+
 export function mergeMarketIndices(
   data: MarketDashboardData,
   indices: MarketIndexSnapshot[],
@@ -248,14 +260,12 @@ export function mergeMarketIndices(
     }
   }
 
-  const next = {
+  // Pure merge: only a full live sync may persist to the cache, otherwise a
+  // sample/cached stock list would be saved as if it were freshly synced.
+  return {
     ...data,
-    generatedAt: new Date().toISOString(),
     indices: mergedIndices,
   };
-
-  writeCachedMarketDashboardData(next);
-  return next;
 }
 
 /** localStorage key for the user's watchlist codes. */
@@ -449,7 +459,7 @@ export async function fetchLandingData(signal?: AbortSignal): Promise<LandingDat
     }
   }
 
-  return normalizePipelineResults(mockPipelineResults);
+  return getLandingData();
 }
 
 /**
@@ -672,24 +682,40 @@ export async function runCandidateAnalysis(
  * Full Korean market dashboard payload for the trading board. Falls back to
  * mock data when no backend is configured.
  */
+export type MarketDashboardResult = {
+  data: MarketDashboardData;
+  source: DashboardDataSource;
+  /** Live index snapshots included in `data` (empty when the index call failed). */
+  liveIndices: MarketIndexSnapshot[];
+  /** Why the live sync failed; set whenever `source` is not "live". */
+  errorMessage?: string;
+};
+
 export async function fetchMarketDashboardData(
   signal?: AbortSignal,
-): Promise<MarketDashboardData> {
+): Promise<MarketDashboardResult> {
   try {
-    return await fetchLiveMarketDashboardData(signal);
+    const data = await fetchLiveMarketDashboardData(signal);
+    return { data, source: "live", liveIndices: data.indices };
   } catch (error) {
     if (isAbortError(error)) {
       throw error;
     }
 
     if (import.meta.env.DEV) {
-      console.warn("KIS dashboard API unavailable. Falling back to mock data.", error);
+      console.warn("KIS dashboard API unavailable. Falling back to the last snapshot.", error);
     }
 
+    const errorMessage = error instanceof Error ? error.message : "KIS 시세 동기화에 실패했습니다.";
+    const snapshot = getMarketDashboardSnapshot();
     try {
-      return mergeMarketIndices(getMarketDashboardData(), await fetchMarketIndicesData(signal));
-    } catch {
-      return mockMarketDashboard;
+      const liveIndices = await fetchMarketIndicesData(signal);
+      return { ...snapshot, data: mergeMarketIndices(snapshot.data, liveIndices), liveIndices, errorMessage };
+    } catch (indexError) {
+      if (isAbortError(indexError)) {
+        throw indexError;
+      }
+      return { ...snapshot, liveIndices: [], errorMessage };
     }
   }
 }

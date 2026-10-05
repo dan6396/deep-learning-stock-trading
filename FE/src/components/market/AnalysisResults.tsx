@@ -25,7 +25,7 @@ export function AnalysisResults({
   onSelect: (stock: StockQuote) => void;
 }) {
   return (
-    <section className="analysis-results" id="market-table">
+    <section className="analysis-results">
       <header className="analysis-results__head">
         <p className="eyebrow">
           <span aria-hidden="true" />

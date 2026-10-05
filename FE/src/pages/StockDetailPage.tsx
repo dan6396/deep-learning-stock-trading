@@ -72,6 +72,8 @@ type ClassifiedNews = AiNews & {
   tone: NewsTone;
   toneLabel: string;
   toneReason?: string;
+  /** "keyword" = no LLM label; tone guessed from title/summary keywords. */
+  toneSource: "llm" | "keyword";
 };
 
 const NEWS_TONE_META: Record<NewsTone, { label: string; shortLabel: string }> = {
@@ -152,6 +154,7 @@ function classifyNews(item: AiNews): ClassifiedNews {
       tone: llmTone,
       toneLabel: NEWS_TONE_META[llmTone].shortLabel,
       toneReason: item.sentimentReason,
+      toneSource: "llm",
     };
   }
 
@@ -165,18 +168,25 @@ function classifyNews(item: AiNews): ClassifiedNews {
     ...item,
     tone,
     toneLabel: NEWS_TONE_META[tone].shortLabel,
+    toneSource: "keyword",
   };
 }
 
 function groupedNews(news: AiNews[]) {
   const classified = news.map(classifyNews);
-  return (["positive", "neutral", "negative"] as const)
+  const groups = (["positive", "neutral", "negative"] as const)
     .map((tone) => ({
       tone,
       ...NEWS_TONE_META[tone],
       items: classified.filter((item) => item.tone === tone),
     }))
     .filter((group) => group.items.length > 0);
+  return { groups, keywordCount: classified.filter((item) => item.toneSource === "keyword").length };
+}
+
+/** News adjustment arrives as a fraction (0.003 = 0.30%p). */
+function formatAdjustmentPp(value: number | null | undefined) {
+  return `${((value ?? 0) * 100).toFixed(2)}%p`;
 }
 
 /** Circular 0-100 conviction gauge — the headline "how strong is this pick" signal. */
@@ -307,7 +317,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
           label="뉴스 분석"
           value={`${candidate.newsCount}건`}
           sub={candidate.finalPredReturn != null
-            ? (candidate.newsApplied ? `보정 ${(candidate.newsAdjustment ?? 0) * 100}%p 적용` : "뉴스 보정 미적용")
+            ? (candidate.newsApplied ? `보정 ${formatAdjustmentPp(candidate.newsAdjustment)} 적용` : "뉴스 보정 미적용")
             : `${candidate.newsOverallScore.toFixed(1)} / 10`}
           tone={candidate.newsOverallScore >= 5 ? "is-positive-text" : "is-negative-text"}
         />
@@ -436,7 +446,7 @@ function SupplyRow({
 
 function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
   const tone = sentimentTone(candidate.finalSentiment);
-  const newsGroups = groupedNews(candidate.news);
+  const { groups: newsGroups, keywordCount } = groupedNews(candidate.news);
 
   return (
     <>
@@ -466,7 +476,7 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
             <MetricTile
               label={candidate.finalPredReturn != null ? "뉴스 보정" : "뉴스 점수"}
               value={candidate.finalPredReturn != null
-                ? (candidate.newsApplied ? `${((candidate.newsAdjustment ?? 0) * 100).toFixed(2)}%p` : "미적용")
+                ? (candidate.newsApplied ? formatAdjustmentPp(candidate.newsAdjustment) : "미적용")
                 : `${candidate.newsOverallScore.toFixed(1)} / 10`}
               sub={candidate.newsSentimentTally || `뉴스 ${candidate.newsCount}건`}
             />
@@ -485,6 +495,12 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
 
       <section className="detail-card reco-reveal" style={{ animationDelay: "440ms" }}>
         <h2>분석에 사용한 뉴스 ({candidate.news.length})</h2>
+        {keywordCount > 0 ? (
+          <p className="detail-card-sub">
+            {keywordCount === candidate.news.length ? "모든" : `${keywordCount}건의`} 기사는 LLM 분석 결과가 없어 제목·요약의
+            키워드로 긍정·부정을 추정했습니다. "추정" 표시가 붙은 분류는 참고용입니다.
+          </p>
+        ) : null}
         {candidate.news.length > 0 ? (
           <div className="ai-news-groups">
             {newsGroups.map((group) => (
@@ -499,7 +515,13 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
                       <a className={`ai-news-list__link is-${item.tone}`} href={item.url} target="_blank" rel="noopener noreferrer">
                         <span className="ai-news-list__top">
                           <span className="ai-news-list__title">{item.title}</span>
-                          <span className={`ai-news-badge is-${item.tone}`}>{item.toneLabel}</span>
+                          <span
+                            className={`ai-news-badge is-${item.tone}`}
+                            title={item.toneSource === "keyword" ? "LLM 분석 없이 키워드로 추정한 분류" : undefined}
+                          >
+                            {item.toneLabel}
+                            {item.toneSource === "keyword" ? " · 추정" : null}
+                          </span>
                         </span>
                         {item.description ? <span className="ai-news-list__desc">{item.description}</span> : null}
                         {item.toneReason ? <span className="ai-news-list__reason">{item.toneReason}</span> : null}
