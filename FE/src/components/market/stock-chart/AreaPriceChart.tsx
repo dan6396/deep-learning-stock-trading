@@ -15,10 +15,11 @@ const VIEW_H = 100;
 const TOP_PAD = 6;
 const BOTTOM_PAD = 92;
 
+// Design tokens; applied via `style` because SVG presentation attributes don't resolve var().
 const TONE_COLORS: Record<PriceTone, string> = {
-  down: "#1f73ff",
-  flat: "#696969",
-  up: "#ef3e55",
+  down: "var(--color-down)",
+  flat: "var(--color-slate)",
+  up: "var(--color-up)",
 };
 
 function getPriceBounds(prices: PricePoint[]) {
@@ -94,16 +95,16 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
         <title>선택 기간 가격 면적 차트</title>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.34" />
-            <stop offset="78%" stopColor={color} stopOpacity="0.05" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
+            <stop offset="0%" style={{ stopColor: color }} stopOpacity="0.34" />
+            <stop offset="78%" style={{ stopColor: color }} stopOpacity="0.05" />
+            <stop offset="100%" style={{ stopColor: color }} stopOpacity="0" />
           </linearGradient>
         </defs>
         <path d={model.areaPath} fill={`url(#${gradientId})`} />
         <path
           d={model.linePath}
           fill="none"
-          stroke={color}
+          style={{ stroke: color }}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="1.6"
@@ -119,7 +120,7 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
               y2={BOTTOM_PAD}
               vectorEffect="non-scaling-stroke"
             />
-            <circle cx={activePoint.x} cy={activePoint.y} fill={color} r="1.8" vectorEffect="non-scaling-stroke" />
+            <circle cx={activePoint.x} cy={activePoint.y} r="1.8" style={{ fill: color }} vectorEffect="non-scaling-stroke" />
           </g>
         ) : null}
       </svg>

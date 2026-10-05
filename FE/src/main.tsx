@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+// Self-hosted Pretendard; the dynamic subset only downloads the glyph ranges a page uses.
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./styles/global.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
