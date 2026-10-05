@@ -5,7 +5,7 @@ export function NotFoundPage() {
   usePageTitle("페이지를 찾을 수 없습니다");
 
   return (
-    <div className="boundary-screen">
+    <main className="boundary-screen" id="main-content" tabIndex={-1}>
       <div className="boundary-card">
         <p className="eyebrow">
           <span aria-hidden="true" />
@@ -17,6 +17,6 @@ export function NotFoundPage() {
           홈으로 돌아가기
         </Link>
       </div>
-    </div>
+    </main>
   );
 }

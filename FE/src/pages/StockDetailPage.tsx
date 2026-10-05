@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Gauge, Newspaper, TrendingUp, Users, type LucideIcon } from "lucide-react";
 import { MarketTopBar } from "../components/market/MarketTopBar";
 import { StockChartPanel } from "../components/market/stock-chart";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -275,13 +276,13 @@ function MetricTile({ label, value, sub, tone }: { label: string; value: string;
 }
 
 function ReportKpiCard({
-  icon,
+  icon: Icon,
   label,
   sub,
   tone,
   value,
 }: {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   sub: string;
   tone?: string;
@@ -289,7 +290,9 @@ function ReportKpiCard({
 }) {
   return (
     <article className="report-kpi-card">
-      <span className="report-kpi-card__icon" aria-hidden="true">{icon}</span>
+      <span className="report-kpi-card__icon" aria-hidden="true">
+        <Icon size={14} />
+      </span>
       <small>{label}</small>
       <strong className={tone}>{value}</strong>
       <span>{sub}</span>
@@ -342,21 +345,21 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
 
       <div className="report-kpi-grid">
         <ReportKpiCard
-          icon="AI"
+          icon={Gauge}
           label={candidate.finalPredReturn != null ? "전체 상대순위" : "최종 결합 점수"}
           value={`${Math.round(candidate.finalCombinedScore)}점`}
           sub={candidate.finalPredReturn != null ? "예상수익률 순위 · 상승확률 아님" : "모델+뉴스+수급"}
           tone={tone === "up" ? "is-positive-text" : tone === "down" ? "is-negative-text" : undefined}
         />
         <ReportKpiCard
-          icon="P"
+          icon={TrendingUp}
           label="예측수익률"
           value={candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
           sub={`${candidate.rank}위 / ${candidate.poolSize}개`}
           tone={(candidate.ensemblePredReturn ?? 0) >= 0 ? "is-positive-text" : "is-negative-text"}
         />
         <ReportKpiCard
-          icon="N"
+          icon={Newspaper}
           label="뉴스 분석"
           value={`${candidate.newsCount}건`}
           sub={candidate.finalPredReturn != null
@@ -365,7 +368,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
           tone={candidate.newsOverallScore >= 5 ? "is-positive-text" : "is-negative-text"}
         />
         <ReportKpiCard
-          icon="F"
+          icon={Users}
           label="수급 합산"
           value={formatEok(candidate.totalSupplyNetBuy)}
           sub={`매수 우위 ${supplyDays}/${supplyDayTotal}일`}
@@ -406,7 +409,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
             <strong>카테고리별 근거 점수</strong>
             <span>0-100</span>
           </div>
-          <div className="report-bar-chart" aria-label="근거 점수 막대 차트">
+          <div className="report-bar-chart" role="group" aria-label="카테고리별 근거 점수 (0-100)">
             {signalBars.map((bar) => (
               <div className="report-bar" key={bar.label}>
                 <span>{bar.label}</span>
@@ -674,12 +677,13 @@ export function StockDetailPage() {
     return (
       <>
         <MarketTopBar stocks={dashboard.stocks} />
-        <main className="page-status">
+        <main className="page-status" id="main-content" tabIndex={-1}>
           <div className="status-view">
-            <strong>분석 데이터가 없습니다</strong>
+            <h1 className="status-view__title">분석 데이터가 없습니다</h1>
             <p>종목코드 {normalized || "(없음)"}에 대한 시세나 AI 분석 결과를 찾을 수 없습니다.</p>
             <Link className="detail-back-link" to="/dashboard">
-              ← 대시보드로 돌아가기
+              <ArrowLeft aria-hidden="true" size={16} />
+              대시보드로 돌아가기
             </Link>
           </div>
         </main>
@@ -690,10 +694,11 @@ export function StockDetailPage() {
   return (
     <>
     <MarketTopBar stocks={dashboard.stocks} />
-    <main className="stock-detail-page">
+    <main className="stock-detail-page" id="main-content" tabIndex={-1}>
       <div className="detail-back-row">
         <Link className="detail-back-link" to="/dashboard">
-          ← 실시간 대시보드
+          <ArrowLeft aria-hidden="true" size={16} />
+          실시간 대시보드
         </Link>
         <span className="detail-source-flag">
           {isSyncing ? "최신 분석 동기화 중…" : isLive ? "실시간 파이프라인 결과" : "최근 생성된 분석 결과"}

@@ -69,6 +69,9 @@ export function CandlePriceChart({ averageBuyPrice, candles }: CandlePriceChartP
         return { price: minLow + ((PRICE_BOTTOM - y) / (PRICE_BOTTOM - PRICE_TOP)) * priceRange, y };
       }),
       lastClose: last.close,
+      summary:
+        `선택 기간 캔들 차트, 봉 ${candles.length}개. 시가 ${formatAxis(candles[0].open)}원에서 ` +
+        `종가 ${formatAxis(last.close)}원, 최고 ${formatAxis(rawHigh)}원, 최저 ${formatAxis(rawLow)}원.`,
       lastCloseY: toY(last.close),
       lastTone: lastUp ? "up" : "down",
     };
@@ -80,8 +83,13 @@ export function CandlePriceChart({ averageBuyPrice, candles }: CandlePriceChartP
 
   return (
     <div className="candle-price-chart">
-      <svg className="candle-price-chart__svg" preserveAspectRatio="none" role="img" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
-        <title>선택 기간 캔들 차트</title>
+      <svg
+        aria-label={model.summary}
+        className="candle-price-chart__svg"
+        preserveAspectRatio="none"
+        role="img"
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+      >
         {model.gridLines.map((grid) => (
           <line
             className="candle-price-chart__grid"

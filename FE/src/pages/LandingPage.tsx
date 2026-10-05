@@ -14,15 +14,15 @@ export function LandingPage() {
     <div id="top">
       <FloatingNav />
       {isLoading ? (
-        <main className="landing-status">
+        <main className="landing-status" id="main-content" tabIndex={-1}>
           <LoadingView label="시장 분석 데이터를 불러오는 중입니다" />
         </main>
       ) : error || !data ? (
-        <main className="landing-status">
+        <main className="landing-status" id="main-content" tabIndex={-1}>
           <ErrorView message={error?.message} onRetry={reload} />
         </main>
       ) : (
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <HeroSection data={data} />
           <FeatureOrbitSection candidates={data.candidates} />
           <ProcessSection />

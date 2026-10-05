@@ -142,10 +142,14 @@ export function DashboardPage() {
     setData(mergeMarketIndices(snapshot.data, liveIndicesRef.current));
   }
 
-  /** Loads the freshly generated outputs and reveals the board. Returns true on success. */
-  async function revealResults(note: string): Promise<boolean> {
+  /**
+   * Loads the freshly generated outputs and reveals the board. Returns true on success.
+   * `requireRows`: when recovering from a failed/dropped run, an empty result
+   * means there is nothing to recover, not "zero candidates".
+   */
+  async function revealResults(note: string, { requireRows = false } = {}): Promise<boolean> {
     const rows = await fetchPipelineCandidates(undefined, { fallbackToMock: false });
-    if (!looksLikeLiveRows(rows)) {
+    if (!looksLikeLiveRows(rows) || (requireRows && rows.length === 0)) {
       return false;
     }
     writeCachedAnalysisRows(rows);
@@ -225,7 +229,7 @@ export function DashboardPage() {
       // though the pipeline finished and wrote outputs. Don't give up — try to
       // load the results from disk before showing an error.
       try {
-        const recovered = await revealResults("분석 결과를 불러왔습니다.");
+        const recovered = await revealResults("분석 결과를 불러왔습니다.", { requireRows: true });
         if (!recovered) {
           throw cause;
         }

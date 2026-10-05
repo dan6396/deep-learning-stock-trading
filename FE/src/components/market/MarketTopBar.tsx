@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Search, X } from "lucide-react";
 import type { StockQuote } from "../../types/trading";
 
 export const marketNavItems = [
   { id: "market-home", label: "홈" },
   { id: "market-table", label: "AI 후보" },
 ] as const;
+
+const MAX_RESULTS = 6;
+const LISTBOX_ID = "market-search-listbox";
 
 function normalizeSearch(value: string) {
   return value.replace(/\s+/g, "").toLowerCase();
@@ -18,7 +22,8 @@ function formatRate(value: number) {
 /**
  * Shared top bar for the dashboard and stock pages. On the dashboard the tabs
  * scroll in-page (`onNavigate`); elsewhere they link back to the dashboard
- * sections. Picking a search result opens that stock's report page.
+ * sections. The search field follows the ARIA combobox pattern: arrow keys move
+ * through results, Enter opens the highlighted stock, Escape closes.
  */
 export function MarketTopBar({
   activeSection,
@@ -33,6 +38,7 @@ export function MarketTopBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [isSearchOpen, setSearchOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   // Narrow screens only: the search field is revealed by the toggle button.
   const [isSearchExpanded, setSearchExpanded] = useState(false);
 
@@ -42,14 +48,24 @@ export function MarketTopBar({
       return [];
     }
 
-    return stocks.filter((stock) => normalizeSearch(`${stock.name}${stock.code}`).includes(normalizedQuery));
+    return stocks
+      .filter((stock) => normalizeSearch(`${stock.name}${stock.code}`).includes(normalizedQuery))
+      .slice(0, MAX_RESULTS);
   }, [normalizedQuery, stocks]);
+
+  const isListOpen = isSearchOpen && searchResults.length > 0;
+  const showEmpty = isSearchOpen && Boolean(query) && searchResults.length === 0;
+  const activeId = isListOpen && activeIndex >= 0 ? `${LISTBOX_ID}-${activeIndex}` : undefined;
 
   useEffect(() => {
     if (isSearchExpanded) {
       inputRef.current?.focus();
     }
   }, [isSearchExpanded]);
+
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [normalizedQuery]);
 
   function openStock(stock: StockQuote) {
     setQuery("");
@@ -61,6 +77,7 @@ export function MarketTopBar({
   function dismissSearch() {
     setSearchOpen(false);
     setSearchExpanded(false);
+    setActiveIndex(-1);
   }
 
   return (
@@ -109,23 +126,29 @@ export function MarketTopBar({
         }}
         type="button"
       >
-        <span aria-hidden="true">{isSearchExpanded ? "×" : "⌕"}</span>
+        {isSearchExpanded ? <X aria-hidden="true" size={20} /> : <Search aria-hidden="true" size={20} />}
       </button>
       <div className="market-search-wrap" id="market-search">
         <form
           className="market-search"
           onSubmit={(event) => {
             event.preventDefault();
-            if (searchResults[0]) {
-              openStock(searchResults[0]);
+            const target = searchResults[activeIndex] ?? searchResults[0];
+            if (target) {
+              openStock(target);
             }
           }}
           role="search"
         >
-          <span aria-hidden="true">⌕</span>
+          <Search aria-hidden="true" size={16} />
           <input
+            aria-activedescendant={activeId}
+            aria-autocomplete="list"
+            aria-controls={LISTBOX_ID}
+            aria-expanded={isListOpen}
             aria-label="국내 종목 검색"
             autoComplete="off"
+            onBlur={() => setSearchOpen(false)}
             onChange={(event) => {
               setQuery(event.target.value);
               setSearchOpen(true);
@@ -134,10 +157,26 @@ export function MarketTopBar({
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 dismissSearch();
+                return;
               }
+              if (event.key === "Enter" && isListOpen && activeIndex >= 0) {
+                event.preventDefault();
+                openStock(searchResults[activeIndex]);
+                return;
+              }
+              if (!searchResults.length || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) {
+                return;
+              }
+              event.preventDefault();
+              setSearchOpen(true);
+              setActiveIndex((current) => {
+                const step = event.key === "ArrowDown" ? 1 : -1;
+                return (current + step + searchResults.length) % searchResults.length;
+              });
             }}
             placeholder="종목명 또는 종목코드 검색"
             ref={inputRef}
+            role="combobox"
             type="search"
             value={query}
           />
@@ -147,36 +186,37 @@ export function MarketTopBar({
               onClick={() => {
                 setQuery("");
                 setSearchOpen(false);
+                inputRef.current?.focus();
               }}
               type="button"
               aria-label="검색어 지우기"
             >
-              ×
+              <X aria-hidden="true" size={16} />
             </button>
           ) : null}
         </form>
-        {query && isSearchOpen ? (
-          <div className="search-results" role="listbox" aria-label="종목 검색 결과">
-            {searchResults.length > 0 ? (
-              searchResults.slice(0, 6).map((stock) => (
-                <button
-                  className="search-result-button"
-                  key={stock.code}
-                  onClick={() => openStock(stock)}
-                  role="option"
-                  type="button"
-                >
-                  <span>{stock.name}</span>
-                  <strong>{stock.code}</strong>
-                  <small className={`market-change market-change--${stock.direction}`}>
-                    {formatRate(stock.changeRate)}
-                  </small>
-                </button>
-              ))
-            ) : (
-              <p className="search-empty">일치하는 KOSPI 종목이 없습니다.</p>
-            )}
-          </div>
+        <ul className="search-results" hidden={!isListOpen} id={LISTBOX_ID} role="listbox" aria-label="종목 검색 결과">
+          {searchResults.map((stock, index) => (
+            <li
+              aria-selected={index === activeIndex}
+              className="search-result-button"
+              id={`${LISTBOX_ID}-${index}`}
+              key={stock.code}
+              // mousedown would blur the input (closing the list) before click lands.
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => openStock(stock)}
+              role="option"
+            >
+              <span>{stock.name}</span>
+              <strong>{stock.code}</strong>
+              <small className={`market-change market-change--${stock.direction}`}>{formatRate(stock.changeRate)}</small>
+            </li>
+          ))}
+        </ul>
+        {showEmpty ? (
+          <p className="search-results search-empty" role="status">
+            일치하는 KOSPI 종목이 없습니다.
+          </p>
         ) : null}
       </div>
     </header>

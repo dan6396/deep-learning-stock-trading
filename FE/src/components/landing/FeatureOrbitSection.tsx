@@ -1,3 +1,4 @@
+import { ArrowUpRight } from "lucide-react";
 import type { Candidate } from "../../types/trading";
 
 type Feature = {
@@ -32,11 +33,11 @@ const baseFeatures: Feature[] = [
 function FeatureCircleCard({ feature, index }: { feature: Feature; index: number }) {
   return (
     <article className={`feature-card feature-card--${index + 1}`}>
-      <div className="feature-orb" aria-hidden="true">
-        <span className="feature-orb__grid" />
-        <span className="feature-orb__signal" />
+      <div className="feature-orb">
+        <span className="feature-orb__grid" aria-hidden="true" />
+        <span className="feature-orb__signal" aria-hidden="true" />
         <a className="satellite-cta" href="#process" aria-label={`${feature.category} 자세히 보기`}>
-          ↗
+          <ArrowUpRight aria-hidden="true" size={18} />
         </a>
       </div>
       <p className="eyebrow feature-eyebrow">

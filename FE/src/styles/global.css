@@ -9,9 +9,11 @@
   --color-lifted: #fcfbfa;
   --color-ink: #141413;
   --color-charcoal: #262627;
-  --color-slate: #696969;
+  --color-slate: #636363;
   --color-muted: var(--color-slate);
   --color-signal: #cf4500;
+  /* Brand orange only passes 4.5:1 on pure white; use this for small text. */
+  --color-signal-text: #ad3a00;
   --color-signal-strong: #9a3707;
   --color-light-signal: #f37338;
   --color-white: #ffffff;
@@ -20,11 +22,12 @@
 
   /* Market semantics (KR convention: red up / blue down). Kept distinct from
      the brand orange so price direction never competes with brand chrome.
-     Both pass 4.5:1 as text on white, the canvas, and their own soft tints. */
-  --color-up: #cf2230;
-  --color-up-rgb: 207, 34, 48;
-  --color-down: #1a64e0;
-  --color-down-rgb: 26, 100, 224;
+     Both pass 4.5:1 as text on white, the canvas, their soft tints and the
+     grey selected-row surfaces (checked with axe-core). */
+  --color-up: #c41f2e;
+  --color-up-rgb: 196, 31, 46;
+  --color-down: #1a5cd0;
+  --color-down-rgb: 26, 92, 208;
   --color-up-soft: rgba(var(--color-up-rgb), 0.1);
   --color-down-soft: rgba(var(--color-down-rgb), 0.1);
   /* Lighter fills for charts/donuts where the mark isn't text. */
@@ -146,8 +149,31 @@ button {
 }
 
 :focus-visible {
-  outline: 3px solid rgba(207, 69, 0, 0.55);
-  outline-offset: 4px;
+  /* Solid brand orange: >= 3:1 against white and the canvas (WCAG 1.4.11). */
+  outline: 3px solid var(--color-signal);
+  outline-offset: 2px;
+}
+
+/* Programmatic focus targets (main landmarks) don't need a ring. */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-ink);
+  color: var(--color-white);
+  font-weight: 700;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
 }
 
 .page-shell {
@@ -969,13 +995,16 @@ h3 {
 .market-tabs {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 8px;
 }
 
 .market-tabs a {
   display: inline-flex;
   align-items: center;
+  min-width: 44px;
   min-height: 44px;
+  padding: 0 8px;
+  justify-content: center;
   color: var(--color-slate);
   font-weight: 700;
 }
@@ -1021,6 +1050,8 @@ h3 {
 .market-search input {
   width: 100%;
   min-width: 0;
+  align-self: stretch;
+  min-height: 42px;
   border: 0;
   outline: 0;
   background: transparent;
@@ -1060,6 +1091,20 @@ h3 {
   border-radius: var(--radius-lg);
   background: var(--color-white);
   box-shadow: var(--shadow-lg);
+}
+
+.search-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-results[hidden] {
+  display: none;
+}
+
+.search-result-button[aria-selected="true"] {
+  background: var(--color-canvas);
 }
 
 .search-result-button {
@@ -1272,6 +1317,16 @@ h3 {
   font-size: var(--text-xs);
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+/* Hide visually only: display:none would drop the live region from the
+   accessibility tree and defeat keeping it mounted. */
+.candidate-analysis-status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .candidate-analysis-status--error {
@@ -1621,7 +1676,7 @@ h3 {
 }
 
 .brief-flow li:not(:last-child)::after {
-  content: "↓";
+  content: "↓" / "";
   position: absolute;
   left: 26px;
   bottom: -17px;
@@ -3284,7 +3339,7 @@ h3 {
   }
 
   .market-tabs {
-    gap: 16px;
+    gap: 4px;
   }
 
   .market-search-toggle {
@@ -3457,6 +3512,13 @@ h3 {
   padding: 40px 28px;
   text-align: center;
   color: var(--color-charcoal);
+}
+
+.status-view__title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-weight: 800;
 }
 
 .status-view p {
@@ -3912,6 +3974,9 @@ h3 {
 }
 
 .detail-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 800;
   color: var(--color-slate);
   text-decoration: none;
@@ -4450,7 +4515,7 @@ h3 {
 }
 
 .gate-stage {
-  color: var(--color-signal);
+  color: var(--color-signal-text);
   font-weight: 600;
   margin: 0 0 16px;
   animation: stage-fade 0.5s ease;
@@ -4548,7 +4613,7 @@ h3 {
   opacity: 0.4;
 }
 
-.gate-steps li.is-active { background: rgba(207, 69, 0, 0.12); color: var(--color-signal); }
+.gate-steps li.is-active { background: rgba(207, 69, 0, 0.12); color: var(--color-signal-text); }
 .gate-steps li.is-active span { opacity: 1; animation: gate-core 1s ease-in-out infinite; }
 .gate-steps li.is-done { color: var(--color-charcoal); }
 .gate-steps li.is-done span { opacity: 1; background: var(--color-signal); }
@@ -4570,7 +4635,7 @@ h3 {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-signal);
+  color: var(--color-signal-text);
   margin-bottom: 8px;
 }
 
@@ -4731,7 +4796,7 @@ h3 {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-signal);
+  color: var(--color-signal-text);
   margin-bottom: 8px;
 }
 
@@ -5459,7 +5524,7 @@ h3 {
 }
 
 .analysis-results__sub strong {
-  color: var(--color-signal);
+  color: var(--color-signal-text);
 }
 
 .result-list {
@@ -5552,7 +5617,7 @@ h3 {
 }
 
 .result-rank.is-positive {
-  background: var(--color-signal);
+  background: var(--color-up);
 }
 
 .result-rank.is-neutral {
@@ -5588,6 +5653,30 @@ h3 {
   color: var(--color-slate);
 }
 
+/* Text twin of the rank badge colour. */
+.result-tone {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--color-neutral-text);
+  font-weight: 700;
+}
+
+.result-tone.is-positive {
+  background: var(--color-up-soft);
+  color: var(--color-up);
+}
+
+.result-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .result-price {
   display: flex;
   flex-direction: column;
@@ -5617,6 +5706,7 @@ h3 {
 .result-cta {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   white-space: nowrap;
   padding: 12px 20px;
   border-radius: var(--radius-pill);

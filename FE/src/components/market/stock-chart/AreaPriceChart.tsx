@@ -38,6 +38,8 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
   const gradientId = `area-gradient-${useId().replace(/:/g, "")}`;
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // Only keyboard exploration is announced; pointer hover would be too chatty.
+  const [announcement, setAnnouncement] = useState("");
 
   const model = useMemo(() => {
     if (prices.length === 0) {
@@ -58,11 +60,21 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
     const averageTopPercent =
       averageBuyPrice && averageBuyPrice >= bounds.min && averageBuyPrice <= bounds.max ? toY(averageBuyPrice) : null;
 
+    const values = prices.map((point) => point.price);
+    const first = prices[0];
+    const last = prices[prices.length - 1];
+    const summary =
+      `선택 기간 가격 차트. ${formatPointDate(first.date)} ${formatWon(first.price)}에서 ` +
+      `${formatPointDate(last.date)} ${formatWon(last.price)}, ` +
+      `최고 ${formatWon(Math.max(...values))}, 최저 ${formatWon(Math.min(...values))}. ` +
+      "좌우 방향키로 시점별 가격을 확인할 수 있습니다.";
+
     return {
       areaPath,
       averageTopPercent,
       linePath,
       points,
+      summary,
     };
   }, [averageBuyPrice, prices]);
 
@@ -72,11 +84,44 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
 
   const activePoint = activeIndex === null ? null : model.points[activeIndex];
   const color = TONE_COLORS[tone];
+  const lastIndex = model.points.length - 1;
+
+  function moveTo(index: number) {
+    const next = Math.min(Math.max(index, 0), lastIndex);
+    const point = model?.points[next];
+    setActiveIndex(next);
+    if (point) {
+      setAnnouncement(`${formatPointDate(point.date)} ${formatWon(point.price)}`);
+    }
+  }
 
   return (
     <div className={`area-price-chart area-price-chart--${tone}`}>
       <svg
+        aria-label={model.summary}
         className="area-price-chart__svg"
+        onBlur={() => {
+          setActiveIndex(null);
+          setAnnouncement("");
+        }}
+        onKeyDown={(event) => {
+          const step = event.shiftKey ? 10 : 1;
+          const current = activeIndex ?? lastIndex;
+          const target =
+            event.key === "ArrowLeft"
+              ? current - step
+              : event.key === "ArrowRight"
+                ? current + step
+                : event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? lastIndex
+                    : null;
+          if (target !== null) {
+            event.preventDefault();
+            moveTo(target);
+          }
+        }}
         onPointerLeave={() => setActiveIndex(null)}
         onPointerMove={(event) => {
           const rect = svgRef.current?.getBoundingClientRect();
@@ -90,9 +135,9 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
         preserveAspectRatio="none"
         ref={svgRef}
         role="img"
+        tabIndex={0}
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
       >
-        <title>선택 기간 가격 면적 차트</title>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" style={{ stopColor: color }} stopOpacity="0.34" />
@@ -133,6 +178,9 @@ export function AreaPriceChart({ averageBuyPrice, prices, tone }: AreaPriceChart
           <strong>{formatWon(activePoint.price)}</strong>
         </div>
       ) : null}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
     </div>
   );
 }

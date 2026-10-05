@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import type { StockQuote } from "../../types/trading";
 
 function formatWon(value: number) {
@@ -10,6 +11,11 @@ function formatRate(value: number) {
 
 function resultTone(label: string) {
   return String(label).toUpperCase() === "POSITIVE" ? "is-positive" : "is-neutral";
+}
+
+/** Text for the tone the rank badge colour encodes, so colour isn't the only cue. */
+function resultToneLabel(label: string) {
+  return String(label).toUpperCase() === "POSITIVE" ? "뉴스 긍정" : "뉴스 중립";
 }
 
 /**
@@ -38,48 +44,60 @@ export function AnalysisResults({
         </p>
       </header>
 
-      <div className="result-list" role="table" aria-label="AI 선정 후보">
-        <div className="result-row result-row--head" role="row">
-          <span role="columnheader">순위</span>
-          <span role="columnheader">종목</span>
-          <span role="columnheader">현재가</span>
-          <span role="columnheader" className="result-col-cta">
-            선정근거
-          </span>
+      <div className="result-list">
+        {/* Visual column labels only; each list item reads on its own. */}
+        <div className="result-row result-row--head" aria-hidden="true">
+          <span>순위</span>
+          <span>종목</span>
+          <span>현재가</span>
+          <span className="result-col-cta">선정근거</span>
         </div>
 
         {stocks.length === 0 ? (
-          <div className="result-empty" role="row">
+          <div className="result-empty">
             <strong>이번 분석에서 표시할 상승·중립 후보가 없습니다.</strong>
             <p>분석 결과를 확인한 뒤 다시 시도해 주세요.</p>
           </div>
-        ) : stocks.map((stock, index) => (
-          <div className="result-row" role="row" key={stock.code}>
-            <span className={`result-rank ${resultTone(stock.sentimentLabel)}`} role="cell">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <div className="result-name" role="cell">
-              <span className="result-logo" aria-hidden="true">
-                {stock.name.slice(0, 1)}
-              </span>
-              <div>
-                <strong>{stock.name}</strong>
-                <small>{stock.code}</small>
-              </div>
-            </div>
-            <div className="result-price" role="cell">
-              <strong>{formatWon(stock.currentPrice)}</strong>
-              <span
-                className={stock.direction === "up" ? "is-up" : stock.direction === "down" ? "is-down" : ""}
-              >
-                {formatRate(stock.changeRate)}
-              </span>
-            </div>
-            <button className="result-cta" type="button" onClick={() => onSelect(stock)}>
-              선정근거 →
-            </button>
-          </div>
-        ))}
+        ) : (
+          <ol className="result-items" aria-label="AI 선정 후보">
+            {stocks.map((stock, index) => (
+              <li className="result-row" key={stock.code}>
+                <span className={`result-rank ${resultTone(stock.sentimentLabel)}`}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="result-name">
+                  <span className="result-logo" aria-hidden="true">
+                    {stock.name.slice(0, 1)}
+                  </span>
+                  <div>
+                    <strong>{stock.name}</strong>
+                    <small>
+                      {stock.code}
+                      <span className={`result-tone ${resultTone(stock.sentimentLabel)}`}>
+                        {resultToneLabel(stock.sentimentLabel)}
+                      </span>
+                    </small>
+                  </div>
+                </div>
+                <div className="result-price">
+                  <strong>{formatWon(stock.currentPrice)}</strong>
+                  <span className={stock.direction === "up" ? "is-up" : stock.direction === "down" ? "is-down" : ""}>
+                    {formatRate(stock.changeRate)}
+                  </span>
+                </div>
+                <button
+                  aria-label={`${stock.name} 선정근거 보기`}
+                  className="result-cta"
+                  onClick={() => onSelect(stock)}
+                  type="button"
+                >
+                  선정근거
+                  <ArrowRight aria-hidden="true" size={16} />
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import type { MarketDashboardData, StockQuote } from "../../types/trading";
 import { readWatchlistCodes, writeWatchlistCodes } from "../../services/tradingData";
 import type { CandidateAnalysisProgress, DashboardDataSource } from "../../services/tradingData";
@@ -281,7 +282,7 @@ function MarketRegimeCard({ index, isLive }: { index: IndexSnapshot; isLive: boo
   const regime = buildMarketRegime(index);
 
   return (
-    <aside className={`regime-card regime-card--${regime.tone}`} aria-label="KOSPI 시장 국면">
+    <section className={`regime-card regime-card--${regime.tone}`} aria-label="KOSPI 시장 국면">
       <div className="regime-card__head">
         <div>
           <span>KOSPI 시장 국면</span>
@@ -306,7 +307,7 @@ function MarketRegimeCard({ index, isLive }: { index: IndexSnapshot; isLive: boo
       </ul>
 
       <p>{regime.note}</p>
-    </aside>
+    </section>
   );
 }
 
@@ -374,11 +375,11 @@ function MarketOverview({
             </button>
           ) : null}
         </div>
-        {analysisPhase !== "running" && candidateAnalysis.message ? (
-          <p className="candidate-analysis-status" role="status">
-            {candidateAnalysis.message}
-          </p>
-        ) : null}
+        {/* Always mounted so screen readers announce the completion message
+            when it appears (a freshly inserted live region is often missed). */}
+        <p className="candidate-analysis-status" role="status">
+          {analysisPhase !== "running" ? candidateAnalysis.message : null}
+        </p>
         {candidateAnalysis.errorMessage ? (
           <p className="candidate-analysis-status candidate-analysis-status--error" role="alert">
             AI 후보 분석 실패: {candidateAnalysis.errorMessage}
@@ -474,11 +475,7 @@ function WatchlistRail({
           aria-label={isOpen ? "관심 패널 닫기" : "관심 패널 열기"}
           onClick={onToggleOpen}
         >
-          <span className="watch-menu-icon" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          {isOpen ? <PanelRightClose aria-hidden="true" size={20} /> : <PanelRightOpen aria-hidden="true" size={20} />}
         </button>
       </div>
       <p className="watch-ai">
@@ -503,7 +500,7 @@ function WatchlistRail({
                 </div>
               </button>
               <button className="watch-remove" onClick={() => onRemoveStock(stock.code)} type="button" aria-label={`${stock.name} 관심 해제`}>
-                ×
+                <X aria-hidden="true" size={16} />
               </button>
             </li>
           ))}
@@ -560,10 +557,12 @@ function AnalysisGate({
           <span />
           <span />
         </div>
-        <p className="gate-title">AI가 후보 종목을 분석하고 있습니다</p>
-        <p className="gate-stage" key={progress?.updatedAt ?? "pending"}>
-          {progress?.message ?? "진행 단계 정보를 기다리는 중입니다"}
-          {elapsedText}
+        <h2 className="gate-title">AI가 후보 종목을 분석하고 있습니다</h2>
+        {/* Persistent live region: only the stage message is announced; the
+            elapsed time ticks every poll and stays outside it. */}
+        <p className="gate-stage">
+          <span role="status">{progress?.message ?? "진행 단계 정보를 기다리는 중입니다"}</span>
+          <span className="gate-elapsed">{elapsedText}</span>
         </p>
         {progressPercent !== undefined ? (
           <div
@@ -708,7 +707,7 @@ export function MarketWorkspace({
   return (
     <div className="market-workspace">
       <MarketTopBar activeSection={activeSection} onNavigate={navigateTo} stocks={data.stocks} />
-      <main className={`market-shell ${isWatchRailOpen ? "" : "market-shell--watch-collapsed"}`}>
+      <main className={`market-shell ${isWatchRailOpen ? "" : "market-shell--watch-collapsed"}`} id="main-content" tabIndex={-1}>
         <div className="market-main">
           <MarketOverview
             analysisPhase={analysisPhase}
