@@ -1,22 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { MarketDashboardData, StockQuote } from "../../types/trading";
 import { readWatchlistCodes, writeWatchlistCodes } from "../../services/tradingData";
 import type { CandidateAnalysisProgress, DashboardDataSource } from "../../services/tradingData";
-import { describeAiSummary } from "../../utils/aiSignal";
 import { AnalysisResults } from "./AnalysisResults";
 
-type MarketFilter = "ALL" | "AI" | "UP" | "DOWN" | "FOREIGN" | "INSTITUTION";
-type TableDensity = "comfortable" | "compact";
-type SortDirection = "asc" | "desc";
-type SortField = "currentPrice" | "changeRate" | "tradingValue" | "personal" | "foreign" | "institution";
-type SortState = {
-  direction: SortDirection;
-  field: SortField;
-};
-
-const MAX_PAGE_COUNT = 20;
-const PAGE_SIZE = 10;
+type AnalysisPhase = "idle" | "running" | "done";
 
 export type DashboardSyncStatus = {
   dataSource: DashboardDataSource;
@@ -41,47 +30,8 @@ const navItems = [
   { id: "market-table", label: "AI 후보" },
 ] as const;
 
-const boardFilterOptions: Array<{ value: MarketFilter; label: string }> = [
-  { value: "ALL", label: "전체" },
-  { value: "AI", label: "AI 후보" },
-  { value: "UP", label: "상승" },
-  { value: "DOWN", label: "하락" },
-  { value: "FOREIGN", label: "외국인 순매수" },
-  { value: "INSTITUTION", label: "기관 순매수" },
-];
-
 function formatWon(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
-}
-
-function formatCompactWon(value: number) {
-  if (value >= 1000000000000) {
-    return `${Math.round(value / 100000000000) / 10}조원`;
-  }
-
-  if (value >= 100000000) {
-    return `${Math.round(value / 100000000).toLocaleString("ko-KR")}억원`;
-  }
-
-  return formatWon(value);
-}
-
-function formatVolume(value: number) {
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
-  return `${sign}${Math.abs(value).toLocaleString("ko-KR")}주`;
-}
-
-/**
- * The KIS quote bridge can't supply per-investor net buying yet, so it returns
- * all-zero flows. Treat that as "no data" and render a dash instead of a
- * misleading "0주" so the table doesn't imply real, balanced flows.
- */
-function hasInvestorFlow(flow: StockQuote["investorFlow"]) {
-  return flow.personal !== 0 || flow.foreign !== 0 || flow.institution !== 0;
-}
-
-function formatFlowCell(flow: StockQuote["investorFlow"], value: number) {
-  return hasInvestorFlow(flow) ? formatVolume(value) : "—";
 }
 
 function formatRate(value: number) {
@@ -274,69 +224,46 @@ function normalizeSearch(value: string) {
   return value.replace(/\s+/g, "").toLowerCase();
 }
 
-function isAiCandidate(stock: StockQuote) {
-  if (stock.sentimentLabel === "NEGATIVE") {
-    return false;
-  }
-
-  if (stock.upProbability !== undefined && stock.upProbability !== null) {
-    return stock.upProbability >= 0.5 || stock.sentimentLabel === "NEUTRAL";
-  }
-
-  return stock.sentimentLabel === "NEUTRAL" || (stock.predictedReturn ?? 0) >= 0.4;
-}
-
-function getSortValue(stock: StockQuote, field: SortField) {
-  if (field === "currentPrice") {
-    return stock.currentPrice;
-  }
-
-  if (field === "changeRate") {
-    return stock.changeRate;
-  }
-
-  if (field === "personal") {
-    return stock.investorFlow.personal;
-  }
-
-  if (field === "foreign") {
-    return stock.investorFlow.foreign;
-  }
-
-  if (field === "institution") {
-    return stock.investorFlow.institution;
-  }
-
-  return stock.tradingValue;
-}
-
 function MarketTopBar({
   activeSection,
+  isSearchExpanded,
   isSearchOpen,
   query,
   searchResults,
   onClearSearch,
-  onDashboardClick,
+  onDismissSearch,
   onNavigate,
   onQueryChange,
   onSearchFocus,
   onSearchSubmit,
   onSelectSearchResult,
+  onToggleSearch,
 }: {
   activeSection: string;
+  /** Narrow screens only: the search field is revealed by the toggle button. */
+  isSearchExpanded: boolean;
   isSearchOpen: boolean;
   query: string;
   searchResults: StockQuote[];
   onClearSearch: () => void;
-  onDashboardClick: () => void;
+  onDismissSearch: () => void;
   onNavigate: (sectionId: string) => void;
   onQueryChange: (value: string) => void;
   onSearchFocus: () => void;
   onSearchSubmit: () => void;
   onSelectSearchResult: (stock: StockQuote) => void;
+  onToggleSearch: () => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isSearchExpanded) {
+      inputRef.current?.focus();
+    }
+  }, [isSearchExpanded]);
+
   return (
-    <header className="market-topbar">
+    <header className={`market-topbar ${isSearchExpanded ? "market-topbar--search-open" : ""}`}>
       <Link className="market-brand" to="/" aria-label="KOSPI AI Trading Desk 홈">
         <span className="market-brand__mark" aria-hidden="true">
           <svg viewBox="0 0 28 28" focusable="false">
@@ -364,7 +291,17 @@ function MarketTopBar({
           </a>
         ))}
       </nav>
-      <div className="market-search-wrap">
+      <button
+        aria-controls="market-search"
+        aria-expanded={isSearchExpanded}
+        aria-label={isSearchExpanded ? "종목 검색 닫기" : "종목 검색 열기"}
+        className="market-search-toggle"
+        onClick={onToggleSearch}
+        type="button"
+      >
+        <span aria-hidden="true">{isSearchExpanded ? "×" : "⌕"}</span>
+      </button>
+      <div className="market-search-wrap" id="market-search">
         <form
           className="market-search"
           onSubmit={(event) => {
@@ -379,7 +316,13 @@ function MarketTopBar({
             autoComplete="off"
             onChange={(event) => onQueryChange(event.target.value)}
             onFocus={onSearchFocus}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                onDismissSearch();
+              }
+            }}
             placeholder="종목명 또는 종목코드 검색"
+            ref={inputRef}
             type="search"
             value={query}
           />
@@ -413,9 +356,6 @@ function MarketTopBar({
           </div>
         ) : null}
       </div>
-      <button className="market-login" onClick={onDashboardClick} type="button">
-        대시보드
-      </button>
     </header>
   );
 }
@@ -515,380 +455,137 @@ function MarketRegimeCard({ index, isLive }: { index: IndexSnapshot; isLive: boo
 }
 
 function MarketOverview({
+  analysisPhase,
   candidateAnalysis,
   data,
   syncStatus,
 }: {
+  analysisPhase: AnalysisPhase;
   candidateAnalysis: DashboardCandidateAnalysisStatus;
   data: MarketDashboardData;
   syncStatus: DashboardSyncStatus;
 }) {
   const featuredIndices = data.indices.filter((index) => index.symbol === "KOSPI200");
   const indices = featuredIndices.length > 0 ? featuredIndices : data.indices.slice(0, 1);
-  const indicesLive = syncStatus.dataSource === "live" || syncStatus.hasLiveIndices;
+  const isLive = syncStatus.dataSource === "live";
+  const indicesLive = isLive || syncStatus.hasLiveIndices;
   const syncLabel = syncStatus.isRefreshing
     ? "KIS 동기화 중"
-    : syncStatus.dataSource === "live"
+    : isLive
       ? "KIS 실시간 시세"
       : syncStatus.dataSource === "cache"
         ? "이 기기의 최근 동기화 시세"
         : "샘플 데이터";
-  const scopeNote =
-    syncStatus.dataSource === "live"
-      ? "한국시장 전용 · 종목·지수 KIS 시세"
-      : indicesLive
-        ? "한국시장 전용 · 지수만 KIS 실시간, 종목 시세는 새로고침 필요"
-        : "한국시장 전용 · 새로고침하면 KIS 시세를 불러옵니다";
+  const scopeNote = isLive
+    ? "종목·지수 KIS 시세"
+    : indicesLive
+      ? "지수만 KIS 실시간, 종목 시세는 새로고침 필요"
+      : "새로고침하면 KIS 시세를 불러옵니다";
 
   return (
-    <section className="market-overview" id="market-home">
-      <div className="session-row">
-        <span className="session-dot" aria-hidden="true" />
-        <span>{data.sessionLabel}</span>
-        <span className="session-muted">{scopeNote}</span>
-        <span
-          className={`session-sync ${syncStatus.dataSource !== "live" && !syncStatus.isRefreshing ? "session-sync--warning" : ""}`}
-          role="status"
-          aria-live="polite"
-        >
-          {syncStatus.isRefreshing ? <i aria-hidden="true" /> : null}
-          {syncLabel}
-        </span>
-        <button className="session-refresh" disabled={syncStatus.isRefreshing} onClick={syncStatus.onRefresh} type="button">
-          새로고침
-        </button>
-        <button
-          className="candidate-analysis-button"
-          disabled={candidateAnalysis.isRunning}
-          onClick={candidateAnalysis.onRun}
-          type="button"
-        >
-          {candidateAnalysis.isRunning ? "AI 분석 중" : "AI 후보 분석"}
-        </button>
-        {candidateAnalysis.message ? (
-          <span className="candidate-analysis-status" role="status">
-            {candidateAnalysis.message}
+    <section className="market-overview" id="market-home" aria-labelledby="market-title">
+      <div className="session-bar">
+        <div className="session-bar__title">
+          <h1 id="market-title">AI 후보 대시보드</h1>
+          <p className="session-meta">
+            <span className={`session-dot ${isLive ? "" : "session-dot--stale"}`} aria-hidden="true" />
+            <span>{data.sessionLabel}</span>
+            <span className="session-muted">{scopeNote}</span>
+          </p>
+        </div>
+        <div className="session-bar__actions">
+          <span
+            className={`session-sync ${!isLive && !syncStatus.isRefreshing ? "session-sync--warning" : ""}`}
+            role="status"
+            aria-live="polite"
+          >
+            {syncStatus.isRefreshing ? <i aria-hidden="true" /> : null}
+            {syncLabel}
           </span>
+          <button className="session-refresh" disabled={syncStatus.isRefreshing} onClick={syncStatus.onRefresh} type="button">
+            새로고침
+          </button>
+          {/* Before the first run the analysis gate below owns the single primary
+              CTA; afterwards a secondary re-run lives here. */}
+          {analysisPhase === "done" ? (
+            <button
+              className="candidate-analysis-button"
+              disabled={candidateAnalysis.isRunning}
+              onClick={candidateAnalysis.onRun}
+              type="button"
+            >
+              다시 분석
+            </button>
+          ) : null}
+        </div>
+        {analysisPhase !== "running" && candidateAnalysis.message ? (
+          <p className="candidate-analysis-status" role="status">
+            {candidateAnalysis.message}
+          </p>
         ) : null}
         {candidateAnalysis.errorMessage ? (
-          <span className="candidate-analysis-status candidate-analysis-status--error" role="status" title={candidateAnalysis.errorMessage}>
+          <p className="candidate-analysis-status candidate-analysis-status--error" role="alert">
             AI 후보 분석 실패: {candidateAnalysis.errorMessage}
-          </span>
+          </p>
         ) : null}
         {syncStatus.errorMessage ? (
-          <span className="session-error" title={syncStatus.errorMessage}>
+          <p className="session-error" title={syncStatus.errorMessage}>
             실시간 시세를 불러오지 못해 {syncStatus.dataSource === "sample" ? "샘플" : "이 기기의 최근 동기화"} 데이터를 표시합니다.
-          </span>
+          </p>
         ) : null}
       </div>
 
       <div className="overview-grid">
         <MarketRegimeCard index={indices[0]} isLive={indicesLive} />
-
-        <div className="index-grid">
-          {indices.map((index) => (
-            <IndexCard index={index} isLive={indicesLive} key={index.symbol} />
-          ))}
-        </div>
-
-        <article className="ai-brief">
-          <span className="brief-chip">오늘의 AI 후보 요약</span>
-          <h1>
-            단기 예측에 특화된 AI가 <em>상승 가능성이 높은 종목</em>을 추천드립니다.
-          </h1>
-          <div className="brief-intro">
-            <p>
-              <strong>Huber 앙상블</strong>가 KOSPI200 전체 종목을 분석하고, 상승 가능성이 높은 종목을 1차 선별합니다.
-            </p>
-            <p>
-              뉴스 본문에서 추출한 사건을 함께 보여줍니다. 뉴스 보정은 검증 기준을 통과한 경우에만 최종 순위에 반영합니다.
-            </p>
-          </div>
-          <ol className="brief-flow" aria-label="AI 후보 선정 순서">
-            <li>
-              <span>분석 대상</span>
-              <strong>KOSPI200 전체 종목</strong>
-            </li>
-            <li>
-              <span>1차 모델</span>
-              <strong>앙상블 시가→종가 수익률 예측</strong>
-            </li>
-            <li>
-              <span>보조 데이터</span>
-              <strong>거래량 변화 + 외국인·기관 수급</strong>
-            </li>
-            <li>
-              <span>2차 판단</span>
-              <strong>기사 사건·근거 추출</strong>
-            </li>
-            <li>
-              <span>최종 후보</span>
-              <strong>Top 5 종목</strong>
-            </li>
-          </ol>
-        </article>
+        {indices.map((index) => (
+          <IndexCard index={index} isLive={indicesLive} key={index.symbol} />
+        ))}
       </div>
     </section>
   );
 }
 
-function StockTable({
-  activeFilter,
-  density,
-  onClearFilters,
-  onDensityChange,
-  onFilterChange,
-  onPageChange,
-  onSelectStock,
-  onSortChange,
-  pageIndex,
-  pageOffset,
-  pageSize,
-  selectedCode,
-  sortState,
-  stocks,
-  totalFilteredCount,
-  totalPages,
-  totalCount,
-}: {
-  activeFilter: MarketFilter;
-  density: TableDensity;
-  onClearFilters: () => void;
-  onDensityChange: (density: TableDensity) => void;
-  onFilterChange: (filter: MarketFilter) => void;
-  onPageChange: (pageIndex: number) => void;
-  onSelectStock: (stock: StockQuote) => void;
-  onSortChange: (field: SortField) => void;
-  pageIndex: number;
-  pageOffset: number;
-  pageSize: number;
-  selectedCode: string;
-  sortState: SortState;
-  stocks: StockQuote[];
-  totalFilteredCount: number;
-  totalPages: number;
-  totalCount: number;
-}) {
-  const pageButtons = Array.from({ length: MAX_PAGE_COUNT }, (_, index) => index);
-  const rangeStart = totalFilteredCount === 0 ? 0 : pageOffset + 1;
-  const rangeEnd = Math.min(pageOffset + stocks.length, totalFilteredCount);
-
-  function getSortDirectionLabel(field: SortField) {
-    if (sortState.field !== field) {
-      return "정렬";
-    }
-
-    return sortState.direction === "asc" ? "오름차순" : "내림차순";
-  }
-
-  function renderSortHeader(field: SortField, label: string) {
-    const isActive = sortState.field === field;
-
-    return (
-      <button
-        className={`sort-header ${isActive ? "is-active" : ""}`}
-        onClick={() => onSortChange(field)}
-        type="button"
-      >
-        <span>{label}</span>
-        <small aria-hidden="true">{isActive ? (sortState.direction === "asc" ? "↑" : "↓") : "↕"}</small>
-        <span className="sr-only">{getSortDirectionLabel(field)}</span>
-      </button>
-    );
-  }
-
+/** How candidates are picked — reference material, collapsed by default. */
+function SelectionMethod() {
   return (
-    <section className="stock-board" id="market-table">
-      <div className="board-toolbar">
-        <div>
-          <h2>실시간 종목</h2>
-          <p>
-            {rangeStart.toLocaleString("ko-KR")}-{rangeEnd.toLocaleString("ko-KR")}개 표시 · 필터 결과{" "}
-            {totalFilteredCount.toLocaleString("ko-KR")}개 · 전체 {totalCount.toLocaleString("ko-KR")}개
-          </p>
-        </div>
-        <div className="board-controls">
-          <div className="board-controls__row">
-            <div className="density-toggle" role="group" aria-label="목록 밀도">
-              <button
-                aria-pressed={density === "comfortable"}
-                onClick={() => onDensityChange("comfortable")}
-                type="button"
-              >
-                기본
-              </button>
-              <button
-                aria-pressed={density === "compact"}
-                onClick={() => onDensityChange("compact")}
-                type="button"
-              >
-                간략히
-              </button>
-            </div>
-          </div>
-          <div className="filter-pills" aria-label="종목 필터">
-            {boardFilterOptions.map((option) => (
-              <button
-                aria-pressed={activeFilter === option.value}
-                key={option.value}
-                onClick={() => onFilterChange(option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+    <details className="ai-brief">
+      <summary>
+        <span className="ai-brief__title">AI 후보 선정 방식</span>
+        <span className="ai-brief__hint">모델 · 데이터 · 검증 기준</span>
+      </summary>
+      <div className="brief-intro">
+        <p>
+          <strong>Huber 앙상블</strong>이 KOSPI200 전체 종목의 다음 거래일 시가→종가 수익률을 예측해 순위를 매기고,
+          상위 종목을 1차 후보로 고릅니다. 순위는 상대 비교이며 상승 확률이 아닙니다.
+        </p>
+        <p>
+          뉴스 본문에서 추출한 사건을 근거로 함께 보여 줍니다. 뉴스 보정은 별도 검증 기준을 통과한 경우에만 최종 순위에
+          반영합니다.
+        </p>
       </div>
-
-      <div className="stock-table-wrap">
-        <table className={`stock-table stock-table--${density}`}>
-          <thead>
-            <tr>
-              <th scope="col">순위</th>
-              <th scope="col">종목</th>
-              <th aria-sort={sortState.field === "currentPrice" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} scope="col">
-                {renderSortHeader("currentPrice", "현재가")}
-              </th>
-              <th aria-sort={sortState.field === "changeRate" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} scope="col">
-                {renderSortHeader("changeRate", "등락률")}
-              </th>
-              <th aria-sort={sortState.field === "tradingValue" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} scope="col">
-                {renderSortHeader("tradingValue", "거래대금")}
-              </th>
-              <th aria-sort={sortState.field === "personal" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} scope="col">
-                {renderSortHeader("personal", "개인")}
-              </th>
-              <th aria-sort={sortState.field === "foreign" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} scope="col">
-                {renderSortHeader("foreign", "외국인")}
-              </th>
-              <th aria-sort={sortState.field === "institution" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} scope="col">
-                {renderSortHeader("institution", "기관")}
-              </th>
-              <th scope="col">AI 요약</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stocks.length > 0 ? (
-              stocks.map((stock, index) => (
-                <tr className={selectedCode === stock.code ? "is-selected" : undefined} key={stock.code}>
-                  <td>{pageOffset + index + 1}</td>
-                  <td>
-                    <button className="stock-name-button" onClick={() => onSelectStock(stock)} type="button">
-                      <span aria-hidden="true">{stock.name.slice(0, 1)}</span>
-                      <div>
-                        <strong>{stock.name}</strong>
-                        <small>{stock.code}</small>
-                      </div>
-                    </button>
-                  </td>
-                  <td>{formatWon(stock.currentPrice)}</td>
-                  <td>
-                    <span className={`rate-badge rate-badge--${stock.direction}`}>{formatRate(stock.changeRate)}</span>
-                  </td>
-                  <td>{formatCompactWon(stock.tradingValue)}</td>
-                  <td className={!hasInvestorFlow(stock.investorFlow) ? undefined : stock.investorFlow.personal >= 0 ? "is-positive-text" : "is-negative-text"}>
-                    {formatFlowCell(stock.investorFlow, stock.investorFlow.personal)}
-                  </td>
-                  <td className={!hasInvestorFlow(stock.investorFlow) ? undefined : stock.investorFlow.foreign >= 0 ? "is-positive-text" : "is-negative-text"}>
-                    {formatFlowCell(stock.investorFlow, stock.investorFlow.foreign)}
-                  </td>
-                  <td className={!hasInvestorFlow(stock.investorFlow) ? undefined : stock.investorFlow.institution >= 0 ? "is-positive-text" : "is-negative-text"}>
-                    {formatFlowCell(stock.investorFlow, stock.investorFlow.institution)}
-                  </td>
-                  <td>{describeAiSummary(stock)}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={9}>
-                  <div className="empty-state">
-                    <strong>조건에 맞는 종목이 없습니다.</strong>
-                    <p>검색어나 필터를 조금 넓혀보세요.</p>
-                    <button type="button" onClick={onClearFilters}>
-                      필터 초기화
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <ul className="stock-card-list" aria-label="실시간 종목 목록">
-        {stocks.length > 0 ? (
-          stocks.map((stock, index) => (
-            <li className={selectedCode === stock.code ? "is-selected" : undefined} key={stock.code}>
-              <button className="stock-card" onClick={() => onSelectStock(stock)} type="button">
-                <span className="stock-card__rank" aria-label={`목록 ${pageOffset + index + 1}위`}>
-                  {pageOffset + index + 1}
-                </span>
-                <span className="stock-logo" aria-hidden="true">
-                  {stock.name.slice(0, 1)}
-                </span>
-                <span className="stock-card__title">
-                  <strong>{stock.name}</strong>
-                  <small>{stock.code}</small>
-                </span>
-                <span className="stock-card__price">
-                  <strong>{formatWon(stock.currentPrice)}</strong>
-                  <span className={`rate-badge rate-badge--${stock.direction}`}>
-                    {formatRate(stock.changeRate)}
-                  </span>
-                </span>
-                <span className="stock-card__meta">
-                  <span>
-                    거래대금 <b>{formatCompactWon(stock.tradingValue)}</b>
-                  </span>
-                  <span className={!hasInvestorFlow(stock.investorFlow) ? undefined : stock.investorFlow.foreign >= 0 ? "is-positive-text" : "is-negative-text"}>
-                    외국인 {formatFlowCell(stock.investorFlow, stock.investorFlow.foreign)}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))
-        ) : (
-          <li className="stock-card-list__empty">
-            <div className="empty-state">
-              <strong>조건에 맞는 종목이 없습니다.</strong>
-              <p>검색어나 필터를 조금 넓혀보세요.</p>
-              <button type="button" onClick={onClearFilters}>
-                필터 초기화
-              </button>
-            </div>
-          </li>
-        )}
-      </ul>
-
-      <div className="stock-pagination" aria-label="종목 페이지">
-        <button disabled={pageIndex === 0} onClick={() => onPageChange(pageIndex - 1)} type="button">
-          이전
-        </button>
-        <div className="stock-pagination__pages">
-          {pageButtons.map((buttonIndex) => {
-            const isEnabled = buttonIndex < totalPages;
-            return (
-              <button
-                aria-current={pageIndex === buttonIndex ? "page" : undefined}
-                disabled={!isEnabled}
-                key={buttonIndex}
-                onClick={() => onPageChange(buttonIndex)}
-                type="button"
-              >
-                {buttonIndex + 1}
-              </button>
-            );
-          })}
-        </div>
-        <button disabled={pageIndex >= totalPages - 1} onClick={() => onPageChange(pageIndex + 1)} type="button">
-          다음
-        </button>
-        <span>
-          페이지당 {pageSize}개 · 최대 {MAX_PAGE_COUNT}페이지
-        </span>
-      </div>
-    </section>
+      <ol className="brief-flow" aria-label="AI 후보 선정 순서">
+        <li>
+          <span>분석 대상</span>
+          <strong>KOSPI200 전체 종목</strong>
+        </li>
+        <li>
+          <span>1차 모델</span>
+          <strong>앙상블 시가→종가 수익률 예측</strong>
+        </li>
+        <li>
+          <span>보조 데이터</span>
+          <strong>거래량 변화 + 외국인·기관 수급</strong>
+        </li>
+        <li>
+          <span>2차 판단</span>
+          <strong>기사 사건·근거 추출</strong>
+        </li>
+        <li>
+          <span>최종 후보</span>
+          <strong>Top 5 종목</strong>
+        </li>
+      </ol>
+    </details>
   );
 }
 
@@ -1078,21 +775,18 @@ export function MarketWorkspace({
   data,
   syncStatus,
 }: {
-  analysisPhase: "idle" | "running" | "done";
+  analysisPhase: AnalysisPhase;
   candidateAnalysis: DashboardCandidateAnalysisStatus;
   data: MarketDashboardData;
   syncStatus: DashboardSyncStatus;
 }) {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("market-home");
-  const [density, setDensity] = useState<TableDensity>("comfortable");
-  const [filter, setFilter] = useState<MarketFilter>("ALL");
   const [isSearchOpen, setSearchOpen] = useState(false);
+  const [isSearchExpanded, setSearchExpanded] = useState(false);
   const [isWatchRailOpen, setWatchRailOpen] = useState(true);
-  const [pageIndex, setPageIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [selectedCode, setSelectedCode] = useState(data.focusedStockCode);
-  const [sortState, setSortState] = useState<SortState>({ direction: "desc", field: "tradingValue" });
   // The persisted watchlist survives reloads; the server's default list only
   // seeds first-time visitors (or storage-unavailable sessions).
   const [watchCodes, setWatchCodes] = useState<string[]>(
@@ -1116,53 +810,6 @@ export function MarketWorkspace({
       return searchable.includes(normalizedQuery);
     });
   }, [data.stocks, normalizedQuery]);
-
-  const visibleStocks = useMemo(() => {
-    const base = normalizedQuery ? searchResults : data.stocks;
-    const filtered = base.filter((stock) => {
-      if (filter === "AI") {
-        return isAiCandidate(stock);
-      }
-
-      if (filter === "UP") {
-        return stock.direction === "up";
-      }
-
-      if (filter === "DOWN") {
-        return stock.direction === "down";
-      }
-
-      if (filter === "FOREIGN") {
-        return stock.investorFlow.foreign > 0;
-      }
-
-      if (filter === "INSTITUTION") {
-        return stock.investorFlow.institution > 0;
-      }
-
-      return true;
-    });
-
-    return [...filtered].sort((a, b) => {
-      const multiplier = sortState.direction === "asc" ? 1 : -1;
-      const valueDelta = getSortValue(a, sortState.field) - getSortValue(b, sortState.field);
-
-      if (valueDelta !== 0) {
-        return valueDelta * multiplier;
-      }
-
-      return a.name.localeCompare(b.name, "ko-KR");
-    });
-  }, [data.stocks, filter, normalizedQuery, searchResults, sortState]);
-
-  const totalPages = Math.max(1, Math.min(MAX_PAGE_COUNT, Math.ceil(visibleStocks.length / PAGE_SIZE)));
-  const safePageIndex = Math.min(pageIndex, totalPages - 1);
-  const pageOffset = safePageIndex * PAGE_SIZE;
-  const paginatedStocks = visibleStocks.slice(pageOffset, pageOffset + PAGE_SIZE);
-
-  useEffect(() => {
-    setPageIndex((current) => Math.min(current, totalPages - 1));
-  }, [totalPages]);
 
   const watchlist = useMemo(
     () =>
@@ -1196,10 +843,9 @@ export function MarketWorkspace({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Clicking any stock (table, card, watchlist, search) navigates to its
-  // dedicated analysis page (/stock/:code) — a full, shareable report instead of
-  // a cramped modal. We still track the selected code so the overview brief and
-  // watchlist highlight stay in sync if the user returns to the dashboard.
+  // Clicking any stock (results, watchlist, search) navigates to its dedicated
+  // analysis page (/stock/:code). We still track the selected code so the
+  // watchlist highlight stays in sync if the user returns to the dashboard.
   function selectStock(stock: StockQuote, syncSearch = false) {
     setSelectedCode(stock.code);
 
@@ -1209,31 +855,6 @@ export function MarketWorkspace({
     }
 
     navigate(`/stock/${stock.code}`);
-  }
-
-  function clearSearchAndFilters() {
-    setQuery("");
-    setSearchOpen(false);
-    setFilter("ALL");
-    setSortState({ direction: "desc", field: "tradingValue" });
-    setPageIndex(0);
-  }
-
-  function changeFilter(nextFilter: MarketFilter) {
-    setFilter(nextFilter);
-    setPageIndex(0);
-  }
-
-  function changePage(nextPageIndex: number) {
-    setPageIndex(Math.min(Math.max(nextPageIndex, 0), totalPages - 1));
-  }
-
-  function changeSort(field: SortField) {
-    setSortState((current) => ({
-      direction: current.field === field && current.direction === "desc" ? "asc" : "desc",
-      field,
-    }));
-    setPageIndex(0);
   }
 
   function toggleSelectedWatchlist() {
@@ -1260,28 +881,35 @@ export function MarketWorkspace({
     <div className="market-workspace">
       <MarketTopBar
         activeSection={activeSection}
+        isSearchExpanded={isSearchExpanded}
         isSearchOpen={isSearchOpen}
         onClearSearch={() => {
           setQuery("");
           setSearchOpen(false);
-          setPageIndex(0);
         }}
-        onDashboardClick={() => navigateTo("market-table")}
+        onDismissSearch={() => {
+          setSearchOpen(false);
+          setSearchExpanded(false);
+        }}
         onNavigate={navigateTo}
         onQueryChange={(value) => {
           setQuery(value);
           setSearchOpen(true);
-          setPageIndex(0);
         }}
         onSearchFocus={() => setSearchOpen(true)}
         onSearchSubmit={submitSearch}
         onSelectSearchResult={(stock) => selectStock(stock, true)}
+        onToggleSearch={() => {
+          setSearchExpanded((value) => !value);
+          setSearchOpen(false);
+        }}
         query={query}
         searchResults={searchResults}
       />
       <main className={`market-shell ${isWatchRailOpen ? "" : "market-shell--watch-collapsed"}`}>
         <div className="market-main">
           <MarketOverview
+            analysisPhase={analysisPhase}
             candidateAnalysis={candidateAnalysis}
             data={data}
             syncStatus={syncStatus}
@@ -1303,6 +931,7 @@ export function MarketWorkspace({
               />
             )}
           </div>
+          <SelectionMethod />
         </div>
         <WatchlistRail
           isOpen={isWatchRailOpen}
