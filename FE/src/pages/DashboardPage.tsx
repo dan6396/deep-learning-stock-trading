@@ -22,11 +22,15 @@ function elapsedLabel(startMs: number): string {
   return elapsedMsLabel(Date.now() - startMs);
 }
 
-function elapsedMsLabel(elapsedMs: number): string {
-  const total = Math.floor(elapsedMs / 1000);
+function durationLabel(durationMs: number): string {
+  const total = Math.max(0, Math.floor(durationMs / 1000));
   const minutes = Math.floor(total / 60);
   const seconds = String(total % 60).padStart(2, "0");
-  return `${minutes}분 ${seconds}초 경과`;
+  return `${minutes}분 ${seconds}초`;
+}
+
+function elapsedMsLabel(elapsedMs: number): string {
+  return `${durationLabel(elapsedMs)} 경과`;
 }
 
 function describeAnalysisStatus(status: CandidateAnalysisStatus, fallbackStartedAt: number): string {
@@ -220,7 +224,10 @@ export function DashboardPage() {
         return;
       }
       const newsNote = result.newsRows && result.newsRows > 0 ? ` · 뉴스 ${result.newsRows}종목` : "";
-      await revealResults(`분석 완료 — 후보 ${result.rows}개${newsNote}. (소요 ${elapsedLabel(startedAt)})`);
+      // Prefer the server's run duration: when re-attaching to a run that was
+      // already in progress, the local clock would under-count it.
+      const durationMs = Number.isFinite(result.elapsedMs) ? result.elapsedMs : Date.now() - startedAt;
+      await revealResults(`분석 완료 — 후보 ${result.rows}개${newsNote} · 소요 ${durationLabel(durationMs)}`);
     } catch (cause) {
       if (analysisRunRef.current !== runId) {
         return;
