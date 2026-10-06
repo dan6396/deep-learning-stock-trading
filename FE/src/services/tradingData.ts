@@ -539,37 +539,6 @@ export async function fetchStockQuoteData(ticker: string, signal?: AbortSignal):
   }
 }
 
-type StockNewsAnalysisStatus = {
-  status: "idle" | "running" | "completed" | "failed";
-  ticker: string;
-  error?: string;
-};
-
-/** Runs Naver-news + Gemini analysis for one selected stock and polls to completion. */
-export async function runStockNewsAnalysis(ticker: string, signal?: AbortSignal): Promise<void> {
-  const normalized = ticker.replace(/\D/g, "").padStart(6, "0").slice(-6);
-  const baseUrl = isLiveApiEnabled() ? API_BASE_URL : "";
-  const path = `/api/stock-analysis/run?ticker=${encodeURIComponent(normalized)}`;
-  await postJson<StockNewsAnalysisStatus>(path, signal, baseUrl, REQUEST_TIMEOUT_MS);
-
-  const deadline = Date.now() + CANDIDATE_ANALYSIS_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    await delay(CANDIDATE_ANALYSIS_POLL_MS, signal);
-    const status = await fetchJson<StockNewsAnalysisStatus>(path, signal, baseUrl, REQUEST_TIMEOUT_MS);
-    if (status.status === "completed") {
-      return;
-    }
-    if (status.status === "failed") {
-      throw new Error(status.error ?? `${normalized} 뉴스 분석에 실패했습니다.`);
-    }
-    if (status.status === "idle") {
-      throw new Error(`${normalized} 뉴스 분석이 시작되지 않았습니다.`);
-    }
-  }
-
-  throw new Error(`${normalized} 뉴스 분석 시간이 초과되었습니다.`);
-}
-
 export type CandidateAnalysisProgress = {
   stage: string;
   stageCount: number;
@@ -591,11 +560,6 @@ export type CandidateAnalysisStatus = {
 const CANDIDATE_ANALYSIS_POLL_MS = 5000;
 const CANDIDATE_ANALYSIS_STALE_MS = 5 * 60 * 1000;
 const CANDIDATE_ANALYSIS_PROGRESS_STALE_MS = 3 * 60 * 1000;
-
-export async function fetchCandidateAnalysisStatus(signal?: AbortSignal): Promise<CandidateAnalysisStatus> {
-  const baseUrl = isLiveApiEnabled() ? API_BASE_URL : "";
-  return fetchJson<CandidateAnalysisStatus>("/api/candidates/run", signal, baseUrl, REQUEST_TIMEOUT_MS);
-}
 
 function isStaleCandidateAnalysis(status: CandidateAnalysisStatus): boolean {
   if (status.status !== "running") {

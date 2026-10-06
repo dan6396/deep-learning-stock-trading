@@ -1,6 +1,6 @@
 import { buildMockKospiStockChartBundle } from "../data/mockStockChartData";
 import type { StockQuote } from "../types/trading";
-import type { CandlePoint, PricePoint, StockChartBundle, StockSummary, TimeRange } from "../types/stockChart";
+import type { StockChartBundle } from "../types/stockChart";
 
 export type StockChartDataSource = "kis" | "mock";
 
@@ -95,30 +95,4 @@ export async function getKospiStockChartBundle(
 
     return toFallbackBundle(symbol, source, warning);
   }
-}
-
-export async function getKospiStockChart(
-  symbol: string,
-  range: TimeRange,
-  source?: StockQuote,
-  signal?: AbortSignal,
-): Promise<PricePoint[]> {
-  return (await getKospiStockChartBundle(symbol, source, signal)).chartData.ranges[range].prices;
-}
-
-export async function getKospiStockCandles(
-  symbol: string,
-  range: TimeRange,
-  source?: StockQuote,
-  signal?: AbortSignal,
-): Promise<CandlePoint[]> {
-  return (await getKospiStockChartBundle(symbol, source, signal)).chartData.ranges[range].candles;
-}
-
-export async function getKospiStockSummary(
-  symbol: string,
-  source?: StockQuote,
-  signal?: AbortSignal,
-): Promise<StockSummary> {
-  return (await getKospiStockChartBundle(symbol, source, signal)).summary;
 }
