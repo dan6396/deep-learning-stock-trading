@@ -221,6 +221,7 @@ def _empty_supply_result(
         "total_supply_net_buy": float("nan"),
         "foreign_positive_days": 0,
         "inst_positive_days": 0,
+        "combined_positive_days": float("nan"),
         "supply_score": float("nan"),
         "supply_pass": False,
         "supply_window": int(window),
@@ -327,6 +328,13 @@ def _fetch_supply_trend(
             "inst_net_buy": inst_net,
         })
 
+    # Count trading dates, not duplicate API rows. Conflicting rows are not evidence.
+    by_date = {}
+    for row in rows:
+        if row["date"] in by_date and by_date[row["date"]] != row:
+            return _empty_supply_result(window, status="fetch_failed", error="동일 거래일 수급 응답 충돌")
+        by_date[row["date"]] = row
+    rows = list(by_date.values())
     rows.sort(key=lambda x: x["date"], reverse=True)
     selected = rows[:window]
     data_days = len(selected)
@@ -338,6 +346,7 @@ def _fetch_supply_trend(
     total_sum = foreign_sum + inst_sum
     foreign_positive_days = sum(1 for r in selected if r["foreign_net_buy"] > 0)
     inst_positive_days = sum(1 for r in selected if r["inst_net_buy"] > 0)
+    combined_positive_days = sum(1 for r in selected if r["foreign_net_buy"] + r["inst_net_buy"] > 0)
     enough = data_days >= window
     supply_pass = (
         enough
@@ -364,6 +373,7 @@ def _fetch_supply_trend(
         "total_supply_net_buy": total_sum,
         "foreign_positive_days": int(foreign_positive_days),
         "inst_positive_days": int(inst_positive_days),
+        "combined_positive_days": int(combined_positive_days),
         "supply_score": total_sum,
         "supply_pass": bool(supply_pass),
         "supply_window": int(window),
@@ -623,6 +633,7 @@ def _build_top10_supply_csv(final_df: pd.DataFrame) -> pd.DataFrame:
         "total_supply_net_buy",
         "foreign_positive_days",
         "inst_positive_days",
+        "combined_positive_days",
         "supply_score",
         "supply_pass",
         "supply_window",
