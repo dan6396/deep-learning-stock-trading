@@ -1,0 +1,121 @@
+{
+  "base": "http://127.0.0.1:5173",
+  "realData": true,
+  "generatedAt": "2026-10-09T14:44:21.539Z",
+  "checks": [
+    "live model-only results are available, final candidates unproduced",
+    "briefing displays original Top-5, unchanged ranks and pool",
+    "normal connection details are collapsed",
+    "briefing uses rank source and base date",
+    "briefing-1440-light: no page overflow",
+    "briefing-1440-light: axe WCAG AA",
+    "rank hides unused columns, membership labels and filter",
+    "rank preserves real population",
+    "rank-1440-light: no page overflow",
+    "rank-1440-light: axe WCAG AA",
+    "about explains feature count and Top-5 selection",
+    "about-1440-light: no page overflow",
+    "about-1440-light: axe WCAG AA",
+    "mobile Top-5 fits without table overflow",
+    "briefing-375-light: no page overflow",
+    "briefing-375-light: axe WCAG AA",
+    "native Top-5 link opens stock report",
+    "/-1440-dark: no page overflow",
+    "/-1440-dark: axe WCAG AA",
+    "/rank-1440-dark: no page overflow",
+    "/rank-1440-dark: axe WCAG AA",
+    "/about-1440-dark: no page overflow",
+    "/about-1440-dark: axe WCAG AA",
+    "built static about HTML contains shared model summary and features",
+    "console error count is zero",
+    "runtime exception count is zero",
+    "no non-GET or external network requests attempted"
+  ],
+  "screenshots": [
+    "briefing-1440-light-start.png",
+    "briefing-1440-light-full.png",
+    "briefing-1440-light.png",
+    "rank-1440-light.png",
+    "about-1440-light.png",
+    "briefing-375-light-start.png",
+    "briefing-375-light-full.png",
+    "briefing-375-light.png"
+  ],
+  "audits": [
+    {
+      "label": "briefing-1440-light",
+      "violations": []
+    },
+    {
+      "label": "rank-1440-light",
+      "violations": []
+    },
+    {
+      "label": "about-1440-light",
+      "violations": []
+    },
+    {
+      "label": "briefing-375-light",
+      "violations": []
+    },
+    {
+      "label": "/-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "/rank-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "/about-1440-dark",
+      "violations": []
+    }
+  ],
+  "rankCount": 199,
+  "originalTopFive": [
+    {
+      "code": "001800",
+      "rank": 1,
+      "pool": "199",
+      "predictedReturn": 0.003957795341987918,
+      "baseDate": "2026-10-08",
+      "modelId": "base_huber_h1_seeds_42_43_44"
+    },
+    {
+      "code": "029780",
+      "rank": 2,
+      "pool": "199",
+      "predictedReturn": 0.003919456347845021,
+      "baseDate": "2026-10-08",
+      "modelId": "base_huber_h1_seeds_42_43_44"
+    },
+    {
+      "code": "000270",
+      "rank": 3,
+      "pool": "199",
+      "predictedReturn": 0.0038405899133311153,
+      "baseDate": "2026-10-08",
+      "modelId": "base_huber_h1_seeds_42_43_44"
+    },
+    {
+      "code": "007070",
+      "rank": 4,
+      "pool": "199",
+      "predictedReturn": 0.003807590217238863,
+      "baseDate": "2026-10-08",
+      "modelId": "base_huber_h1_seeds_42_43_44"
+    },
+    {
+      "code": "323410",
+      "rank": 5,
+      "pool": "199",
+      "predictedReturn": 0.003762586489244884,
+      "baseDate": "2026-10-08",
+      "modelId": "base_huber_h1_seeds_42_43_44"
+    }
+  ],
+  "savedAt": "2026-10-09T12:33:37.171Z",
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": []
+}

@@ -1,0 +1,258 @@
+{
+  "fixtureOnly": false,
+  "generatedAt": "2026-10-09T09:56:30.285Z",
+  "restoredCodeSha256": "4264713CB050B9B9086615C830D1B0636D14DBA7AE2B4F50CD5776100E24C4F1",
+  "pages": [
+    {
+      "url": "http://127.0.0.1:5173/stock/001800",
+      "text": "데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n모델 분석 완료 · 뉴스 분석 미실행\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 뉴스 보정 최종 후보 미생성\n연결 상태 설명\n브리핑으로\n\nSTOCK REPORT · 001800\n\n오리온홀딩스\n\n001800 · 최종 후보 여부 미확인\n\n다시 조회\n관심 종목\n\n모델 분석만 완료 · 뉴스 보정 최종 후보 미생성. 최종 후보 여부는 미확인이며 뉴스 보정 수치와 순위는 제공되지 않습니다.\n\nQUOTE\n\n조회 가격\n\n22,550원\n\n-1.10% · -250원\n\nAPI 조회\n시세 기준 시각 2026. 10. 09. 18:56\n거래량\n65,265\n거래대금\n1,482,466,750원\n\nPREDICTION · 실제 성과 아님\n\n모델과 최종 보정\n원본 모델 예측수익률\n+0.40%\n최종 보정 예측수익률\n—\n원본 모델 순위 / 모집단\n1 / 199\n최종 보정 순위\n— · 원본 미제공\n분석 기준일\n2026. 10. 08.\n예측 대상\n다음 거래일 시가→종가\n다음 거래일\n미확인 · 거래일 달력 미연결\n저장된 결과\n모델 결과 저장 시각 2026. 10. 09. 18:38\n저장된 결과\n상세 분석 저장 시각 2026. 10. 09. 18:38\n\nPRICE OBSERVATIONS\n\n가격 이력\n1일\n1개월\n3개월\n1년\n3년\n5년\n가격선\n캔들\nAPI 조회\n조회/저장 시각 2026. 10. 09. 18:56\n\n요청 1일 · 실제 제공 관측 범위 2026. 10. 08. 09:00 ~ 2026. 10. 08. 15:30. 요청 기간 전체의 관측 제공 여부는 미확인입니다.\n\n1일 요청 · 가격선. 391개 원본 관측. 2026. 10. 08. 09:00 22,750원부터 2026. 10. 08. 15:30 22,600원까지. 최고 22,900원, 최저 22,550원.\n\n2026. 10. 08. 09:00 · 가격 22,750원\n\n각 점은 제공된 관측 시각의 가격입니다. 가격 이력은 모델의 실현 성과가 아닙니다. 실제 제공 관측 범위와 부분 제공 안내를 확인하세요. 원본 관측이 없는 구간은 연결하지 않습니다.\n\nNEWS EVIDENCE\n\n뉴스 원본 근거\n판정 방법 미확인\n\n수집 상태: skipped · 확인된 기사 감성을 그대로 표시합니다.\n\n뉴스 수집 여부를 확인할 수 없습니다.\n\n성과 기록\n수집 중\n\n확인된 공식 성과 기록이 없습니다. 모델 예측과 단순 가격 이력을 실현 성과로 표시하지 않습니다.\n\nMODEL & EVIDENCE\n\n신호와 근거 일치도\n모델\n판정 불가\n\n뉴스 보정 최종 후보가 생성되지 않아 후보 여부는 미확인입니다. 모델 선별 결과를 최종 후보나 비후보 판정으로 쓰지 않습니다.\n\n뉴스\n판정 불가\n\n뉴스 수집·분석의 성공 상태를 확인할 수 없습니다.\n\n수급\n판정 불가\n\n원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\n\n— · 긍정 0/0\n판정 불가 3개는 분모에서 제외\n\n모델 긍정은 최종 후보 선정 멤버십을 뜻할 수 있습니다. 확정 규칙상 원본 예측이 음수인 최종 후보도 긍정이며, 상승이나 수익을 보장하지 않습니다.\n\n원본 모델 예측은 +0.40%이며 최종 보정 예측은 —입니다. 예측값은 확률이나 실현 성과가 아닙니다.\n\nSUPPLY INPUTS\n\n수급 원본\n외국인 합계\n-425,000,000원\n기관 합계\n-452,000,000원\n외국인·기관 합계\n-877,000,000원\n외국인 양수일수\n2\n기관 양수일수\n0\n합산 순매수 일수\n—\n조회 기간 / 확보 일수\n5 / 5\n충분성 / 상태\n충분 / ok\n\n합산 순매수 일수 원본이 없으면 수급 신호는 판정 불가입니다. 개별 양수일수를 더하거나 양쪽 각각 절반이라는 규칙으로 바꾸지 않습니다.\n\n근거 판정 기준 m1-2026-10-08-v2\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.",
+      "rows": 0,
+      "quote": "22,550원",
+      "plot": "1일 요청 · 가격선. 391개 원본 관측. 2026. 10. 08. 09:00 22,750원부터 2026. 10. 08. 15:30 22,600원까지. 최고 22,900원, 최저 22,550원.",
+      "supply": "SUPPLY INPUTS\n\n수급 원본\n외국인 합계\n-425,000,000원\n기관 합계\n-452,000,000원\n외국인·기관 합계\n-877,000,000원\n외국인 양수일수\n2\n기관 양수일수\n0\n합산 순매수 일수\n—\n조회 기간 / 확보 일수\n5 / 5\n충분성 / 상태\n충분 / ok\n\n합산 순매수 일수 원본이 없으면 수급 신호는 판정 불가입니다. 개별 양수일수를 더하거나 양쪽 각각 절반이라는 규칙으로 바꾸지 않습니다.",
+      "signals": [
+        "unavailable",
+        "unavailable",
+        "unavailable"
+      ],
+      "violations": []
+    },
+    {
+      "url": "http://127.0.0.1:5173/",
+      "text": "데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n모델 분석 완료 · 뉴스 분석 미실행\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 뉴스 보정 최종 후보 미생성\n연결 상태 설명\n\nKOSPI AI Desk\n\n오늘의 브리핑\n\n예측과 근거를 나란히, 판단은 신중하게.\n\n다시 조회\n\n예측을 읽는 새로운 방식\n모델 순위와 뉴스·수급 근거를 함께 비교하세요. 예측은 투자 추천이나 수익 보장이 아니며, 실제 성과와 다릅니다.\n\n분석 기준일\n—\n다음 거래일\n미확인\n거래일 달력 미연결\n분석 결과 출처\n저장된 결과\n저장 시각 —\n이번 조회 시각\n2026. 10. 09. 18:56\n가격 관측 시각과 다를 수 있음\n시장 흐름\n하락 흐름 우위\n지수 등락률 기반 단순 판단 · 투자 판단 지표 아님\n코스피\n-2.62%\n6,625.93\nAPI 조회\n기준 시각 2026. 10. 09. 18:56\n시계열: 과거 관측값\n코스닥\n-0.69%\n892.27\nAPI 조회\n기준 시각 2026. 10. 09. 18:56\n시계열: 과거 관측값\n코스피200\n-2.71%\n1,044.52\nAPI 조회\n기준 시각 2026. 10. 09. 18:57\n시계열: 보간값 · 실제 이력 아님\n\nMODEL & EVIDENCE\n\n최종 후보 비교 —\n종목을 선택해 근거 보기\n\n모델 분석만 완료 · 뉴스 보정 최종 후보 미생성. 최종 후보 여부는 미확인이며 뉴스 보정 수치와 순위는 제공되지 않습니다.\n모델 예측 순위는 전체 순위에서 확인하세요.\n\n예측수익률: 다음 거래일 시가→종가 모델 예측 · 실제 성과 아님\n원본 순위 미제공 시 — 표시 · 판정 불가 신호는 일치도 분모에서 제외\n\n성과 기록\n수집 중\n\n검증 가능한 공식 성과가 쌓이면 제공됩니다. 현재 확인된 거래일 수와 수익률 기록은 없습니다.\n\n근거 판정 기준 m1-2026-10-08-v2\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.\n\n근거를 더 가까이\n\n비교표에서 종목을 선택하면 모델·뉴스·수급 근거와 조회 가격을 확인할 수 있습니다.",
+      "rows": 0,
+      "signals": [],
+      "violations": []
+    },
+    {
+      "url": "http://127.0.0.1:5173/rank",
+      "text": "데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n모델 분석 완료 · 뉴스 분석 미실행\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 뉴스 보정 최종 후보 미생성\n연결 상태 설명\n\nMODEL UNIVERSE\n\n전체 순위\n\n전체 분석 집합을 비교하세요. 최종 후보와 원본 모델 순위는 다른 기준입니다.\n\n다시 조회\n저장된 결과\n전체 순위 저장 시각 2026. 10. 09. 18:38\n\n모델 분석만 완료 · 뉴스 보정 최종 후보 미생성. 최종 후보 여부는 미확인이며 뉴스 보정 수치와 순위는 제공되지 않습니다. 원본 뉴스·수급은 별도로 평가합니다.\n\n모델 원본 비교 199종목\n\n다음 거래일 시가→종가 예측 · 실제 성과 아님\n\n종목 이름 또는 코드\n보기\n전체 종목\n최종 후보만\n원본 예측 양수\n원본 예측 0 이하\n원본 예측 미제공\n전체 순위 원본 비교. 예측값은 실제 성과가 아니며 누락값은 —입니다.\n종목\n\t\n원본 모델 순위\n\t\n최종 보정 순위\n\t\n모델 예측\n\t\n최종 보정 예측\n\t모델\t뉴스\t수급\t근거 일치도\n\n관심 종목\n오리온홀딩스\n001800\n최종 후보 미확인\n\t1\t—\t+0.40%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n삼성카드\n029780\n최종 후보 미확인\n\t2\t—\t+0.39%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n기아\n000270\n최종 후보 미확인\n\t3\t—\t+0.38%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\nGS리테일\n007070\n최종 후보 미확인\n\t4\t—\t+0.38%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n카카오뱅크\n323410\n최종 후보 미확인\n\t5\t—\t+0.38%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n롯데정밀화학\n004000\n최종 후보 미확인\n\t6\t—\t+0.36%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n두산밥캣\n241560\n최종 후보 미확인\n\t7\t—\t+0.34%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n삼성바이오로직스\n207940\n최종 후보 미확인\n\t8\t—\t+0.32%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\nKB금융\n105560\n최종 후보 미확인\n\t9\t—\t+0.32%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n한화오션\n042660\n최종 후보 미확인\n\t10\t—\t+0.32%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n신한지주\n055550\n최종 후보 미확인\n\t11\t—\t+0.31%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\nBGF리테일\n282330\n최종 후보 미확인\n\t12\t—\t+0.30%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\nSK바이오팜\n326030\n최종 후보 미확인\n\t13\t—\t+0.30%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n오리온\n271560\n최종 후보 미확인\n\t14\t—\t+0.30%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n삼성중공업\n010140\n최종 후보 미확인\n\t15\t—\t+0.29%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n미스토홀딩스\n081660\n최종 후보 미확인\n\t16\t—\t+0.29%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n대웅\n003090\n최종 후보 미확인\n\t17\t—\t+0.28%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\nHD현대일렉트릭\n267260\n최종 후보 미확인\n\t18\t—\t+0.28%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\n대한항공\n003490\n최종 후보 미확인\n\t19\t—\t+0.28%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n\n\n관심 종목\nGKL\n114090\n최종 후보 미확인\n\t20\t—\t+0.28%\t—\t\n판정 불가\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t—\n긍정 0/0 · 판정 불가 3\n1 / 10페이지 · 199종목\n이전\n다음\n\n누락값은 —이며 양방향 정렬 모두 마지막에 표시합니다. 화면 순서를 모델 순위로 만들지 않습니다. 최종 후보 여부는 모델 판정에만 사용하고, 뉴스·수급은 실제 원본 근거로 평가합니다.\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 다음 거래일은 거래일 달력 미연결로 미확인입니다.",
+      "rows": 20,
+      "signals": [
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable"
+      ],
+      "violations": []
+    },
+    {
+      "url": "http://127.0.0.1:5173/history",
+      "text": "데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n모델 분석 완료 · 뉴스 분석 미실행\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 뉴스 보정 최종 후보 미생성\n연결 상태 설명\n\nANALYSIS RECORDS\n\n분석 기록\n\n지금 확인할 수 있는 실행 상태와 기록의 기준을 살펴보세요.\n\n다시 조회\n검증 가능한 기록부터\n\n현재 제공되는 정보는 최신 실행 상태 한 건입니다. 과거 실행 목록, 공식 실행 판정, 20거래일 실현 성과는 제공되지 않아 확인할 수 없습니다.\n\n최신 실행 상태\n실행 중인 분석 없음\n측정된 경과 시간\n—\n최근 상태 갱신\n미확인\n진행 메시지\n—\n제공된 오류\n—\n공식 / 수시 구분\n미확인\n실행 식별자\n미제공\n출처\n출처 미확인\n상태 기준 시각\n—\n\n경과 시간은 제공된 측정값입니다. 최근 상태 갱신 시각을 확인할 수 없으면 미확인으로 표시합니다.\n\n현재 분석 결과\n\n저장된 결과의 존재만으로 특정 실행의 완료나 공식 실행 여부를 확인할 수 없습니다.\n\n조회된 후보 수\n미생성\n공식 / 수시 구분\n미확인\n결과 출처\n저장된 결과\n저장 기준 시각\n—\n\n모델 분석만 완료 · 뉴스 보정 최종 후보 미생성. 최종 후보 여부는 미확인이며 뉴스 보정 수치와 순위는 제공되지 않습니다.\n\n브리핑에서 근거 확인\n전체 모델 순위 보기\n저장된 마지막 실행\n\n서버가 디스크에 남긴 마지막 실행 기록입니다. 지금 실행 중인 분석이나 공식 기록이 아닙니다.\n\n저장된 실행 결과\n완료\n실행 방식\n모델 전용 실행 · 뉴스 분석 미실행\n시작 시각\n2026. 10. 09. 18:37\n종료 시각\n2026. 10. 09. 18:38\n측정된 실행 시간\n20.744초\n출처\n저장된 결과\n\n전체 순위: 저장된 분석 결과 제공 · 199종목\n\n모델 순위만 실행했습니다. 뉴스 보정 최종 후보는 생성되지 않았습니다.\n\n공식 / 수시 구분, 실행 식별자, 실현 성과는 제공되지 않습니다. 현재 실행 상태는 별도로 확인하세요.\n\n기록을 읽는 기준\n실행 상태\n\n최신 실행의 진행 여부입니다. 과거 실행 목록이나 공식 기록을 대신하지 않습니다.\n\n분석 결과\n\n조회 시점에 제공된 예측과 근거입니다. 실제 거래나 실현 수익률을 뜻하지 않습니다.\n\n실현 성과\n\n공식 실행 식별자와 거래일별 실제 가격을 연결한 기록이 필요합니다. 현재 확인 가능한 기록은 없습니다.",
+      "rows": 0,
+      "signals": [],
+      "violations": []
+    }
+  ],
+  "backend": {
+    "version": 1,
+    "analysisMode": "model_only",
+    "checkedAt": "2026-10-09T09:56:30.397Z",
+    "source": "unknown",
+    "asOf": null,
+    "market": {
+      "configuration": "configured",
+      "verification": "unverified"
+    },
+    "news": {
+      "configuration": "configured",
+      "collectionConfiguration": "configured",
+      "verification": "unverified"
+    },
+    "runtime": {
+      "state": "idle",
+      "startedAt": null,
+      "finishedAt": null
+    },
+    "marker": {
+      "state": "completed",
+      "mode": "model_only",
+      "startedAt": "2026-10-09T09:37:55.019Z",
+      "finishedAt": "2026-10-09T09:38:15.763Z",
+      "source": "cache",
+      "asOf": "2026-10-09T09:38:15.770Z"
+    },
+    "results": {
+      "candidates": {
+        "state": "not_produced",
+        "count": null,
+        "source": "unknown",
+        "asOf": null
+      },
+      "rank": {
+        "state": "available",
+        "count": 199,
+        "source": "cache",
+        "asOf": "2026-10-09T09:38:15.230Z"
+      }
+    }
+  },
+  "rankCount": 199,
+  "supply": [
+    {
+      "ticker": "001800",
+      "rank": 1,
+      "foreign": -425000000,
+      "institution": -452000000,
+      "foreignDays": 2,
+      "institutionDays": 0,
+      "window": 5,
+      "dataDays": 5,
+      "enough": true,
+      "status": "ok",
+      "combinedDays": null
+    },
+    {
+      "ticker": "029780",
+      "rank": 2,
+      "foreign": -1770000000,
+      "institution": -1587000000,
+      "foreignDays": 1,
+      "institutionDays": 2,
+      "window": 5,
+      "dataDays": 5,
+      "enough": true,
+      "status": "ok",
+      "combinedDays": null
+    },
+    {
+      "ticker": "000270",
+      "rank": 3,
+      "foreign": 22431000000,
+      "institution": -92698000000,
+      "foreignDays": 4,
+      "institutionDays": 0,
+      "window": 5,
+      "dataDays": 5,
+      "enough": true,
+      "status": "ok",
+      "combinedDays": null
+    },
+    {
+      "ticker": "007070",
+      "rank": 4,
+      "foreign": 160000000,
+      "institution": -1551000000,
+      "foreignDays": 2,
+      "institutionDays": 0,
+      "window": 5,
+      "dataDays": 5,
+      "enough": true,
+      "status": "ok",
+      "combinedDays": null
+    },
+    {
+      "ticker": "323410",
+      "rank": 5,
+      "foreign": -7109000000,
+      "institution": -2709000000,
+      "foreignDays": 2,
+      "institutionDays": 2,
+      "window": 5,
+      "dataDays": 5,
+      "enough": true,
+      "status": "ok",
+      "combinedDays": null
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": [],
+  "interceptionErrors": [],
+  "cancelledInterceptions": [
+    {
+      "targetId": "0F469575D1710148DCFEE250B0DBC8C9",
+      "session": "page-websocket",
+      "requestId": "interception-job-215.0",
+      "networkId": "226908.472",
+      "frameId": "0F469575D1710148DCFEE250B0DBC8C9",
+      "url": "http://127.0.0.1:5173/api/rank",
+      "method": "Fetch.continueRequest",
+      "code": -32602,
+      "message": "Invalid InterceptionId.",
+      "loadingFailed": {
+        "requestId": "226908.472",
+        "timestamp": 39393.73667,
+        "type": "Fetch",
+        "errorText": "net::ERR_ABORTED",
+        "canceled": true
+      }
+    },
+    {
+      "targetId": "0F469575D1710148DCFEE250B0DBC8C9",
+      "session": "page-websocket",
+      "requestId": "interception-job-287.0",
+      "networkId": "226908.626",
+      "frameId": "0F469575D1710148DCFEE250B0DBC8C9",
+      "url": "http://127.0.0.1:5173/api/backend/status",
+      "method": "Fetch.continueRequest",
+      "code": -32602,
+      "message": "Invalid InterceptionId.",
+      "loadingFailed": {
+        "requestId": "226908.626",
+        "timestamp": 39395.119343,
+        "type": "Fetch",
+        "errorText": "net::ERR_ABORTED",
+        "canceled": true
+      }
+    }
+  ],
+  "passed": true,
+  "browserClosed": true
+}

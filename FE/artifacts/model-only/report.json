@@ -1,0 +1,312 @@
+{
+  "fixtureOnly": true,
+  "generatedAt": "2026-10-09T09:55:04.027Z",
+  "checks": [
+    "briefing says final candidates were not produced instead of 'none'",
+    "briefing count is — and offers the whole-rank link",
+    "connection notice shows model-only completion and no fabricated final candidates",
+    "briefing-model-only: axe WCAG 2.2 AA",
+    "briefing-model-only: no page overflow",
+    "deep link is 'membership unknown', not 'non-candidate'",
+    "deep link model signal unavailable while raw prediction is still shown",
+    "rank table is filled with 199 model rows",
+    "no rank row is claimed to be a non-candidate",
+    "every model signal is unavailable under unknown membership",
+    "raw model rank and prediction render",
+    "news-adjusted rank and prediction stay empty (—), never filled from the model",
+    "rank page explains model-only state",
+    "rank-model-only: axe WCAG 2.2 AA",
+    "rank-model-only: no page overflow",
+    "watchlist rows are unknown membership with raw model values and null final fields",
+    "watchlist-model-only: axe WCAG 2.2 AA",
+    "watchlist-model-only: no page overflow",
+    "report keeps membership unknown with raw prediction and empty final fields",
+    "report model signal is unavailable and news evidence is not fabricated",
+    "report-model-only: axe WCAG 2.2 AA",
+    "report-model-only: no page overflow",
+    "history shows model run completed, candidates unproduced, no official-performance claim",
+    "history stored-run card comes from the disk marker, labelled model-only, with the real rank count",
+    "history-model-only: axe WCAG 2.2 AA",
+    "history-model-only: no page overflow",
+    "produced candidate list still renders without any production notice",
+    "a produced empty list still says there are no final candidates",
+    "status failure leaves the empty list unconfirmed",
+    "zero console.error and unhandled exceptions",
+    "all product API calls are fixture GET, never an analysis POST",
+    "analysis run endpoint was only read for status, never started",
+    "zero external network/article visits"
+  ],
+  "axe": [
+    {
+      "label": "briefing-model-only",
+      "violations": []
+    },
+    {
+      "label": "rank-model-only",
+      "violations": []
+    },
+    {
+      "label": "watchlist-model-only",
+      "violations": []
+    },
+    {
+      "label": "report-model-only",
+      "violations": []
+    },
+    {
+      "label": "history-model-only",
+      "violations": []
+    }
+  ],
+  "screenshots": [
+    "briefing-1440-dark.png",
+    "rank-1440-dark.png"
+  ],
+  "passed": true,
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": [],
+  "clickDiagnostics": [],
+  "cancelledInterceptions": [],
+  "interceptionErrors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539704240
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539704240
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791539704241
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791539704241
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539704971
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791539704973
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791539704974
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539704974
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791539704974
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791539704974
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539705205
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791539705206
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539705208
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539706237
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791539706238
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539706242
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539706694
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791539706695
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791539706696
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791539706696
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539706699
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539707167
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791539707168
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539707168
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539707237
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539707238
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539707532
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539707535
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791539707535
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791539707536
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539707740
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539707741
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791539707741
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791539707741
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539707964
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791539707965
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791539707966
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791539707967
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791539708022
+    }
+  ],
+  "page": {
+    "url": "http://127.0.0.1:65213/next",
+    "text": "본문으로 건너뛰기\nKOSPI AI Desk\n브리핑\n전체 순위\n관심\n분석 기록\n검색\n⌘ K / Ctrl K\n데이터 연결 상태\n연결 상태 다시 확인\n\n연결 상태 미확인 · 다른 화면은 계속 이용할 수 있습니다.\n\nKOSPI AI Desk\n\n오늘의 브리핑\n\n예측과 근거를 나란히, 판단은 신중하게.\n\n다시 조회\n\n예측을 읽는 새로운 방식\n모델 순위와 뉴스·수급 근거를 함께 비교하세요. 예측은 투자 추천이나 수익 보장이 아니며, 실제 성과와 다릅니다.\n\n분석 기준일\n—\n다음 거래일\n미확인\n거래일 달력 미연결\n분석 결과 출처\n저장된 결과\n저장 시각 2026. 10. 07. 18:00\n이번 조회 시각\n2026. 10. 09. 18:55\n가격 관측 시각과 다를 수 있음\n시장 흐름\n상승 흐름 우위\n지수 등락률 기반 단순 판단 · 투자 판단 지표 아님\n코스피\n+0.41%\n2,748.32\n저장된 결과\n기준 시각 2026. 10. 07. 18:00\n시계열: 과거 관측값\n코스피 200\n+0.63%\n367.84\n저장된 결과\n기준 시각 2026. 10. 07. 18:00\n시계열: 보간값 · 실제 이력 아님\n코스닥\n-0.41%\n821.17\n예시 데이터\n기준 시각 2026. 10. 07. 18:00\n시계열: 보간값 · 실제 이력 아님\n\nMODEL & EVIDENCE\n\n최종 후보 비교 —\n종목을 선택해 근거 보기\n\n최종 후보 생성 여부를 확인하지 못했습니다. 후보 여부는 미확인입니다.\n모델 예측 순위는 전체 순위에서 확인하세요.\n\n예측수익률: 다음 거래일 시가→종가 모델 예측 · 실제 성과 아님\n원본 순위 미제공 시 — 표시 · 판정 불가 신호는 일치도 분모에서 제외\n\n성과 기록\n수집 중\n\n검증 가능한 공식 성과가 쌓이면 제공됩니다. 현재 확인된 거래일 수와 수익률 기록은 없습니다.\n\n근거 판정 기준 m1-2026-10-08-v2\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.\n\n근거를 더 가까이\n\n비교표에서 종목을 선택하면 모델·뉴스·수급 근거와 조회 가격을 확인할 수 있습니다.\n\nKOSPI AI Desk\n\n예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.\n\n서비스 소개\n기록 확인"
+  }
+}

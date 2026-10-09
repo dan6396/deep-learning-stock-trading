@@ -1,0 +1,41 @@
+﻿PASS briefing report link targets new route
+PASS briefing-to-report navigation focuses mounted main
+PASS report and briefing authoritative model/final rank agree
+PASS report does not expose analysis execution UI
+PASS deeplink survives reload
+PASS return link preserves briefing selected code
+PASS browser back restores report
+PASS rapid selection has B panel and matching report href before mouse click
+PASS late A stock/quote/chart never replace B after real selection
+PASS range pending has no old plot
+PASS late range response cannot overwrite selected range
+PASS raw OHLC permits accessible candle mode
+PASS price exploration is keyboard operable
+PASS pending membership does not invent non-candidate/model signal
+PASS previous candidate data stays explicitly unconfirmed on error
+PASS successful [] confirms true non-membership
+PASS negative candidate keeps membership-positive model and blue numeric tone
+PASS null analysis/quote preserves missing values
+PASS stock error rejects response without prediction fabrication
+PASS stock mismatch rejects response without prediction fabrication
+PASS stock sample rejects response without prediction fabrication
+PASS background error retains prior results with warnings
+PASS chart empty never fabricates observed history
+PASS chart sample never fabricates observed history
+PASS chart unknown never fabricates observed history
+PASS chart mismatch never fabricates observed history
+PASS chart error never fabricates observed history
+PASS chart missingTime never fabricates observed history
+PASS legacy OHLC replacements cannot become verified candles
+PASS server-preserved raw price gap produces two disconnected paths
+PASS chart background failure is explicitly stale
+PASS unclear article keeps original reason and safe text-only URL
+PASS missing prediction has no fabricated summary or final rank
+node : invalid code shows validation without API requests
+At line:6 char:23
++   $log = "$d\$s.log"; node "scripts/verify/$s.mjs" *> $log; $code = $ ...
++                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (invalid code sh...ut API requests:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Artifacts: FE/artifacts/m3/ · FAILED

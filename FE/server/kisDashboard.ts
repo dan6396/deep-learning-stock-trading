@@ -11,6 +11,9 @@ import { TIME_RANGES, type CandlePoint, type PricePoint, type StockChartBundle, 
 import { KOSPI200_POOL } from "./kospi200Pool";
 import { readDashboardSnapshot, readLastSnapshot, writeDashboardSnapshot } from "./dashboardCache";
 import { indexPipelineByTicker, loadPipelineRows } from "./pipelineResults";
+import { cachedDashboard } from "./snapshotMetadata";
+import { pipelineOutputDir } from "./pipelineFreshness";
+import { mkdir } from "node:fs/promises";
 
 declare const process: {
   cwd: () => string;
@@ -319,20 +322,20 @@ async function indexMiniSeriesFromHistory(
   current: number,
   change: number,
   env: Record<string, string | undefined>,
-): Promise<number[]> {
+): Promise<{ miniSeries: number[]; miniSeriesSource: "history" | "interpolated" }> {
   try {
     const series = await fetchYahooIndexSeries(index.yahooSymbol, env);
     const alignedSeries = seriesWithCurrentValue(series, current);
     if (alignedSeries.length >= 2) {
-      return alignedSeries;
+      return { miniSeries: alignedSeries, miniSeriesSource: "history" };
     }
 
-    return miniSeriesFromChange(current, change);
+    return { miniSeries: miniSeriesFromChange(current, change), miniSeriesSource: "interpolated" };
   } catch (error) {
     console.warn(
       `[kis] ${index.symbol} index history fallback: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return miniSeriesFromChange(current, change);
+    return { miniSeries: miniSeriesFromChange(current, change), miniSeriesSource: "interpolated" };
   }
 }
 
@@ -396,6 +399,7 @@ async function getAccessToken(config: KisConfig): Promise<string> {
       "Content-Type": "application/json",
     },
     method: "POST",
+    signal: AbortSignal.timeout(20000),
   });
 
   const text = await response.text();
@@ -446,6 +450,7 @@ async function requestKisOutput(
       tr_id: trId,
     },
     method: "GET",
+    signal: AbortSignal.timeout(20000),
   });
 
   return parseKisResponse(response, trId);
@@ -474,6 +479,7 @@ async function requestKisBody(
       tr_id: trId,
     },
     method: "GET",
+    signal: AbortSignal.timeout(20000),
   });
 
   return parseKisBody(response, trId);
@@ -571,6 +577,29 @@ function toFiniteOrNull(value: unknown): number | null {
   }
 
   return null;
+}
+
+function pickNullableNumber(output: KisOutput, keys: string[]): number | null {
+  for (const key of keys) {
+    const number = toFiniteOrNull(output[key]);
+    if (number !== null) return number;
+  }
+  return null;
+}
+
+function nullableSigned(value: number | null, direction: MarketDirection): number | null {
+  return value === null ? null : signedChange(value, direction);
+}
+
+/** Preserve upstream absence for new consumers alongside legacy numeric fields. */
+function rawQuoteValues(output: KisOutput, direction: MarketDirection): NonNullable<StockQuote["rawValues"]> {
+  return {
+    currentPrice: pickNullableNumber(output, ["stck_prpr"]),
+    change: nullableSigned(pickNullableNumber(output, ["prdy_vrss"]), direction),
+    changeRate: nullableSigned(pickNullableNumber(output, ["prdy_ctrt"]), direction),
+    accumulatedVolume: pickNullableNumber(output, ["acml_vol"]),
+    tradingValue: pickNullableNumber(output, ["acml_tr_pbmn"]),
+  };
 }
 
 function upProbabilityFromRow(aiRow: PipelineOutputRow | undefined): number | null {
@@ -691,6 +720,7 @@ async function fetchStockQuote(
 
   return {
     code: stock.code,
+    rawValues: rawQuoteValues(output, direction),
     name,
     market: stock.market,
     // Every live quote comes from the KOSPI200 pool, so mark membership
@@ -718,7 +748,7 @@ async function fetchIndexSnapshot(
   accessToken: string,
   index: (typeof INDEX_UNIVERSE)[number],
   env: Record<string, string | undefined>,
-) {
+): Promise<MarketIndexSnapshot> {
   const output = await requestWithRetry(
     config,
     accessToken,
@@ -737,12 +767,19 @@ async function fetchIndexSnapshot(
 
   return {
     symbol: index.symbol,
+    rawValues: {
+      value: pickNullableNumber(output, ["bstp_nmix_prpr", "stck_prpr"]),
+      change: nullableSigned(pickNullableNumber(output, ["bstp_nmix_prdy_vrss", "prdy_vrss"]), direction),
+      changeRate: nullableSigned(pickNullableNumber(output, ["bstp_nmix_prdy_ctrt", "prdy_ctrt"]), direction),
+    },
     name: index.name,
     value,
     change,
     changeRate,
     direction,
-    miniSeries: await indexMiniSeriesFromHistory(index, value, change, env),
+    ...await indexMiniSeriesFromHistory(index, value, change, env),
+    source: "live",
+    asOf: new Date().toISOString(),
   } satisfies MarketIndexSnapshot;
 }
 
@@ -790,10 +827,11 @@ export async function buildKisStockQuote(symbol: string, env = process.env): Pro
   const pipelineRows = await loadPipelineRows();
   const aiByTicker = pipelineRows ? indexPipelineByTicker(pipelineRows) : null;
 
-  return fetchStockQuote(config, accessToken, seed, {
+  const quote = await fetchStockQuote(config, accessToken, seed, {
     aiRow: aiByTicker?.get(code),
     withInvestorFlow: env.KIS_QUOTE_WITH_INVESTOR_FLOW === "true",
   });
+  return { ...quote, source: "live", asOf: new Date().toISOString() };
 }
 
 const RANGE_LOOKBACK_DAYS: Record<TimeRange, number> = {
@@ -970,6 +1008,8 @@ function dailyRowToCandle(row: KisOutput): CandlePoint | null {
     open,
     time: normalizeKisDate(row.stck_bsop_date ?? row.bsop_date),
     volume: pickNumber(row, ["acml_vol", "cntg_vol"]),
+    rawTime: rawCandleTime(row.stck_bsop_date ?? row.bsop_date),
+    rawValues: rawCandleValues(row, false),
   };
 }
 
@@ -990,6 +1030,8 @@ function timeRowToCandle(row: KisOutput): CandlePoint | null {
     open,
     time: normalizeKisTime(row.stck_bsop_date ?? row.bsop_date, row.stck_cntg_hour ?? row.cntg_hour),
     volume: pickNumber(row, ["cntg_vol", "acml_vol"]),
+    rawTime: rawCandleTime(row.stck_bsop_date ?? row.bsop_date, row.stck_cntg_hour ?? row.cntg_hour, true),
+    rawValues: rawCandleValues(row, true),
   };
 }
 
@@ -997,7 +1039,97 @@ function candlesToPrices(candles: CandlePoint[]): PricePoint[] {
   return candles.map((candle) => ({
     date: candle.time,
     price: candle.close,
+    rawDate: candle.rawTime ?? null,
   }));
+}
+
+/** Raw same-day prices for settlement: no adjusted/fallback/synthesized OHLC. */
+export async function fetchKisSettlementPrice(code: string, date: string, env = process.env): Promise<{ date: string; open: number; close: number; volume: number } | null> {
+  if (!/^\d{6}$/.test(code) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid settlement query.");
+  const config = getKisConfig(env), token = await getAccessToken(config);
+  const body = await requestBodyWithRetry(config, token, "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice", "FHKST03010100", {
+    FID_COND_MRKT_DIV_CODE: "J", FID_INPUT_ISCD: code, FID_INPUT_DATE_1: date.replace(/-/g, ""), FID_INPUT_DATE_2: date.replace(/-/g, ""),
+    FID_PERIOD_DIV_CODE: "D", FID_ORG_ADJ_PRC: "1",
+  });
+  await sleep(config.requestDelayMs);
+  const matches = outputRows(body).filter(row => String(row.stck_bsop_date) === date.replace(/-/g, ""));
+  if (matches.length !== 1) return null;
+  const row = matches[0], open = pickNullableNumber(row, ["stck_oprc"]), close = pickNullableNumber(row, ["stck_clpr"]), volume = pickNullableNumber(row, ["acml_vol"]);
+  return open !== null && open > 0 && close !== null && close > 0 && volume !== null && volume > 0 ? { date, open, close, volume } : null;
+}
+
+type TradingCalendarCache = { fetchedDate: string; days: Record<string, boolean>; observedTargets?: Record<string, string> };
+const calendarMemory = new Map<string, TradingCalendarCache>();
+/** Quote-only keys may not access the account calendar. Historical KOSPI sessions still prove the next completed trading day. */
+async function observedNextSession(baseDate: string, config: KisConfig): Promise<string | null> {
+  const end = new Date(Math.min(Date.parse(`${baseDate}T00:00:00Z`) + 31 * 86400000, Date.now())).toISOString().slice(0, 10);
+  const body = await requestBodyWithRetry(config, await getAccessToken(config), "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice", "FHKUP03500100", {
+    FID_COND_MRKT_DIV_CODE: "U", FID_INPUT_ISCD: "0001", FID_INPUT_DATE_1: baseDate.replace(/-/g, ""), FID_INPUT_DATE_2: end.replace(/-/g, ""), FID_PERIOD_DIV_CODE: "D",
+  });
+  await sleep(config.requestDelayMs);
+  const dates = outputRows(body).filter(row => /^\d{8}$/.test(String(row.stck_bsop_date)) && (pickNullableNumber(row, ["bstp_nmix_prpr"]) ?? 0) > 0)
+    .map(row => String(row.stck_bsop_date)).sort();
+  // Presence of the base session proves the returned range has not been truncated before the next session.
+  if (!dates.includes(baseDate.replace(/-/g, ""))) return null;
+  const next = dates.find(date => date > baseDate.replace(/-/g, "") && date <= end.replace(/-/g, ""));
+  return next ? `${next.slice(0, 4)}-${next.slice(4, 6)}-${next.slice(6, 8)}` : null;
+}
+/** KIS recommends one calendar request daily. Reuse the returned date range on disk across restarts. */
+export async function fetchKisTargetSession(baseDate: string, env = process.env): Promise<string | null> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(baseDate) || !Number.isFinite(Date.parse(baseDate))) throw new Error("Invalid calendar query.");
+  const config = getKisConfig(env);
+  if (config.env !== "real") throw new Error("Settlement requires the real KIS calendar.");
+  const path = join(pipelineOutputDir(env), ".performance-calendar.json"), today = todayKisDate();
+  let cache = calendarMemory.get(path) ?? null;
+  if (!cache) { try { cache = JSON.parse(await readFile(path, "utf8")) as TradingCalendarCache; } catch { cache = null; } }
+  const target = (data: TradingCalendarCache | null) => {
+    if (!data?.days || data.days[baseDate] !== true) return null;
+    for (let day = 1; day <= 31; day++) {
+      const date = new Date(Date.parse(`${baseDate}T00:00:00Z`) + day * 86400000).toISOString().slice(0, 10);
+      if (typeof data.days[date] !== "boolean") return null;
+      if (data.days[date]) return date;
+    }
+    return null;
+  };
+  const found = target(cache) ?? cache?.observedTargets?.[baseDate]; if (found) return found;
+  const days: Record<string, boolean> = { ...cache?.days };
+  if (cache?.fetchedDate !== today) {
+    try {
+      const body = await requestBodyWithRetry(config, await getAccessToken(config), "/uapi/domestic-stock/v1/quotations/chk-holiday", "CTCA0903R", {
+    BASS_DT: baseDate.replace(/-/g, ""), CTX_AREA_FK: "", CTX_AREA_NK: "",
+  });
+      for (const row of outputRows(body)) {
+    const date = String(row.bass_dt ?? "");
+    if (/^\d{8}$/.test(date) && ["Y", "N"].includes(String(row.opnd_yn)) && ["Y", "N"].includes(String(row.tr_day_yn))) days[`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`] = row.opnd_yn === "Y" && row.tr_day_yn === "Y";
+      }
+    } catch { /* Account calendar is unavailable with some quote-only app keys. Verify observed sessions below. */ }
+  }
+  cache = { fetchedDate: today, days, observedTargets: { ...cache?.observedTargets } };
+  const calendarTarget = target(cache);
+  calendarMemory.set(path, cache);
+  await mkdir(pipelineOutputDir(env), { recursive: true });
+  await writeFile(path, JSON.stringify(cache), "utf8");
+  if (calendarTarget) return calendarTarget;
+  const observed = await observedNextSession(baseDate, config);
+  if (observed) { cache.observedTargets![baseDate] = observed; await writeFile(path, JSON.stringify(cache), "utf8"); }
+  return observed;
+}
+
+/** Raw observation time never inherits legacy today/midnight defaults. */
+function rawCandleTime(date: unknown, time?: unknown, intraday = false): string | null {
+  if (typeof date !== "string" || !/^\d{8}$/.test(date)) return null;
+  const day = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+  const parsed = new Date(`${day}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== day) return null;
+  if (!intraday) return day;
+  if (typeof time !== "string" || !/^(?:[01]\d|2[0-3])[0-5]\d[0-5]\d$/.test(time)) return null;
+  return `${day}T${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4, 6)}+09:00`;
+}
+
+function rawCandleValues(row: KisOutput, intraday: boolean): NonNullable<CandlePoint["rawValues"]> {
+  return { open: pickNullableNumber(row, ["stck_oprc"]), high: pickNullableNumber(row, ["stck_hgpr"]), low: pickNullableNumber(row, ["stck_lwpr"]),
+    close: pickNullableNumber(row, intraday ? ["stck_prpr", "stck_clpr"] : ["stck_clpr", "stck_prpr"]),
+    volume: pickNullableNumber(row, intraday ? ["cntg_vol", "acml_vol"] : ["acml_vol", "cntg_vol"]) };
 }
 
 async function fetchDailyChartRange(
@@ -1005,6 +1137,7 @@ async function fetchDailyChartRange(
   accessToken: string,
   code: string,
   range: Exclude<TimeRange, "1D">,
+  rawPrices?: { date: string | null; price: number | null }[],
 ): Promise<CandlePoint[]> {
   const body = await requestBodyWithRetry(
     config,
@@ -1021,7 +1154,9 @@ async function fetchDailyChartRange(
     },
   );
 
-  return uniqueSortedCandles(outputRows(body).map(dailyRowToCandle).filter((candle): candle is CandlePoint => candle !== null));
+  const rows = outputRows(body);
+  rawPrices?.push(...rows.map(row => ({ date: rawCandleTime(row.stck_bsop_date ?? row.bsop_date), price: pickNullableNumber(row, ["stck_clpr", "stck_prpr"]) })));
+  return uniqueSortedCandles(rows.map(dailyRowToCandle).filter((candle): candle is CandlePoint => candle !== null));
 }
 
 async function fetchIntradayChartRange(
@@ -1029,6 +1164,7 @@ async function fetchIntradayChartRange(
   accessToken: string,
   code: string,
   pageCount: number,
+  rawPrices?: { date: string | null; price: number | null }[],
 ): Promise<CandlePoint[]> {
   const candles: CandlePoint[] = [];
   let cursorTime: string | null = "153000";
@@ -1059,6 +1195,7 @@ async function fetchIntradayChartRange(
     }
 
     candles.push(...rows.map(timeRowToCandle).filter((candle): candle is CandlePoint => candle !== null));
+    rawPrices?.push(...rows.map(row => ({ date: rawCandleTime(row.stck_bsop_date ?? row.bsop_date, row.stck_cntg_hour ?? row.cntg_hour, true), price: pickNullableNumber(row, ["stck_prpr", "stck_clpr"]) })));
 
     const rowTimes = rows.map(rowTimeValue).filter((value) => /^\d{6}$/.test(value));
     if (rowTimes.length === 0) {
@@ -1074,7 +1211,26 @@ async function fetchIntradayChartRange(
     cursorTime = previousMinute(oldestTime);
   }
 
+  if (rawPrices) {
+    const rawDays = rawPrices.map(point => point.date?.slice(0, 10) ?? "").sort();
+    const latestRawDay = rawDays[rawDays.length - 1];
+    const seen = new Set<string>();
+    const latestRaw = rawPrices.filter(point => {
+      if (point.date === null) return true; // Unknown position stays a gap marker, never today's observation.
+      if (point.date.slice(0, 10) !== latestRawDay || seen.has(point.date)) return false;
+      seen.add(point.date); return true;
+    });
+    rawPrices.splice(0, rawPrices.length, ...latestRaw);
+  }
   return latestSessionCandles(candles);
+}
+
+function chartCoverage(target: TimeRange, sourceRange: TimeRange, method: "requested" | "subset" | "fallback", rawPrices: { date: string | null; price: number | null }[]) {
+  const dates = rawPrices.filter(point => point.date !== null && point.price !== null && point.price > 0).map(point => point.date!.slice(0, 10)).sort();
+  return { requestedRange: target, sourceRange, method,
+    status: !dates.length ? "empty" as const : RANGE_LOOKBACK_DAYS[sourceRange] < RANGE_LOOKBACK_DAYS[target] ? "partial" as const : "unverified" as const,
+    requestedStart: target === "1D" ? null : isoDateDaysAgo(RANGE_LOOKBACK_DAYS[target]), requestedEnd: target === "1D" ? null : isoDateDaysAgo(0),
+    observedStart: dates[0] ?? null, observedEnd: dates[dates.length - 1] ?? null };
 }
 
 async function fetchRangeChart(
@@ -1083,15 +1239,18 @@ async function fetchRangeChart(
   code: string,
   range: TimeRange,
   env: Record<string, string | undefined>,
-): Promise<{ candles: CandlePoint[]; prices: PricePoint[] }> {
+): Promise<StockChartData["ranges"][TimeRange]> {
+  const rawPrices: { date: string | null; price: number | null }[] = [];
   const candles =
     range === "1D"
-      ? await fetchIntradayChartRange(config, accessToken, code, intradayPageCount(env))
-      : await fetchDailyChartRange(config, accessToken, code, range);
+      ? await fetchIntradayChartRange(config, accessToken, code, intradayPageCount(env), rawPrices)
+      : await fetchDailyChartRange(config, accessToken, code, range, rawPrices);
 
   return {
     candles,
     prices: candlesToPrices(candles),
+    rawPrices,
+    coverage: chartCoverage(range, range, "requested", rawPrices),
   };
 }
 
@@ -1173,6 +1332,7 @@ function quoteOutputToSourceStock(output: KisOutput, seed: StockSeed): StockQuot
   const tradingValue = pickNumber(output, ["acml_tr_pbmn"]) || currentPrice * accumulatedVolume;
 
   return {
+    rawValues: rawQuoteValues(output, direction),
     accumulatedVolume,
     aiSummary: "KIS 현재가 API 기준 시세입니다.",
     change,
@@ -1200,33 +1360,35 @@ function quoteOutputToSourceStock(output: KisOutput, seed: StockSeed): StockQuot
  * No extra KIS calls, so every tab stays populated even under rate limiting.
  */
 function fillMissingRanges(ranges: StockChartData["ranges"]): void {
-  const derive = (target: TimeRange, source: CandlePoint[]): void => {
-    if (ranges[target].candles.length > 0 || source.length === 0) {
+  const derive = (target: TimeRange, sourceRange: TimeRange, method: "subset" | "fallback"): void => {
+    const source = ranges[sourceRange];
+    if (ranges[target].candles.length > 0 || source.candles.length === 0 || (ranges[target].rawPrices?.length ?? 0) > 0) {
       return;
     }
 
     const cutoff = isoDateDaysAgo(RANGE_LOOKBACK_DAYS[target]);
-    const candles = source.filter((candle) => candle.time >= cutoff);
+    const candles = source.candles.filter((candle) => candle.time >= cutoff);
     if (candles.length > 0) {
-      ranges[target] = { candles, prices: candlesToPrices(candles) };
+      const rawPrices = source.rawPrices?.filter(point => point.date === null || point.date >= cutoff);
+      ranges[target] = { candles, prices: candlesToPrices(candles), rawPrices,
+        coverage: chartCoverage(target, source.coverage?.sourceRange ?? sourceRange, method, rawPrices ?? []) };
     }
   };
 
-  derive("1M", ranges["3M"].candles);
-  derive("3Y", ranges["5Y"].candles);
+  derive("1M", "3M", "subset");
+  derive("3Y", "5Y", "subset");
 
   // Last resort: backfill any still-empty range from the longest history we have
   // (earliest first candle), so a tab is never blank when some data exists.
   const longest = TIME_RANGES.filter((range) => range !== "1D" && ranges[range].candles.length > 0)
-    .map((range) => ranges[range].candles)
-    .sort((left, right) => (left[0]?.time ?? "").localeCompare(right[0]?.time ?? ""))[0];
+    .sort((left, right) => (ranges[left].candles[0]?.time ?? "").localeCompare(ranges[right].candles[0]?.time ?? ""))[0];
 
   if (longest) {
     for (const range of TIME_RANGES) {
       if (range === "1D") {
         continue; // 1D is intraday; never backfill it from daily candles.
       }
-      derive(range, longest);
+      derive(range, longest, "fallback");
     }
   }
 }
@@ -1245,7 +1407,7 @@ export async function buildKisStockChart(symbol: string, env = process.env): Pro
   const cacheKey = `${config.env}:${code}:ALL`;
   const cached = stockChartCache.get(cacheKey);
   if (cached && Date.now() - cached.builtAt < stockChartCacheTtlMs(env)) {
-    return cached.data;
+    return { ...cached.data, source: "cache", sourceStock: { ...cached.data.sourceStock, source: "cache" } };
   }
 
   const accessToken = await getAccessToken(config);
@@ -1302,7 +1464,9 @@ export async function buildKisStockChart(symbol: string, env = process.env): Pro
     }
   }
 
-  const data = {
+  const data: StockChartBundle = {
+    source: "live",
+    asOf: new Date().toISOString(),
     chartData: {
       code,
       currentPrice: sourceStock.currentPrice,
@@ -1408,12 +1572,14 @@ async function buildLiveDashboard(
 
   return {
     events: buildEvents(stocks, indices, config.env),
+    source: "live",
+    asOf: generatedAt,
     focusedStockCode: stocks[0].code,
     generatedAt,
     indices,
     sessionLabel: buildSessionLabel(generatedAt, config.env),
-    stocks,
-    watchlist: stocks.slice(0, 8),
+    stocks: stocks.map(stock => ({ ...stock, source: "live", asOf: generatedAt })),
+    watchlist: stocks.slice(0, 8).map(stock => ({ ...stock, source: "live", asOf: generatedAt })),
   };
 }
 
@@ -1463,7 +1629,7 @@ function warmFullSnapshotInBackground(env: Record<string, string | undefined>): 
 export async function buildKisDashboard(env = process.env): Promise<MarketDashboardData> {
   const snapshot = await readDashboardSnapshot();
   if (snapshot) {
-    return snapshot;
+    return cachedDashboard(snapshot);
   }
 
   // No FRESH snapshot. If a stale one exists, keep serving its full breadth and
@@ -1472,7 +1638,7 @@ export async function buildKisDashboard(env = process.env): Promise<MarketDashbo
   const stale = await readLastSnapshot();
   if (stale) {
     warmFullSnapshotInBackground(env);
-    return stale;
+    return cachedDashboard(stale);
   }
 
   // True cold start (no snapshot at all): build a small inline slice for a fast

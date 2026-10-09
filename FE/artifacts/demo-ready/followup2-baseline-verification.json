@@ -1,0 +1,252 @@
+{
+  "generatedAt": "2026-10-09T15:32:15.741Z",
+  "base": "http://127.0.0.1:5173",
+  "realData": true,
+  "checks": [
+    "default first selection keeps URL unchanged",
+    "model-only briefing has two evidence dots and no news section",
+    "fixed paper record is labelled",
+    "1280x720 first viewport includes summary, all five rows and detail heading without scrolling",
+    "briefing-1280-dark: axe violations zero",
+    "briefing-1280-dark: no page overflow",
+    "briefing-1280-dark: visible text at least 12px",
+    "quotes requested for exactly five distinct Top-5 codes",
+    "row selection opens right panel through query string",
+    "analysis-dialog-dark: axe violations zero",
+    "analysis-dialog-dark: no page overflow",
+    "analysis-dialog-dark: visible text at least 12px",
+    "briefing-1440-light: axe violations zero",
+    "briefing-1440-light: no page overflow",
+    "briefing-1440-light: visible text at least 12px",
+    "analysis dialog receives focus",
+    "analysis-dialog-light: axe violations zero",
+    "analysis-dialog-light: no page overflow",
+    "analysis-dialog-light: visible text at least 12px",
+    "analysis dialog restores header button focus",
+    "briefing-375-light: axe violations zero",
+    "briefing-375-light: no page overflow",
+    "briefing-375-light: visible text at least 12px",
+    "mobile detail stacks below comparison table",
+    "rank hides final columns in model-only state",
+    "rank-1440-light: axe violations zero",
+    "rank-1440-light: no page overflow",
+    "rank-1440-light: visible text at least 12px",
+    "about-1440-light: axe violations zero",
+    "about-1440-light: no page overflow",
+    "about-1440-light: visible text at least 12px",
+    "static about HTML includes model Top-5 flow and feature composition",
+    "console errors and runtime exceptions zero",
+    "no non-GET or external requests"
+  ],
+  "audits": [
+    {
+      "label": "briefing-1280-dark",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "analysis-dialog-dark",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "briefing-1440-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "analysis-dialog-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "briefing-375-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "rank-1440-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "about-1440-light",
+      "violations": [],
+      "smallText": []
+    }
+  ],
+  "screenshots": [
+    "briefing-1280x720-dark.png",
+    "briefing-1440-light.png",
+    "analysis-dialog-1440-light.png",
+    "briefing-375-light.png",
+    "briefing-375-light-full.png",
+    "rank-1440-light.png",
+    "about-1440-light.png"
+  ],
+  "resources": [
+    {
+      "path": "/",
+      "width": 1280,
+      "theme": "dark",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/rank",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/rank",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/",
+      "width": 375,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/rank",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/rank",
+      "width": 1440,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/rank",
+        "/api/candidates",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/rank",
+        "/api/candidates"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/about",
+      "width": 1440,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates/run",
+        "/api/backend/status"
+      ],
+      "chartError": null
+    }
+  ],
+  "desktopLayout": {
+    "scrollY": 0,
+    "rows": [
+      {
+        "top": 463.890625,
+        "bottom": 510.890625
+      },
+      {
+        "top": 510.890625,
+        "bottom": 558.390625
+      },
+      {
+        "top": 558.390625,
+        "bottom": 605.890625
+      },
+      {
+        "top": 605.890625,
+        "bottom": 653.390625
+      },
+      {
+        "top": 653.390625,
+        "bottom": 700.890625
+      }
+    ],
+    "summary": {
+      "x": 24,
+      "y": 171.59375,
+      "width": 876,
+      "height": 133,
+      "top": 171.59375,
+      "right": 900,
+      "bottom": 304.59375,
+      "left": 24
+    },
+    "detail": {
+      "x": 932,
+      "y": 187.59375,
+      "width": 105.90625,
+      "height": 28.34375,
+      "top": 187.59375,
+      "right": 1037.90625,
+      "bottom": 215.9375,
+      "left": 932
+    }
+  },
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": []
+}

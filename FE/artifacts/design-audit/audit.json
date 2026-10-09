@@ -1,0 +1,1977 @@
+{
+  "fixtureOnly": true,
+  "generatedAt": "2026-10-09T11:08:38.159Z",
+  "pages": [
+    {
+      "name": "briefing",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 305,
+        "height": 39,
+        "width": 215
+      },
+      "launch": {
+        "top": 632,
+        "height": 46,
+        "width": 118
+      },
+      "candidate": {
+        "top": 1099,
+        "height": 46,
+        "width": 124
+      },
+      "table": [
+        {
+          "width": 940,
+          "content": 940
+        }
+      ],
+      "smallText": [
+        {
+          "text": "KOSPI AI Desk",
+          "size": "11px"
+        },
+        {
+          "text": "거래일 달력 미연결",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "가격 관측 시각과 다를 수 있음",
+          "size": "11px"
+        },
+        {
+          "text": "NEW ANALYSIS",
+          "size": "11px"
+        },
+        {
+          "text": "지수 등락률 기반 단순 판단 · 투자 판단 지표 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "시계열: 과거 관측값",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "rank",
+      "path": "/rank",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 309,
+        "height": 40,
+        "width": 388
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [
+        {
+          "width": 1336,
+          "content": 1336
+        }
+      ],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "005930",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        },
+        {
+          "text": "긍정 2/2 · 판정 불가 1",
+          "size": "11px"
+        },
+        {
+          "text": "100001",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보 외 종목",
+          "size": "11px"
+        },
+        {
+          "text": "부정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "watchlist",
+      "path": "/watchlist",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 309,
+        "height": 40,
+        "width": 299
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "history",
+      "path": "/history",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 306,
+        "height": 39,
+        "width": 322
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ANALYSIS RECORDS",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "stock",
+      "path": "/stock/005930",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 348,
+        "height": 43,
+        "width": 147
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "STOCK REPORT · 005930",
+          "size": "11px"
+        },
+        {
+          "text": "QUOTE",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "시세 기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PREDICTION · 실제 성과 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "모델 결과 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "상세 분석 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PRICE OBSERVATIONS",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "조회/저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "about",
+      "path": "/about",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 355,
+        "height": 125,
+        "width": 720
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ABOUT KOSPI AI Desk",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "briefing",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 305,
+        "height": 39,
+        "width": 215
+      },
+      "launch": {
+        "top": 632,
+        "height": 46,
+        "width": 118
+      },
+      "candidate": {
+        "top": 1099,
+        "height": 46,
+        "width": 124
+      },
+      "table": [
+        {
+          "width": 940,
+          "content": 940
+        }
+      ],
+      "smallText": [
+        {
+          "text": "KOSPI AI Desk",
+          "size": "11px"
+        },
+        {
+          "text": "거래일 달력 미연결",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "가격 관측 시각과 다를 수 있음",
+          "size": "11px"
+        },
+        {
+          "text": "NEW ANALYSIS",
+          "size": "11px"
+        },
+        {
+          "text": "지수 등락률 기반 단순 판단 · 투자 판단 지표 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "시계열: 과거 관측값",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "rank",
+      "path": "/rank",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 309,
+        "height": 40,
+        "width": 388
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [
+        {
+          "width": 1336,
+          "content": 1336
+        }
+      ],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "005930",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        },
+        {
+          "text": "긍정 2/2 · 판정 불가 1",
+          "size": "11px"
+        },
+        {
+          "text": "100001",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보 외 종목",
+          "size": "11px"
+        },
+        {
+          "text": "부정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "watchlist",
+      "path": "/watchlist",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 309,
+        "height": 40,
+        "width": 299
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "history",
+      "path": "/history",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 306,
+        "height": 39,
+        "width": 322
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ANALYSIS RECORDS",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "stock",
+      "path": "/stock/005930",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 348,
+        "height": 43,
+        "width": 147
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "STOCK REPORT · 005930",
+          "size": "11px"
+        },
+        {
+          "text": "QUOTE",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "시세 기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PREDICTION · 실제 성과 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "모델 결과 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "상세 분석 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PRICE OBSERVATIONS",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "조회/저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "about",
+      "path": "/about",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 84,
+        "height": 179,
+        "width": 1384
+      },
+      "heading": {
+        "top": 355,
+        "height": 125,
+        "width": 720
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ABOUT KOSPI AI Desk",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "briefing",
+      "path": "/",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 361,
+        "height": 34,
+        "width": 215
+      },
+      "launch": {
+        "top": 897,
+        "height": 46,
+        "width": 309
+      },
+      "candidate": {
+        "top": 1698,
+        "height": 46,
+        "width": 124
+      },
+      "table": [
+        {
+          "width": 311,
+          "content": 620
+        }
+      ],
+      "smallText": [
+        {
+          "text": "KOSPI AI Desk",
+          "size": "11px"
+        },
+        {
+          "text": "거래일 달력 미연결",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "가격 관측 시각과 다를 수 있음",
+          "size": "11px"
+        },
+        {
+          "text": "NEW ANALYSIS",
+          "size": "11px"
+        },
+        {
+          "text": "지수 등락률 기반 단순 판단 · 투자 판단 지표 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "시계열: 과거 관측값",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "rank",
+      "path": "/rank",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 365,
+        "height": 35,
+        "width": 343
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [
+        {
+          "width": 311,
+          "content": 1120
+        }
+      ],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "005930",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        },
+        {
+          "text": "긍정 2/2 · 판정 불가 1",
+          "size": "11px"
+        },
+        {
+          "text": "100001",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보 외 종목",
+          "size": "11px"
+        },
+        {
+          "text": "부정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "watchlist",
+      "path": "/watchlist",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 365,
+        "height": 35,
+        "width": 299
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "history",
+      "path": "/history",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 362,
+        "height": 35,
+        "width": 219
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ANALYSIS RECORDS",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "stock",
+      "path": "/stock/005930",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 403,
+        "height": 38,
+        "width": 147
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "STOCK REPORT · 005930",
+          "size": "11px"
+        },
+        {
+          "text": "QUOTE",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "시세 기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PREDICTION · 실제 성과 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "모델 결과 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "상세 분석 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PRICE OBSERVATIONS",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "조회/저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "about",
+      "path": "/about",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 393,
+        "height": 83,
+        "width": 343
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ABOUT KOSPI AI Desk",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "briefing",
+      "path": "/",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 361,
+        "height": 34,
+        "width": 215
+      },
+      "launch": {
+        "top": 897,
+        "height": 46,
+        "width": 309
+      },
+      "candidate": {
+        "top": 1698,
+        "height": 46,
+        "width": 124
+      },
+      "table": [
+        {
+          "width": 311,
+          "content": 620
+        }
+      ],
+      "smallText": [
+        {
+          "text": "KOSPI AI Desk",
+          "size": "11px"
+        },
+        {
+          "text": "거래일 달력 미연결",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "가격 관측 시각과 다를 수 있음",
+          "size": "11px"
+        },
+        {
+          "text": "NEW ANALYSIS",
+          "size": "11px"
+        },
+        {
+          "text": "지수 등락률 기반 단순 판단 · 투자 판단 지표 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "시계열: 과거 관측값",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "rank",
+      "path": "/rank",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 365,
+        "height": 35,
+        "width": 343
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [
+        {
+          "width": 311,
+          "content": 1120
+        }
+      ],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "005930",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        },
+        {
+          "text": "긍정 2/2 · 판정 불가 1",
+          "size": "11px"
+        },
+        {
+          "text": "100001",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보 외 종목",
+          "size": "11px"
+        },
+        {
+          "text": "부정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "watchlist",
+      "path": "/watchlist",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 365,
+        "height": 35,
+        "width": 299
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "history",
+      "path": "/history",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 362,
+        "height": 35,
+        "width": 219
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ANALYSIS RECORDS",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "stock",
+      "path": "/stock/005930",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 403,
+        "height": 38,
+        "width": 147
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "STOCK REPORT · 005930",
+          "size": "11px"
+        },
+        {
+          "text": "QUOTE",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "시세 기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PREDICTION · 실제 성과 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "모델 결과 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "상세 분석 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PRICE OBSERVATIONS",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "조회/저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "about",
+      "path": "/about",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 199,
+        "width": 343
+      },
+      "heading": {
+        "top": 393,
+        "height": 83,
+        "width": 343
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ABOUT KOSPI AI Desk",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "briefing",
+      "path": "/",
+      "width": 667,
+      "height": 375,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 341,
+        "height": 39,
+        "width": 215
+      },
+      "launch": {
+        "top": 764,
+        "height": 46,
+        "width": 118
+      },
+      "candidate": {
+        "top": 1243,
+        "height": 46,
+        "width": 124
+      },
+      "table": [
+        {
+          "width": 599,
+          "content": 599
+        }
+      ],
+      "smallText": [
+        {
+          "text": "KOSPI AI Desk",
+          "size": "11px"
+        },
+        {
+          "text": "거래일 달력 미연결",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "가격 관측 시각과 다를 수 있음",
+          "size": "11px"
+        },
+        {
+          "text": "NEW ANALYSIS",
+          "size": "11px"
+        },
+        {
+          "text": "지수 등락률 기반 단순 판단 · 투자 판단 지표 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "시계열: 과거 관측값",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "rank",
+      "path": "/rank",
+      "width": 667,
+      "height": 375,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 345,
+        "height": 40,
+        "width": 388
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [
+        {
+          "width": 587,
+          "content": 1120
+        }
+      ],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "005930",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        },
+        {
+          "text": "긍정 2/2 · 판정 불가 1",
+          "size": "11px"
+        },
+        {
+          "text": "100001",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보 외 종목",
+          "size": "11px"
+        },
+        {
+          "text": "부정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "watchlist",
+      "path": "/watchlist",
+      "width": 667,
+      "height": 375,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 345,
+        "height": 40,
+        "width": 299
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "history",
+      "path": "/history",
+      "width": 667,
+      "height": 375,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 342,
+        "height": 35,
+        "width": 322
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ANALYSIS RECORDS",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "stock",
+      "path": "/stock/005930",
+      "width": 667,
+      "height": 375,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 384,
+        "height": 43,
+        "width": 147
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "STOCK REPORT · 005930",
+          "size": "11px"
+        },
+        {
+          "text": "QUOTE",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "시세 기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PREDICTION · 실제 성과 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "모델 결과 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "상세 분석 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PRICE OBSERVATIONS",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "조회/저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "about",
+      "path": "/about",
+      "width": 667,
+      "height": 375,
+      "theme": "dark",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 373,
+        "height": 83,
+        "width": 635
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ABOUT KOSPI AI Desk",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "briefing",
+      "path": "/",
+      "width": 667,
+      "height": 375,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 341,
+        "height": 39,
+        "width": 215
+      },
+      "launch": {
+        "top": 764,
+        "height": 46,
+        "width": 118
+      },
+      "candidate": {
+        "top": 1243,
+        "height": 46,
+        "width": 124
+      },
+      "table": [
+        {
+          "width": 599,
+          "content": 599
+        }
+      ],
+      "smallText": [
+        {
+          "text": "KOSPI AI Desk",
+          "size": "11px"
+        },
+        {
+          "text": "거래일 달력 미연결",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "가격 관측 시각과 다를 수 있음",
+          "size": "11px"
+        },
+        {
+          "text": "NEW ANALYSIS",
+          "size": "11px"
+        },
+        {
+          "text": "지수 등락률 기반 단순 판단 · 투자 판단 지표 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "시계열: 과거 관측값",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "rank",
+      "path": "/rank",
+      "width": 667,
+      "height": 375,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 345,
+        "height": 40,
+        "width": 388
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [
+        {
+          "width": 587,
+          "content": 1120
+        }
+      ],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "005930",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "긍정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        },
+        {
+          "text": "긍정 2/2 · 판정 불가 1",
+          "size": "11px"
+        },
+        {
+          "text": "100001",
+          "size": "11px"
+        },
+        {
+          "text": "최종 후보 외 종목",
+          "size": "11px"
+        },
+        {
+          "text": "부정",
+          "size": "11px"
+        },
+        {
+          "text": "판정 불가",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "watchlist",
+      "path": "/watchlist",
+      "width": 667,
+      "height": 375,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 345,
+        "height": 40,
+        "width": 299
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "전체 순위 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "history",
+      "path": "/history",
+      "width": 667,
+      "height": 375,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 342,
+        "height": 35,
+        "width": 322
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ANALYSIS RECORDS",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "stock",
+      "path": "/stock/005930",
+      "width": 667,
+      "height": 375,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 384,
+        "height": 43,
+        "width": 147
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "STOCK REPORT · 005930",
+          "size": "11px"
+        },
+        {
+          "text": "QUOTE",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "시세 기준 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PREDICTION · 실제 성과 아님",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "모델 결과 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "상세 분석 저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        },
+        {
+          "text": "PRICE OBSERVATIONS",
+          "size": "11px"
+        },
+        {
+          "text": "저장된 결과",
+          "size": "10px"
+        },
+        {
+          "text": "조회/저장 시각 2026. 10. 07. 18:00",
+          "size": "10px"
+        }
+      ],
+      "smallControls": []
+    },
+    {
+      "name": "about",
+      "path": "/about",
+      "width": 667,
+      "height": 375,
+      "theme": "light",
+      "violations": [],
+      "overflow": false,
+      "connection": {
+        "top": 120,
+        "height": 179,
+        "width": 635
+      },
+      "heading": {
+        "top": 373,
+        "height": 83,
+        "width": 635
+      },
+      "launch": null,
+      "candidate": null,
+      "table": [],
+      "smallText": [
+        {
+          "text": "ABOUT KOSPI AI Desk",
+          "size": "11px"
+        }
+      ],
+      "smallControls": []
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": []
+}

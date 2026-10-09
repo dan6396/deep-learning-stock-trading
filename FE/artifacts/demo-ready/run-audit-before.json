@@ -1,0 +1,55 @@
+﻿{
+    "status":  {
+                   "version":  1,
+                   "analysisMode":  "model_only",
+                   "checkedAt":  "2026-10-09T15:40:16.753Z",
+                   "source":  "unknown",
+                   "asOf":  null,
+                   "market":  {
+                                  "configuration":  "configured",
+                                  "verification":  "unverified"
+                              },
+                   "news":  {
+                                "configuration":  "configured",
+                                "collectionConfiguration":  "configured",
+                                "verification":  "unverified"
+                            },
+                   "runtime":  {
+                                   "runId":  null,
+                                   "kind":  null,
+                                   "state":  "idle",
+                                   "startedAt":  null,
+                                   "finishedAt":  null
+                               },
+                   "marker":  {
+                                  "runId":  "9cba7095-3f3c-47ff-8d5c-5115b9558cf9",
+                                  "kind":  "adhoc",
+                                  "state":  "completed",
+                                  "mode":  "model_only",
+                                  "startedAt":  "2026-10-09T15:19:31.769Z",
+                                  "finishedAt":  "2026-10-09T15:19:49.289Z",
+                                  "source":  "cache",
+                                  "asOf":  "2026-10-09T15:19:49.296Z"
+                              },
+                   "results":  {
+                                   "candidates":  {
+                                                      "state":  "not_produced",
+                                                      "count":  null,
+                                                      "source":  "unknown",
+                                                      "asOf":  null
+                                                  },
+                                   "rank":  {
+                                                "state":  "available",
+                                                "count":  199,
+                                                "source":  "cache",
+                                                "asOf":  "2026-10-09T15:19:49.015Z"
+                                            }
+                               }
+               },
+    "checkedAt":  "2026-10-09T15:40:16.7197414Z",
+    "run":  {
+                "status":  "idle",
+                "source":  "live",
+                "asOf":  null
+            }
+}

@@ -1,0 +1,15 @@
+/*
+ * CSS entry point.
+ *
+ * Layer order matters: unlayered rules beat every layer, so the legacy
+ * global.css is placed in the lowest layer instead. That keeps the old screens
+ * exactly as they are while Tailwind utilities on the rebuilt screens always
+ * win. Tailwind's preflight reset is intentionally not imported until the
+ * legacy stylesheet is removed (rebuild plan M6).
+ */
+@layer legacy, theme, base, components, utilities;
+
+@import "./global.css" layer(legacy);
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./theme.css";

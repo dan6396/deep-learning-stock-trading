@@ -1,0 +1,2880 @@
+{
+  "fixtureOnly": true,
+  "generatedAt": "2026-10-09T09:37:16.389Z",
+  "checks": [
+    "whole rank has 199 records paginated in 20-row native table",
+    "original model rank starts ascending without fabricated screen rank",
+    "first prediction sort is descending and aria-sort matches",
+    "all 199 descending values keep measured zero/negative and missing last",
+    "all 199 ascending values keep missing last",
+    "rank search includes a stock outside five final candidates",
+    "0-or-negative filter includes actual zero and excludes missing",
+    "candidate filter is exactly five confirmed members",
+    "non-candidate actual LLM news is retained instead of labelled unanalysed",
+    "absent watchlist never seeds sample/default codes",
+    "legacy deliberately empty [] survives reload",
+    "watch toggle keeps a fixed accessible name and pressed state",
+    "selected code survives real page reload",
+    "sessionStorage event cannot change localStorage watchlist",
+    "outside-universe saved code keeps unknown name, missing analysis and report link",
+    "real cross-tab newValue [] clears the visible watchlist",
+    "real cross-tab localStorage.clear synchronizes the watchlist",
+    "outside-universe saved code can be removed",
+    "save failure preserves action with explicit session-only notice",
+    "watchlist pending does not assert missing analysis",
+    "previous watch analysis remains explicitly unconfirmed after failure",
+    "initial watch failure is unknown rather than absent analysis",
+    "global search uses all rank records, preserves full-universe count",
+    "searched non-candidate link is visibly inside modal and receives pointer hit",
+    "search can toggle watch without closing dialog",
+    "search forward Tab wraps to modal close button",
+    "search reverse Tab wraps within modal",
+    "Escape restores actual trigger focus",
+    "close button restores actual trigger focus",
+    "backdrop restores actual trigger focus",
+    "CtrlK inside an input does not intercept editing",
+    "IME Escape does not close the search modal",
+    "IME cancellation does not persist after closing and reopening search",
+    "browser-back route transition closes modal without stealing main focus",
+    "trusted non-candidate search click opens correct report and focuses main",
+    "search initial failure never claims authoritative zero",
+    "empty rank is never filled with five candidates",
+    "authoritative successful [] permits a real zero count",
+    "sample rank is explicitly an example, never upgraded to actual analysis",
+    "rank background error retains rows with explicit warning",
+    "pending candidate membership cannot invent model signal",
+    "failed membership does not use previous final-candidate model state",
+    "intraday line is labelled price rather than closing price",
+    "5Y request shows actual 1Y fallback coverage without inventing years",
+    "report watch toggle is connected",
+    "briefing watch toggle shares the same stored selection",
+    "arrow selection replaces history instead of adding a back step",
+    "rank-1440-dark: populated axe WCAG 2.2 AA",
+    "rank-1440-dark: no page overflow",
+    "rank-1440-dark: pointer targets at least 24px",
+    "rank-1440-dark: single first h1 and no skipped headings",
+    "search-1440-dark: populated axe WCAG 2.2 AA",
+    "search-1440-dark: no page overflow",
+    "search-1440-dark: pointer targets at least 24px",
+    "search-1440-dark: single first h1 and no skipped headings",
+    "watchlist-1440-dark: populated axe WCAG 2.2 AA",
+    "watchlist-1440-dark: no page overflow",
+    "watchlist-1440-dark: pointer targets at least 24px",
+    "watchlist-1440-dark: single first h1 and no skipped headings",
+    "rank-1440-light: populated axe WCAG 2.2 AA",
+    "rank-1440-light: no page overflow",
+    "rank-1440-light: pointer targets at least 24px",
+    "rank-1440-light: single first h1 and no skipped headings",
+    "search-1440-light: populated axe WCAG 2.2 AA",
+    "search-1440-light: no page overflow",
+    "search-1440-light: pointer targets at least 24px",
+    "search-1440-light: single first h1 and no skipped headings",
+    "watchlist-1440-light: populated axe WCAG 2.2 AA",
+    "watchlist-1440-light: no page overflow",
+    "watchlist-1440-light: pointer targets at least 24px",
+    "watchlist-1440-light: single first h1 and no skipped headings",
+    "rank-1280-dark: populated axe WCAG 2.2 AA",
+    "rank-1280-dark: no page overflow",
+    "rank-1280-dark: pointer targets at least 24px",
+    "rank-1280-dark: single first h1 and no skipped headings",
+    "search-1280-dark: populated axe WCAG 2.2 AA",
+    "search-1280-dark: no page overflow",
+    "search-1280-dark: pointer targets at least 24px",
+    "search-1280-dark: single first h1 and no skipped headings",
+    "watchlist-1280-dark: populated axe WCAG 2.2 AA",
+    "watchlist-1280-dark: no page overflow",
+    "watchlist-1280-dark: pointer targets at least 24px",
+    "watchlist-1280-dark: single first h1 and no skipped headings",
+    "rank-1280-light: populated axe WCAG 2.2 AA",
+    "rank-1280-light: no page overflow",
+    "rank-1280-light: pointer targets at least 24px",
+    "rank-1280-light: single first h1 and no skipped headings",
+    "search-1280-light: populated axe WCAG 2.2 AA",
+    "search-1280-light: no page overflow",
+    "search-1280-light: pointer targets at least 24px",
+    "search-1280-light: single first h1 and no skipped headings",
+    "watchlist-1280-light: populated axe WCAG 2.2 AA",
+    "watchlist-1280-light: no page overflow",
+    "watchlist-1280-light: pointer targets at least 24px",
+    "watchlist-1280-light: single first h1 and no skipped headings",
+    "rank-375-dark: populated axe WCAG 2.2 AA",
+    "rank-375-dark: no page overflow",
+    "rank-375-dark: pointer targets at least 24px",
+    "rank-375-dark: single first h1 and no skipped headings",
+    "search-375-dark: populated axe WCAG 2.2 AA",
+    "search-375-dark: no page overflow",
+    "search-375-dark: pointer targets at least 24px",
+    "search-375-dark: single first h1 and no skipped headings",
+    "watchlist-375-dark: populated axe WCAG 2.2 AA",
+    "watchlist-375-dark: no page overflow",
+    "watchlist-375-dark: pointer targets at least 24px",
+    "watchlist-375-dark: single first h1 and no skipped headings",
+    "rank-375-light: populated axe WCAG 2.2 AA",
+    "rank-375-light: no page overflow",
+    "rank-375-light: pointer targets at least 24px",
+    "rank-375-light: single first h1 and no skipped headings",
+    "search-375-light: populated axe WCAG 2.2 AA",
+    "search-375-light: no page overflow",
+    "search-375-light: pointer targets at least 24px",
+    "search-375-light: single first h1 and no skipped headings",
+    "watchlist-375-light: populated axe WCAG 2.2 AA",
+    "watchlist-375-light: no page overflow",
+    "watchlist-375-light: pointer targets at least 24px",
+    "watchlist-375-light: single first h1 and no skipped headings",
+    "zero console.error and unhandled exceptions",
+    "all product API calls are fixture GET, never paid analysis POST",
+    "zero external network/article visits"
+  ],
+  "axe": [
+    {
+      "label": "rank-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "search-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-1440-light",
+      "violations": []
+    },
+    {
+      "label": "search-1440-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1440-light",
+      "violations": []
+    },
+    {
+      "label": "rank-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "search-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-1280-light",
+      "violations": []
+    },
+    {
+      "label": "search-1280-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1280-light",
+      "violations": []
+    },
+    {
+      "label": "rank-375-dark",
+      "violations": []
+    },
+    {
+      "label": "search-375-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-375-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-375-light",
+      "violations": []
+    },
+    {
+      "label": "search-375-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-375-light",
+      "violations": []
+    }
+  ],
+  "screenshots": [
+    "m4-rank-1440-dark.png",
+    "m4-search-1440-dark.png",
+    "m4-rank-1440-light.png",
+    "m4-search-1440-light.png",
+    "m4-rank-1280-dark.png",
+    "m4-rank-1280-light.png"
+  ],
+  "sort": {
+    "descending": [
+      {
+        "code": "005930",
+        "value": "+3.12%"
+      },
+      {
+        "code": "000660",
+        "value": "+2.44%"
+      },
+      {
+        "code": "100004",
+        "value": "+1.91%"
+      },
+      {
+        "code": "100005",
+        "value": "+1.90%"
+      },
+      {
+        "code": "100006",
+        "value": "+1.89%"
+      },
+      {
+        "code": "100007",
+        "value": "+1.88%"
+      },
+      {
+        "code": "100008",
+        "value": "+1.87%"
+      },
+      {
+        "code": "100009",
+        "value": "+1.86%"
+      },
+      {
+        "code": "100010",
+        "value": "+1.85%"
+      },
+      {
+        "code": "100011",
+        "value": "+1.84%"
+      },
+      {
+        "code": "100012",
+        "value": "+1.83%"
+      },
+      {
+        "code": "100013",
+        "value": "+1.82%"
+      },
+      {
+        "code": "100014",
+        "value": "+1.81%"
+      },
+      {
+        "code": "100015",
+        "value": "+1.80%"
+      },
+      {
+        "code": "100016",
+        "value": "+1.79%"
+      },
+      {
+        "code": "100017",
+        "value": "+1.78%"
+      },
+      {
+        "code": "100018",
+        "value": "+1.77%"
+      },
+      {
+        "code": "100019",
+        "value": "+1.76%"
+      },
+      {
+        "code": "267250",
+        "value": "+1.76%"
+      },
+      {
+        "code": "100020",
+        "value": "+1.75%"
+      },
+      {
+        "code": "100021",
+        "value": "+1.74%"
+      },
+      {
+        "code": "100022",
+        "value": "+1.73%"
+      },
+      {
+        "code": "100023",
+        "value": "+1.72%"
+      },
+      {
+        "code": "100024",
+        "value": "+1.71%"
+      },
+      {
+        "code": "100025",
+        "value": "+1.70%"
+      },
+      {
+        "code": "100026",
+        "value": "+1.69%"
+      },
+      {
+        "code": "100027",
+        "value": "+1.68%"
+      },
+      {
+        "code": "100028",
+        "value": "+1.67%"
+      },
+      {
+        "code": "100029",
+        "value": "+1.66%"
+      },
+      {
+        "code": "100030",
+        "value": "+1.65%"
+      },
+      {
+        "code": "100031",
+        "value": "+1.64%"
+      },
+      {
+        "code": "100032",
+        "value": "+1.63%"
+      },
+      {
+        "code": "100033",
+        "value": "+1.62%"
+      },
+      {
+        "code": "100034",
+        "value": "+1.61%"
+      },
+      {
+        "code": "100035",
+        "value": "+1.60%"
+      },
+      {
+        "code": "100036",
+        "value": "+1.59%"
+      },
+      {
+        "code": "100037",
+        "value": "+1.58%"
+      },
+      {
+        "code": "100038",
+        "value": "+1.57%"
+      },
+      {
+        "code": "100039",
+        "value": "+1.56%"
+      },
+      {
+        "code": "100040",
+        "value": "+1.55%"
+      },
+      {
+        "code": "100041",
+        "value": "+1.54%"
+      },
+      {
+        "code": "100042",
+        "value": "+1.53%"
+      },
+      {
+        "code": "100043",
+        "value": "+1.52%"
+      },
+      {
+        "code": "100044",
+        "value": "+1.51%"
+      },
+      {
+        "code": "100045",
+        "value": "+1.50%"
+      },
+      {
+        "code": "100046",
+        "value": "+1.49%"
+      },
+      {
+        "code": "100047",
+        "value": "+1.48%"
+      },
+      {
+        "code": "100048",
+        "value": "+1.47%"
+      },
+      {
+        "code": "100049",
+        "value": "+1.46%"
+      },
+      {
+        "code": "100050",
+        "value": "+1.45%"
+      },
+      {
+        "code": "100051",
+        "value": "+1.44%"
+      },
+      {
+        "code": "100052",
+        "value": "+1.43%"
+      },
+      {
+        "code": "100053",
+        "value": "+1.42%"
+      },
+      {
+        "code": "100054",
+        "value": "+1.41%"
+      },
+      {
+        "code": "100055",
+        "value": "+1.40%"
+      },
+      {
+        "code": "100056",
+        "value": "+1.39%"
+      },
+      {
+        "code": "100057",
+        "value": "+1.38%"
+      },
+      {
+        "code": "100058",
+        "value": "+1.37%"
+      },
+      {
+        "code": "100059",
+        "value": "+1.36%"
+      },
+      {
+        "code": "100060",
+        "value": "+1.35%"
+      },
+      {
+        "code": "100061",
+        "value": "+1.34%"
+      },
+      {
+        "code": "100062",
+        "value": "+1.33%"
+      },
+      {
+        "code": "100063",
+        "value": "+1.32%"
+      },
+      {
+        "code": "100064",
+        "value": "+1.31%"
+      },
+      {
+        "code": "100065",
+        "value": "+1.30%"
+      },
+      {
+        "code": "100066",
+        "value": "+1.29%"
+      },
+      {
+        "code": "100067",
+        "value": "+1.28%"
+      },
+      {
+        "code": "100068",
+        "value": "+1.27%"
+      },
+      {
+        "code": "100069",
+        "value": "+1.26%"
+      },
+      {
+        "code": "100070",
+        "value": "+1.25%"
+      },
+      {
+        "code": "100071",
+        "value": "+1.24%"
+      },
+      {
+        "code": "100072",
+        "value": "+1.23%"
+      },
+      {
+        "code": "100073",
+        "value": "+1.22%"
+      },
+      {
+        "code": "100074",
+        "value": "+1.21%"
+      },
+      {
+        "code": "100075",
+        "value": "+1.20%"
+      },
+      {
+        "code": "100076",
+        "value": "+1.19%"
+      },
+      {
+        "code": "100077",
+        "value": "+1.18%"
+      },
+      {
+        "code": "100078",
+        "value": "+1.17%"
+      },
+      {
+        "code": "100079",
+        "value": "+1.16%"
+      },
+      {
+        "code": "100080",
+        "value": "+1.15%"
+      },
+      {
+        "code": "100081",
+        "value": "+1.14%"
+      },
+      {
+        "code": "100082",
+        "value": "+1.13%"
+      },
+      {
+        "code": "100083",
+        "value": "+1.12%"
+      },
+      {
+        "code": "100084",
+        "value": "+1.11%"
+      },
+      {
+        "code": "100085",
+        "value": "+1.10%"
+      },
+      {
+        "code": "100086",
+        "value": "+1.09%"
+      },
+      {
+        "code": "035420",
+        "value": "+1.08%"
+      },
+      {
+        "code": "100087",
+        "value": "+1.08%"
+      },
+      {
+        "code": "100088",
+        "value": "+1.07%"
+      },
+      {
+        "code": "100089",
+        "value": "+1.06%"
+      },
+      {
+        "code": "100090",
+        "value": "+1.05%"
+      },
+      {
+        "code": "100091",
+        "value": "+1.04%"
+      },
+      {
+        "code": "100092",
+        "value": "+1.03%"
+      },
+      {
+        "code": "100093",
+        "value": "+1.02%"
+      },
+      {
+        "code": "100094",
+        "value": "+1.01%"
+      },
+      {
+        "code": "100095",
+        "value": "+1.00%"
+      },
+      {
+        "code": "100096",
+        "value": "+0.99%"
+      },
+      {
+        "code": "100097",
+        "value": "+0.98%"
+      },
+      {
+        "code": "100098",
+        "value": "+0.97%"
+      },
+      {
+        "code": "100099",
+        "value": "+0.96%"
+      },
+      {
+        "code": "100100",
+        "value": "+0.95%"
+      },
+      {
+        "code": "100101",
+        "value": "+0.94%"
+      },
+      {
+        "code": "100102",
+        "value": "+0.93%"
+      },
+      {
+        "code": "100103",
+        "value": "+0.92%"
+      },
+      {
+        "code": "100104",
+        "value": "+0.91%"
+      },
+      {
+        "code": "100105",
+        "value": "+0.90%"
+      },
+      {
+        "code": "100106",
+        "value": "+0.89%"
+      },
+      {
+        "code": "100107",
+        "value": "+0.88%"
+      },
+      {
+        "code": "100108",
+        "value": "+0.87%"
+      },
+      {
+        "code": "100109",
+        "value": "+0.86%"
+      },
+      {
+        "code": "100110",
+        "value": "+0.85%"
+      },
+      {
+        "code": "100111",
+        "value": "+0.84%"
+      },
+      {
+        "code": "100112",
+        "value": "+0.83%"
+      },
+      {
+        "code": "100113",
+        "value": "+0.82%"
+      },
+      {
+        "code": "100114",
+        "value": "+0.81%"
+      },
+      {
+        "code": "100115",
+        "value": "+0.80%"
+      },
+      {
+        "code": "100116",
+        "value": "+0.79%"
+      },
+      {
+        "code": "100117",
+        "value": "+0.78%"
+      },
+      {
+        "code": "100118",
+        "value": "+0.77%"
+      },
+      {
+        "code": "100119",
+        "value": "+0.76%"
+      },
+      {
+        "code": "100120",
+        "value": "+0.75%"
+      },
+      {
+        "code": "100121",
+        "value": "+0.74%"
+      },
+      {
+        "code": "100122",
+        "value": "+0.73%"
+      },
+      {
+        "code": "100123",
+        "value": "+0.72%"
+      },
+      {
+        "code": "100124",
+        "value": "+0.71%"
+      },
+      {
+        "code": "100125",
+        "value": "+0.70%"
+      },
+      {
+        "code": "100126",
+        "value": "+0.69%"
+      },
+      {
+        "code": "100127",
+        "value": "+0.68%"
+      },
+      {
+        "code": "100128",
+        "value": "+0.67%"
+      },
+      {
+        "code": "100129",
+        "value": "+0.66%"
+      },
+      {
+        "code": "100130",
+        "value": "+0.65%"
+      },
+      {
+        "code": "100131",
+        "value": "+0.64%"
+      },
+      {
+        "code": "100132",
+        "value": "+0.63%"
+      },
+      {
+        "code": "100133",
+        "value": "+0.62%"
+      },
+      {
+        "code": "100134",
+        "value": "+0.61%"
+      },
+      {
+        "code": "100135",
+        "value": "+0.60%"
+      },
+      {
+        "code": "100136",
+        "value": "+0.59%"
+      },
+      {
+        "code": "100137",
+        "value": "+0.58%"
+      },
+      {
+        "code": "100138",
+        "value": "+0.57%"
+      },
+      {
+        "code": "100139",
+        "value": "+0.56%"
+      },
+      {
+        "code": "100140",
+        "value": "+0.55%"
+      },
+      {
+        "code": "100141",
+        "value": "+0.54%"
+      },
+      {
+        "code": "100142",
+        "value": "+0.53%"
+      },
+      {
+        "code": "100143",
+        "value": "+0.52%"
+      },
+      {
+        "code": "100144",
+        "value": "+0.51%"
+      },
+      {
+        "code": "100145",
+        "value": "+0.50%"
+      },
+      {
+        "code": "100146",
+        "value": "+0.49%"
+      },
+      {
+        "code": "100147",
+        "value": "+0.48%"
+      },
+      {
+        "code": "100148",
+        "value": "+0.47%"
+      },
+      {
+        "code": "100149",
+        "value": "+0.46%"
+      },
+      {
+        "code": "100150",
+        "value": "+0.45%"
+      },
+      {
+        "code": "100151",
+        "value": "+0.44%"
+      },
+      {
+        "code": "100152",
+        "value": "+0.43%"
+      },
+      {
+        "code": "100153",
+        "value": "+0.42%"
+      },
+      {
+        "code": "100154",
+        "value": "+0.41%"
+      },
+      {
+        "code": "100155",
+        "value": "+0.40%"
+      },
+      {
+        "code": "100156",
+        "value": "+0.39%"
+      },
+      {
+        "code": "100157",
+        "value": "+0.38%"
+      },
+      {
+        "code": "100158",
+        "value": "+0.37%"
+      },
+      {
+        "code": "100159",
+        "value": "+0.36%"
+      },
+      {
+        "code": "100160",
+        "value": "+0.35%"
+      },
+      {
+        "code": "100161",
+        "value": "+0.34%"
+      },
+      {
+        "code": "100162",
+        "value": "+0.33%"
+      },
+      {
+        "code": "100163",
+        "value": "+0.32%"
+      },
+      {
+        "code": "100164",
+        "value": "+0.31%"
+      },
+      {
+        "code": "100165",
+        "value": "+0.30%"
+      },
+      {
+        "code": "100166",
+        "value": "+0.29%"
+      },
+      {
+        "code": "100167",
+        "value": "+0.28%"
+      },
+      {
+        "code": "100168",
+        "value": "+0.27%"
+      },
+      {
+        "code": "100169",
+        "value": "+0.26%"
+      },
+      {
+        "code": "100170",
+        "value": "+0.25%"
+      },
+      {
+        "code": "100171",
+        "value": "+0.24%"
+      },
+      {
+        "code": "100172",
+        "value": "+0.23%"
+      },
+      {
+        "code": "100173",
+        "value": "+0.22%"
+      },
+      {
+        "code": "100174",
+        "value": "+0.21%"
+      },
+      {
+        "code": "100175",
+        "value": "+0.20%"
+      },
+      {
+        "code": "100176",
+        "value": "+0.19%"
+      },
+      {
+        "code": "100177",
+        "value": "+0.18%"
+      },
+      {
+        "code": "100178",
+        "value": "+0.17%"
+      },
+      {
+        "code": "100179",
+        "value": "+0.16%"
+      },
+      {
+        "code": "100180",
+        "value": "+0.15%"
+      },
+      {
+        "code": "100181",
+        "value": "+0.14%"
+      },
+      {
+        "code": "100182",
+        "value": "+0.13%"
+      },
+      {
+        "code": "100183",
+        "value": "+0.12%"
+      },
+      {
+        "code": "100184",
+        "value": "+0.11%"
+      },
+      {
+        "code": "100185",
+        "value": "+0.10%"
+      },
+      {
+        "code": "100186",
+        "value": "+0.09%"
+      },
+      {
+        "code": "100187",
+        "value": "+0.08%"
+      },
+      {
+        "code": "100188",
+        "value": "+0.07%"
+      },
+      {
+        "code": "100189",
+        "value": "+0.06%"
+      },
+      {
+        "code": "100190",
+        "value": "+0.05%"
+      },
+      {
+        "code": "100191",
+        "value": "+0.04%"
+      },
+      {
+        "code": "100192",
+        "value": "+0.03%"
+      },
+      {
+        "code": "100193",
+        "value": "+0.02%"
+      },
+      {
+        "code": "100194",
+        "value": "+0.01%"
+      },
+      {
+        "code": "100001",
+        "value": "0.00%"
+      },
+      {
+        "code": "100002",
+        "value": "-1.00%"
+      },
+      {
+        "code": "005380",
+        "value": "—"
+      },
+      {
+        "code": "100003",
+        "value": "—"
+      }
+    ],
+    "ascending": [
+      {
+        "code": "100002",
+        "value": "-1.00%"
+      },
+      {
+        "code": "100001",
+        "value": "0.00%"
+      },
+      {
+        "code": "100194",
+        "value": "+0.01%"
+      },
+      {
+        "code": "100193",
+        "value": "+0.02%"
+      },
+      {
+        "code": "100192",
+        "value": "+0.03%"
+      },
+      {
+        "code": "100191",
+        "value": "+0.04%"
+      },
+      {
+        "code": "100190",
+        "value": "+0.05%"
+      },
+      {
+        "code": "100189",
+        "value": "+0.06%"
+      },
+      {
+        "code": "100188",
+        "value": "+0.07%"
+      },
+      {
+        "code": "100187",
+        "value": "+0.08%"
+      },
+      {
+        "code": "100186",
+        "value": "+0.09%"
+      },
+      {
+        "code": "100185",
+        "value": "+0.10%"
+      },
+      {
+        "code": "100184",
+        "value": "+0.11%"
+      },
+      {
+        "code": "100183",
+        "value": "+0.12%"
+      },
+      {
+        "code": "100182",
+        "value": "+0.13%"
+      },
+      {
+        "code": "100181",
+        "value": "+0.14%"
+      },
+      {
+        "code": "100180",
+        "value": "+0.15%"
+      },
+      {
+        "code": "100179",
+        "value": "+0.16%"
+      },
+      {
+        "code": "100178",
+        "value": "+0.17%"
+      },
+      {
+        "code": "100177",
+        "value": "+0.18%"
+      },
+      {
+        "code": "100176",
+        "value": "+0.19%"
+      },
+      {
+        "code": "100175",
+        "value": "+0.20%"
+      },
+      {
+        "code": "100174",
+        "value": "+0.21%"
+      },
+      {
+        "code": "100173",
+        "value": "+0.22%"
+      },
+      {
+        "code": "100172",
+        "value": "+0.23%"
+      },
+      {
+        "code": "100171",
+        "value": "+0.24%"
+      },
+      {
+        "code": "100170",
+        "value": "+0.25%"
+      },
+      {
+        "code": "100169",
+        "value": "+0.26%"
+      },
+      {
+        "code": "100168",
+        "value": "+0.27%"
+      },
+      {
+        "code": "100167",
+        "value": "+0.28%"
+      },
+      {
+        "code": "100166",
+        "value": "+0.29%"
+      },
+      {
+        "code": "100165",
+        "value": "+0.30%"
+      },
+      {
+        "code": "100164",
+        "value": "+0.31%"
+      },
+      {
+        "code": "100163",
+        "value": "+0.32%"
+      },
+      {
+        "code": "100162",
+        "value": "+0.33%"
+      },
+      {
+        "code": "100161",
+        "value": "+0.34%"
+      },
+      {
+        "code": "100160",
+        "value": "+0.35%"
+      },
+      {
+        "code": "100159",
+        "value": "+0.36%"
+      },
+      {
+        "code": "100158",
+        "value": "+0.37%"
+      },
+      {
+        "code": "100157",
+        "value": "+0.38%"
+      },
+      {
+        "code": "100156",
+        "value": "+0.39%"
+      },
+      {
+        "code": "100155",
+        "value": "+0.40%"
+      },
+      {
+        "code": "100154",
+        "value": "+0.41%"
+      },
+      {
+        "code": "100153",
+        "value": "+0.42%"
+      },
+      {
+        "code": "100152",
+        "value": "+0.43%"
+      },
+      {
+        "code": "100151",
+        "value": "+0.44%"
+      },
+      {
+        "code": "100150",
+        "value": "+0.45%"
+      },
+      {
+        "code": "100149",
+        "value": "+0.46%"
+      },
+      {
+        "code": "100148",
+        "value": "+0.47%"
+      },
+      {
+        "code": "100147",
+        "value": "+0.48%"
+      },
+      {
+        "code": "100146",
+        "value": "+0.49%"
+      },
+      {
+        "code": "100145",
+        "value": "+0.50%"
+      },
+      {
+        "code": "100144",
+        "value": "+0.51%"
+      },
+      {
+        "code": "100143",
+        "value": "+0.52%"
+      },
+      {
+        "code": "100142",
+        "value": "+0.53%"
+      },
+      {
+        "code": "100141",
+        "value": "+0.54%"
+      },
+      {
+        "code": "100140",
+        "value": "+0.55%"
+      },
+      {
+        "code": "100139",
+        "value": "+0.56%"
+      },
+      {
+        "code": "100138",
+        "value": "+0.57%"
+      },
+      {
+        "code": "100137",
+        "value": "+0.58%"
+      },
+      {
+        "code": "100136",
+        "value": "+0.59%"
+      },
+      {
+        "code": "100135",
+        "value": "+0.60%"
+      },
+      {
+        "code": "100134",
+        "value": "+0.61%"
+      },
+      {
+        "code": "100133",
+        "value": "+0.62%"
+      },
+      {
+        "code": "100132",
+        "value": "+0.63%"
+      },
+      {
+        "code": "100131",
+        "value": "+0.64%"
+      },
+      {
+        "code": "100130",
+        "value": "+0.65%"
+      },
+      {
+        "code": "100129",
+        "value": "+0.66%"
+      },
+      {
+        "code": "100128",
+        "value": "+0.67%"
+      },
+      {
+        "code": "100127",
+        "value": "+0.68%"
+      },
+      {
+        "code": "100126",
+        "value": "+0.69%"
+      },
+      {
+        "code": "100125",
+        "value": "+0.70%"
+      },
+      {
+        "code": "100124",
+        "value": "+0.71%"
+      },
+      {
+        "code": "100123",
+        "value": "+0.72%"
+      },
+      {
+        "code": "100122",
+        "value": "+0.73%"
+      },
+      {
+        "code": "100121",
+        "value": "+0.74%"
+      },
+      {
+        "code": "100120",
+        "value": "+0.75%"
+      },
+      {
+        "code": "100119",
+        "value": "+0.76%"
+      },
+      {
+        "code": "100118",
+        "value": "+0.77%"
+      },
+      {
+        "code": "100117",
+        "value": "+0.78%"
+      },
+      {
+        "code": "100116",
+        "value": "+0.79%"
+      },
+      {
+        "code": "100115",
+        "value": "+0.80%"
+      },
+      {
+        "code": "100114",
+        "value": "+0.81%"
+      },
+      {
+        "code": "100113",
+        "value": "+0.82%"
+      },
+      {
+        "code": "100112",
+        "value": "+0.83%"
+      },
+      {
+        "code": "100111",
+        "value": "+0.84%"
+      },
+      {
+        "code": "100110",
+        "value": "+0.85%"
+      },
+      {
+        "code": "100109",
+        "value": "+0.86%"
+      },
+      {
+        "code": "100108",
+        "value": "+0.87%"
+      },
+      {
+        "code": "100107",
+        "value": "+0.88%"
+      },
+      {
+        "code": "100106",
+        "value": "+0.89%"
+      },
+      {
+        "code": "100105",
+        "value": "+0.90%"
+      },
+      {
+        "code": "100104",
+        "value": "+0.91%"
+      },
+      {
+        "code": "100103",
+        "value": "+0.92%"
+      },
+      {
+        "code": "100102",
+        "value": "+0.93%"
+      },
+      {
+        "code": "100101",
+        "value": "+0.94%"
+      },
+      {
+        "code": "100100",
+        "value": "+0.95%"
+      },
+      {
+        "code": "100099",
+        "value": "+0.96%"
+      },
+      {
+        "code": "100098",
+        "value": "+0.97%"
+      },
+      {
+        "code": "100097",
+        "value": "+0.98%"
+      },
+      {
+        "code": "100096",
+        "value": "+0.99%"
+      },
+      {
+        "code": "100095",
+        "value": "+1.00%"
+      },
+      {
+        "code": "100094",
+        "value": "+1.01%"
+      },
+      {
+        "code": "100093",
+        "value": "+1.02%"
+      },
+      {
+        "code": "100092",
+        "value": "+1.03%"
+      },
+      {
+        "code": "100091",
+        "value": "+1.04%"
+      },
+      {
+        "code": "100090",
+        "value": "+1.05%"
+      },
+      {
+        "code": "100089",
+        "value": "+1.06%"
+      },
+      {
+        "code": "100088",
+        "value": "+1.07%"
+      },
+      {
+        "code": "035420",
+        "value": "+1.08%"
+      },
+      {
+        "code": "100087",
+        "value": "+1.08%"
+      },
+      {
+        "code": "100086",
+        "value": "+1.09%"
+      },
+      {
+        "code": "100085",
+        "value": "+1.10%"
+      },
+      {
+        "code": "100084",
+        "value": "+1.11%"
+      },
+      {
+        "code": "100083",
+        "value": "+1.12%"
+      },
+      {
+        "code": "100082",
+        "value": "+1.13%"
+      },
+      {
+        "code": "100081",
+        "value": "+1.14%"
+      },
+      {
+        "code": "100080",
+        "value": "+1.15%"
+      },
+      {
+        "code": "100079",
+        "value": "+1.16%"
+      },
+      {
+        "code": "100078",
+        "value": "+1.17%"
+      },
+      {
+        "code": "100077",
+        "value": "+1.18%"
+      },
+      {
+        "code": "100076",
+        "value": "+1.19%"
+      },
+      {
+        "code": "100075",
+        "value": "+1.20%"
+      },
+      {
+        "code": "100074",
+        "value": "+1.21%"
+      },
+      {
+        "code": "100073",
+        "value": "+1.22%"
+      },
+      {
+        "code": "100072",
+        "value": "+1.23%"
+      },
+      {
+        "code": "100071",
+        "value": "+1.24%"
+      },
+      {
+        "code": "100070",
+        "value": "+1.25%"
+      },
+      {
+        "code": "100069",
+        "value": "+1.26%"
+      },
+      {
+        "code": "100068",
+        "value": "+1.27%"
+      },
+      {
+        "code": "100067",
+        "value": "+1.28%"
+      },
+      {
+        "code": "100066",
+        "value": "+1.29%"
+      },
+      {
+        "code": "100065",
+        "value": "+1.30%"
+      },
+      {
+        "code": "100064",
+        "value": "+1.31%"
+      },
+      {
+        "code": "100063",
+        "value": "+1.32%"
+      },
+      {
+        "code": "100062",
+        "value": "+1.33%"
+      },
+      {
+        "code": "100061",
+        "value": "+1.34%"
+      },
+      {
+        "code": "100060",
+        "value": "+1.35%"
+      },
+      {
+        "code": "100059",
+        "value": "+1.36%"
+      },
+      {
+        "code": "100058",
+        "value": "+1.37%"
+      },
+      {
+        "code": "100057",
+        "value": "+1.38%"
+      },
+      {
+        "code": "100056",
+        "value": "+1.39%"
+      },
+      {
+        "code": "100055",
+        "value": "+1.40%"
+      },
+      {
+        "code": "100054",
+        "value": "+1.41%"
+      },
+      {
+        "code": "100053",
+        "value": "+1.42%"
+      },
+      {
+        "code": "100052",
+        "value": "+1.43%"
+      },
+      {
+        "code": "100051",
+        "value": "+1.44%"
+      },
+      {
+        "code": "100050",
+        "value": "+1.45%"
+      },
+      {
+        "code": "100049",
+        "value": "+1.46%"
+      },
+      {
+        "code": "100048",
+        "value": "+1.47%"
+      },
+      {
+        "code": "100047",
+        "value": "+1.48%"
+      },
+      {
+        "code": "100046",
+        "value": "+1.49%"
+      },
+      {
+        "code": "100045",
+        "value": "+1.50%"
+      },
+      {
+        "code": "100044",
+        "value": "+1.51%"
+      },
+      {
+        "code": "100043",
+        "value": "+1.52%"
+      },
+      {
+        "code": "100042",
+        "value": "+1.53%"
+      },
+      {
+        "code": "100041",
+        "value": "+1.54%"
+      },
+      {
+        "code": "100040",
+        "value": "+1.55%"
+      },
+      {
+        "code": "100039",
+        "value": "+1.56%"
+      },
+      {
+        "code": "100038",
+        "value": "+1.57%"
+      },
+      {
+        "code": "100037",
+        "value": "+1.58%"
+      },
+      {
+        "code": "100036",
+        "value": "+1.59%"
+      },
+      {
+        "code": "100035",
+        "value": "+1.60%"
+      },
+      {
+        "code": "100034",
+        "value": "+1.61%"
+      },
+      {
+        "code": "100033",
+        "value": "+1.62%"
+      },
+      {
+        "code": "100032",
+        "value": "+1.63%"
+      },
+      {
+        "code": "100031",
+        "value": "+1.64%"
+      },
+      {
+        "code": "100030",
+        "value": "+1.65%"
+      },
+      {
+        "code": "100029",
+        "value": "+1.66%"
+      },
+      {
+        "code": "100028",
+        "value": "+1.67%"
+      },
+      {
+        "code": "100027",
+        "value": "+1.68%"
+      },
+      {
+        "code": "100026",
+        "value": "+1.69%"
+      },
+      {
+        "code": "100025",
+        "value": "+1.70%"
+      },
+      {
+        "code": "100024",
+        "value": "+1.71%"
+      },
+      {
+        "code": "100023",
+        "value": "+1.72%"
+      },
+      {
+        "code": "100022",
+        "value": "+1.73%"
+      },
+      {
+        "code": "100021",
+        "value": "+1.74%"
+      },
+      {
+        "code": "100020",
+        "value": "+1.75%"
+      },
+      {
+        "code": "100019",
+        "value": "+1.76%"
+      },
+      {
+        "code": "267250",
+        "value": "+1.76%"
+      },
+      {
+        "code": "100018",
+        "value": "+1.77%"
+      },
+      {
+        "code": "100017",
+        "value": "+1.78%"
+      },
+      {
+        "code": "100016",
+        "value": "+1.79%"
+      },
+      {
+        "code": "100015",
+        "value": "+1.80%"
+      },
+      {
+        "code": "100014",
+        "value": "+1.81%"
+      },
+      {
+        "code": "100013",
+        "value": "+1.82%"
+      },
+      {
+        "code": "100012",
+        "value": "+1.83%"
+      },
+      {
+        "code": "100011",
+        "value": "+1.84%"
+      },
+      {
+        "code": "100010",
+        "value": "+1.85%"
+      },
+      {
+        "code": "100009",
+        "value": "+1.86%"
+      },
+      {
+        "code": "100008",
+        "value": "+1.87%"
+      },
+      {
+        "code": "100007",
+        "value": "+1.88%"
+      },
+      {
+        "code": "100006",
+        "value": "+1.89%"
+      },
+      {
+        "code": "100005",
+        "value": "+1.90%"
+      },
+      {
+        "code": "100004",
+        "value": "+1.91%"
+      },
+      {
+        "code": "000660",
+        "value": "+2.44%"
+      },
+      {
+        "code": "005930",
+        "value": "+3.12%"
+      },
+      {
+        "code": "005380",
+        "value": "—"
+      },
+      {
+        "code": "100003",
+        "value": "—"
+      }
+    ]
+  },
+  "imeEvents": [
+    {
+      "type": "compositionstart",
+      "data": ""
+    }
+  ],
+  "imeLimitation": "This Edge CDP composition cancellation emits no compositionend; native OS IME completion is unverified. Composition-end guard is covered by unit tests.",
+  "passed": true,
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": [],
+  "clickDiagnostics": [
+    {
+      "selector": "button[data-sort=\"predictedReturn\"]",
+      "attempt": 1,
+      "x": 627.359375,
+      "y": 558.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 720.90625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[data-sort=\"predictedReturn\"]",
+      "attempt": 1,
+      "x": 638.640625,
+      "y": 558.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"다음 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1350.7578125,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 720.90625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": "button[aria-label=\"이전 순위 페이지\"]",
+      "attempt": 1,
+      "x": 1266.2734375,
+      "y": 721.40625
+    },
+    {
+      "selector": ".rank-search input",
+      "attempt": 1,
+      "x": 244.3671875,
+      "y": 553.40625
+    },
+    {
+      "selector": ".rank-search input",
+      "attempt": 1,
+      "x": 244.3671875,
+      "y": 553.40625
+    },
+    {
+      "selector": ".rank-search input",
+      "attempt": 1,
+      "x": 244.3671875,
+      "y": 553.40625
+    },
+    {
+      "selector": "[data-rank-code=\"005930\"] [data-watch-code=\"005930\"]",
+      "attempt": 1,
+      "x": 82,
+      "y": 558.40625
+    },
+    {
+      "selector": ".ds-nav a[href=\"/watchlist\"]",
+      "attempt": 1,
+      "x": 366.5859375,
+      "y": 32
+    },
+    {
+      "selector": "[data-watch-code=\"999999\"]",
+      "attempt": 1,
+      "x": 82,
+      "y": 696.90625
+    },
+    {
+      "selector": "[data-watch-code=\"005930\"]",
+      "attempt": 1,
+      "x": 82,
+      "y": 596.40625
+    },
+    {
+      "selector": ".rank-title-row button",
+      "attempt": 1,
+      "x": 1361.890625,
+      "y": 332.359375
+    },
+    {
+      "selector": "button[aria-label=\"종목 검색\"]",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-dialog input",
+      "attempt": 1,
+      "x": 734.4609375,
+      "y": 261
+    },
+    {
+      "selector": ".search-dialog [data-watch-code=\"100194\"]",
+      "attempt": 1,
+      "x": 983,
+      "y": 566.5
+    },
+    {
+      "selector": "button[aria-label=\"종목 검색 닫기\"]",
+      "attempt": 1,
+      "x": 986,
+      "y": 188.5
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".rank-search input",
+      "attempt": 1,
+      "x": 244.3671875,
+      "y": 553.40625
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": "button[aria-label=\"종목 검색 닫기\"]",
+      "attempt": 1,
+      "x": 986,
+      "y": 188.5
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".ds-nav a[href=\"/\"]",
+      "attempt": 1,
+      "x": 224.640625,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-dialog input",
+      "attempt": 1,
+      "x": 734.4609375,
+      "y": 261
+    },
+    {
+      "selector": "[data-search-code=\"100194\"] a",
+      "attempt": 1,
+      "x": 696,
+      "y": 566.5
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".rank-title-row button",
+      "attempt": 1,
+      "x": 1361.890625,
+      "y": 332.359375
+    },
+    {
+      "selector": ".rank-title-row button",
+      "attempt": 1,
+      "x": 1361.890625,
+      "y": 332.359375
+    },
+    {
+      "selector": ".report-chart-controls > div:first-child button:nth-child(6)",
+      "attempt": 1,
+      "x": 298.859375,
+      "y": 557.78125
+    },
+    {
+      "selector": ".stock-report [data-watch-code=\"005930\"]",
+      "attempt": 1,
+      "x": 1394,
+      "y": 349.296875
+    },
+    {
+      "selector": "[data-candidate-code=\"005930\"] button",
+      "attempt": 1,
+      "x": 143.078125,
+      "y": 558.3828125
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1263.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1103.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 1103.9453125,
+      "y": 32
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 274.7578125,
+      "y": 30
+    },
+    {
+      "selector": ".search-trigger",
+      "attempt": 1,
+      "x": 274.7578125,
+      "y": 30
+    }
+  ],
+  "cancelledInterceptions": [],
+  "interceptionErrors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538636699
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538636700
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538636704
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538640979
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538640980
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538640983
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538641165
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538641166
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538641168
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538641343
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538641344
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538641346
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538641843
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538641843
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538641846
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538642783
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538642786
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538642787
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538644468
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538644469
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538645486
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538645699
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538645700
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538645701
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538646738
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538646930
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538646930
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538646932
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538648065
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538648065
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=100194",
+      "at": 1791538648529
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=100194",
+      "at": 1791538648534
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=100194",
+      "at": 1791538648534
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538648697
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538648698
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538648700
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538649741
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538649901
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538649902
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538649903
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538650168
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538650169
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538650171
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538650383
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538650383
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538651409
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538651627
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538651627
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538651630
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538653333
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538653335
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538654351
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538654613
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538654613
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538654614
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538654614
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538654617
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538654838
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538655146
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538655146
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538655146
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538655146
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538655146
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538655147
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=000660",
+      "at": 1791538655372
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=000660",
+      "at": 1791538655373
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538655481
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538655483
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538655484
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538657244
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538657246
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538657248
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538657621
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538657621
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538657623
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538659280
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538659281
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538659284
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538659659
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538659661
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538659664
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538661175
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538661175
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538661177
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538661546
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538661548
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538661549
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538662879
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538662880
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538662882
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538663274
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538663277
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538663279
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538664257
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538664258
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538664260
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538664611
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538664612
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538664613
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538665522
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538665522
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538665524
+    }
+  ],
+  "page": {
+    "url": "http://127.0.0.1:57044/watchlist",
+    "activeElement": "<body>\n    <div id=\"root\"><a class=\"skip-link\" href=\"#main-content\">본문으로 건너뛰기</a><div class=\"ds-root min-h-dvh bg-bg font-sans text-fg antialiased\"><header class=\"ds-header sticky top-0 z-10 bg-surface\"><a class=\"ds-brand\" href=\"/\"><svg class=\"size-7 text-fg\" width=\"28\" height=\"28\" viewBox=\"0 0 28 28\" aria-hidden=\"true\" focusable=\"false\"><rect width=\"28\" height=\"28\" rx=\"8\" fill=\"currentColor\"></rect><path d=\"M6 19.5L11 14l4 3.5 7-9\" fill=\"none\" stroke=\"var(--ds-bg)\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg><span>KOSPI AI Desk</span></a><nav aria-label=\"주요 메뉴\" class=\"ds-nav\"><a class=\"ds-nav-link\" href=\"/\">브리핑</a><a class=\"ds-nav-link\" href=\"/rank\">전체 순위</a><a aria-current=\"page\" class=\"ds-nav-link ds-nav-active\" href=\"/watchlist\">관심</a><a class=\"ds-nav-link\" href=\"/history\">분석 기록</a></nav><div class=\"ds-header-actions\"><span class=\"search-trigger-group\"><button type=\"button\" class=\"search-trigger\" aria-label=\"종목 검색\" aria-haspopup=\"dialog\" aria-keyshortcuts=\"Control+K Meta+K\" aria-expanded=\"false\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg><span>검색</span></button><kbd aria-hidden=\"true\">⌘ K / Ctrl K</kbd></span><button type=\"button\" aria-label=\"어두운 테마로 전환\" class=\"ds-theme-button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-moon\" aria-hidden=\"true\"><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\"></path></svg></button></div></header><main id=\"main-content\" data-route-path=\"/watchlist\" tabindex=\"-1\" class=\"ds-main px-7 pt-5 pb-12 focus:outline-none\"><aside class=\"connection-notice\" aria-label=\"데이터 연결 상태\" data-connection-state=\"ready\"><div class=\"connection-notice-heading\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-cable\" aria-hidden=\"true\"><path d=\"M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z\"></path><path d=\"M17 21v-2\"></path><path d=\"M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10\"></path><path d=\"M21 21v-2\"></path><path d=\"M3 5V3\"></path><path d=\"M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z\"></path><path d=\"M7 5V3\"></path></svg><strong>데이터 연결 상태</strong><button type=\"button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rotate-cw\" aria-hidden=\"true\"><path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path></svg>연결 상태 다시 확인</button></div><p>시장 데이터 설정 확인 · 조회 검증 필요</p><p>저장된 분석 완료 기록</p><div class=\"connection-notice-results\"><span>전체 순위: 저장된 분석 결과 제공</span><span>최종 후보: 저장된 분석 결과 제공</span></div><details><summary>연결 상태 설명</summary><p>설정 확인은 실제 조회 성공을 보장하지 않습니다. 가격·지수의 실제 출처와 기준 시각은 각 화면에서 확인하세요.</p><p>뉴스 포함 분석은 별도 실행 승인이 필요합니다.</p><p>뉴스 평가 설정 확인 · 기사 수집 연결 대기. 설정 여부만 확인했으며 수집·평가는 검증하지 않았습니다.</p><p>상태 확인 시각 2026. 10. 07. 18:00 · 분석 자료는 저장 결과이며 실시간 가격이 아닙니다.</p></details></aside><div class=\"rank-page\"><div class=\"rank-title-row\"><div><p class=\"rank-eyebrow\">YOUR WATCHLIST</p><h1>관심 종목 <span class=\"rank-muted\">2개</span></h1><p class=\"rank-muted\">별을 눌러 직접 고른 종목입니다. 이 브라우저에 저장합니다.</p></div><button class=\"rank-button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg>다시 조회</button></div><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>전체 순위 저장 시각 2026. 10. 07. 18:00</span></span><section class=\"rank-card\" aria-labelledby=\"watchlist-heading\"><div class=\"rank-section-heading\"><h2 id=\"watchlist-heading\">저장한 종목</h2><a class=\"rank-button\" href=\"/rank\">전체 순위에서 찾기</a></div><div class=\"rank-table-scroll\" role=\"region\" tabindex=\"0\" aria-label=\"종목 비교표, 좁은 화면에서는 가로로 이동할 수 있습니다\"><table class=\"rank-table\"><caption class=\"watch-sr-only\">전체 순위 원본 비교. 예측값은 실제 성과가 아니며 누락값은 —입니다.</caption><thead><tr><th scope=\"col\">종목</th><th scope=\"col\">원본 모델 순위</th><th scope=\"col\">최종 보정 순위</th><th scope=\"col\">모델 예측</th><th scope=\"col\">최종 보정 예측</th><th scope=\"col\">모델</th><th scope=\"col\">뉴스</th><th scope=\"col\">수급</th><th scope=\"col\">근거 일치도</th></tr></thead><tbody><tr data-rank-code=\"100194\" data-membership=\"nonCandidate\"><td><div class=\"rank-stock\"><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"100194\" aria-pressed=\"true\" aria-label=\"검증종목194 100194 관심 종목\" title=\"관심 종목 해제\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button><a href=\"/stock/100194\"><strong>검증종목194</strong><small>100194</small></a></div><small class=\"rank-row-note\">최종 후보 외 종목</small></td><td data-value=\"rank\">199</td><td data-value=\"finalRank\">—</td><td data-value=\"predictedReturn\"><strong class=\"rank-rise\">+0.01%</strong></td><td data-value=\"finalPredictedReturn\"><strong class=\"\">—</strong></td><td data-rank-signal=\"model\"><span class=\"briefing-signal\" data-signal=\"neutral\" title=\"원본 예측수익률은 양수이나 상위 5% 밖입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-minus lucide-minus-circle\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M8 12h8\"></path></svg><span>중립</span></span></td><td data-rank-signal=\"news\"><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"뉴스 수집·분석의 성공 상태를 확인할 수 없습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span><small class=\"rank-row-note\">뉴스 미분석 · 수집 미확인</small></td><td data-rank-signal=\"supply\"><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span><small class=\"rank-row-note\">수급 미분석</small></td><td><strong>0%</strong><small class=\"rank-row-note\">긍정 0/1 · 판정 불가 2</small></td></tr><tr data-rank-code=\"005930\" data-membership=\"candidate\"><td><div class=\"rank-stock\"><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"005930\" aria-pressed=\"true\" aria-label=\"삼성전자 005930 관심 종목\" title=\"관심 종목 해제\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button><a href=\"/stock/005930\"><strong>삼성전자</strong><small>005930</small></a></div><small class=\"rank-row-note\">최종 후보</small></td><td data-value=\"rank\">5</td><td data-value=\"finalRank\">1</td><td data-value=\"predictedReturn\"><strong class=\"rank-rise\">+3.12%</strong></td><td data-value=\"finalPredictedReturn\"><strong class=\"rank-rise\">+3.42%</strong></td><td data-rank-signal=\"model\"><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td data-rank-signal=\"news\"><span class=\"briefing-signal\" data-signal=\"positive\" title=\"LLM 긍정 기사 수가 부정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td data-rank-signal=\"supply\"><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><strong>100%</strong><small class=\"rank-row-note\">긍정 2/2 · 판정 불가 1</small></td></tr></tbody></table></div><p class=\"rank-help rank-muted\">저장한 코드는 전체 순위 조회 여부와 관계없이 유지합니다. 조회가 성공한 뒤 분석 결과에 없는 코드를 구분하며, 리포트를 열거나 별을 눌러 삭제할 수 있습니다. 예측은 투자 추천·수익 보장·실제 성과가 아닙니다.</p></section></div></main><footer class=\"ds-footer\"><div><strong>KOSPI AI Desk</strong><p>예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.</p></div><nav aria-label=\"서비스 안내\"><a class=\"\" href=\"/about\">서비스 소개</a><a class=\"\" href=\"/history\">기록 확인</a></nav></footer></div></div>\n\n  \n\n</body>",
+    "text": "본문으로 건너뛰기\nKOSPI AI Desk\n브리핑\n전체 순위\n관심\n분석 기록\n검색\n데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n저장된 분석 완료 기록\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 저장된 분석 결과 제공\n연결 상태 설명\n\nYOUR WATCHLIST\n\n관심 종목 2개\n\n별을 눌러 직접 고른 종목입니다. 이 브라우저에 저장합니다.\n\n다시 조회\n저장된 결과\n전체 순위 저장 시각 2026. 10. 07. 18:00\n저장한 종목\n전체 순위에서 찾기\n전체 순위 원본 비교. 예측값은 실제 성과가 아니며 누락값은 —입니다.\n종목\t원본 모델 순위\t최종 보정 순위\t모델 예측\t최종 보정 예측\t모델\t뉴스\t수급\t근거 일치도\n\n관심 종목\n검증종목194\n100194\n최종 후보 외 종목\n\t199\t—\t+0.01%\t—\t\n중립\n\t\n판정 불가\n뉴스 미분석 · 수집 미확인\n\t\n판정 불가\n수급 미분석\n\t0%\n긍정 0/1 · 판정 불가 2\n\n\n관심 종목\n삼성전자\n005930\n최종 후보\n\t5\t1\t+3.12%\t+3.42%\t\n긍정\n\t\n긍정\n\t\n판정 불가\n\t100%\n긍정 2/2 · 판정 불가 1\n\n저장한 코드는 전체 순위 조회 여부와 관계없이 유지합니다. 조회가 성공한 뒤 분석 결과에 없는 코드를 구분하며, 리포트를 열거나 별을 눌러 삭제할 수 있습니다. 예측은 투자 추천·수익 보장·실제 성과가 아닙니다.\n\nKOSPI AI Desk\n\n예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.\n\n서비스 소개\n기록 확인"
+  }
+}

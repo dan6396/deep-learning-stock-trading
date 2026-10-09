@@ -1,0 +1,7 @@
+@layer components {
+  .watch-toggle { display:inline-flex; align-items:center; justify-content:center; min-width:36px; min-height:36px; flex-shrink:0; border:1px solid var(--ds-line); border-radius:11px; background:var(--ds-surface-2); color:var(--ds-fg-2); cursor:pointer; }
+  .watch-toggle[aria-pressed="true"] { color:var(--ds-fg); box-shadow:inset 0 0 0 1px var(--ds-fg-2); }
+  .watch-toggle:focus-visible { outline:2px solid var(--ds-focus); outline-offset:3px; }
+  .watch-notice { padding:14px 18px; border-radius:14px; background:var(--ds-warn-soft); color:var(--ds-fg); line-height:1.6; font-size:13px; }
+  .watch-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+}

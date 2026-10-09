@@ -1,0 +1,1217 @@
+{
+  "fixtureOnly": true,
+  "generatedAt": "2026-10-09T09:36:49.136Z",
+  "checks": [
+    "briefing report link targets new route",
+    "briefing-to-report navigation focuses mounted main",
+    "report and briefing authoritative model/final rank agree",
+    "report does not expose analysis execution UI",
+    "deeplink survives reload",
+    "return link preserves briefing selected code",
+    "browser back restores report",
+    "rapid selection has B panel and matching report href before mouse click",
+    "late A stock/quote/chart never replace B after real selection",
+    "range pending has no old plot",
+    "late range response cannot overwrite selected range",
+    "raw OHLC permits accessible candle mode",
+    "price exploration is keyboard operable",
+    "pending membership does not invent non-candidate/model signal",
+    "previous candidate data stays explicitly unconfirmed on error",
+    "successful [] confirms true non-membership",
+    "negative candidate keeps membership-positive model and blue numeric tone",
+    "null analysis/quote preserves missing values",
+    "stock error rejects response without prediction fabrication",
+    "stock mismatch rejects response without prediction fabrication",
+    "stock sample rejects response without prediction fabrication",
+    "background error retains prior results with warnings",
+    "chart empty never fabricates observed history",
+    "chart sample never fabricates observed history",
+    "chart unknown never fabricates observed history",
+    "chart mismatch never fabricates observed history",
+    "chart error never fabricates observed history",
+    "chart missingTime never fabricates observed history",
+    "legacy OHLC replacements cannot become verified candles",
+    "server-preserved raw price gap produces two disconnected paths",
+    "chart background failure is explicitly stale",
+    "unclear article keeps original reason and safe text-only URL",
+    "missing prediction has no fabricated summary or final rank",
+    "invalid code shows validation with no stock API requests (shared status GET only)",
+    "1440-dark: populated axe WCAG 2.2 AA",
+    "1440-dark: no page overflow",
+    "1440-dark: pointer targets at least 24px",
+    "1440-dark: single first h1 and no skipped levels",
+    "1440-dark: safe original article link attributes",
+    "1440-light: populated axe WCAG 2.2 AA",
+    "1440-light: no page overflow",
+    "1440-light: pointer targets at least 24px",
+    "1440-light: single first h1 and no skipped levels",
+    "1440-light: safe original article link attributes",
+    "1280-dark: populated axe WCAG 2.2 AA",
+    "1280-dark: no page overflow",
+    "1280-dark: pointer targets at least 24px",
+    "1280-dark: single first h1 and no skipped levels",
+    "1280-dark: safe original article link attributes",
+    "1280-light: populated axe WCAG 2.2 AA",
+    "1280-light: no page overflow",
+    "1280-light: pointer targets at least 24px",
+    "1280-light: single first h1 and no skipped levels",
+    "1280-light: safe original article link attributes",
+    "375-light-stacked: populated axe WCAG 2.2 AA",
+    "375-light-stacked: no page overflow",
+    "375-light-stacked: pointer targets at least 24px",
+    "375-light-stacked: single first h1 and no skipped levels",
+    "zero console.error/unhandled exceptions",
+    "every product API call is a fixture GET",
+    "no external article/API/network visits"
+  ],
+  "axe": [
+    {
+      "label": "1440-dark",
+      "violations": []
+    },
+    {
+      "label": "1440-light",
+      "violations": []
+    },
+    {
+      "label": "1280-dark",
+      "violations": []
+    },
+    {
+      "label": "1280-light",
+      "violations": []
+    },
+    {
+      "label": "375-light-stacked",
+      "violations": []
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "m3-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "fixture": true
+    },
+    {
+      "name": "m3-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "fixture": true
+    },
+    {
+      "name": "m3-1280-dark.png",
+      "width": 1280,
+      "theme": "dark",
+      "fixture": true
+    },
+    {
+      "name": "m3-1280-light.png",
+      "width": 1280,
+      "theme": "light",
+      "fixture": true
+    }
+  ],
+  "exploration": {
+    "before": "2026. 07. 31. · 종가 72,000원 · 시가 71,840원 · 고가 72,260원 · 저가 71,530원 · 거래량 0",
+    "afterClick": "2026. 08. 04. · 종가 72,720원 · 시가 72,910원 · 고가 73,170원 · 저가 72,410원 · 거래량 91,200",
+    "afterKey": "2026. 08. 08. · 종가 73,070원 · 시가 72,910원 · 고가 73,330원 · 저가 72,600원 · 거래량 92,400"
+  },
+  "passed": true,
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": [],
+  "clickDiagnostics": [
+    {
+      "selector": ".briefing-report-link",
+      "attempt": 1,
+      "x": 1222,
+      "y": 782.15625
+    },
+    {
+      "selector": ".report-back",
+      "attempt": 1,
+      "x": 69.25,
+      "y": 298.3125
+    },
+    {
+      "selector": ".report-back",
+      "attempt": 1,
+      "x": 69.25,
+      "y": 298.3125
+    },
+    {
+      "selector": "[data-candidate-code=\"000660\"] button",
+      "attempt": 1,
+      "x": 143.078125,
+      "y": 558.0234375
+    },
+    {
+      "selector": "[data-detail-code=\"000660\"] .briefing-report-link",
+      "attempt": 1,
+      "x": 1222,
+      "y": 782.15625
+    },
+    {
+      "selector": "[aria-label=\"가격 이력 기간\"] button:nth-child(2)",
+      "attempt": 1,
+      "x": 116.296875,
+      "y": 557.78125
+    },
+    {
+      "selector": "[aria-label=\"가격 이력 기간\"] button:nth-child(3)",
+      "attempt": 1,
+      "x": 168.421875,
+      "y": 557.78125
+    },
+    {
+      "selector": "[aria-label=\"차트 표시 방식\"] button:nth-child(2)",
+      "attempt": 1,
+      "x": 969.625,
+      "y": 557.78125
+    },
+    {
+      "selector": "button[aria-label=\"다음 가격 관측\"]",
+      "attempt": 1,
+      "x": 973,
+      "y": 558.140625
+    },
+    {
+      "selector": ".report-title-row button",
+      "attempt": 1,
+      "x": 775.3359375,
+      "y": 349.2890625
+    },
+    {
+      "selector": ".report-title-row button",
+      "attempt": 1,
+      "x": 779.8515625,
+      "y": 349.2890625
+    },
+    {
+      "selector": ".report-title-row button",
+      "attempt": 1,
+      "x": 775.3359375,
+      "y": 349.2890625
+    },
+    {
+      "selector": "[aria-label=\"차트 표시 방식\"] button:nth-child(2)",
+      "attempt": 1,
+      "x": 969.625,
+      "y": 557.78125
+    },
+    {
+      "selector": "button[aria-label=\"가격 이력 다시 조회\"]",
+      "attempt": 1,
+      "x": 973,
+      "y": 558.484375
+    }
+  ],
+  "cancelledInterceptions": [],
+  "interceptionErrors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538609355
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538609356
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538609357
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538609357
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538609358
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538609358
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538609694
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538609925
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538609925
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538609926
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538609926
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538609933
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538610231
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538610231
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538610401
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538610402
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538610402
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538610402
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538610402
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538610746
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538610746
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538610746
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538610747
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=000660",
+      "at": 1791538610821
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=000660",
+      "at": 1791538610822
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=000660",
+      "at": 1791538610950
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538613081
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538613082
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538613083
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538613084
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538613084
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538613285
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538613335
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538615423
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538615423
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538615428
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538615428
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538615428
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538617150
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538617151
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538617152
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538617153
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538618167
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538618282
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538618282
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538618283
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538618284
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538618515
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538618515
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538618516
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538618517
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538618520
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538618876
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538618877
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538618878
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538618878
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538618880
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538619206
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538619206
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538619208
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538619208
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538619208
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538620281
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538620446
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538620446
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538620447
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538620447
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538620449
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538621564
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538621776
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538621779
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538621780
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538621781
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538621783
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538622890
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538623125
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538623126
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538623128
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538623133
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538623134
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538623285
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538623285
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538623285
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538623287
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538624297
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538624298
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538624552
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538624553
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538624557
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538624557
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538624557
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538624800
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538624801
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538624802
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538624803
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538624806
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538625089
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538625091
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538625092
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538625098
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538625098
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538625338
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538625339
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538625340
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538625340
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538625340
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538626444
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538626648
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538626651
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538626651
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538626651
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538626653
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538627725
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538627882
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538627885
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538627886
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538627886
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538627888
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538628191
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538628191
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538628192
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538628192
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538628194
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538628515
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538628515
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538628516
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538628516
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538628519
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538628736
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538629760
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538629992
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538629992
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538629993
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538629998
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538629999
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538630337
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005380",
+      "at": 1791538630337
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005380",
+      "at": 1791538630339
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005380",
+      "at": 1791538630339
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538630342
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538630651
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538631124
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538631124
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538631125
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538631125
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538631131
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538632041
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538632041
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538632042
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538632042
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538632044
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538632881
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538632882
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538632882
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538632883
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538632885
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538633623
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538633623
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538633624
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538633624
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538633626
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538634423
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538634423
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538634424
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538634425
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538634425
+    }
+  ],
+  "page": {
+    "url": "http://127.0.0.1:52239/next/stock/005930",
+    "reportCode": "005930",
+    "range": "1D",
+    "activeElement": "<body>\n    <div id=\"root\"><a class=\"skip-link\" href=\"#main-content\">본문으로 건너뛰기</a><div class=\"ds-root min-h-dvh bg-bg font-sans text-fg antialiased\"><header class=\"ds-header sticky top-0 z-10 bg-surface\"><a aria-current=\"page\" class=\"ds-brand active\" href=\"/next\"><svg class=\"size-7 text-fg\" width=\"28\" height=\"28\" viewBox=\"0 0 28 28\" aria-hidden=\"true\" focusable=\"false\"><rect width=\"28\" height=\"28\" rx=\"8\" fill=\"currentColor\"></rect><path d=\"M6 19.5L11 14l4 3.5 7-9\" fill=\"none\" stroke=\"var(--ds-bg)\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg><span>KOSPI AI Desk</span></a><nav aria-label=\"주요 메뉴\" class=\"ds-nav\"><a class=\"ds-nav-link\" href=\"/next\">브리핑</a><a class=\"ds-nav-link\" href=\"/next/rank\">전체 순위</a><a class=\"ds-nav-link\" href=\"/next/watchlist\">관심</a><a class=\"ds-nav-link\" href=\"/next/history\">분석 기록</a></nav><div class=\"ds-header-actions\"><span class=\"search-trigger-group\"><button type=\"button\" class=\"search-trigger\" aria-label=\"종목 검색\" aria-haspopup=\"dialog\" aria-keyshortcuts=\"Control+K Meta+K\" aria-expanded=\"false\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg><span>검색</span></button><kbd aria-hidden=\"true\">⌘ K / Ctrl K</kbd></span><button type=\"button\" aria-label=\"어두운 테마로 전환\" class=\"ds-theme-button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-moon\" aria-hidden=\"true\"><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\"></path></svg></button></div></header><main id=\"main-content\" data-route-path=\"/next/stock/005930\" tabindex=\"-1\" class=\"ds-main px-7 pt-5 pb-12 focus:outline-none\"><aside class=\"connection-notice\" aria-label=\"데이터 연결 상태\" data-connection-state=\"ready\"><div class=\"connection-notice-heading\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-cable\" aria-hidden=\"true\"><path d=\"M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z\"></path><path d=\"M17 21v-2\"></path><path d=\"M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10\"></path><path d=\"M21 21v-2\"></path><path d=\"M3 5V3\"></path><path d=\"M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z\"></path><path d=\"M7 5V3\"></path></svg><strong>데이터 연결 상태</strong><button type=\"button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rotate-cw\" aria-hidden=\"true\"><path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path></svg>연결 상태 다시 확인</button></div><p>시장 데이터 설정 확인 · 조회 검증 필요</p><p>저장된 분석 완료 기록</p><div class=\"connection-notice-results\"><span>전체 순위: 저장된 분석 결과 제공</span><span>최종 후보: 저장된 분석 결과 제공</span></div><details><summary>연결 상태 설명</summary><p>설정 확인은 실제 조회 성공을 보장하지 않습니다. 가격·지수의 실제 출처와 기준 시각은 각 화면에서 확인하세요.</p><p>뉴스 포함 분석은 별도 실행 승인이 필요합니다.</p><p>뉴스 평가 설정 확인 · 기사 수집 연결 대기. 설정 여부만 확인했으며 수집·평가는 검증하지 않았습니다.</p><p>상태 확인 시각 2026. 10. 07. 18:00 · 분석 자료는 저장 결과이며 실시간 가격이 아닙니다.</p></details></aside><div class=\"stock-report\" data-report-code=\"005930\"><div class=\"report-title-row\"><div><a class=\"report-back\" href=\"/next?code=005930\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-arrow-left\" aria-hidden=\"true\"><path d=\"m12 19-7-7 7-7\"></path><path d=\"M19 12H5\"></path></svg>브리핑으로</a><p class=\"report-eyebrow\">STOCK REPORT · 005930</p><h1>삼성전자</h1><p class=\"report-muted\" data-membership=\"candidate\">005930 · 최종 후보</p></div><button class=\"stock-report-button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg>다시 조회</button><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"005930\" aria-pressed=\"false\" aria-label=\"삼성전자 005930 관심 종목\" title=\"관심 종목 추가\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button></div><div class=\"report-top-grid\"><section class=\"report-card\" aria-labelledby=\"report-price-title\"><p class=\"report-eyebrow\">QUOTE</p><h2 id=\"report-price-title\">조회 가격</h2><p class=\"report-price\" data-testid=\"report-price\">74,200원</p><p class=\"report-rise\">+0.68% · 500원</p><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>시세 기준 시각 2026. 10. 07. 18:00</span></span><dl class=\"report-stats\"><div><dt>거래량</dt><dd>1,200,045</dd></div><div><dt>거래대금</dt><dd>84,000,000,000원</dd></div></dl></section><section class=\"report-card\" aria-labelledby=\"report-model-title\"><p class=\"report-eyebrow\">PREDICTION · 실제 성과 아님</p><h2 id=\"report-model-title\">모델과 최종 보정</h2><dl class=\"report-predictions\"><div><dt>원본 모델 예측수익률</dt><dd class=\"report-rise\" data-testid=\"report-prediction\">+3.12%</dd></div><div><dt>최종 보정 예측수익률</dt><dd class=\"report-rise\" data-testid=\"report-final-prediction\">+3.42%</dd></div></dl><dl class=\"report-stats\"><div><dt>원본 모델 순위 / 모집단</dt><dd>5 / 199</dd></div><div><dt>최종 보정 순위</dt><dd data-testid=\"report-final-rank\">1위</dd></div><div><dt>분석 기준일</dt><dd>2026. 10. 07.</dd></div><div><dt>예측 대상</dt><dd>다음 거래일 시가→종가</dd></div><div><dt>다음 거래일</dt><dd>미확인 · 거래일 달력 미연결</dd></div></dl><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>모델 결과 저장 시각 2026. 10. 07. 18:00</span></span><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>상세 분석 저장 시각 2026. 10. 07. 18:00</span></span></section></div><div class=\"report-columns\"><div class=\"report-primary\"><section class=\"report-card report-chart\" aria-labelledby=\"report-chart-title\"><div class=\"report-section-heading\"><div><p class=\"report-eyebrow\">PRICE OBSERVATIONS</p><h2 id=\"report-chart-title\">가격 이력</h2></div><button class=\"report-icon-button\" aria-label=\"가격 이력 다시 조회\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg></button></div><div class=\"report-chart-controls\"><div role=\"group\" aria-label=\"가격 이력 기간\"><button type=\"button\" aria-pressed=\"true\">1일</button><button type=\"button\" aria-pressed=\"false\">1개월</button><button type=\"button\" aria-pressed=\"false\">3개월</button><button type=\"button\" aria-pressed=\"false\">1년</button><button type=\"button\" aria-pressed=\"false\">3년</button><button type=\"button\" aria-pressed=\"false\">5년</button></div><div role=\"group\" aria-label=\"차트 표시 방식\"><button aria-pressed=\"true\">가격선</button><button aria-pressed=\"false\">캔들</button></div></div><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>조회/저장 시각 2026. 10. 07. 18:00</span></span><p class=\"report-muted\" data-chart-coverage=\"unverified\">요청 1일 · 실제 제공 관측 범위 2026. 10. 07. 09:00 ~ 2026. 10. 07. 14:40. 요청 기간 전체의 관측 제공 여부는 미확인입니다.</p><div class=\"report-plot\" data-chart-range=\"1D\" data-chart-code=\"005930\" data-chart-mode=\"area\"><svg viewBox=\"0 0 760 260\" role=\"img\" aria-label=\"1일 요청 · 가격선. 18개 원본 관측. 2026. 10. 07. 09:00 72,000원부터 2026. 10. 07. 14:40 74,600원까지. 최고 74,600원, 최저 71,813원.\"><line x1=\"20\" x2=\"740\" y1=\"71.25\" y2=\"71.25\" stroke=\"var(--ds-line)\"></line><line x1=\"20\" x2=\"740\" y1=\"122.5\" y2=\"122.5\" stroke=\"var(--ds-line)\"></line><line x1=\"20\" x2=\"740\" y1=\"173.75\" y2=\"173.75\" stroke=\"var(--ds-line)\"></line><g><path d=\"M20,180.3014723066137 L62.35294117647059,145.8074316429072 L104.70588235294117,129.03949520916103 L147.05882352941177,136.99228791773777 L189.41176470588235,161.61720028043936 L231.76470588235296,184.7569525590091 L274.11764705882354,189.26034120121523 L316.4705882352941,169.1388174807198 L358.8235294117647,133.39915868193503 L401.1764705882353,100.53400327179247 L443.5294117647059,87.31128768403832 L485.8823529411765,98.52185089974293 L528.2352941176471,124.15283944846927 L570.5882352941176,145.519981304043 L612.9411764705882,146.38233232063567 L655.2941176470588,123.0988548726338 L697.6470588235294,86.54475344706705 L740,55.739658798784774\" fill=\"none\" stroke=\"var(--ds-fg-2)\" stroke-width=\"2.5\"></path></g><circle cx=\"20\" cy=\"180.3014723066137\" r=\"4\" fill=\"var(--ds-fg)\"></circle></svg><p class=\"report-chart-summary\">1일 요청 · 가격선. 18개 원본 관측. 2026. 10. 07. 09:00 72,000원부터 2026. 10. 07. 14:40 74,600원까지. 최고 74,600원, 최저 71,813원.</p><div class=\"report-chart-explore\"><button class=\"report-icon-button\" disabled=\"\" aria-label=\"이전 가격 관측\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-left\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"></path></svg></button><p aria-live=\"polite\">2026. 10. 07. 09:00 · 가격 72,000원</p><button class=\"report-icon-button\" aria-label=\"다음 가격 관측\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-right\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"></path></svg></button></div></div><p class=\"report-muted report-footnote\">각 점은 제공된 관측 시각의 가격입니다. 가격 이력은 모델의 실현 성과가 아닙니다. 실제 제공 관측 범위와 부분 제공 안내를 확인하세요. 원본 관측이 없는 구간은 연결하지 않습니다.</p></section><section class=\"report-card\" aria-labelledby=\"report-news-title\"><div class=\"report-section-heading\"><div><p class=\"report-eyebrow\">NEWS EVIDENCE</p><h2 id=\"report-news-title\">뉴스 원본 근거</h2></div><span class=\"report-muted\">LLM 판정</span></div><p class=\"report-muted\">수집 상태: analyzed · 확인된 기사 감성을 그대로 표시합니다.</p><ul class=\"report-news\"><li><div class=\"report-news-heading\"><h3><a href=\"https://fixture-news.invalid/article\" target=\"_blank\" rel=\"noopener noreferrer\">삼성전자 사업 현황 점검<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-external-link\" aria-hidden=\"true\"><path d=\"M15 3h6v6\"></path><path d=\"M10 14 21 3\"></path><path d=\"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6\"></path></svg></a></h3><span class=\"report-news-sentiment\" data-article-sentiment=\"positive\">긍정</span></div><p class=\"report-muted\">검증용 기사 · 2026. 10. 07. 18:00</p><p>fixture 판정</p></li><li><div class=\"report-news-heading\"><h3>삼성전자 산업 동향과 불확실성</h3><span class=\"report-news-sentiment\" data-article-sentiment=\"neutral\">중립</span></div><p class=\"report-muted\">검증용 기사 · 2026. 10. 07. 18:00</p><p>원본 LLM 근거</p></li></ul></section><section class=\"report-card report-record\" aria-labelledby=\"report-record-title\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-book-open\" aria-hidden=\"true\"><path d=\"M12 5v16\"></path><path d=\"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z\"></path></svg><div><h2 id=\"report-record-title\">성과 기록</h2><strong>수집 중</strong><p class=\"report-muted\">확인된 공식 성과 기록이 없습니다. 모델 예측과 단순 가격 이력을 실현 성과로 표시하지 않습니다.</p></div></section></div><div class=\"report-secondary\"><section class=\"report-card\" aria-labelledby=\"report-evidence-title\"><p class=\"report-eyebrow\">MODEL &amp; EVIDENCE</p><h2 id=\"report-evidence-title\">신호와 근거 일치도</h2><div class=\"report-signals\"><div data-report-signal=\"model\"><div><strong>모델</strong><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></div><p class=\"report-muted\">원본 예측값이 있는 최종 후보입니다.</p></div><div data-report-signal=\"news\"><div><strong>뉴스</strong><span class=\"briefing-signal\" data-signal=\"positive\" title=\"LLM 긍정 기사 수가 부정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></div><p class=\"report-muted\">LLM 긍정 기사 수가 부정 기사 수보다 많습니다.</p></div><div data-report-signal=\"supply\"><div><strong>수급</strong><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></div><p class=\"report-muted\">원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.</p></div></div><p class=\"report-agreement\"><strong>100%</strong> · 긍정 2/2<small>판정 불가 1개는 분모에서 제외</small></p><p class=\"report-muted report-footnote\">모델 긍정은 최종 후보 선정 멤버십을 뜻할 수 있습니다. 확정 규칙상 원본 예측이 음수인 최종 후보도 긍정이며, 상승이나 수익을 보장하지 않습니다.</p><p class=\"report-summary\">원본 모델 예측은 +3.12%이며 최종 보정 예측은 +3.42%입니다. 예측값은 확률이나 실현 성과가 아닙니다.</p></section><section class=\"report-card\" aria-labelledby=\"report-supply-title\"><p class=\"report-eyebrow\">SUPPLY INPUTS</p><h2 id=\"report-supply-title\">수급 원본</h2><dl class=\"report-stats\"><div><dt>외국인 합계</dt><dd>1,350,000,000원</dd></div><div><dt>기관 합계</dt><dd>450,000,000원</dd></div><div><dt>외국인·기관 합계</dt><dd>1,800,000,000원</dd></div><div><dt>외국인 양수일수</dt><dd>3</dd></div><div><dt>기관 양수일수</dt><dd>2</dd></div><div><dt>합산 순매수 일수</dt><dd>—</dd></div><div><dt>조회 기간 / 확보 일수</dt><dd>5 / 5</dd></div><div><dt>충분성 / 상태</dt><dd>충분 / ok</dd></div></dl><p class=\"report-muted\">합산 순매수 일수 원본이 없으면 수급 신호는 판정 불가입니다. 개별 양수일수를 더하거나 양쪽 각각 절반이라는 규칙으로 바꾸지 않습니다.</p></section></div></div><details class=\"report-card report-rules\"><summary>근거 판정 기준 <span>m1-2026-10-08-v2</span></summary><dl><div><dt>모델</dt><dd>원본 예측값이 있는 최종 후보는 긍정. 전체 순위는 예측수익률 0 이하이면 부정, 상위 5%이면서 양수이면 긍정, 나머지는 중립입니다.</dd></div><div><dt>뉴스</dt><dd>LLM 기사별 판정 또는 명시 집계의 긍정·부정 건수를 비교합니다. 실제 수집 결과 0건은 중립이며 미수집·키워드 추정은 판정 불가입니다.</dd></div><div><dt>수급</dt><dd>외국인·기관 합계 금액과 합산 순매수 일수/기간을 함께 봅니다. 개별 양수일수만으로 합산 순매수 일수를 계산하지 않습니다.</dd></div><div><dt>근거 일치도</dt><dd>긍정 신호 수 / 평가 가능한 신호 수. 판정 불가는 분모에서 제외하고, 모두 판정 불가이면 —로 표시합니다.</dd></div><div><dt>다음 거래일</dt><dd>거래일 달력이 연결되지 않아 다음 거래일은 미확인입니다.</dd></div></dl></details><p class=\"report-muted report-disclaimer\">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.</p></div></main><footer class=\"ds-footer\"><div><strong>KOSPI AI Desk</strong><p>예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.</p></div><nav aria-label=\"서비스 안내\"><a class=\"\" href=\"/next/about\">서비스 소개</a><a class=\"\" href=\"/next/history\">기록 확인</a></nav></footer></div></div>\n\n  \n\n</body>",
+    "text": "본문으로 건너뛰기\nKOSPI AI Desk\n브리핑\n전체 순위\n관심\n분석 기록\n검색\n데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n저장된 분석 완료 기록\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 저장된 분석 결과 제공\n연결 상태 설명\n브리핑으로\n\nSTOCK REPORT · 005930\n\n삼성전자\n\n005930 · 최종 후보\n\n다시 조회\n관심 종목\n\nQUOTE\n\n조회 가격\n\n74,200원\n\n+0.68% · 500원\n\n저장된 결과\n시세 기준 시각 2026. 10. 07. 18:00\n거래량\n1,200,045\n거래대금\n84,000,000,000원\n\nPREDICTION · 실제 성과 아님\n\n모델과 최종 보정\n원본 모델 예측수익률\n+3.12%\n최종 보정 예측수익률\n+3.42%\n원본 모델 순위 / 모집단\n5 / 199\n최종 보정 순위\n1위\n분석 기준일\n2026. 10. 07.\n예측 대상\n다음 거래일 시가→종가\n다음 거래일\n미확인 · 거래일 달력 미연결\n저장된 결과\n모델 결과 저장 시각 2026. 10. 07. 18:00\n저장된 결과\n상세 분석 저장 시각 2026. 10. 07. 18:00\n\nPRICE OBSERVATIONS\n\n가격 이력\n1일\n1개월\n3개월\n1년\n3년\n5년\n가격선\n캔들\n저장된 결과\n조회/저장 시각 2026. 10. 07. 18:00\n\n요청 1일 · 실제 제공 관측 범위 2026. 10. 07. 09:00 ~ 2026. 10. 07. 14:40. 요청 기간 전체의 관측 제공 여부는 미확인입니다.\n\n1일 요청 · 가격선. 18개 원본 관측. 2026. 10. 07. 09:00 72,000원부터 2026. 10. 07. 14:40 74,600원까지. 최고 74,600원, 최저 71,813원.\n\n2026. 10. 07. 09:00 · 가격 72,000원\n\n각 점은 제공된 관측 시각의 가격입니다. 가격 이력은 모델의 실현 성과가 아닙니다. 실제 제공 관측 범위와 부분 제공 안내를 확인하세요. 원본 관측이 없는 구간은 연결하지 않습니다.\n\nNEWS EVIDENCE\n\n뉴스 원본 근거\nLLM 판정\n\n수집 상태: analyzed · 확인된 기사 감성을 그대로 표시합니다.\n\n삼성전자 사업 현황 점검\n긍정\n\n검증용 기사 · 2026. 10. 07. 18:00\n\nfixture 판정\n\n삼성전자 산업 동향과 불확실성\n중립\n\n검증용 기사 · 2026. 10. 07. 18:00\n\n원본 LLM 근거\n\n성과 기록\n수집 중\n\n확인된 공식 성과 기록이 없습니다. 모델 예측과 단순 가격 이력을 실현 성과로 표시하지 않습니다.\n\nMODEL & EVIDENCE\n\n신호와 근거 일치도\n모델\n긍정\n\n원본 예측값이 있는 최종 후보입니다.\n\n뉴스\n긍정\n\nLLM 긍정 기사 수가 부정 기사 수보다 많습니다.\n\n수급\n판정 불가\n\n원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\n\n100% · 긍정 2/2\n판정 불가 1개는 분모에서 제외\n\n모델 긍정은 최종 후보 선정 멤버십을 뜻할 수 있습니다. 확정 규칙상 원본 예측이 음수인 최종 후보도 긍정이며, 상승이나 수익을 보장하지 않습니다.\n\n원본 모델 예측은 +3.12%이며 최종 보정 예측은 +3.42%입니다. 예측값은 확률이나 실현 성과가 아닙니다.\n\nSUPPLY INPUTS\n\n수급 원본\n외국인 합계\n1,350,000,000원\n기관 합계\n450,000,000원\n외국인·기관 합계\n1,800,000,000원\n외국인 양수일수\n3\n기관 양수일수\n2\n합산 순매수 일수\n—\n조회 기간 / 확보 일수\n5 / 5\n충분성 / 상태\n충분 / ok\n\n합산 순매수 일수 원본이 없으면 수급 신호는 판정 불가입니다. 개별 양수일수를 더하거나 양쪽 각각 절반이라는 규칙으로 바꾸지 않습니다.\n\n근거 판정 기준\nm1-2026-10-08-v2\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.\n\nKOSPI AI Desk\n\n예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.\n\n서비스 소개\n기록 확인"
+  }
+}

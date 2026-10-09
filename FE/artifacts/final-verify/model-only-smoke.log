@@ -1,0 +1,34 @@
+﻿PASS briefing says final candidates were not produced instead of 'none'
+PASS briefing count is — and offers the whole-rank link
+PASS connection notice shows model-only completion and no fabricated final candidates
+PASS briefing-model-only: axe WCAG 2.2 AA
+PASS briefing-model-only: no page overflow
+PASS deep link is 'membership unknown', not 'non-candidate'
+PASS deep link model signal unavailable while raw prediction is still shown
+PASS rank table is filled with 199 model rows
+PASS no rank row is claimed to be a non-candidate
+PASS every model signal is unavailable under unknown membership
+PASS raw model rank and prediction render
+PASS news-adjusted rank and prediction stay empty (—), never filled from the model
+PASS rank page explains model-only state
+PASS rank-model-only: axe WCAG 2.2 AA
+PASS rank-model-only: no page overflow
+PASS watchlist rows are unknown membership with raw model values and null final fields
+PASS watchlist-model-only: axe WCAG 2.2 AA
+PASS watchlist-model-only: no page overflow
+PASS report keeps membership unknown with raw prediction and empty final fields
+PASS report model signal is unavailable and news evidence is not fabricated
+PASS report-model-only: axe WCAG 2.2 AA
+PASS report-model-only: no page overflow
+PASS history shows model run completed, candidates unproduced, no official-performance claim
+PASS history stored-run card comes from the disk marker, labelled model-only, with the real rank count
+PASS history-model-only: axe WCAG 2.2 AA
+PASS history-model-only: no page overflow
+PASS produced candidate list still renders without any production notice
+PASS a produced empty list still says there are no final candidates
+PASS status failure leaves the empty list unconfirmed
+PASS zero console.error and unhandled exceptions
+PASS all product API calls are fixture GET, never an analysis POST
+PASS analysis run endpoint was only read for status, never started
+PASS zero external network/article visits
+Artifacts: FE/artifacts/model-only/ · ALL PASSED

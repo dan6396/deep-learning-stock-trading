@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { LoadingView } from "./components/common/StatusView";
+import { focusMountedMain, scrollMountedHash } from "./app/routeFocus";
 
 // Split each route into its own chunk so the initial landing load doesn't pull
 // in the heavy dashboard (table, candle chart, KIS client) until it's visited.
@@ -9,20 +10,16 @@ const LandingPage = lazy(() => import("./pages/LandingPage").then((module) => ({
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const StockDetailPage = lazy(() => import("./pages/StockDetailPage").then((module) => ({ default: module.StockDetailPage })));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
+// Rebuilt screens are the main site; /next remains a compatible preview alias.
+const AppShell = lazy(() => import("./app/AppShell").then((module) => ({ default: module.AppShell })));
+const BriefingPage = lazy(() => import("./features/briefing/BriefingPage").then((module) => ({ default: module.BriefingPage })));
+const StockReportPage = lazy(() => import("./features/stock/StockReportPage").then((module) => ({ default: module.StockReportPage })));
+const RankPage = lazy(() => import("./features/rank/RankPage").then((module) => ({ default: module.RankPage })));
+const WatchlistPage = lazy(() => import("./features/watchlist/WatchlistPage").then((module) => ({ default: module.WatchlistPage })));
+const HistoryPage = lazy(() => import("./features/history/HistoryPage").then((module) => ({ default: module.HistoryPage })));
+const AboutPage = lazy(() => import("./features/about/AboutPage").then((module) => ({ default: module.AboutPage })));
 
 const MAIN_ID = "main-content";
-
-/** Focuses the page's main landmark once it has rendered (routes load lazily). */
-function focusMain(attempt = 0) {
-  const main = document.getElementById(MAIN_ID);
-  if (main) {
-    main.focus({ preventScroll: true });
-    return;
-  }
-  if (attempt < 30) {
-    requestAnimationFrame(() => focusMain(attempt + 1));
-  }
-}
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -32,18 +29,21 @@ function ScrollToTop() {
   useEffect(() => {
     // Screen-reader and keyboard users land at the new page's content instead
     // of wherever focus was on the previous page. Skip the initial load.
+    let cancelFocus: (() => void) | undefined;
     if (previousPath.current !== pathname) {
       previousPath.current = pathname;
-      focusMain();
+      cancelFocus = focusMountedMain(pathname);
     }
 
     // A hash means the user is deep-linking to a section (e.g. /dashboard#market-table);
     // let that section's own scroll handler take over instead of jumping to the top.
     if (hash) {
-      return;
+      const cancelHash = scrollMountedHash(pathname, hash);
+      return () => { cancelFocus?.(); cancelHash(); };
     }
 
     window.scrollTo({ top: 0, behavior: "auto" });
+    return cancelFocus;
   }, [pathname, hash]);
 
   return null;
@@ -67,6 +67,23 @@ function SkipLink() {
   );
 }
 
+function DashboardRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate replace to={{ pathname: "/", search, hash: hash === "#market-table" ? "#candidate-heading" : hash }} />;
+}
+
+function appRoutes() {
+  return <>
+    <Route index element={<BriefingPage />} />
+    <Route path="rank" element={<RankPage />} />
+    <Route path="watchlist" element={<WatchlistPage />} />
+    <Route path="history" element={<HistoryPage />} />
+    <Route path="about" element={<AboutPage />} />
+    <Route path="stock/:code" element={<StockReportPage />} />
+    <Route path="*" element={<NotFoundPage />} />
+  </>;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -80,10 +97,12 @@ export default function App() {
         }
       >
         <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/stock/:code" element={<StockDetailPage />} />
-          <Route path="*" element={<NotFoundPage />} />
+          <Route path="/dashboard" element={<DashboardRedirect />} />
+          <Route path="/legacy" element={<LandingPage />} />
+          <Route path="/legacy/dashboard" element={<DashboardPage />} />
+          <Route path="/legacy/stock/:code" element={<StockDetailPage />} />
+          <Route path="/next" element={<AppShell />}>{appRoutes()}</Route>
+          <Route path="/" element={<AppShell />}>{appRoutes()}</Route>
         </Routes>
       </Suspense>
     </ErrorBoundary>

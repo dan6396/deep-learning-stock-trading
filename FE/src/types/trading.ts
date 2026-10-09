@@ -50,6 +50,18 @@ export type PipelineOutputRow = {
   result: PipelineAnalysisResult;
   input_row: PipelineInputRow;
   news: PipelineNewsItem[];
+  /** Additive provenance; legacy consumers can ignore this field. */
+  data_meta?: {
+    source?: "live" | "cache" | "sample" | "unknown";
+    asOf?: string | null;
+    newsCollected?: boolean;
+    newsMethod?: "llm" | "keyword" | "unknown";
+    newsStatus?: string;
+    newsTally?: unknown;
+    rawFinalPrediction?: number | null;
+    rawModelRank?: number | null;
+    rawFinalRank?: number | null;
+  };
 };
 
 export type RiskState = "Low" | "Normal" | "Elevated" | "High";
@@ -94,6 +106,7 @@ export type LandingData = {
 export type MarketDirection = "up" | "down" | "flat";
 
 export type MarketIndexSnapshot = {
+  rawValues?: { value: number | null; change: number | null; changeRate: number | null };
   symbol: string;
   name: string;
   value: number;
@@ -101,6 +114,9 @@ export type MarketIndexSnapshot = {
   changeRate: number;
   direction: MarketDirection;
   miniSeries: number[];
+  miniSeriesSource?: "history" | "interpolated" | "unknown";
+  source?: "live" | "cache" | "sample" | "unknown";
+  asOf?: string | null;
 };
 
 export type InvestorFlow = {
@@ -123,6 +139,9 @@ export type Candle = {
 };
 
 export type StockQuote = {
+  rawValues?: { currentPrice: number | null; change: number | null; changeRate: number | null; accumulatedVolume: number | null; tradingValue: number | null };
+  source?: "live" | "cache" | "sample" | "unknown";
+  asOf?: string | null;
   code: string;
   name: string;
   market: "KOSPI" | "KOSDAQ";
@@ -160,6 +179,8 @@ export type MarketEvent = {
 };
 
 export type MarketDashboardData = {
+  source?: "live" | "cache" | "sample" | "unknown";
+  asOf?: string | null;
   generatedAt: string;
   sessionLabel: string;
   indices: MarketIndexSnapshot[];

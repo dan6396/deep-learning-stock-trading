@@ -1,0 +1,34 @@
+{
+  "checks": [
+    "mount never launches analysis",
+    "launch button receives keyboard focus",
+    "keyboard activation launches exactly once",
+    "running launch is disabled",
+    "model-only completion links to whole rank",
+    "dark 1440px: no horizontal overflow",
+    "dark 1440px: accessible button size",
+    "dark 1440px: axe WCAG A/AA",
+    "light 375px: no horizontal overflow",
+    "light 375px: accessible button size",
+    "light 375px: axe WCAG A/AA",
+    "full mode displays paid-call notice before launch",
+    "preview alias preserves history link",
+    "no browser exceptions",
+    "no console errors"
+  ],
+  "launches": 1,
+  "consoleErrors": [],
+  "exceptions": [],
+  "accessibility": [
+    {
+      "theme": "dark",
+      "width": 1440,
+      "violations": []
+    },
+    {
+      "theme": "light",
+      "width": 375,
+      "violations": []
+    }
+  ]
+}

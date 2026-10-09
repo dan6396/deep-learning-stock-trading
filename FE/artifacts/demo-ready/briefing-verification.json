@@ -1,0 +1,638 @@
+{
+  "generatedAt": "2026-10-09T15:55:32.386Z",
+  "base": "http://127.0.0.1:5173",
+  "realData": true,
+  "checks": [
+    "default first selection keeps URL unchanged",
+    "model-only briefing has two evidence dots and no news section",
+    "fixed paper record gives capital and absolute return primary hierarchy",
+    "1280x720 first viewport includes summary, all five rows and detail heading without scrolling",
+    "briefing-1280-dark: axe violations zero",
+    "briefing-1280-dark: no page overflow",
+    "briefing-1280-dark: visible text at least 12px",
+    "quotes requested for exactly five distinct Top-5 codes",
+    "row selection opens right panel through query string",
+    "analysis-dialog-dark: axe violations zero",
+    "analysis-dialog-dark: no page overflow",
+    "analysis-dialog-dark: visible text at least 12px",
+    "briefing-1440-light: axe violations zero",
+    "briefing-1440-light: no page overflow",
+    "briefing-1440-light: visible text at least 12px",
+    "analysis dialog receives focus",
+    "analysis dialog locks background scrolling",
+    "native modal Tab reaches the checked radio",
+    "native radio group Tab skips unchecked radios",
+    "modal Shift-Tab boundary stays inside dialog",
+    "modal Tab boundary wraps to close control",
+    "analysis-dialog-light: axe violations zero",
+    "analysis-dialog-light: no page overflow",
+    "analysis-dialog-light: visible text at least 12px",
+    "analysis dialog restores header button focus",
+    "background scrolling restored after closing",
+    "briefing-375-light: axe violations zero",
+    "briefing-375-light: no page overflow",
+    "briefing-375-light: visible text at least 12px",
+    "mobile detail stacks below comparison table",
+    "rank hides final columns in model-only state",
+    "rank-1440-light: axe violations zero",
+    "rank-1440-light: no page overflow",
+    "rank-1440-light: visible text at least 12px",
+    "about-1440-light: axe violations zero",
+    "about-1440-light: no page overflow",
+    "about-1440-light: visible text at least 12px",
+    "static about HTML includes model Top-5 flow and feature composition",
+    "no analysis start clicks or non-GET API attempts",
+    "saved run marker unchanged during browser verification",
+    "console errors and runtime exceptions zero",
+    "no non-GET or external requests"
+  ],
+  "audits": [
+    {
+      "label": "briefing-1280-dark",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "analysis-dialog-dark",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "briefing-1440-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "analysis-dialog-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "briefing-375-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "rank-1440-light",
+      "violations": [],
+      "smallText": []
+    },
+    {
+      "label": "about-1440-light",
+      "violations": [],
+      "smallText": []
+    }
+  ],
+  "screenshots": [
+    "briefing-1280x720-dark.png",
+    "briefing-1440-light.png",
+    "analysis-dialog-1440-light.png",
+    "briefing-375-light.png",
+    "briefing-375-light-full.png",
+    "rank-1440-light.png",
+    "about-1440-light.png"
+  ],
+  "resources": [
+    {
+      "path": "/",
+      "width": 1280,
+      "theme": "dark",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/rank",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/rank",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/",
+      "width": 375,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates",
+        "/api/korean-market/indices",
+        "/api/rank",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=000270",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800",
+        "/api/korean-market/quote?symbol=001800",
+        "/api/korean-market/quote?symbol=029780",
+        "/api/korean-market/quote?symbol=007070",
+        "/api/korean-market/quote?symbol=323410",
+        "/api/korean-market/stock-chart?symbol=001800"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/rank",
+      "width": 1440,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/rank",
+        "/api/candidates",
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/rank",
+        "/api/candidates"
+      ],
+      "chartError": null
+    },
+    {
+      "path": "/about",
+      "width": 1440,
+      "theme": "light",
+      "api": [
+        "/api/candidates/run",
+        "/api/backend/status",
+        "/api/candidates/run",
+        "/api/backend/status"
+      ],
+      "chartError": null
+    }
+  ],
+  "requestAudit": [
+    {
+      "path": "/",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/indices"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/indices"
+        },
+        {
+          "method": "GET",
+          "path": "/api/rank"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=000270"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=007070"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=323410"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=000270"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=007070"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=323410"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=029780"
+        }
+      ],
+      "forbiddenClicks": []
+    },
+    {
+      "path": "/",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/indices"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/indices"
+        },
+        {
+          "method": "GET",
+          "path": "/api/rank"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=000270"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=007070"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=323410"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=000270"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=007070"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=323410"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=001800"
+        }
+      ],
+      "forbiddenClicks": []
+    },
+    {
+      "path": "/",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/indices"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/indices"
+        },
+        {
+          "method": "GET",
+          "path": "/api/rank"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=000270"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=007070"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=323410"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=001800"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=029780"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=000270"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=007070"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/quote?symbol=323410"
+        },
+        {
+          "method": "GET",
+          "path": "/api/korean-market/stock-chart?symbol=001800"
+        }
+      ],
+      "forbiddenClicks": []
+    },
+    {
+      "path": "/rank",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/rank"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/rank"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates"
+        }
+      ],
+      "forbiddenClicks": []
+    },
+    {
+      "path": "/about",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/candidates/run"
+        },
+        {
+          "method": "GET",
+          "path": "/api/backend/status"
+        }
+      ],
+      "forbiddenClicks": []
+    }
+  ],
+  "runBefore": {
+    "runId": "9cba7095-3f3c-47ff-8d5c-5115b9558cf9",
+    "kind": "adhoc",
+    "state": "completed",
+    "mode": "model_only",
+    "startedAt": "2026-10-09T15:19:31.769Z",
+    "finishedAt": "2026-10-09T15:19:49.289Z",
+    "source": "cache",
+    "asOf": "2026-10-09T15:19:49.296Z"
+  },
+  "desktopLayout": {
+    "scrollY": 0,
+    "rows": [
+      {
+        "top": 463.890625,
+        "bottom": 510.890625
+      },
+      {
+        "top": 510.890625,
+        "bottom": 558.390625
+      },
+      {
+        "top": 558.390625,
+        "bottom": 605.890625
+      },
+      {
+        "top": 605.890625,
+        "bottom": 653.390625
+      },
+      {
+        "top": 653.390625,
+        "bottom": 700.890625
+      }
+    ],
+    "summary": {
+      "x": 24,
+      "y": 171.59375,
+      "width": 876,
+      "height": 133,
+      "top": 171.59375,
+      "right": 900,
+      "bottom": 304.59375,
+      "left": 24
+    },
+    "detail": {
+      "x": 932,
+      "y": 187.59375,
+      "width": 105.90625,
+      "height": 28.34375,
+      "top": 187.59375,
+      "right": 1037.90625,
+      "bottom": 215.9375,
+      "left": 932
+    }
+  },
+  "nativeBackwardBoundary": {
+    "tag": "BODY",
+    "text": "본문으로 건너뛰기\nKOSPI AI Desk\n브리핑\n전체 순위\n관심\n분석 기록\n종목 검색\n⌘K\nAI 분석 실행\n데이터 연결 상태\n모델 결과 저장됨 · 저장 시각 2026. 10. 10. 00:19\n오늘의 브리핑\n다시 조회\n\n최근 지수 흐름\n\n하락 흐름 우위\n\n코스피200 1,044.52 -2.71%API 조회\n\n당일 지수 등락 기반 단순 판단\n\n모의투자 기록 · 10/6–10/8\n\n976.1만 원\n-2.39%\n\n코스피200 대비 +3.26%p\n\n모의투자 · 3거래일 · 고정 기록\n기준\n\n분석 · 데이터\n\n2026. 10. 10. 00:19\n\n199종목 · 소요 0분 17초\n\n저장된 결과 · 최근 완료 기록\nTransformer Ensemble Top-5\n원본 예측 순위 · 행 선택으로 근거 보기\n\nTransformer Ensemble · 동일 구조 Transformer 3개(seed 42·43·44) 예측 평균 · 최근 20거래일 × 11개 특징 · 다음 거래일 시가→종가 수익률 예측\n\n분석 기준일 2026. 10. 08. · 모집단 199종목\n저장된 결과\n저장 시각 2026. 10. 10. 00:19\n후보 비교. 종목 버튼으로 오른쪽 상세를 열고 위·아래 화살표로 선택을 이동할 수 있습니다. 화면 순서를 원본 순위로 사용하지 않습니다.\n원본 순위\t종목\t예측\n시가→종가\n\t모델\t수급\t근거 일치\t현재가\n01\t\n오리온홀딩스\n001800\n· 선택됨\n상세 보기\n\t+0.40%\n\t\n긍정\n\t\n부정\n\t\n1/2 긍정\n\t22,550원\n-1.10%\n\n02\t\n삼성카드\n029780\n상세 보기\n\t+0.39%\n\t\n긍정\n\t\n부정\n\t\n1/2 긍정\n\t41,350원\n-0.96%\n\n03\t\n기아\n000270\n상세 보기\n\t+0.38%\n\t\n긍정\n\t\n부정\n\t\n1/2 긍정\n\t107,000원\n-2.37%\n\n04\t\nGS리테일\n007070\n상세 보기\n\t+0.38%\n\t\n긍정\n\t\n부정\n\t\n1/2 긍정\n\t21,550원\n-4.01%\n\n05\t\n카카오뱅크\n323410\n상세 보기\n\t+0.38%\n\t\n긍정\n\t\n부정\n\t\n1/2 긍정\n\t19,520원\n-1.71%\n\n시세 API 조회 · 조회/저장 2026. 10. 10. 00:55 (가장 오래된 시각)\n\n원본 순위 6위 이하 194종목은 전체 순위에서 확인\n전체 순위 보기\n\n예측수익률: 다음 거래일 시가→종가 모델 예측 · 실제 성과 아님 · 모델·수급 2개 근거 기준\n\n예측과 근거를 읽는 기준은 서비스 소개에서 확인하세요.\n\n근거 판정 기준 m1-2026-10-08-v2\n\n모델 예측과 모의투자 기록은 투자 추천·수익 보장·실제 성과가 아닙니다.\n\n오리온홀딩스\n\n001800\n\n22,550원\n-1.10%\nAPI 조회\n시세 2026. 10. 10. 00:55\n예측 1위 / 199\n1/2 긍정\n\n모델 예측 199종목 중 1위 · 외국인·기관 5일 합계 순매도 -8.8억\n\n관심 추가\n전체 리포트 열기\n가격 이력\n2026. 08. 25. – 2026. 10. 08.\n저장된 결과\n조회/저장 2026. 10. 10. 00:55\n원본 관측 · 결측 미연결\n기간·출처 기준\n근거\n모델\n긍정\n\n199종목 중 1위 · 예측수익률 +0.40%\n\n수급\n부정\n\n외국인 -4.3억 / 기관 -4.5억\n5거래일 · 합산 순매수 1일 · 외국인 2일 / 기관 0일\n\n모델 예측수익률\n+0.40%\n저장된 결과\n분석 저장 시각 2026. 10. 10. 00:19\n\n예측과 가격 이력은 실제 투자 성과가 아닙니다.\n\nKOSPI AI Desk\n\n예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.\n\n서비스 소개\n기록 확인\nAI 분석 실행\n\nNEW ANALYSIS\n\n새 분석 실행\n\n이번 실행에 사용할 모드를 선택하세요. 서버 기본 설정은 변경되지 않습니다.\n\n분석 모드\n모델 예측만\n예측 순위 · 뉴스 API 호출 없음\n뉴스 포함\n뉴스 수집 + Gemini 분석 · 유료 API\n공식 성과 기록 요청\n\n기본은 수시 실행입니다. 공식 요청은 기준일·모드별 첫 완료 예측을 고정하고, 목표일 09:00 한국시간 전 완료 여부를 검증합니다.\n\n모델 전용 · 뉴스 호출 없이 예측 순위를 계산합니다. 최종 후보는 생성하지 않습니다.\n\n분석 시작\n\n새 분석은 서버에서 실행됩니다. ‘다시 조회’는 저장된 결과만 불러옵니다.\n\n분석 기록 보기\n전체 순위 보기",
+    "inside": false
+  },
+  "runAfter": {
+    "runId": "9cba7095-3f3c-47ff-8d5c-5115b9558cf9",
+    "kind": "adhoc",
+    "state": "completed",
+    "mode": "model_only",
+    "startedAt": "2026-10-09T15:19:31.769Z",
+    "finishedAt": "2026-10-09T15:19:49.289Z",
+    "source": "cache",
+    "asOf": "2026-10-09T15:19:49.296Z"
+  },
+  "clicks": [
+    {
+      "selector": ".ds-analysis-trigger",
+      "attempt": 1,
+      "x": 1195.6796875,
+      "y": 32
+    },
+    {
+      "selector": ".ds-analysis-trigger",
+      "attempt": 1,
+      "x": 1355.6796875,
+      "y": 32
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": []
+}

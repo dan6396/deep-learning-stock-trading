@@ -1,0 +1,51 @@
+﻿
+ RUN  v3.2.7 C:/Users/PC/Desktop/deep-learning-stock-trading/FE
+
+ ✓ src/test/routes.test.js (7 tests) 85ms
+ ✓ src/app/paths.test.tsx (7 tests) 156ms
+ ✓ src/features/about/AboutPage.test.tsx (2 tests) 188ms
+ ✓ src/app/routeFocus.test.ts (9 tests) 644ms
+   ✓ focuses a main mounted after the old 30-frame limit  619ms
+ ✓ src/shared/api/queries.test.ts (12 tests) 283ms
+ ✓ src/app/theme.test.tsx (4 tests) 413ms
+   ✓ AppShell theme toggle > starts dark, switches to light, and remembers the choice  367ms
+ ✓ src/test/kisDashboard.test.js (9 tests) 773ms
+   ✓ server market provenance > labels a shorter 1Y fallback for requested 5Y through server, adapter and report UI  590ms
+ ✓ src/app/AppRoutes.test.tsx (10 tests) 1618ms
+   ✓ mounts the rebuilt home and shell at /  785ms
+ ✓ src/features/search/SearchDialog.test.tsx (6 tests) 1166ms
+   ✓ global whole-rank search > opens a labelled modal with focused input, searches all 199 instead of candidates  631ms
+   ✓ global whole-rank search > traps Tab in both directions and closes the native modal before restoring focus  335ms
+ ✓ src/features/watchlist/WatchlistPage.test.tsx (8 tests) 1206ms
+   ✓ watchlist joins and persistence UI > retains a code outside the universe, links it, and lets the user remove it  424ms
+ ✓ src/features/history/HistoryPage.test.tsx (17 tests) 1490ms
+   ✓ keeps a measured zero and raw progress separate from unknown official records  411ms
+ ✓ src/features/briefing/candidateProduction.test.tsx (14 tests) 2295ms
+   ✓ briefing with model-only (not_produced) candidates > shows an unproduced notice instead of asserting zero final candidates  635ms
+   ✓ rank and report pages with model-only results > keeps every whole-rank row membership unknown while still showing raw model values and null final fields  416ms
+ ✓ src/features/stock/StockReportPage.test.tsx (15 tests) 2763ms
+   ✓ stock report using actual fetch fixtures > merges authoritative candidate model fields and preserves raw news without unsafe links  842ms
+   ✓ stock report using actual fetch fixtures > keeps pending/error membership unavailable and [] successful non-membership distinct  331ms
+ ✓ src/features/briefing/BriefingPage.test.tsx (17 tests) 2818ms
+   ✓ briefing with fetch fixtures > selects through native buttons, ArrowDown, URL history, and close focus  971ms
+ ✓ src/test/pipelineAvailability.test.js (39 tests) 57ms
+ ✓ src/features/rank/RankPage.test.tsx (5 tests) 3922ms
+   ✓ whole-rank page fetch interactions > paginates 199 rows, exposes native sort state and searches beyond five candidates  2947ms
+   ✓ whole-rank page fetch interactions > labels sample responses and retains previous results on background error  422ms
+ ✓ src/test/pipelineResults.test.js (20 tests) 49ms
+ ✓ src/shared/lib/format.test.ts (9 tests) 40ms
+ ✓ src/shared/api/client.test.ts (6 tests) 24ms
+ ✓ src/features/rank/rankData.test.ts (5 tests) 30ms
+ ✓ src/test/pipelineRunner.test.js (6 tests) 17ms
+ ✓ src/features/stock/reportData.test.ts (23 tests) 22ms
+ ✓ src/entities/candidate.test.ts (17 tests) 17ms
+ ✓ src/test/backendStatusRoute.test.js (16 tests) 16ms
+ ✓ src/shared/lib/watchlist.test.ts (6 tests) 16ms
+ ✓ src/test/backendStatus.test.js (14 tests) 17ms
+ ✓ src/entities/signals.test.ts (16 tests) 9ms
+
+ Test Files  27 passed (27)
+      Tests  319 passed (319)
+   Start at  18:31:16
+   Duration  11.38s (transform 3.67s, setup 24.74s, collect 15.17s, tests 20.13s, environment 70.44s, prepare 8.82s)
+

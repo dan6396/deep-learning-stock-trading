@@ -1,0 +1,174 @@
+{
+  "table": {
+    "viewport": 311,
+    "content": 1120,
+    "scrollLeft": 450,
+    "name": {
+      "left": -408,
+      "right": -233.421875
+    },
+    "prediction": {
+      "left": 27.703125,
+      "right": 127.03125
+    },
+    "region": {
+      "left": 32,
+      "right": 343
+    },
+    "scrollHint": "종목 비교표, 좁은 화면에서는 가로로 이동할 수 있습니다",
+    "visibleHint": "종목 이름 또는 코드\n보기\n전체 종목\n최종 후보만\n원본 예측 양수\n원본 예측 0 이하\n원본 예측 미제공"
+  },
+  "search": {
+    "initialFocus": true,
+    "violations": [],
+    "restoredFocus": true
+  },
+  "focus": [
+    {
+      "name": "KOSPI AI Desk",
+      "inHeader": true,
+      "top": 8,
+      "bottom": 52,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "브리핑",
+      "inHeader": true,
+      "top": 56,
+      "bottom": 100,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "전체 순위",
+      "inHeader": true,
+      "top": 56,
+      "bottom": 100,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "관심",
+      "inHeader": true,
+      "top": 56,
+      "bottom": 100,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "분석 기록",
+      "inHeader": true,
+      "top": 56,
+      "bottom": 100,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "종목 검색",
+      "inHeader": true,
+      "top": 11,
+      "bottom": 49,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "밝은 테마로 전환",
+      "inHeader": true,
+      "top": 10,
+      "bottom": 50,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "연결 상태 다시 확인",
+      "inHeader": false,
+      "top": 135,
+      "bottom": 167,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "연결 상태 설명",
+      "inHeader": false,
+      "top": 276,
+      "bottom": 304,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "다시 조회",
+      "inHeader": false,
+      "top": 339,
+      "bottom": 380,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "서비스 안내 닫기",
+      "inHeader": false,
+      "top": 485,
+      "bottom": 517,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "분석 시작",
+      "inHeader": false,
+      "top": 441,
+      "bottom": 486,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "분석 기록 보기",
+      "inHeader": false,
+      "top": 572,
+      "bottom": 604,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "삼성전자 005930 상세 보기",
+      "inHeader": false,
+      "top": 439,
+      "bottom": 489,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "삼성전자 005930 관심 종목",
+      "inHeader": false,
+      "top": 446,
+      "bottom": 482,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "SK하이닉스 000660 상세 보기",
+      "inHeader": false,
+      "top": 524,
+      "bottom": 574,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "SK하이닉스 000660 관심 종목",
+      "inHeader": false,
+      "top": 531,
+      "bottom": 567,
+      "fullyObscured": false,
+      "outline": "solid"
+    },
+    {
+      "name": "HD현대 267250 상세 보기",
+      "inHeader": false,
+      "top": 609,
+      "bottom": 658,
+      "fullyObscured": false,
+      "outline": "solid"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

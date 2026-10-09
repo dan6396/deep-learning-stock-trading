@@ -1,0 +1,20 @@
+﻿@layer components {
+  .connection-notice { margin-bottom: 16px; border: 1px solid var(--ds-line); border-radius: 14px; background: var(--ds-surface); color: var(--ds-fg-2); padding: 0 16px; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+  .connection-notice-heading { display: flex; align-items: center; gap: 8px; color: var(--ds-fg); }
+  .connection-notice-body button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 10px; margin-bottom: 8px; border-radius: 9px; border: 1px solid var(--ds-line); color: var(--ds-fg); background: var(--ds-surface); cursor: pointer; }
+  .connection-notice button:focus-visible, .connection-notice summary:focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 3px; }
+  .connection-notice p { margin: 5px 0; }
+  .connection-notice-results { display: flex; flex-wrap: wrap; column-gap: 20px; }
+  .connection-notice summary { min-height: 44px; cursor: pointer; list-style: none; }
+  .connection-notice summary::-webkit-details-marker { display: none; }
+  .connection-notice-heading > svg { flex-shrink: 0; }
+  .connection-notice-heading > span { margin-left: auto; font-size: 12px; color: var(--ds-fg-2); }
+  .connection-notice-heading .connection-attention { color: var(--ds-warn); }
+  .connection-chevron { transition: transform .15s ease; flex-shrink: 0; }
+  .connection-disclosure[open] .connection-chevron { transform: rotate(180deg); }
+  .connection-notice-body { padding: 4px 0 12px; }
+  .connection-explanation { border-top: 1px solid var(--ds-line); padding-top: 8px; margin-top: 10px; }
+  .connection-notice details p { max-width: 100ch; }
+  @media (max-width: 520px) { .connection-notice { padding: 0 12px; } .connection-notice-results { display: grid; gap: 2px; } .connection-notice-heading { gap: 6px; } .connection-notice-heading strong { font-size: 12px; } }
+}
+

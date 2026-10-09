@@ -1,0 +1,51 @@
+﻿PASS public briefing has no manual analysis execution control
+PASS rapid A→B / late A never replaces B
+PASS ArrowDown moves selection and keyboard focus
+PASS native Enter opens selection
+PASS native Space opens selection
+PASS browser back restores selected code
+PASS reload preserves selected deeplink
+PASS close restores focus to selected table button
+PASS intro dismissal persists across reload
+PASS theme choice persists across reload
+PASS pending deeplink membership and model fail closed
+PASS failed refresh makes previous table/panel membership unavailable
+PASS error deeplink never claims non-candidate
+PASS successful [] establishes genuine non-membership
+PASS main receives focus after lazy mount beyond 30 frames
+PASS authoritative [] replaces populated table
+PASS background failure explicitly retains previous result
+PASS initial API error has no fabricated empty success/sample table
+PASS sample response explicitly labelled
+PASS populated background failure keeps candidates with warning
+PASS running→completed GET polling invalidates and defeats older refresh
+PASS late prior refresh cannot restore older candidate prediction
+PASS polling stops after completion
+PASS missing model prediction remains — and unavailable, no prose zero
+PASS cache/sample and interpolation stay visible per index
+PASS model table and panel share final candidate membership
+PASS no invented record count/next-session date
+PASS rule explanation and version are disclosed
+PASS 1440-dark: populated axe WCAG 2.2 AA
+PASS 1440-dark: no horizontal page overflow
+PASS 1440-dark: pointer targets at least 24px
+PASS 1440-dark: single first h1, no skipped heading levels
+PASS 1440-light: populated axe WCAG 2.2 AA
+PASS 1440-light: no horizontal page overflow
+PASS 1440-light: pointer targets at least 24px
+PASS 1440-light: single first h1, no skipped heading levels
+PASS 1280-dark: populated axe WCAG 2.2 AA
+PASS 1280-dark: no horizontal page overflow
+PASS 1280-dark: pointer targets at least 24px
+PASS 1280-dark: single first h1, no skipped heading levels
+PASS 1280-light: populated axe WCAG 2.2 AA
+PASS 1280-light: no horizontal page overflow
+PASS 1280-light: pointer targets at least 24px
+PASS 1280-light: single first h1, no skipped heading levels
+PASS 375-light-stacked: populated axe WCAG 2.2 AA
+PASS 375-light-stacked: no horizontal page overflow
+PASS 375-light-stacked: pointer targets at least 24px
+PASS 375-light-stacked: single first h1, no skipped heading levels
+PASS zero page console.error and unhandled exceptions
+PASS all product API requests are GET against fixture server
+Artifacts: FE/artifacts/m2/ · ALL PASSED

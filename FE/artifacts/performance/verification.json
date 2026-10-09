@@ -1,0 +1,45 @@
+{
+  "live": true,
+  "generatedAt": "2026-10-09T12:35:01.122Z",
+  "checks": [
+    "/ 1440: no horizontal overflow",
+    "1440: explicit official intent checkbox",
+    "/history 1440: no horizontal overflow",
+    "1440: collection button and truthful missing-results reason",
+    "1440: persistent run identifier shown",
+    "1440: history automated WCAG AA",
+    "/rank 1440: no horizontal overflow",
+    "/ 375: no horizontal overflow",
+    "375: explicit official intent checkbox",
+    "/history 375: no horizontal overflow",
+    "375: collection button and truthful missing-results reason",
+    "375: persistent run identifier shown",
+    "375: history automated WCAG AA",
+    "/rank 375: no horizontal overflow",
+    "no browser exceptions",
+    "no console errors",
+    "no intercepted write requests"
+  ],
+  "axe": [
+    {
+      "width": 1440,
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "width": 375,
+      "theme": "light",
+      "violations": []
+    }
+  ],
+  "screenshots": [
+    "briefing-1440-dark.png",
+    "history-1440-dark.png",
+    "rank-1440-dark.png",
+    "briefing-375-light.png",
+    "history-375-light.png",
+    "rank-375-light.png"
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

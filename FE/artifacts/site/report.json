@@ -1,0 +1,1709 @@
+{
+  "fixtureOnly": true,
+  "fixtureBase": "http://127.0.0.1:57712",
+  "generatedAt": "2026-10-09T09:37:47.258Z",
+  "checks": [
+    "root opens rebuilt briefing without legacy chunks",
+    "root-preflight-1440-dark: WCAG 2.2 AA automated rules",
+    "root-preflight-1440-dark: no page overflow",
+    "root-preflight-1440-dark: one main and one h1",
+    "/rank: active navigation and route focus",
+    "/watchlist: active navigation and route focus",
+    "/history: active navigation and route focus",
+    "history distinguishes latest status, results and unavailable official records",
+    "failed run keeps separate stored candidate results",
+    "history polls an active run using GET",
+    "about links reach briefing and rank",
+    "dashboard alias preserves query and adapts section hash",
+    "dashboard hash scrolls the mounted target below sticky header",
+    "/next: direct visit and reload",
+    "/next/rank: direct visit and reload",
+    "/next/watchlist: direct visit and reload",
+    "/next/history: direct visit and reload",
+    "/next/about: direct visit and reload",
+    "/stock/005930: direct visit and reload",
+    "/next/stock/005930: direct visit and reload",
+    "/missing: site 404 with correct home",
+    "/missing: soft 404 is noindex",
+    "/missing: noindex is removed on normal route",
+    "/next/missing: site 404 with correct home",
+    "/next/missing: soft 404 is noindex",
+    "/next/missing: noindex is removed on normal route",
+    "search results are visible inside the modal",
+    "search-dialog-1440-dark: WCAG 2.2 AA automated rules",
+    "search-dialog-1440-dark: no page overflow",
+    "search-dialog-1440-dark: one main and one h1",
+    "search Escape restores trigger focus after dialog closes",
+    "search close button restores trigger focus",
+    "search navigates to root stock report",
+    "/legacy: legacy remains mounted",
+    "/legacy/dashboard: legacy remains mounted",
+    "/legacy/stock/005930: legacy remains mounted",
+    "theme button persists the chosen palette",
+    "chosen theme survives direct reload",
+    "briefing-1440-dark: WCAG 2.2 AA automated rules",
+    "briefing-1440-dark: no page overflow",
+    "briefing-1440-dark: one main and one h1",
+    "briefing-1440-dark: header targets at least 24px",
+    "rank-1440-dark: WCAG 2.2 AA automated rules",
+    "rank-1440-dark: no page overflow",
+    "rank-1440-dark: one main and one h1",
+    "rank-1440-dark: header targets at least 24px",
+    "watchlist-1440-dark: WCAG 2.2 AA automated rules",
+    "watchlist-1440-dark: no page overflow",
+    "watchlist-1440-dark: one main and one h1",
+    "watchlist-1440-dark: header targets at least 24px",
+    "history-1440-dark: WCAG 2.2 AA automated rules",
+    "history-1440-dark: no page overflow",
+    "history-1440-dark: one main and one h1",
+    "history-1440-dark: header targets at least 24px",
+    "about-1440-dark: WCAG 2.2 AA automated rules",
+    "about-1440-dark: no page overflow",
+    "about-1440-dark: one main and one h1",
+    "about-1440-dark: header targets at least 24px",
+    "briefing-1440-light: WCAG 2.2 AA automated rules",
+    "briefing-1440-light: no page overflow",
+    "briefing-1440-light: one main and one h1",
+    "briefing-1440-light: header targets at least 24px",
+    "rank-1440-light: WCAG 2.2 AA automated rules",
+    "rank-1440-light: no page overflow",
+    "rank-1440-light: one main and one h1",
+    "rank-1440-light: header targets at least 24px",
+    "watchlist-1440-light: WCAG 2.2 AA automated rules",
+    "watchlist-1440-light: no page overflow",
+    "watchlist-1440-light: one main and one h1",
+    "watchlist-1440-light: header targets at least 24px",
+    "history-1440-light: WCAG 2.2 AA automated rules",
+    "history-1440-light: no page overflow",
+    "history-1440-light: one main and one h1",
+    "history-1440-light: header targets at least 24px",
+    "about-1440-light: WCAG 2.2 AA automated rules",
+    "about-1440-light: no page overflow",
+    "about-1440-light: one main and one h1",
+    "about-1440-light: header targets at least 24px",
+    "briefing-1280-dark: WCAG 2.2 AA automated rules",
+    "briefing-1280-dark: no page overflow",
+    "briefing-1280-dark: one main and one h1",
+    "briefing-1280-dark: header targets at least 24px",
+    "rank-1280-dark: WCAG 2.2 AA automated rules",
+    "rank-1280-dark: no page overflow",
+    "rank-1280-dark: one main and one h1",
+    "rank-1280-dark: header targets at least 24px",
+    "watchlist-1280-dark: WCAG 2.2 AA automated rules",
+    "watchlist-1280-dark: no page overflow",
+    "watchlist-1280-dark: one main and one h1",
+    "watchlist-1280-dark: header targets at least 24px",
+    "history-1280-dark: WCAG 2.2 AA automated rules",
+    "history-1280-dark: no page overflow",
+    "history-1280-dark: one main and one h1",
+    "history-1280-dark: header targets at least 24px",
+    "about-1280-dark: WCAG 2.2 AA automated rules",
+    "about-1280-dark: no page overflow",
+    "about-1280-dark: one main and one h1",
+    "about-1280-dark: header targets at least 24px",
+    "briefing-1280-light: WCAG 2.2 AA automated rules",
+    "briefing-1280-light: no page overflow",
+    "briefing-1280-light: one main and one h1",
+    "briefing-1280-light: header targets at least 24px",
+    "rank-1280-light: WCAG 2.2 AA automated rules",
+    "rank-1280-light: no page overflow",
+    "rank-1280-light: one main and one h1",
+    "rank-1280-light: header targets at least 24px",
+    "watchlist-1280-light: WCAG 2.2 AA automated rules",
+    "watchlist-1280-light: no page overflow",
+    "watchlist-1280-light: one main and one h1",
+    "watchlist-1280-light: header targets at least 24px",
+    "history-1280-light: WCAG 2.2 AA automated rules",
+    "history-1280-light: no page overflow",
+    "history-1280-light: one main and one h1",
+    "history-1280-light: header targets at least 24px",
+    "about-1280-light: WCAG 2.2 AA automated rules",
+    "about-1280-light: no page overflow",
+    "about-1280-light: one main and one h1",
+    "about-1280-light: header targets at least 24px",
+    "briefing-375-dark: WCAG 2.2 AA automated rules",
+    "briefing-375-dark: no page overflow",
+    "briefing-375-dark: one main and one h1",
+    "briefing-375-dark: header targets at least 24px",
+    "rank-375-dark: WCAG 2.2 AA automated rules",
+    "rank-375-dark: no page overflow",
+    "rank-375-dark: one main and one h1",
+    "rank-375-dark: header targets at least 24px",
+    "watchlist-375-dark: WCAG 2.2 AA automated rules",
+    "watchlist-375-dark: no page overflow",
+    "watchlist-375-dark: one main and one h1",
+    "watchlist-375-dark: header targets at least 24px",
+    "history-375-dark: WCAG 2.2 AA automated rules",
+    "history-375-dark: no page overflow",
+    "history-375-dark: one main and one h1",
+    "history-375-dark: header targets at least 24px",
+    "about-375-dark: WCAG 2.2 AA automated rules",
+    "about-375-dark: no page overflow",
+    "about-375-dark: one main and one h1",
+    "about-375-dark: header targets at least 24px",
+    "briefing-375-light: WCAG 2.2 AA automated rules",
+    "briefing-375-light: no page overflow",
+    "briefing-375-light: one main and one h1",
+    "briefing-375-light: header targets at least 24px",
+    "rank-375-light: WCAG 2.2 AA automated rules",
+    "rank-375-light: no page overflow",
+    "rank-375-light: one main and one h1",
+    "rank-375-light: header targets at least 24px",
+    "watchlist-375-light: WCAG 2.2 AA automated rules",
+    "watchlist-375-light: no page overflow",
+    "watchlist-375-light: one main and one h1",
+    "watchlist-375-light: header targets at least 24px",
+    "history-375-light: WCAG 2.2 AA automated rules",
+    "history-375-light: no page overflow",
+    "history-375-light: one main and one h1",
+    "history-375-light: header targets at least 24px",
+    "about-375-light: WCAG 2.2 AA automated rules",
+    "about-375-light: no page overflow",
+    "about-375-light: one main and one h1",
+    "about-375-light: header targets at least 24px",
+    "briefing-667-dark: WCAG 2.2 AA automated rules",
+    "briefing-667-dark: no page overflow",
+    "briefing-667-dark: one main and one h1",
+    "briefing-667-dark: header targets at least 24px",
+    "rank-667-dark: WCAG 2.2 AA automated rules",
+    "rank-667-dark: no page overflow",
+    "rank-667-dark: one main and one h1",
+    "rank-667-dark: header targets at least 24px",
+    "watchlist-667-dark: WCAG 2.2 AA automated rules",
+    "watchlist-667-dark: no page overflow",
+    "watchlist-667-dark: one main and one h1",
+    "watchlist-667-dark: header targets at least 24px",
+    "history-667-dark: WCAG 2.2 AA automated rules",
+    "history-667-dark: no page overflow",
+    "history-667-dark: one main and one h1",
+    "history-667-dark: header targets at least 24px",
+    "about-667-dark: WCAG 2.2 AA automated rules",
+    "about-667-dark: no page overflow",
+    "about-667-dark: one main and one h1",
+    "about-667-dark: header targets at least 24px",
+    "briefing-667-light: WCAG 2.2 AA automated rules",
+    "briefing-667-light: no page overflow",
+    "briefing-667-light: one main and one h1",
+    "briefing-667-light: header targets at least 24px",
+    "rank-667-light: WCAG 2.2 AA automated rules",
+    "rank-667-light: no page overflow",
+    "rank-667-light: one main and one h1",
+    "rank-667-light: header targets at least 24px",
+    "watchlist-667-light: WCAG 2.2 AA automated rules",
+    "watchlist-667-light: no page overflow",
+    "watchlist-667-light: one main and one h1",
+    "watchlist-667-light: header targets at least 24px",
+    "history-667-light: WCAG 2.2 AA automated rules",
+    "history-667-light: no page overflow",
+    "history-667-light: one main and one h1",
+    "history-667-light: header targets at least 24px",
+    "about-667-light: WCAG 2.2 AA automated rules",
+    "about-667-light: no page overflow",
+    "about-667-light: one main and one h1",
+    "about-667-light: header targets at least 24px",
+    "keyboard focus 1 remains visible",
+    "keyboard focus 2 remains visible",
+    "keyboard focus 3 remains visible",
+    "keyboard focus 4 remains visible",
+    "keyboard focus 5 remains visible",
+    "keyboard focus 6 remains visible",
+    "keyboard focus 7 remains visible",
+    "keyboard focus 8 remains visible",
+    "keyboard focus 9 remains visible",
+    "keyboard focus 10 remains visible",
+    "about response contains readable static content and metadata",
+    "static about loads only shared and about styles",
+    "introduction is readable with application JavaScript disabled",
+    "static snapshot remains without the application shell",
+    "about-nojs-dark: WCAG 2.2 AA automated rules",
+    "about-nojs-dark: no page overflow",
+    "about-nojs-dark: one main and one h1",
+    "about-nojs-light: WCAG 2.2 AA automated rules",
+    "about-nojs-light: no page overflow",
+    "about-nojs-light: one main and one h1",
+    "zero console errors and unhandled exceptions",
+    "zero product POST requests",
+    "zero external network requests"
+  ],
+  "axe": [
+    {
+      "label": "root-preflight-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "search-dialog-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "briefing-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "history-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "about-1440-dark",
+      "violations": []
+    },
+    {
+      "label": "briefing-1440-light",
+      "violations": []
+    },
+    {
+      "label": "rank-1440-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1440-light",
+      "violations": []
+    },
+    {
+      "label": "history-1440-light",
+      "violations": []
+    },
+    {
+      "label": "about-1440-light",
+      "violations": []
+    },
+    {
+      "label": "briefing-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "history-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "about-1280-dark",
+      "violations": []
+    },
+    {
+      "label": "briefing-1280-light",
+      "violations": []
+    },
+    {
+      "label": "rank-1280-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-1280-light",
+      "violations": []
+    },
+    {
+      "label": "history-1280-light",
+      "violations": []
+    },
+    {
+      "label": "about-1280-light",
+      "violations": []
+    },
+    {
+      "label": "briefing-375-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-375-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-375-dark",
+      "violations": []
+    },
+    {
+      "label": "history-375-dark",
+      "violations": []
+    },
+    {
+      "label": "about-375-dark",
+      "violations": []
+    },
+    {
+      "label": "briefing-375-light",
+      "violations": []
+    },
+    {
+      "label": "rank-375-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-375-light",
+      "violations": []
+    },
+    {
+      "label": "history-375-light",
+      "violations": []
+    },
+    {
+      "label": "about-375-light",
+      "violations": []
+    },
+    {
+      "label": "briefing-667-dark",
+      "violations": []
+    },
+    {
+      "label": "rank-667-dark",
+      "violations": []
+    },
+    {
+      "label": "watchlist-667-dark",
+      "violations": []
+    },
+    {
+      "label": "history-667-dark",
+      "violations": []
+    },
+    {
+      "label": "about-667-dark",
+      "violations": []
+    },
+    {
+      "label": "briefing-667-light",
+      "violations": []
+    },
+    {
+      "label": "rank-667-light",
+      "violations": []
+    },
+    {
+      "label": "watchlist-667-light",
+      "violations": []
+    },
+    {
+      "label": "history-667-light",
+      "violations": []
+    },
+    {
+      "label": "about-667-light",
+      "violations": []
+    },
+    {
+      "label": "about-nojs-dark",
+      "violations": []
+    },
+    {
+      "label": "about-nojs-light",
+      "violations": []
+    }
+  ],
+  "screenshots": [
+    "search-dialog-1440-dark.png",
+    "briefing-1440-dark.png",
+    "history-1440-dark.png",
+    "about-1440-dark.png",
+    "briefing-1440-light.png",
+    "history-1440-light.png",
+    "about-1440-light.png",
+    "briefing-1280-dark.png",
+    "history-1280-dark.png",
+    "about-1280-dark.png",
+    "briefing-1280-light.png",
+    "history-1280-light.png",
+    "about-1280-light.png",
+    "briefing-375-dark.png",
+    "history-375-dark.png",
+    "about-375-dark.png",
+    "briefing-375-light.png",
+    "history-375-light.png",
+    "about-375-light.png",
+    "briefing-667-dark.png",
+    "history-667-dark.png",
+    "about-667-dark.png",
+    "briefing-667-light.png",
+    "history-667-light.png",
+    "about-667-light.png",
+    "about-nojs-dark.png",
+    "about-nojs-light.png"
+  ],
+  "hashPosition": {
+    "scrollY": 570,
+    "targetTop": 267.265625,
+    "headerBottom": 64
+  },
+  "passed": true,
+  "consoleErrors": [],
+  "exceptions": [],
+  "blocked": [],
+  "cancelledInterceptions": [],
+  "interceptionErrors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538667528
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538667530
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538667531
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538667531
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538668211
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538668619
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538668619
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538668748
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538668749
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538673769
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538674451
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538674452
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538674454
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538674773
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538674773
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538674777
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538674779
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538674781
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538674781
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538675095
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538675095
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538675095
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538675098
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538675311
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538675312
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538675313
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538675313
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538675523
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538675525
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538675528
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538675687
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538675687
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538675690
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538675978
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538675979
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538675981
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538676173
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538676173
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538676175
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538676371
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538676372
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538676372
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538676552
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538676552
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538676553
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538676688
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538676850
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538677095
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538677096
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538677098
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538677098
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538677098
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538677264
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538677264
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538677265
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538677265
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538677270
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538677500
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538677500
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538677502
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538677502
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538677502
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538677713
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538677713
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538677714
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538677714
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538677715
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538677909
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538678054
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538678054
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538678055
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538678206
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538678356
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538678356
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538678357
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538678508
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538678509
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538678510
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538678510
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538678642
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538679611
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538679612
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538679612
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538679722
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538679893
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538680097
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538680097
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=005930",
+      "at": 1791538680125
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538680303
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538680303
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538680305
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538680305
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538680640
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538680640
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538680641
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538680641
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538680821
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538680822
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538680828
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538680831
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538681673
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538681673
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538681675
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538682443
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538682443
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538682445
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538683047
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538683047
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538683048
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538683773
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538684367
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538684367
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538684368
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538684369
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538685057
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538685059
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538685062
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538685873
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538685873
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538685874
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538686451
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538686451
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538686452
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538687117
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538687795
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538687795
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538687797
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538687798
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538688581
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538688582
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538688583
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538689488
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538689489
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538689491
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538690079
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538690079
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538690079
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538690808
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538691480
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538691481
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538691482
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538691483
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538692337
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538692337
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538692339
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538693106
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538693106
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538693108
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538693685
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538693685
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538693685
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538694357
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538694974
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538694975
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538694976
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538694977
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538695672
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538695672
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538695674
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538696439
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538696439
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538696441
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538697013
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538697013
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538697013
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538697656
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538698166
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538698166
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538698167
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538698168
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538698864
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538698865
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538698867
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538699643
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538699643
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538699645
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538700188
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538700188
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538700188
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538700751
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538701300
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538701300
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538701301
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538701302
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538702083
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538702083
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538702085
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538702877
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538702879
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538702880
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538703422
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538703422
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538703422
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538704055
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538704649
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538704650
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538704650
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538704651
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538705394
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538705397
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538705399
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538706139
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538706139
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538706141
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538706758
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538706758
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538706758
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538707357
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538708013
+    }
+  ],
+  "page": {
+    "url": "http://127.0.0.1:57712/about",
+    "active": "<body>\n    <div id=\"root\"><div class=\"ds-root min-h-dvh bg-bg font-sans text-fg\"><main id=\"main-content\" class=\"ds-main px-7 pt-5 pb-12\"><article class=\"about-page\"><header class=\"about-hero\"><p class=\"about-eyebrow\">ABOUT KOSPI AI Desk</p><h1>예측을 읽는 기준,<br>판단을 위한 근거</h1><p class=\"about-lead\">숫자 하나보다 그 숫자가 만들어진 조건을 먼저 봅니다.</p><div class=\"about-actions\"><a href=\"/\">브리핑 보기</a><a href=\"/rank\">전체 순위 확인</a></div></header><div class=\"about-grid\"><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">01</span><h2>예측과 근거를 함께 읽습니다</h2><p>KOSPI AI Desk는 한국 주식의 모델 예측, 뉴스, 수급 정보를 나란히 보여주는 의사결정 보조 서비스입니다. 특정 종목의 매수·매도 지시나 자동 주문을 제공하는 화면이 아닙니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">02</span><h2>브리핑 → 전체 순위 → 종목 리포트</h2><p>브리핑에서 최종 후보를 비교하고, 전체 순위에서 모델 원본의 상대 위치를 확인하세요. 종목 리포트에서 예측 기준일, 가격 관측 시각, 뉴스와 수급의 근거를 읽으세요. 관심 목록은 이 기기에 저장됩니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">03</span><h2>모델 원본과 뉴스 반영 최종 결과</h2><p>모델 원본 순위와 뉴스 반영 후 최종 순위는 서로 다른 결과입니다. 원본 순위가 없으면 화면 정렬 순서로 대신하지 않습니다. 예측수익률은 다음 거래일 시가→종가에 대한 모델 예측이며, 실제 가격 변동이나 달성한 수익이 아닙니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">04</span><h2>뉴스 미수집과 0건은 다릅니다</h2><p>미수집·한도 도달·판정 불가는 뉴스가 없거나 중립이라는 뜻이 아닙니다. 수집 여부와 감성 판정을 따로 확인하세요. 0건은 수집 결과가 실제로 비어 있다고 확인된 경우에만 읽을 수 있습니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">05</span><h2>수급이 없으면 미확인으로</h2><p>외국인·기관 수급이나 관측일 수가 부족하면 판정할 수 없습니다. 미제공 값은 0으로 바꾸지 않으며, 자료 부족을 매도나 부정 신호로 해석하지 않습니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">06</span><h2>일치도는 확인된 근거의 비율</h2><p>모델·뉴스·수급 중 판정 가능한 근거만 분모에 포함합니다. 예를 들어 2개 중 2개와 3개 중 3개는 모두 100%지만 정보의 양이 다릅니다. 일치도는 승률이나 수익 확률이 아닙니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">07</span><h2>출처와 시각을 먼저 확인하세요</h2><p>API 조회, 저장된 결과, 예시 데이터, 출처 미확인을 구분합니다. 저장된 결과는 최신 실시간 가격을 뜻하지 않고, 예시 데이터는 실제 분석이 아닙니다. 가격 이력의 출처가 미확인이거나 보간된 값이라면 실제 관측 이력으로 읽지 마세요. 조회 시각과 데이터 기준 시각도 다를 수 있습니다.</p></section><section class=\"about-card\"><span class=\"about-number\" aria-hidden=\"true\">08</span><h2>분석 기록과 실현 성과</h2><p>현재는 최신 실행 상태만 확인할 수 있습니다. 공식·수시 실행 구분, 과거 실행 목록과 20거래일 실현 성과는 확인되지 않습니다. 저장된 예측이 있다는 사실만으로 공식 실행이나 과거 성과를 입증할 수 없습니다.</p></section></div><section class=\"about-note\"><h2>이용 전 확인해 주세요</h2><p>분석과 예측에는 오류·지연·누락이 있을 수 있으며, 미래 수익을 보장하지 않습니다. 예측과 실제 성과를 구분하고 원자료를 함께 확인하세요. 투자 판단과 책임은 투자자에게 있습니다.</p><a href=\"/history\">현재 확인 가능한 기록 보기</a></section></article></main></div></div>\n\n  \n\n</body>",
+    "text": "ABOUT KOSPI AI Desk\n\n예측을 읽는 기준,\n판단을 위한 근거\n\n숫자 하나보다 그 숫자가 만들어진 조건을 먼저 봅니다.\n\n브리핑 보기\n전체 순위 확인\n01\n예측과 근거를 함께 읽습니다\n\nKOSPI AI Desk는 한국 주식의 모델 예측, 뉴스, 수급 정보를 나란히 보여주는 의사결정 보조 서비스입니다. 특정 종목의 매수·매도 지시나 자동 주문을 제공하는 화면이 아닙니다.\n\n02\n브리핑 → 전체 순위 → 종목 리포트\n\n브리핑에서 최종 후보를 비교하고, 전체 순위에서 모델 원본의 상대 위치를 확인하세요. 종목 리포트에서 예측 기준일, 가격 관측 시각, 뉴스와 수급의 근거를 읽으세요. 관심 목록은 이 기기에 저장됩니다.\n\n03\n모델 원본과 뉴스 반영 최종 결과\n\n모델 원본 순위와 뉴스 반영 후 최종 순위는 서로 다른 결과입니다. 원본 순위가 없으면 화면 정렬 순서로 대신하지 않습니다. 예측수익률은 다음 거래일 시가→종가에 대한 모델 예측이며, 실제 가격 변동이나 달성한 수익이 아닙니다.\n\n04\n뉴스 미수집과 0건은 다릅니다\n\n미수집·한도 도달·판정 불가는 뉴스가 없거나 중립이라는 뜻이 아닙니다. 수집 여부와 감성 판정을 따로 확인하세요. 0건은 수집 결과가 실제로 비어 있다고 확인된 경우에만 읽을 수 있습니다.\n\n05\n수급이 없으면 미확인으로\n\n외국인·기관 수급이나 관측일 수가 부족하면 판정할 수 없습니다. 미제공 값은 0으로 바꾸지 않으며, 자료 부족을 매도나 부정 신호로 해석하지 않습니다.\n\n06\n일치도는 확인된 근거의 비율\n\n모델·뉴스·수급 중 판정 가능한 근거만 분모에 포함합니다. 예를 들어 2개 중 2개와 3개 중 3개는 모두 100%지만 정보의 양이 다릅니다. 일치도는 승률이나 수익 확률이 아닙니다.\n\n07\n출처와 시각을 먼저 확인하세요\n\nAPI 조회, 저장된 결과, 예시 데이터, 출처 미확인을 구분합니다. 저장된 결과는 최신 실시간 가격을 뜻하지 않고, 예시 데이터는 실제 분석이 아닙니다. 가격 이력의 출처가 미확인이거나 보간된 값이라면 실제 관측 이력으로 읽지 마세요. 조회 시각과 데이터 기준 시각도 다를 수 있습니다.\n\n08\n분석 기록과 실현 성과\n\n현재는 최신 실행 상태만 확인할 수 있습니다. 공식·수시 실행 구분, 과거 실행 목록과 20거래일 실현 성과는 확인되지 않습니다. 저장된 예측이 있다는 사실만으로 공식 실행이나 과거 성과를 입증할 수 없습니다.\n\n이용 전 확인해 주세요\n\n분석과 예측에는 오류·지연·누락이 있을 수 있으며, 미래 수익을 보장하지 않습니다. 예측과 실제 성과를 구분하고 원자료를 함께 확인하세요. 투자 판단과 책임은 투자자에게 있습니다.\n\n현재 확인 가능한 기록 보기"
+  },
+  "fixtureClosed": true,
+  "finishedAt": "2026-10-09T09:38:30.006Z"
+}

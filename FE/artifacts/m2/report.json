@@ -1,0 +1,882 @@
+{
+  "fixtureOnly": true,
+  "generatedAt": "2026-10-09T09:33:46.681Z",
+  "checks": [
+    "public briefing has no manual analysis execution control",
+    "rapid A→B / late A never replaces B",
+    "ArrowDown moves selection and keyboard focus",
+    "native Enter opens selection",
+    "native Space opens selection",
+    "browser back restores selected code",
+    "reload preserves selected deeplink",
+    "close restores focus to selected table button",
+    "intro dismissal persists across reload",
+    "theme choice persists across reload",
+    "pending deeplink membership and model fail closed",
+    "failed refresh makes previous table/panel membership unavailable",
+    "error deeplink never claims non-candidate",
+    "successful [] establishes genuine non-membership",
+    "main receives focus after lazy mount beyond 30 frames",
+    "authoritative [] replaces populated table",
+    "background failure explicitly retains previous result",
+    "initial API error has no fabricated empty success/sample table",
+    "sample response explicitly labelled",
+    "populated background failure keeps candidates with warning",
+    "running→completed GET polling invalidates and defeats older refresh",
+    "late prior refresh cannot restore older candidate prediction",
+    "polling stops after completion",
+    "missing model prediction remains — and unavailable, no prose zero",
+    "cache/sample and interpolation stay visible per index",
+    "model table and panel share final candidate membership",
+    "no invented record count/next-session date",
+    "rule explanation and version are disclosed",
+    "1440-dark: populated axe WCAG 2.2 AA",
+    "1440-dark: no horizontal page overflow",
+    "1440-dark: pointer targets at least 24px",
+    "1440-dark: single first h1, no skipped heading levels",
+    "1440-light: populated axe WCAG 2.2 AA",
+    "1440-light: no horizontal page overflow",
+    "1440-light: pointer targets at least 24px",
+    "1440-light: single first h1, no skipped heading levels",
+    "1280-dark: populated axe WCAG 2.2 AA",
+    "1280-dark: no horizontal page overflow",
+    "1280-dark: pointer targets at least 24px",
+    "1280-dark: single first h1, no skipped heading levels",
+    "1280-light: populated axe WCAG 2.2 AA",
+    "1280-light: no horizontal page overflow",
+    "1280-light: pointer targets at least 24px",
+    "1280-light: single first h1, no skipped heading levels",
+    "375-light-stacked: populated axe WCAG 2.2 AA",
+    "375-light-stacked: no horizontal page overflow",
+    "375-light-stacked: pointer targets at least 24px",
+    "375-light-stacked: single first h1, no skipped heading levels",
+    "zero page console.error and unhandled exceptions",
+    "all product API requests are GET against fixture server"
+  ],
+  "screenshots": [
+    {
+      "name": "m2-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "fixture": true
+    },
+    {
+      "name": "m2-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "fixture": true
+    },
+    {
+      "name": "m2-1280-dark.png",
+      "width": 1280,
+      "theme": "dark",
+      "fixture": true
+    },
+    {
+      "name": "m2-1280-light.png",
+      "width": 1280,
+      "theme": "light",
+      "fixture": true
+    }
+  ],
+  "axe": [
+    {
+      "label": "1440-dark",
+      "violations": []
+    },
+    {
+      "label": "1440-light",
+      "violations": []
+    },
+    {
+      "label": "1280-dark",
+      "violations": []
+    },
+    {
+      "label": "1280-light",
+      "violations": []
+    },
+    {
+      "label": "375-light-stacked",
+      "violations": []
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538427049
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538427050
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538427051
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538427052
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538427345
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538427345
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=000660",
+      "at": 1791538427542
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=000660",
+      "at": 1791538427542
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=267250",
+      "at": 1791538429228
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=267250",
+      "at": 1791538429228
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538429363
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538429560
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538429774
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538429775
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538429776
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538429776
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538429776
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538429777
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538430187
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538430187
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538430189
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538430189
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538430555
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538430555
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538430555
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538430556
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538430839
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538430841
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538430842
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538430842
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538430843
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538430843
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538431960
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538431961
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538431962
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538431965
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538432982
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538433217
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538433218
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538433218
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538433221
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538433221
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538433222
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538434274
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538434391
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538434392
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538434393
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538434397
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538434686
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538434688
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538434688
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538434689
+    },
+    {
+      "method": "GET",
+      "path": "/api/rank",
+      "query": "",
+      "at": 1791538436249
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538436560
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538436561
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538436676
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538436676
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538437705
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538437949
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538437949
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538437949
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538437950
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538439016
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538439089
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538439090
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538439207
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538439209
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538439256
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538439257
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538440271
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538440271
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538440508
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538440509
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538440510
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538440511
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538440511
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538440511
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538440709
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538440709
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538440709
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538440711
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538445602
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538445609
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538445610
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538445611
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538452504
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005380",
+      "at": 1791538452507
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005380",
+      "at": 1791538452510
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538452510
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538452510
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538452510
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538452812
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538452812
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538452813
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538452816
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538452816
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538452817
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538453315
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538453316
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538453317
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538453319
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538453319
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538453319
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538454285
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538454286
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538454287
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538454288
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538454289
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538454289
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538455202
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538455202
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538455204
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538455217
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538455219
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538455220
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538456126
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538456128
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538456133
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538456134
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538456135
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538456135
+    },
+    {
+      "method": "GET",
+      "path": "/api/backend/status",
+      "query": "",
+      "at": 1791538457184
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock-analysis",
+      "query": "?ticker=005930",
+      "at": 1791538457187
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=005930",
+      "at": 1791538457188
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates",
+      "query": "",
+      "at": 1791538457189
+    },
+    {
+      "method": "GET",
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "at": 1791538457189
+    },
+    {
+      "method": "GET",
+      "path": "/api/candidates/run",
+      "query": "",
+      "at": 1791538457189
+    }
+  ],
+  "blocked": [],
+  "passed": true,
+  "cancelledInterceptions": [],
+  "interceptionErrors": [],
+  "page": {
+    "url": "http://127.0.0.1:55019/next?code=005930",
+    "selectedCode": "005930",
+    "detailCode": "005930",
+    "price": "74,200원",
+    "activeElement": "<body>\n    <div id=\"root\"><a class=\"skip-link\" href=\"#main-content\">본문으로 건너뛰기</a><div class=\"ds-root min-h-dvh bg-bg font-sans text-fg antialiased\"><header class=\"ds-header sticky top-0 z-10 bg-surface\"><a aria-current=\"page\" class=\"ds-brand active\" href=\"/next\"><svg class=\"size-7 text-fg\" width=\"28\" height=\"28\" viewBox=\"0 0 28 28\" aria-hidden=\"true\" focusable=\"false\"><rect width=\"28\" height=\"28\" rx=\"8\" fill=\"currentColor\"></rect><path d=\"M6 19.5L11 14l4 3.5 7-9\" fill=\"none\" stroke=\"var(--ds-bg)\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg><span>KOSPI AI Desk</span></a><nav aria-label=\"주요 메뉴\" class=\"ds-nav\"><a aria-current=\"page\" class=\"ds-nav-link ds-nav-active\" href=\"/next\">브리핑</a><a class=\"ds-nav-link\" href=\"/next/rank\">전체 순위</a><a class=\"ds-nav-link\" href=\"/next/watchlist\">관심</a><a class=\"ds-nav-link\" href=\"/next/history\">분석 기록</a></nav><div class=\"ds-header-actions\"><span class=\"search-trigger-group\"><button type=\"button\" class=\"search-trigger\" aria-label=\"종목 검색\" aria-haspopup=\"dialog\" aria-keyshortcuts=\"Control+K Meta+K\" aria-expanded=\"false\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg><span>검색</span></button><kbd aria-hidden=\"true\">⌘ K / Ctrl K</kbd></span><button type=\"button\" aria-label=\"어두운 테마로 전환\" class=\"ds-theme-button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-moon\" aria-hidden=\"true\"><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\"></path></svg></button></div></header><main id=\"main-content\" data-route-path=\"/next\" tabindex=\"-1\" class=\"ds-main px-7 pt-5 pb-12 focus:outline-none\"><aside class=\"connection-notice\" aria-label=\"데이터 연결 상태\" data-connection-state=\"ready\"><div class=\"connection-notice-heading\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-cable\" aria-hidden=\"true\"><path d=\"M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z\"></path><path d=\"M17 21v-2\"></path><path d=\"M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10\"></path><path d=\"M21 21v-2\"></path><path d=\"M3 5V3\"></path><path d=\"M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z\"></path><path d=\"M7 5V3\"></path></svg><strong>데이터 연결 상태</strong><button type=\"button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rotate-cw\" aria-hidden=\"true\"><path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path></svg>연결 상태 다시 확인</button></div><p>시장 데이터 설정 확인 · 조회 검증 필요</p><p>저장된 분석 완료 기록</p><div class=\"connection-notice-results\"><span>전체 순위: 저장된 분석 결과 제공</span><span>최종 후보: 저장된 분석 결과 제공</span></div><details><summary>연결 상태 설명</summary><p>설정 확인은 실제 조회 성공을 보장하지 않습니다. 가격·지수의 실제 출처와 기준 시각은 각 화면에서 확인하세요.</p><p>뉴스 포함 분석은 별도 실행 승인이 필요합니다.</p><p>뉴스 평가 설정 확인 · 기사 수집 연결 대기. 설정 여부만 확인했으며 수집·평가는 검증하지 않았습니다.</p><p>상태 확인 시각 2026. 10. 07. 18:00 · 분석 자료는 저장 결과이며 실시간 가격이 아닙니다.</p></details></aside><div class=\"briefing-page\"><div class=\"briefing-title-row\"><div><p class=\"briefing-eyebrow\">KOSPI AI Desk</p><h1>오늘의 브리핑</h1><p class=\"briefing-muted\">예측과 근거를 나란히, 판단은 신중하게.</p></div><button type=\"button\" class=\"briefing-button\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg>다시 조회</button></div><section class=\"briefing-intro\" aria-label=\"서비스 첫 방문 안내\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-info\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 16v-4\"></path><path d=\"M12 8h.01\"></path></svg><p><strong>예측을 읽는 새로운 방식</strong><span>모델 순위와 뉴스·수급 근거를 함께 비교하세요. 예측은 투자 추천이나 수익 보장이 아니며, 실제 성과와 다릅니다.</span></p><button type=\"button\" class=\"briefing-icon-button\" aria-label=\"서비스 안내 닫기\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-x\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"></path><path d=\"m6 6 12 12\"></path></svg></button></section><section class=\"briefing-dates\" aria-label=\"분석과 조회 기준\"><div><span>분석 기준일</span><strong>2026. 10. 07.</strong></div><div><span>다음 거래일</span><strong>미확인</strong><small>거래일 달력 미연결</small></div><div><span>분석 결과 출처</span><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>저장 시각 2026. 10. 07. 18:00</span></span></div><div><span>이번 조회 시각</span><strong>2026. 10. 09. 18:34</strong><small>가격 관측 시각과 다를 수 있음</small></div></section><section class=\"briefing-market\" aria-label=\"시장 지수\"><div class=\"briefing-market-heading\"><span>시장 흐름</span><strong>상승 흐름 우위</strong><small>지수 등락률 기반 단순 판단 · 투자 판단 지표 아님</small></div><div class=\"briefing-index-grid\"><article class=\"briefing-index\" data-index-symbol=\"KOSPI\"><div class=\"briefing-index-title\"><strong>코스피</strong><span class=\"briefing-rise\">+0.41%</span></div><b>2,748.32</b><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>기준 시각 2026. 10. 07. 18:00</span></span><span class=\"briefing-series-label\">시계열: 과거 관측값</span></article><article class=\"briefing-index\" data-index-symbol=\"KOSPI200\"><div class=\"briefing-index-title\"><strong>코스피 200</strong><span class=\"briefing-rise\">+0.63%</span></div><b>367.84</b><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>기준 시각 2026. 10. 07. 18:00</span></span><span class=\"briefing-series-label\">시계열: 보간값 · 실제 이력 아님</span></article><article class=\"briefing-index\" data-index-symbol=\"KOSDAQ\"><div class=\"briefing-index-title\"><strong>코스닥</strong><span class=\"briefing-fall\">-0.41%</span></div><b>821.17</b><span class=\"briefing-source\" data-source=\"sample\"><span class=\"briefing-source-tag\">예시 데이터</span><span>기준 시각 2026. 10. 07. 18:00</span></span><span class=\"briefing-series-label\">시계열: 보간값 · 실제 이력 아님</span></article></div></section><div class=\"briefing-columns\"><div class=\"briefing-primary\"><section class=\"briefing-card\" aria-labelledby=\"candidate-heading\"><div class=\"briefing-section-heading\"><div><p class=\"briefing-eyebrow\">MODEL &amp; EVIDENCE</p><h2 id=\"candidate-heading\">최종 후보 비교 <span class=\"briefing-count\">5</span></h2></div><span class=\"briefing-muted briefing-footnote\">종목을 선택해 근거 보기</span></div><div class=\"briefing-table-scroll\"><table class=\"briefing-table\"><caption class=\"briefing-sr-only\">최종 후보 비교. 종목 버튼으로 상세를 열고 위·아래 화살표로 선택을 이동할 수 있습니다.</caption><thead><tr><th scope=\"col\">종목</th><th scope=\"col\">모델 예측</th><th scope=\"col\">모델</th><th scope=\"col\">뉴스</th><th scope=\"col\">수급</th><th scope=\"col\">근거 일치도</th></tr></thead><tbody><tr data-selected=\"true\" data-candidate-code=\"005930\"><td><div style=\"display: flex; align-items: center; gap: 8px;\"><button type=\"button\" class=\"briefing-stock-button\" aria-pressed=\"true\" aria-controls=\"briefing-detail\"><span><strong>삼성전자</strong> <small>005930 · 선택됨</small></span><span class=\"briefing-sr-only\"> 상세 보기</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-right\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"></path></svg></button><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"005930\" aria-pressed=\"false\" aria-label=\"삼성전자 005930 관심 종목\" title=\"관심 종목 추가\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button></div></td><td><strong class=\"briefing-rise\">+3.12%</strong><small class=\"briefing-cell-note\">원본 순위 5위</small></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"LLM 긍정 기사 수가 부정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><strong>100%</strong><span class=\"briefing-cell-note\">긍정 2/2 · 판정 불가 1개</span><span class=\"briefing-meter\" aria-hidden=\"true\"><span style=\"width: 100%;\"></span></span></td></tr><tr data-candidate-code=\"000660\"><td><div style=\"display: flex; align-items: center; gap: 8px;\"><button type=\"button\" class=\"briefing-stock-button\" aria-pressed=\"false\" aria-controls=\"briefing-detail\"><span><strong>SK하이닉스</strong> <small>000660</small></span><span class=\"briefing-sr-only\"> 상세 보기</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-right\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"></path></svg></button><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"000660\" aria-pressed=\"false\" aria-label=\"SK하이닉스 000660 관심 종목\" title=\"관심 종목 추가\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button></div></td><td><strong class=\"briefing-rise\">+2.44%</strong><small class=\"briefing-cell-note\">원본 순위 8위</small></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"negative\" title=\"LLM 부정 기사 수가 긍정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-minus lucide-minus-circle\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M8 12h8\"></path></svg><span>부정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><strong>50%</strong><span class=\"briefing-cell-note\">긍정 1/2 · 판정 불가 1개</span><span class=\"briefing-meter\" aria-hidden=\"true\"><span style=\"width: 50%;\"></span></span></td></tr><tr data-candidate-code=\"267250\"><td><div style=\"display: flex; align-items: center; gap: 8px;\"><button type=\"button\" class=\"briefing-stock-button\" aria-pressed=\"false\" aria-controls=\"briefing-detail\"><span><strong>HD현대</strong> <small>267250</small></span><span class=\"briefing-sr-only\"> 상세 보기</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-right\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"></path></svg></button><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"267250\" aria-pressed=\"false\" aria-label=\"HD현대 267250 관심 종목\" title=\"관심 종목 추가\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button></div></td><td><strong class=\"briefing-rise\">+1.76%</strong><small class=\"briefing-cell-note\">원본 순위 11위</small></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"LLM 긍정 기사 수가 부정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><strong>100%</strong><span class=\"briefing-cell-note\">긍정 2/2 · 판정 불가 1개</span><span class=\"briefing-meter\" aria-hidden=\"true\"><span style=\"width: 100%;\"></span></span></td></tr><tr data-candidate-code=\"035420\"><td><div style=\"display: flex; align-items: center; gap: 8px;\"><button type=\"button\" class=\"briefing-stock-button\" aria-pressed=\"false\" aria-controls=\"briefing-detail\"><span><strong>NAVER</strong> <small>035420</small></span><span class=\"briefing-sr-only\"> 상세 보기</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-right\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"></path></svg></button><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"035420\" aria-pressed=\"false\" aria-label=\"NAVER 035420 관심 종목\" title=\"관심 종목 추가\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button></div></td><td><strong class=\"briefing-rise\">+1.08%</strong><small class=\"briefing-cell-note\">원본 순위 —</small></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"positive\" title=\"LLM 긍정 기사 수가 부정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><strong>100%</strong><span class=\"briefing-cell-note\">긍정 2/2 · 판정 불가 1개</span><span class=\"briefing-meter\" aria-hidden=\"true\"><span style=\"width: 100%;\"></span></span></td></tr><tr data-candidate-code=\"005380\"><td><div style=\"display: flex; align-items: center; gap: 8px;\"><button type=\"button\" class=\"briefing-stock-button\" aria-pressed=\"false\" aria-controls=\"briefing-detail\"><span><strong>현대차</strong> <small>005380</small></span><span class=\"briefing-sr-only\"> 상세 보기</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-right\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"></path></svg></button><button type=\"button\" class=\"watch-toggle\" data-watch-code=\"005380\" aria-pressed=\"false\" aria-label=\"현대차 005380 관심 종목\" title=\"관심 종목 추가\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-star\" aria-hidden=\"true\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\"></path></svg><span class=\"watch-sr-only\">관심 종목</span></button></div></td><td><strong class=\"\">—</strong><small class=\"briefing-cell-note\">원본 순위 17위</small></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본 모델 예측값이 없습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"뉴스 수집·분석의 성공 상태를 확인할 수 없습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span></td><td><strong>—</strong><span class=\"briefing-cell-note\">긍정 0/0 · 판정 불가 3개</span><span class=\"briefing-meter\" aria-hidden=\"true\"><span style=\"width: 0%;\"></span></span></td></tr></tbody></table></div><p class=\"briefing-table-help\">예측수익률: 다음 거래일 시가→종가 모델 예측 · 실제 성과 아님<br>원본 순위 미제공 시 — 표시 · 판정 불가 신호는 일치도 분모에서 제외</p></section><section class=\"briefing-card briefing-record\" aria-labelledby=\"record-heading\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-book-open\" aria-hidden=\"true\"><path d=\"M12 5v16\"></path><path d=\"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z\"></path></svg><div><h2 id=\"record-heading\">성과 기록</h2><strong>수집 중</strong><p>검증 가능한 공식 성과가 쌓이면 제공됩니다. 현재 확인된 거래일 수와 수익률 기록은 없습니다.</p></div></section><details class=\"briefing-card briefing-rules\"><summary>근거 판정 기준 <span>m1-2026-10-08-v2</span></summary><dl><div><dt>모델</dt><dd>원본 예측값이 있는 최종 후보는 긍정. 전체 순위는 예측수익률 0 이하이면 부정, 상위 5%이면서 양수이면 긍정, 나머지는 중립입니다.</dd></div><div><dt>뉴스</dt><dd>LLM 기사별 판정 또는 명시 집계의 긍정·부정 건수를 비교합니다. 실제 수집 결과 0건은 중립이며 미수집·키워드 추정은 판정 불가입니다.</dd></div><div><dt>수급</dt><dd>외국인·기관 합계 금액과 합산 순매수 일수/기간을 함께 봅니다. 개별 양수일수만으로 합산 순매수 일수를 계산하지 않습니다.</dd></div><div><dt>근거 일치도</dt><dd>긍정 신호 수 / 평가 가능한 신호 수. 판정 불가는 분모에서 제외하고, 모두 판정 불가이면 —로 표시합니다.</dd></div><div><dt>다음 거래일</dt><dd>거래일 달력이 연결되지 않아 다음 거래일은 미확인입니다.</dd></div></dl></details><p class=\"briefing-disclaimer\">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.</p></div><aside id=\"briefing-detail\" class=\"briefing-card briefing-detail\" aria-labelledby=\"detail-title\" data-detail-code=\"005930\"><div class=\"briefing-section-heading\"><span class=\"briefing-eyebrow\">선택한 종목</span><button class=\"briefing-icon-button\" type=\"button\" aria-label=\"종목 상세 닫기\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-x\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"></path><path d=\"m6 6 12 12\"></path></svg></button></div><h2 id=\"detail-title\">삼성전자</h2><p class=\"briefing-muted briefing-code\" data-membership=\"candidate\">005930 · 최종 후보</p><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>분석 저장 시각 2026. 10. 07. 18:00</span></span><div class=\"briefing-price-block\"><span class=\"briefing-eyebrow\">조회 가격</span><strong data-testid=\"detail-price\">74,200원</strong><span>+0.68%</span><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>기준 시각 2026. 10. 07. 18:00</span></span></div><dl class=\"briefing-detail-stats\"><div><dt>모델 예측수익률</dt><dd>+3.12%</dd></div><div><dt>원본 모델 순위</dt><dd>5위</dd></div></dl><span class=\"briefing-source\" data-source=\"cache\"><span class=\"briefing-source-tag\">저장된 결과</span><span>모델 결과 저장 시각 2026. 10. 07. 18:00</span></span><div class=\"briefing-divider\"></div><h3>선택 근거</h3><div class=\"briefing-detail-signals\"><div><span>모델</span><span class=\"briefing-signal\" data-signal=\"positive\" title=\"원본 예측값이 있는 최종 후보입니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span><p>원본 예측값이 있는 최종 후보입니다.</p></div><div><span>뉴스</span><span class=\"briefing-signal\" data-signal=\"positive\" title=\"LLM 긍정 기사 수가 부정 기사 수보다 많습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-check lucide-check-circle-2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m16 9-5.5 5.5L8 12\"></path></svg><span>긍정</span></span><p>LLM 긍정 기사 수가 부정 기사 수보다 많습니다.</p></div><div><span>수급</span><span class=\"briefing-signal\" data-signal=\"unavailable\" title=\"원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark lucide-help-circle lucide-circle-help\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg><span>판정 불가</span></span><p>원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.</p></div></div><p class=\"briefing-agreement\">근거 일치도 <strong>100%</strong> · 긍정 2/2<small>판정 불가 1개는 분모에서 제외</small></p><p class=\"briefing-summary\">삼성전자의 모델 예측과 뉴스 근거를 함께 확인하세요. 저장된 분석 결과입니다.</p><h3>수급 원본</h3><dl class=\"briefing-detail-stats\"><div><dt>외국인 합계</dt><dd>1,350,000,000원</dd></div><div><dt>기관 합계</dt><dd>450,000,000원</dd></div><div><dt>외국인·기관 합계</dt><dd>1,800,000,000원</dd></div></dl><h3>뉴스 근거</h3><ul class=\"briefing-news\"><li><strong>삼성전자 사업 현황 점검</strong><small>검증용 기사 · 2026. 10. 07.</small></li><li><strong>삼성전자 산업 동향과 불확실성</strong><small>검증용 기사 · 2026. 10. 07.</small></li></ul><a class=\"briefing-report-link\" href=\"/next/stock/005930\">전체 리포트 <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-arrow-up-right\" aria-hidden=\"true\"><path d=\"M7 7h10v10\"></path><path d=\"M7 17 17 7\"></path></svg></a><p class=\"briefing-muted briefing-footnote\">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다.</p></aside></div></div></main><footer class=\"ds-footer\"><div><strong>KOSPI AI Desk</strong><p>예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.</p></div><nav aria-label=\"서비스 안내\"><a class=\"\" href=\"/next/about\">서비스 소개</a><a class=\"\" href=\"/next/history\">기록 확인</a></nav></footer></div></div>\n\n  \n\n</body>",
+    "text": "본문으로 건너뛰기\nKOSPI AI Desk\n브리핑\n전체 순위\n관심\n분석 기록\n검색\n데이터 연결 상태\n연결 상태 다시 확인\n\n시장 데이터 설정 확인 · 조회 검증 필요\n\n저장된 분석 완료 기록\n\n전체 순위: 저장된 분석 결과 제공\n최종 후보: 저장된 분석 결과 제공\n연결 상태 설명\n\nKOSPI AI Desk\n\n오늘의 브리핑\n\n예측과 근거를 나란히, 판단은 신중하게.\n\n다시 조회\n\n예측을 읽는 새로운 방식\n모델 순위와 뉴스·수급 근거를 함께 비교하세요. 예측은 투자 추천이나 수익 보장이 아니며, 실제 성과와 다릅니다.\n\n분석 기준일\n2026. 10. 07.\n다음 거래일\n미확인\n거래일 달력 미연결\n분석 결과 출처\n저장된 결과\n저장 시각 2026. 10. 07. 18:00\n이번 조회 시각\n2026. 10. 09. 18:34\n가격 관측 시각과 다를 수 있음\n시장 흐름\n상승 흐름 우위\n지수 등락률 기반 단순 판단 · 투자 판단 지표 아님\n코스피\n+0.41%\n2,748.32\n저장된 결과\n기준 시각 2026. 10. 07. 18:00\n시계열: 과거 관측값\n코스피 200\n+0.63%\n367.84\n저장된 결과\n기준 시각 2026. 10. 07. 18:00\n시계열: 보간값 · 실제 이력 아님\n코스닥\n-0.41%\n821.17\n예시 데이터\n기준 시각 2026. 10. 07. 18:00\n시계열: 보간값 · 실제 이력 아님\n\nMODEL & EVIDENCE\n\n최종 후보 비교 5\n종목을 선택해 근거 보기\n최종 후보 비교. 종목 버튼으로 상세를 열고 위·아래 화살표로 선택을 이동할 수 있습니다.\n종목\t모델 예측\t모델\t뉴스\t수급\t근거 일치도\n\n삼성전자\n005930 · 선택됨\n상세 보기\n관심 종목\n\t+3.12%\n원본 순위 5위\n\t\n긍정\n\t\n긍정\n\t\n판정 불가\n\t100%\n긍정 2/2 · 판정 불가 1개\n\n\nSK하이닉스\n000660\n상세 보기\n관심 종목\n\t+2.44%\n원본 순위 8위\n\t\n긍정\n\t\n부정\n\t\n판정 불가\n\t50%\n긍정 1/2 · 판정 불가 1개\n\n\nHD현대\n267250\n상세 보기\n관심 종목\n\t+1.76%\n원본 순위 11위\n\t\n긍정\n\t\n긍정\n\t\n판정 불가\n\t100%\n긍정 2/2 · 판정 불가 1개\n\n\nNAVER\n035420\n상세 보기\n관심 종목\n\t+1.08%\n원본 순위 —\n\t\n긍정\n\t\n긍정\n\t\n판정 불가\n\t100%\n긍정 2/2 · 판정 불가 1개\n\n\n현대차\n005380\n상세 보기\n관심 종목\n\t—\n원본 순위 17위\n\t\n판정 불가\n\t\n판정 불가\n\t\n판정 불가\n\t—\n긍정 0/0 · 판정 불가 3개\n\n예측수익률: 다음 거래일 시가→종가 모델 예측 · 실제 성과 아님\n원본 순위 미제공 시 — 표시 · 판정 불가 신호는 일치도 분모에서 제외\n\n성과 기록\n수집 중\n\n검증 가능한 공식 성과가 쌓이면 제공됩니다. 현재 확인된 거래일 수와 수익률 기록은 없습니다.\n\n근거 판정 기준 m1-2026-10-08-v2\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.\n\n선택한 종목\n삼성전자\n\n005930 · 최종 후보\n\n저장된 결과\n분석 저장 시각 2026. 10. 07. 18:00\n조회 가격\n74,200원\n+0.68%\n저장된 결과\n기준 시각 2026. 10. 07. 18:00\n모델 예측수익률\n+3.12%\n원본 모델 순위\n5위\n저장된 결과\n모델 결과 저장 시각 2026. 10. 07. 18:00\n선택 근거\n모델\n긍정\n\n원본 예측값이 있는 최종 후보입니다.\n\n뉴스\n긍정\n\nLLM 긍정 기사 수가 부정 기사 수보다 많습니다.\n\n수급\n판정 불가\n\n원본에 외국인·기관 합산 순매수 일수가 없습니다. 개별 양수일수로 추정하지 않습니다.\n\n근거 일치도 100% · 긍정 2/2\n판정 불가 1개는 분모에서 제외\n\n삼성전자의 모델 예측과 뉴스 근거를 함께 확인하세요. 저장된 분석 결과입니다.\n\n수급 원본\n외국인 합계\n1,350,000,000원\n기관 합계\n450,000,000원\n외국인·기관 합계\n1,800,000,000원\n뉴스 근거\n삼성전자 사업 현황 점검\n검증용 기사 · 2026. 10. 07.\n삼성전자 산업 동향과 불확실성\n검증용 기사 · 2026. 10. 07.\n전체 리포트\n\n모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다.\n\nKOSPI AI Desk\n\n예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.\n\n서비스 소개\n기록 확인"
+  }
+}

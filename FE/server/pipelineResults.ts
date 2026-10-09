@@ -3,6 +3,8 @@ import { join } from "node:path";
 import type { PipelineInputRow, PipelineOutputRow, StockQuote } from "../src/types/trading";
 import { readLastSnapshot, writeDashboardSnapshot } from "./dashboardCache";
 import { isFreshForRun, readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshness";
+import { isNewsCollectionSuccess } from "../src/types/newsCollection";
+import type { PipelineAvailability } from "../src/types/backendStatus";
 
 declare const process: {
   cwd: () => string;
@@ -54,6 +56,7 @@ type GeminiEvaluation = {
 };
 
 type GeminiNewsEntry = {
+  status?: unknown;
   ticker?: unknown;
   company_name?: unknown;
   news_count?: unknown;
@@ -94,7 +97,7 @@ function isPipelineRows(value: unknown): value is PipelineOutputRow[] {
   );
 }
 
-function parseCsv(text: string): Record<string, string>[] {
+export function parseCsv(text: string): Record<string, string>[] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -234,6 +237,7 @@ function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutpu
   return {
     input_row: inputRow,
     news: [],
+    data_meta: { source: "cache", newsCollected: false, newsMethod: "unknown" },
     result: {
       caution: "News and OpenAI sentiment were not run for this output.",
       company_name: companyName,
@@ -271,7 +275,7 @@ async function loadJsonRows(): Promise<LoadedRows | null> {
       if (isPipelineRows(parsed)) {
         const mtimeMs = (await stat(path)).mtimeMs;
         if (!latest || mtimeMs > latest.mtimeMs) {
-          latest = { mtimeMs, rows: parsed };
+          latest = { mtimeMs, rows: parsed.map(row => withFileMeta(row, mtimeMs)) };
         }
       }
     } catch {
@@ -296,13 +300,14 @@ async function loadCsvRows(
     }
 
     try {
-      const rows = parseCsv(await readFile(path, "utf8"))
+      const text = await readFile(path, "utf8");
+      const rows = parseCsv(text)
         .map(ensembleCsvToPipelineRow)
         .filter((row): row is PipelineOutputRow => row !== null);
-      if (rows.length > 0) {
+      if (rows.length > 0 || /^\s*(?:\uFEFF)?[^\r\n]*ticker[^\r\n]*/.test(text)) {
         const mtimeMs = (await stat(path)).mtimeMs;
         if (!latest || mtimeMs > latest.mtimeMs) {
-          latest = { mtimeMs, rows };
+          latest = { mtimeMs, rows: rows.map(row => withFileMeta(row, mtimeMs)) };
         }
       }
     } catch (error) {
@@ -316,6 +321,10 @@ async function loadCsvRows(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function withFileMeta(row: PipelineOutputRow, mtimeMs: number): PipelineOutputRow {
+  return { ...row, data_meta: { ...row.data_meta, source: row.data_meta?.source === "sample" ? "sample" : "cache", asOf: new Date(mtimeMs).toISOString() } };
 }
 
 /** Maps Gemini's Bullish/Bearish/Neutral to the pipeline's sentiment label. */
@@ -407,7 +416,7 @@ function newsSentimentMapFromEvaluation(evaluation: GeminiEvaluation): Map<numbe
   const add = (indexValue: unknown, sentimentValue: unknown, reasonValue?: unknown) => {
     const index = toFiniteOrNull(indexValue);
     const sentiment = stringValue(sentimentValue);
-    if (index === null || index < 1 || sentiment === "") {
+    if (index === null || index < 1 || !/^(positive|negative|neutral|bullish|bearish)$/i.test(sentiment)) {
       return;
     }
 
@@ -501,12 +510,19 @@ function applyNewsToRow(row: PipelineOutputRow, entry: GeminiNewsEntry): Pipelin
   const sentimentTally = stringValue(evaluation.news_sentiment_tally);
   const tradingInsight = stringValue(evaluation.trading_insight);
   const news = toPipelineNews(entry.news, evaluation);
+  const rawStatus = stringValue(entry.status).toLowerCase();
+  const hasExplicitEvidence = news.some(item => item.sentiment !== undefined) ||
+    (/(긍정|중립|부정)\s*\d+\s*건/.test(sentimentTally) && [...sentimentTally.matchAll(/(?:긍정|중립|부정)\s*(\d+)\s*건/g)].some(match => Number(match[1]) > 0));
+  // crolling.py emits only successful LLM entries but swallows crawling failures
+  // into [] and emits no collection status. [] is therefore NOT confirmed zero.
+  const newsStatus = rawStatus || (hasExplicitEvidence ? "llm_evidence" : "unknown");
+  const newsCollected = Array.isArray(entry.news) && isNewsCollectionSuccess(rawStatus);
 
   const hasEvaluation =
-    sentiment !== "" || summary !== "" || impact !== null || combinedScore !== null || newsScore !== null;
+    sentiment !== "" || sentimentTally !== "" || summary !== "" || impact !== null || combinedScore !== null || newsScore !== null;
   if (!hasEvaluation) {
     // Gemini failed/skipped this ticker — still surface any crawled headlines.
-    return news.length > 0 ? { ...row, news } : row;
+    return { ...row, news, data_meta: { ...row.data_meta, newsCollected, newsStatus, newsMethod: "unknown" } };
   }
 
   const { label, label_ko } = sentimentLabelFromGemini(sentiment);
@@ -535,6 +551,7 @@ function applyNewsToRow(row: PipelineOutputRow, entry: GeminiNewsEntry): Pipelin
   return {
     ...row,
     news,
+    data_meta: { ...row.data_meta, newsCollected, newsStatus, newsMethod: "llm", newsTally: sentimentTally || undefined },
     result: {
       ...row.result,
       label,
@@ -559,39 +576,54 @@ function applyNewsToRow(row: PipelineOutputRow, entry: GeminiNewsEntry): Pipelin
 }
 
 function applyEventToRow(row: PipelineOutputRow, entry: EventEntry): PipelineOutputRow {
-  const finalScore = toFiniteOrNull(entry.final_score) ?? toFiniteOrNull(row.input_row.ensemble_pred_return) ?? 0;
-  const newsDelta = toFiniteOrNull(entry.news_delta) ?? 0;
+  const finalScore = toFiniteOrNull(entry.final_score);
+  const newsDelta = toFiniteOrNull(entry.news_delta);
   const rank = toFiniteOrNull(entry.final_rank);
   const percentile = toFiniteOrNull(entry.final_rank_percentile);
   const applied = entry.applied === true;
-  const accepted = toFiniteOrNull(entry.accepted_events) ?? 0;
+  const rawAccepted = toFiniteOrNull(entry.accepted_events);
+  const accepted = rawAccepted !== null && Number.isInteger(rawAccepted) && rawAccepted >= 0 ? rawAccepted : null;
   const articles = Array.isArray(entry.news) ? entry.news : [];
   const news = articles.map((item, index) => {
     const sentiment = stringValue(item.sentiment);
-    const mapped = sentimentLabelFromGemini(sentiment);
+    const mapped = /^(positive|negative|neutral|bullish|bearish)$/i.test(sentiment) ? sentimentLabelFromGemini(sentiment) : null;
     return {
       index: index + 1,
       title: stringValue(item.title),
       url: stringValue(item.url),
       source: stringValue(item.source),
       pub_date: stringValue(item.pub_date),
-      sentiment: mapped.label,
-      sentiment_ko: mapped.label_ko,
+      sentiment: mapped?.label ?? (sentiment || undefined),
+      sentiment_ko: mapped?.label_ko,
       sentiment_reason: stringValue(item.reason) || stringValue(item.evidence_quote),
     };
   });
   const positiveCount = news.filter((item) => item.sentiment === "POSITIVE").length;
   const negativeCount = news.filter((item) => item.sentiment === "NEGATIVE").length;
-  const neutralCount = news.length - positiveCount - negativeCount;
-  const direction = finalScore > 0 ? { label: "POSITIVE", label_ko: "상승 예상" }
+  const neutralCount = news.filter(item => item.sentiment === "NEUTRAL").length;
+  const direction = finalScore === null ? { label: "NEUTRAL", label_ko: "판정 불가" } : finalScore > 0 ? { label: "POSITIVE", label_ko: "상승 예상" }
     : finalScore < 0 ? { label: "NEGATIVE", label_ko: "하락 예상" }
       : { label: "NEUTRAL", label_ko: "중립" };
-  const status = stringValue(entry.status);
-  const summary = `Huber 예상수익률 ${(Number(row.input_row.ensemble_pred_return ?? 0) * 100).toFixed(2)}%. ` +
-    (applied ? `검증된 뉴스 보정 ${newsDelta >= 0 ? "+" : ""}${(newsDelta * 100).toFixed(2)}%p를 적용했습니다.`
-      : `${accepted}건의 직접 관련 사건을 확인했으며, 뉴스 보정은 검증 기준 미통과로 적용하지 않았습니다.`);
+  const status = stringValue(entry.status).toLowerCase();
+  const rawPrediction = toFiniteOrNull(row.input_row.ensemble_pred_return);
+  const rawNewsDelta = toFiniteOrNull(entry.news_delta);
+  const summary = (rawPrediction === null ? "Huber 원본 예측수익률 미확인. " : `Huber 예상수익률 ${(rawPrediction * 100).toFixed(2)}%. `) +
+    (applied ? rawNewsDelta === null ? "적용된 뉴스 보정값은 미확인입니다." : `검증된 뉴스 보정 ${rawNewsDelta >= 0 ? "+" : ""}${(rawNewsDelta * 100).toFixed(2)}%p를 적용했습니다.`
+      : `${accepted === null ? "직접 관련 사건 수는 미확인" : `${accepted}건의 직접 관련 사건을 확인`}이며, 뉴스 보정은 적용하지 않았습니다.`);
   return {
     ...row,
+    data_meta: {
+      ...row.data_meta,
+      rawFinalPrediction: toFiniteOrNull(entry.final_score),
+      rawModelRank: toFiniteOrNull(row.input_row.pred_rank),
+      rawFinalRank: rank,
+      newsCollected: Array.isArray(entry.news) && isNewsCollectionSuccess(status),
+      newsStatus: status,
+      newsMethod: articles.every(item => /^(positive|negative|neutral|bullish|bearish)$/i.test(stringValue(item.sentiment))) ? "llm" : "unknown",
+      // Do not count an absent/unknown article label as an explicit LLM neutral vote.
+      newsTally: articles.every(item => /^(positive|negative|neutral|bullish|bearish)$/i.test(stringValue(item.sentiment)))
+        ? { positive: positiveCount, neutral: neutralCount, negative: negativeCount } : null,
+    },
     input_row: {
       ...row.input_row,
       final_pred_return: finalScore,
@@ -611,9 +643,9 @@ function applyEventToRow(row: PipelineOutputRow, entry: EventEntry): PipelineOut
       trading_insight: applied ? "뉴스 사건 보정이 순위에 반영됐습니다." : "뉴스 분석은 참고 근거이며 현재 매매 순위에는 반영되지 않습니다.",
       key_data_points: [
         ...row.result.key_data_points,
-        `최종 예상수익률: ${(finalScore * 100).toFixed(2)}%`,
-        `뉴스 보정: ${(newsDelta * 100).toFixed(2)}%p`,
-        `본문 분석 ${news.length}건 · 직접 관련 사건 ${accepted}건`,
+        `최종 예상수익률: ${finalScore === null ? "미확인" : `${(finalScore * 100).toFixed(2)}%`}`,
+        `뉴스 보정: ${newsDelta === null ? "미확인" : `${(newsDelta * 100).toFixed(2)}%p`}`,
+        `본문 분석 ${news.length}건 · 직접 관련 사건 ${accepted === null ? "미확인" : `${accepted}건`}`,
         `긍정 ${positiveCount}건 · 중립 ${neutralCount}건 · 부정 ${negativeCount}건`,
       ],
       caution: stringValue(entry.activation_reason),
@@ -622,6 +654,7 @@ function applyEventToRow(row: PipelineOutputRow, entry: EventEntry): PipelineOut
 }
 
 async function loadEventResult(): Promise<Map<string, EventEntry> | null> {
+  if ((await readPipelineRunMarker())?.mode === "model_only") return null;
   let latest: { mtimeMs: number; map: Map<string, EventEntry> } | null = null;
   for (const path of candidatePaths(EVENT_RESULT_FILES, false)) {
     try {
@@ -644,6 +677,7 @@ async function loadEventResult(): Promise<Map<string, EventEntry> | null> {
 
 /** Loads the latest Gemini news result keyed by 6-digit ticker, or null if absent. */
 async function loadNewsResult(): Promise<Map<string, GeminiNewsEntry> | null> {
+  if ((await readPipelineRunMarker())?.mode === "model_only") return null;
   let latest: { mtimeMs: number; map: Map<string, GeminiNewsEntry> } | null = null;
 
   for (const path of candidatePaths(NEWS_RESULT_FILES)) {
@@ -678,8 +712,82 @@ async function loadNewsResult(): Promise<Map<string, GeminiNewsEntry> | null> {
   return latest?.map ?? null;
 }
 
+const SUPPLY_CHECKED_FILE = "step2_supply_checked.csv";
+const REAL_SUPPLY_STATUSES = new Set(["ok", "insufficient_data"]);
+function csvBoolean(value: string | undefined): boolean | null {
+  const text = (value ?? "").trim().toLowerCase();
+  return text === "true" ? true : text === "false" ? false : null;
+}
+function nonNegativeInteger(value: string | undefined): number | null {
+  const parsed = toFiniteOrNull(value);
+  return parsed !== null && Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+/**
+ * Model-only runs keep supply only in step2_supply_checked.csv (the whole-rank CSV has none). Read it with the same
+ * parser and freshness rule as the other outputs, and only if the run marker is unchanged across the read.
+ * Duplicate tickers are ambiguous and dropped.
+ */
+async function loadModelOnlySupply(marker: PipelineRunMarker): Promise<Map<string, Record<string, string>>> {
+  const found = new Map<string, Record<string, string>>();
+  if (marker.status !== "completed") return found;
+  let latest: { mtimeMs: number; records: Record<string, string>[] } | null = null;
+  for (const path of candidatePaths([SUPPLY_CHECKED_FILE], false)) {
+    try {
+      const text = await readFile(path, "utf8"), mtimeMs = (await stat(path)).mtimeMs;
+      if (!latest || mtimeMs > latest.mtimeMs) latest = { mtimeMs, records: parseCsv(text) };
+    } catch {
+      // Absent or unreadable: supply stays missing. The error is never surfaced.
+    }
+  }
+  if (!latest || !isFreshForRun(latest.mtimeMs, marker)) return found;
+  const after = await readPipelineRunMarker();
+  if (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode) return found;
+  const duplicates = new Set<string>();
+  for (const record of latest.records) {
+    const ticker = record.ticker ?? "";
+    if (found.has(ticker)) duplicates.add(ticker);
+    found.set(ticker, record);
+  }
+  duplicates.forEach(ticker => found.delete(ticker));
+  return found;
+}
+
+/**
+ * Copies only measured supply values onto the matching whole-rank row. A record is used only when it describes the same
+ * prediction (exact ticker, base date, target, rank and value) and carries real data: not_checked rows hold placeholder
+ * zeros and fetch_failed/empty rows hold nothing, so they are never promoted. combined_positive_days is not derived.
+ */
+function applyModelSupply(row: PipelineOutputRow, record: Record<string, string> | undefined): PipelineOutputRow {
+  if (!record) return row;
+  const input = row.input_row, ticker = tickerFromRow(row);
+  const rank = toFiniteOrNull(input.pred_rank), prediction = toFiniteOrNull(input.ensemble_pred_return);
+  const baseDate = isoDate(record.prediction_base_date);
+  if (record.ticker !== ticker || record.prediction_status !== "ok" || record.prediction_target !== MODEL_TARGET || input.prediction_target !== MODEL_TARGET ||
+    baseDate === null || baseDate !== input.prediction_base_date || rank === null || positiveInteger(record.pred_rank) !== rank ||
+    prediction === null || toFiniteOrNull(record.ensemble_pred_return) !== prediction) return row;
+  const status = record.supply_status, window = positiveInteger(record.supply_window), dataDays = positiveInteger(record.supply_data_days);
+  const foreignNet = toFiniteOrNull(record.foreign_net_buy_sum), institutionNet = toFiniteOrNull(record.inst_net_buy_sum);
+  const foreignDays = nonNegativeInteger(record.foreign_positive_days), institutionDays = nonNegativeInteger(record.inst_positive_days);
+  const enough = csvBoolean(record.supply_data_enough);
+  const combinedDays = nonNegativeInteger(record.combined_positive_days);
+  if (status === undefined || !REAL_SUPPLY_STATUSES.has(status) || window === null || dataDays === null || foreignNet === null || institutionNet === null ||
+    foreignDays === null || institutionDays === null || enough === null || foreignDays > dataDays || institutionDays > dataDays ||
+    enough !== (dataDays >= window) || (status === "ok") !== enough) return row;
+  return { ...row, input_row: { ...input, foreign_net_buy_sum: foreignNet, inst_net_buy_sum: institutionNet, foreign_positive_days: foreignDays,
+    inst_positive_days: institutionDays, combined_positive_days: combinedDays !== null && combinedDays <= dataDays ? combinedDays : null,
+    supply_window: window, supply_data_days: dataDays, supply_data_enough: enough, supply_status: status } };
+}
+
 /** Overlays the Gemini news result onto candidate rows, matched by ticker. */
 async function overlayNewsResult(rows: PipelineOutputRow[]): Promise<PipelineOutputRow[]> {
+  const marker = await readPipelineRunMarker();
+  if (marker?.mode === "model_only") {
+    const supply = await loadModelOnlySupply(marker);
+    return rows.map(row => applyModelSupply({ ...row, news: [], data_meta: { ...row.data_meta, rawFinalPrediction: null, rawFinalRank: null,
+      newsCollected: false, newsMethod: "unknown", newsStatus: "skipped", newsTally: null },
+      input_row: { ...row.input_row, final_pred_return: null, news_adjustment: null, news_applied: false } }, supply.get(tickerFromRow(row))));
+  }
   const events = await loadEventResult();
   if (events) {
     return rows.map((row) => {
@@ -701,6 +809,8 @@ async function overlayNewsResult(rows: PipelineOutputRow[]): Promise<PipelineOut
 
 async function loadBaseRows(): Promise<PipelineOutputRow[] | null> {
   const marker = await readPipelineRunMarker();
+  // STEP2 model selections are not news-adjusted final candidates.
+  if (marker?.mode === "model_only") return marker.status === "completed" ? [] : null;
   if (!marker && process.env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") {
     return null;
   }
@@ -727,7 +837,7 @@ async function loadBaseRows(): Promise<PipelineOutputRow[] | null> {
         if (!markerAllowsLoadedFile(marker, mtimeMs)) {
           continue;
         }
-        return parsed;
+        return parsed.map(row => withFileMeta(row, mtimeMs));
       }
     } catch {
       // Try the next legacy path.
@@ -814,6 +924,126 @@ export async function getStockAnalysisPayload(ticker: string): Promise<PipelineO
   }
   const rows = fullRank ? await overlayNewsResult(fullRank.rows) : top10Rows;
   return rows?.find((row) => String(row.input_row?.ticker ?? row.result?.ticker ?? "").padStart(6, "0") === normalized) ?? null;
+}
+
+/** Full model ranking; it is never narrowed to final news-filtered candidates. */
+export async function getRankPayload(): Promise<PipelineOutputRow[]> {
+  const marker = await readPipelineRunMarker();
+  if ((!marker && process.env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && marker.status !== "completed")) return [];
+  const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false);
+  return rank && markerAllowsLoadedFile(marker, rank.mtimeMs) ? overlayNewsResult(rank.rows) : [];
+}
+
+/** Diagnostic only. Reuses the production parsers/loaders without changing their API contracts. */
+export async function inspectPipelineResultAvailability(): Promise<{ candidates: PipelineAvailability; rank: PipelineAvailability }> {
+  const unavailable = (state: PipelineAvailability["state"]): PipelineAvailability => ({ state, count: null, source: "unknown", asOf: null });
+  const marker = await readPipelineRunMarker();
+  if (!marker || marker.status !== "completed") return { candidates: unavailable("blocked"), rank: unavailable("blocked") };
+  if (!Number.isFinite(marker.startedAt) || marker.startedAt <= 0 ||
+    (marker.finishedAt !== undefined && (!Number.isFinite(marker.finishedAt) || marker.finishedAt < marker.startedAt))) {
+    return { candidates: unavailable("invalid"), rank: unavailable("invalid") };
+  }
+  const failedLoad = async (paths: string[]): Promise<PipelineAvailability> => {
+    let exists = false, fresh = false;
+    for (const path of paths) {
+      try { const file = await stat(path); if (!file.isFile()) continue; exists = true; fresh ||= isFreshForRun(file.mtimeMs, marker); }
+      catch (error) { if ((error as { code?: string }).code !== "ENOENT") return unavailable("unknown"); }
+    }
+    return unavailable(!exists ? "missing" : !fresh ? "stale" : "invalid");
+  };
+  const ready = (rows: PipelineOutputRow[], asOf: string | null): PipelineAvailability => rows.some(row => row.data_meta?.source === "sample")
+    ? { state: "sample", count: null, source: "sample", asOf }
+    : { state: rows.length ? "available" : "empty", count: rows.length, source: "cache", asOf };
+  const candidates = async (): Promise<PipelineAvailability> => {
+    if (marker.mode === "model_only") return unavailable("not_produced");
+    try {
+      const base = await loadBaseRows();
+      if (base !== null) {
+        const rows = await getCandidatesPayload();
+        const asOf = base.map(row => row.data_meta?.asOf).find((time): time is string => typeof time === "string") ?? null;
+        return base.some(row => row.data_meta?.source === "sample") ? ready(base, asOf) : ready(rows, asOf);
+      }
+    } catch { return unavailable("invalid"); }
+    return failedLoad([...candidatePaths(CSV_RESULT_FILES), ...candidatePaths(JSON_RESULT_FILES), ...candidatePaths(LEGACY_JSON_RESULT_FILES)]);
+  };
+  const rank = async (): Promise<PipelineAvailability> => {
+    try {
+      const loaded = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false);
+      if (loaded && isFreshForRun(loaded.mtimeMs, marker)) return ready(await overlayNewsResult(loaded.rows), new Date(loaded.mtimeMs).toISOString());
+    } catch { return unavailable("invalid"); }
+    return failedLoad(candidatePaths(FULL_RANK_CSV_RESULT_FILES, false));
+  };
+  const [candidateResult, rankResult] = await Promise.all([candidates(), rank()]);
+  const after = await readPipelineRunMarker();
+  if (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode) {
+    return { candidates: unavailable("unknown"), rank: unavailable("unknown") };
+  }
+  return { candidates: candidateResult, rank: rankResult };
+}
+
+const MODEL_TARGET = "next_session_open_to_close";
+const MODEL_OUTPUT_COLUMNS = ["ticker", "ensemble_pred_return", "prediction_target", "prediction_status", "pred_rank", "pred_pool_size", "prediction_base_date"];
+
+function isoDate(value: string | undefined): string | null {
+  const text = (value ?? "").trim();
+  const time = /^\d{4}-\d{2}-\d{2}$/.test(text) ? Date.parse(`${text}T00:00:00Z`) : Number.NaN;
+  // Date.parse accepts neither month 13 nor day 40, but rolls Feb 30 over, so require an exact round trip.
+  return Number.isFinite(time) && new Date(time).toISOString().startsWith(text) ? text : null;
+}
+function positiveInteger(value: string | undefined): number | null {
+  const parsed = toFiniteOrNull(value);
+  return parsed !== null && Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
+}
+
+type ValidatedModelRow = { ticker: string; prediction: number; rank: number };
+/** One STEP2 CSV: fresh, schema-complete, and every ok row carries a finite prediction with the agreed target and date. */
+function validateModelRows(records: Record<string, string>[]): { ok: ValidatedModelRow[]; baseDate: string; poolSize: number; all: number } {
+  const fail = (): never => { throw new Error("Invalid model output rows."); };
+  if (records.length === 0) fail();
+  if (records.some(row => !/^\d{6}$/.test(row.ticker ?? "") || row.ticker === "000000")) fail();
+  if (new Set(records.map(row => row.ticker)).size !== records.length) fail();
+  const ok = records.filter(row => row.prediction_status === "ok");
+  if (ok.length === 0) fail();
+  // A row that is not ok must not claim a model rank.
+  if (records.some(row => row.prediction_status !== "ok" && row.pred_rank?.trim())) fail();
+  const dates = new Set(ok.map(row => isoDate(row.prediction_base_date)));
+  const [baseDate] = [...dates];
+  if (dates.size !== 1 || baseDate === null) fail();
+  const rows = ok.map((row): ValidatedModelRow => {
+    const prediction = toFiniteOrNull(row.ensemble_pred_return), rank = positiveInteger(row.pred_rank);
+    if (prediction === null || rank === null || row.prediction_target !== MODEL_TARGET) return fail();
+    return { ticker: row.ticker, prediction, rank };
+  });
+  const poolSizes = new Set(ok.map(row => positiveInteger(row.pred_pool_size)));
+  return { ok: rows, baseDate: baseDate as string, poolSize: poolSizes.size === 1 ? [...poolSizes][0] ?? 0 : 0, all: records.length };
+}
+
+/**
+ * Validate exact STEP2 outputs before a model-only completion marker is written. A fresh,
+ * parseable CSV is not enough: the whole-rank file must contain finite ok predictions with a
+ * consecutive 1..N rank, one pool size and one base date, and the selection must be the exact
+ * top of that same ranking. Anything else is a failed run, never an "empty" completion.
+ */
+export async function validateModelOnlyOutputs(outputDir: string, startedAt: number): Promise<{ rows: number; modelSelectionRows: number }> {
+  const load = async (name: string): Promise<Record<string, string>[]> => {
+    const path = join(outputDir, name), text = await readFile(path, "utf8"), file = await stat(path);
+    if (!file.isFile() || !Number.isFinite(file.mtimeMs) || file.mtimeMs + 1000 < startedAt) throw new Error("Model output was not updated.");
+    const header = text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0].split(",").map(value => value.trim());
+    if (!MODEL_OUTPUT_COLUMNS.every(key => header.includes(key))) throw new Error("Invalid model output schema.");
+    return parseCsv(text);
+  };
+  const [rankRecords, selectionRecords] = await Promise.all([load("step2_all_transformer_rank.csv"), load("step2_final_top10.csv")]);
+  const rank = validateModelRows(rankRecords), selection = validateModelRows(selectionRecords);
+  const inconsistent = (): never => { throw new Error("Inconsistent model selection."); };
+  const ranked = [...rank.ok].sort((a, b) => a.rank - b.rank);
+  // Ranks are exactly 1..N in non-increasing prediction order, and N matches the declared pool size.
+  if (ranked.some((row, index) => row.rank !== index + 1 || (index > 0 && row.prediction > ranked[index - 1].prediction)) || rank.poolSize !== ranked.length) inconsistent();
+  if (selection.baseDate !== rank.baseDate || selection.poolSize !== rank.poolSize || selection.ok.length !== selection.all || selection.ok.length > ranked.length) inconsistent();
+  const byTicker = new Map(ranked.map(row => [row.ticker, row]));
+  const picked = [...selection.ok].sort((a, b) => a.rank - b.rank);
+  // The selection is the top-k of the same ranking with identical raw values.
+  if (picked.some((row, index) => row.rank !== index + 1 || byTicker.get(row.ticker)?.rank !== row.rank || byTicker.get(row.ticker)?.prediction !== row.prediction)) inconsistent();
+  return { rows: rankRecords.length, modelSelectionRows: selectionRecords.length };
 }
 
 /**

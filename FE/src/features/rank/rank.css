@@ -1,0 +1,46 @@
+@layer components {
+  .rank-page { display:grid; gap:20px; min-width:0; color:var(--ds-fg); }
+  .rank-title-row,.rank-section-heading,.rank-controls,.rank-pagination { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+  .rank-title-row h1 { font-size:32px; line-height:1.25; margin:8px 0 10px; letter-spacing:-.045em; }
+  .rank-eyebrow { font-size:12px; font-weight:700; color:var(--ds-fg-2); letter-spacing:.04em; margin:0; }
+  .rank-muted { color:var(--ds-fg-2); font-size:13px; line-height:1.7; margin:0; }
+  .rank-card { min-width:0; border-radius:22px; background:var(--ds-surface); padding:24px; }
+  .rank-card h2 { font-size:20px; letter-spacing:-.035em; margin:0; }
+  .rank-card h2 span { color:var(--ds-fg-2); font-size:13px; margin-left:8px; font-weight:500; }
+  .rank-button { display:inline-flex; align-items:center; justify-content:center; min-height:40px; gap:8px; border:0; border-radius:12px; padding:8px 14px; background:var(--ds-surface-2); color:var(--ds-fg); cursor:pointer; font:inherit; font-size:13px; }
+  .rank-button:disabled { opacity:.5; cursor:default; }
+  .rank-button:focus-visible,.rank-table button:focus-visible,.rank-table a:focus-visible,.rank-controls input:focus-visible,.rank-controls select:focus-visible,.rank-table-scroll:focus-visible { outline:2px solid var(--ds-focus); outline-offset:3px; }
+  .rank-controls { margin:22px 0 12px; justify-content:flex-start; }
+  .rank-search { display:flex; align-items:center; gap:9px; border-radius:12px; padding:0 12px; background:var(--ds-surface-2); color:var(--ds-fg-2); min-height:44px; width:min(360px,100%); box-sizing:border-box; }
+  .rank-search input { color:var(--ds-fg); background:transparent; border:0; min-height:44px; min-width:0; width:100%; font:inherit; font-size:14px; }
+  .rank-search input::placeholder { color:var(--ds-fg-2); }
+  .rank-filter { display:flex; align-items:center; gap:10px; color:var(--ds-fg-2); font-size:13px; }
+  .rank-filter select { border:1px solid var(--ds-line); border-radius:10px; min-height:44px; padding:0 12px; background:var(--ds-surface-2); color:var(--ds-fg); font:inherit; }
+  .rank-table-scroll { overflow:auto; max-width:100%; border-radius:12px; scroll-padding-inline-start: 200px; }
+  .rank-scroll-hint { display: flex; align-items: center; gap: 6px; color: var(--ds-fg-2); font-size: 12px; line-height: 1.6; margin: 8px 0 12px; }
+  .rank-table { border-collapse:collapse; width:100%; min-width:1120px; text-align:left; font-size:13px; }
+  .rank-table.rank-model-table { min-width:760px; }
+  .rank-table th,.rank-table td { padding:16px 12px; border-bottom:1px solid var(--ds-line); vertical-align:middle; }
+  .rank-table th { color:var(--ds-fg-2); font-size:12px; font-weight:600; white-space:nowrap; }
+  .rank-table th button { border:0; background:transparent; color:inherit; font:inherit; min-height:36px; display:flex; align-items:center; gap:5px; padding:0 3px; cursor:pointer; }
+  .rank-table td { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .rank-table th:first-child,.rank-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--ds-surface); box-shadow: 1px 0 0 var(--ds-line); }
+  .rank-table th:first-child { z-index: 2; }
+  .rank-stock { display:flex; align-items:center; gap:10px; min-width:155px; }
+  .rank-stock a { display:flex; flex-direction:column; justify-content:center; color:var(--ds-fg); text-decoration:none; min-height:42px; gap:5px; }
+  .rank-stock a:hover strong { text-decoration:underline; }
+  .rank-stock small,.rank-row-note { color:var(--ds-fg-2); font-size:12px; display:block; margin-top:5px; font-weight:400; }
+  .rank-rise { color:var(--ds-rise); }.rank-fall { color:var(--ds-fall); }
+  .rank-pagination { justify-content:flex-end; margin-top:20px; gap:10px; font-size:13px; }
+  .rank-pagination span { margin-right:auto; color:var(--ds-fg-2); }
+  .rank-help { margin-top:22px; }
+  .rank-empty { padding:44px 12px; color:var(--ds-fg-2); line-height:1.8; text-align:center; }
+  .rank-notice { border-radius:14px; background:var(--ds-warn-soft); padding:14px 18px; line-height:1.6; font-size:13px; }
+  @media(max-width:600px) { .rank-card { padding:20px 16px; }.rank-title-row { align-items:flex-start; }.rank-title-row h1 { font-size:28px; }.rank-controls { gap:12px; }.rank-search { width:100%; }.rank-section-heading { gap:8px; }.rank-table th,.rank-table td { padding:14px 10px; } }
+  @media(max-width:600px) {
+    .rank-table-scroll { scroll-padding-inline-start: 174px; }
+    .rank-table th:first-child,.rank-table td:first-child { min-width: 154px; max-width: 154px; width: 154px; white-space: normal; }
+    .rank-stock { min-width: 134px; max-width: 134px; gap: 6px; }
+    .rank-stock a { min-width: 0; overflow-wrap: anywhere; }
+  }
+}

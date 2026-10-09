@@ -1,0 +1,51 @@
+﻿{
+    "limitation":  "과거 전체 요청 로그 없음. 서버·원장 소스는 열람하지 않음.",
+    "previousReport":  "followup2-baseline-verification.json",
+    "checkedAt":  "2026-10-09T15:42:54.5044540Z",
+    "files":  [
+                  {
+                      "sha256":  "135CE9EB224AF740CDEFE100EAEDC2DF577990A211C07E824CC3D2A772694BEB",
+                      "path":  "artifacts/demo-ready/verify.mjs"
+                  },
+                  {
+                      "sha256":  "EC90B9D3D83D0263B0470880FF617146255D74DC0D5E6DE91388871A8A84D7CA",
+                      "path":  "artifacts/demo-ready/verify-briefing.mjs"
+                  },
+                  {
+                      "sha256":  "D4887F3A72CA096C1DC338EEC3F896199E293F4A5C967E05B97DF5FB825637BE",
+                      "path":  "scripts/verify/cdp-browser.mjs"
+                  },
+                  {
+                      "sha256":  "B88D5DF25C156A66AA3B3110F4BEE70CA634E058E1074A8DBE2BBCC7BE75D1AE",
+                      "path":  "src/features/briefing/AnalysisControl.tsx"
+                  },
+                  {
+                      "sha256":  "3A31652BCDCBA9E9A433ACA97FF2BF1A1807DDB25D615EBAC3CE8579877CF318",
+                      "path":  "src/shared/api/analysis.ts"
+                  }
+              ],
+    "markerUnchanged":  true,
+    "finalMarker":  {
+                        "runId":  "9cba7095-3f3c-47ff-8d5c-5115b9558cf9",
+                        "kind":  "adhoc",
+                        "state":  "completed",
+                        "mode":  "model_only",
+                        "startedAt":  "2026-10-09T15:19:31.769Z",
+                        "finishedAt":  "2026-10-09T15:19:49.289Z",
+                        "source":  "cache",
+                        "asOf":  "2026-10-09T15:19:49.296Z"
+                    },
+    "checkedAfter":  "2026-10-09T15:59:37.9528459Z",
+    "conclusion":  "확인한 스크립트·테스트에서 과거 실행을 유발한 경로 또는 근거 없음. 이번 실데이터 검증 시작 클릭 및 비GET 요청 0건, 전후 marker 동일. 과거 전체 로그 부재로 호출 주체 확정 불가. 00:18 기록 독립 확인 못 함.",
+    "evidence":  [
+                     "README.md:58",
+                     "briefing-verification.json",
+                     "followup2-baseline-verification.json",
+                     "run-audit-before.json",
+                     "run-audit-after.json",
+                     "src/features/briefing/AnalysisControl.test.tsx:16",
+                     "src/test/routes.test.js:9",
+                     "src/test/pipelineRunner.test.js:3",
+                     "src/test/runLedger.test.js:12"
+                 ]
+}

@@ -7,6 +7,9 @@ declare const process: {
 };
 
 export type PipelineRunMarker = {
+  runId?: string;
+  kind?: "official" | "adhoc";
+  mode?: "full" | "model_only";
   status: "running" | "completed" | "failed";
   startedAt: number;
   finishedAt?: number;

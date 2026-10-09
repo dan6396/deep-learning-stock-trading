@@ -1,0 +1,64 @@
+﻿{
+    "checkedAt":  "2026-10-09T12:36:41.9004788Z",
+    "runs":  [
+                 {
+                     "runId":  "6d64c696-cb32-45f8-930e-6d92cea4ffe4",
+                     "kind":  "official",
+                     "status":  "completed",
+                     "baseDate":  "2026-10-08",
+                     "targetDate":  null,
+                     "selectedCount":  5,
+                     "measuredCount":  0,
+                     "outcomeState":  "waiting",
+                     "reason":  "KIS 휴장일 달력 또는 실제 코스피 거래일 기록에서 다음 거래일을 아직 확인하지 못했습니다. 달력 권한이 없으면 다음 거래일 시세가 제공된 뒤 확인·수집합니다."
+                 },
+                 {
+                     "runId":  "a113b732-54b6-4f16-8fa0-025278667f18",
+                     "kind":  "adhoc",
+                     "status":  "completed",
+                     "baseDate":  "2026-10-08",
+                     "targetDate":  null,
+                     "selectedCount":  5,
+                     "measuredCount":  0,
+                     "outcomeState":  "waiting",
+                     "reason":  "KIS 휴장일 달력 또는 실제 코스피 거래일 기록에서 다음 거래일을 아직 확인하지 못했습니다. 달력 권한이 없으면 다음 거래일 시세가 제공된 뒤 확인·수집합니다."
+                 }
+             ],
+    "supply":  [
+                   {
+                       "code":  "001800",
+                       "combinedPositiveDays":  1,
+                       "status":  "ok",
+                       "days":  5
+                   },
+                   {
+                       "code":  "029780",
+                       "combinedPositiveDays":  0,
+                       "status":  "ok",
+                       "days":  5
+                   },
+                   {
+                       "code":  "000270",
+                       "combinedPositiveDays":  0,
+                       "status":  "ok",
+                       "days":  5
+                   },
+                   {
+                       "code":  "007070",
+                       "combinedPositiveDays":  1,
+                       "status":  "ok",
+                       "days":  5
+                   },
+                   {
+                       "code":  "323410",
+                       "combinedPositiveDays":  1,
+                       "status":  "ok",
+                       "days":  5
+                   }
+               ],
+    "collector":  {
+                      "status":  "completed",
+                      "checkedAt":  "2026-10-09T12:36:06.104Z",
+                      "error":  null
+                  }
+}

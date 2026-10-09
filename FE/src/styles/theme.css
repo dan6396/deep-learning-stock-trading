@@ -1,0 +1,118 @@
+/*
+ * Design tokens for the rebuilt screens (Toss-style; see docs/REBUILD_PLAN.md §7).
+ * Dark is the default; [data-theme="light"] on <html> switches the palette.
+ * Text pairs are checked for WCAG AA (4.5:1) against their surfaces.
+ *
+ * Meaning rules: rise/fall are only for 상승/하락. Primary (blue) is only for
+ * interactive controls; data marks use neutral tones so a blue bar is never
+ * read as 하락.
+ */
+:root,
+[data-theme="dark"] {
+  --ds-bg: #17171c;
+  --ds-surface: #202027;
+  --ds-surface-2: #2c2c35;
+  --ds-line: #2a2a32;
+  --ds-fg: #e4e4e5;
+  --ds-fg-2: #c3c3c6;
+  --ds-subtle: #9e9ea4;
+  --ds-rise: #ff5a6a;
+  --ds-rise-soft: rgba(255, 90, 106, 0.16);
+  --ds-fall: #4c9aff;
+  --ds-fall-soft: rgba(76, 154, 255, 0.16);
+  --ds-primary: #1b64da;
+  --ds-on-primary: #ffffff;
+  --ds-link: #4c9aff;
+  --ds-warn: #ffb54c;
+  --ds-warn-soft: rgba(255, 181, 76, 0.14);
+  --ds-focus: #4c9aff;
+}
+
+[data-theme="light"] {
+  --ds-bg: #f2f4f6;
+  --ds-surface: #ffffff;
+  --ds-surface-2: #f2f4f6;
+  --ds-line: #e5e8eb;
+  --ds-fg: #191f28;
+  --ds-fg-2: #4e5968;
+  --ds-subtle: #6b7684;
+  --ds-rise: #d91f35;
+  --ds-rise-soft: #ffeeee;
+  --ds-fall: #1b64da;
+  --ds-fall-soft: #e8f3ff;
+  --ds-primary: #1b64da;
+  --ds-on-primary: #ffffff;
+  --ds-link: #1b64da;
+  --ds-warn: #a55300;
+  --ds-warn-soft: #fff3e0;
+  --ds-focus: #1b64da;
+}
+
+/* Scoped to the rebuilt shell: setting color-scheme on :root would also darken
+   scrollbars and native controls on the legacy (light) screens. */
+.ds-root {
+  color-scheme: dark;
+}
+
+[data-theme="light"] .ds-root {
+  color-scheme: light;
+}
+
+/* Rebuilt routes only: keep navigation usable at narrow widths. */
+.ds-root { scroll-padding-top: 90px; }
+.ds-root .ds-header a:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; border-radius: 5px; }
+@media (max-width: 700px) {
+  .ds-root .ds-header { flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px 0; }
+  .ds-root .ds-header nav { order: 3; width: 100%; min-height: 42px; }
+  .ds-root .ds-header nav a { flex: 1; font-size: 13px; }
+  .ds-root .ds-main { padding: 20px 16px 36px; }
+}
+
+/* Expose the tokens as Tailwind colors: bg-surface, text-fg, text-rise, ... */
+@theme inline {
+  --color-bg: var(--ds-bg);
+  --color-surface: var(--ds-surface);
+  --color-surface-2: var(--ds-surface-2);
+  --color-line: var(--ds-line);
+  --color-fg: var(--ds-fg);
+  --color-fg-2: var(--ds-fg-2);
+  --color-subtle: var(--ds-subtle);
+  --color-rise: var(--ds-rise);
+  --color-rise-soft: var(--ds-rise-soft);
+  --color-fall: var(--ds-fall);
+  --color-fall-soft: var(--ds-fall-soft);
+  --color-primary: var(--ds-primary);
+  --color-on-primary: var(--ds-on-primary);
+  --color-link: var(--ds-link);
+  --color-warn: var(--ds-warn);
+  --color-warn-soft: var(--ds-warn-soft);
+  --color-focus: var(--ds-focus);
+  --radius-card: 22px;
+  --radius-control: 12px;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Malgun Gothic", sans-serif;
+}
+
+/* Shared site shell; feature layouts retain their own styles. */
+.ds-root { min-width: 0; }
+.ds-header { display: flex; align-items: center; gap: 28px; min-height: 64px; padding: 0 28px; box-shadow: 0 1px 0 var(--ds-line); }
+.ds-brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; color: var(--ds-fg); font-size: 15px; font-weight: 750; text-decoration: none; min-height: 44px; }
+.ds-nav { display: flex; align-self: stretch; gap: 6px; }
+.ds-nav-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; color: var(--ds-fg-2); font-size: 14px; font-weight: 650; text-decoration: none; border-bottom: 3px solid transparent; }
+.ds-nav-active { color: var(--ds-fg); border-bottom-color: var(--ds-fg); }
+.ds-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.ds-theme-button { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-fg-2); cursor: pointer; flex-shrink: 0; }
+.ds-root button:focus-visible, .ds-root a:focus-visible, .ds-root summary:focus-visible, .ds-root input:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
+.ds-root :is(a,button,input,summary,[tabindex],[id]) { scroll-margin-top: 140px; scroll-margin-bottom: 24px; }
+.ds-footer { max-width: 1512px; margin: 0 auto; padding: 24px 28px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--ds-line); font-size: 12px; color: var(--ds-fg-2); }
+.ds-footer p { margin: 6px 0 0; line-height: 1.65; }
+.ds-footer nav { display: flex; gap: 18px; flex-shrink: 0; }
+.ds-footer a { color: var(--ds-fg-2); display: inline-flex; align-items: center; min-height: 32px; }
+@media (max-width: 800px) {
+  .ds-root .ds-header { flex-wrap: wrap; gap: 4px 12px; padding: 8px 16px 0; }
+  .ds-root .ds-header .ds-nav { order: 3; width: 100%; min-height: 44px; gap: 0; }
+  .ds-root .ds-header .ds-nav a { flex: 1; padding: 0 8px; font-size: 13px; }
+  .ds-footer { flex-direction: column; align-items: flex-start; padding: 20px 16px 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-root *, .ds-root *::before, .ds-root *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

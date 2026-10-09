@@ -2,7 +2,10 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
-import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput } from "./pipelineResults";
+import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput, validateModelOnlyOutputs } from "./pipelineResults";
+import { randomUUID } from "node:crypto";
+import { beginRun, completeRun, failRun } from "./runLedger";
+import type { RunKind } from "../src/types/performance";
 
 declare const process: {
   cwd: () => string;
@@ -10,6 +13,11 @@ declare const process: {
 };
 
 export type CandidateAnalysisRunResult = {
+  runId?: string;
+  kind?: RunKind;
+  mode?: "full" | "model_only";
+  modelSelectionRows?: number;
+  candidateKind?: "news_final" | "not_produced";
   dashboardUpdated: boolean;
   elapsedMs: number;
   rows: number;
@@ -255,7 +263,7 @@ function tail(value: string): string {
   return value.length > MAX_LOG_CHARS ? value.slice(value.length - MAX_LOG_CHARS) : value;
 }
 
-function pipelineEnv(env: Record<string, string | undefined>): Record<string, string | undefined> {
+function pipelineEnv(env: Record<string, string | undefined>, modelOnly = false): Record<string, string | undefined> {
   const next: Record<string, string | undefined> = {
     ...env,
     PYTHONIOENCODING: env.PYTHONIOENCODING ?? "utf-8",
@@ -285,7 +293,16 @@ function pipelineEnv(env: Record<string, string | undefined>): Record<string, st
     next.OPENAI_API_KEY = openAiKey;
   }
 
+  if (modelOnly) {
+    for (const name of ["GEMINI_API_KEY", "NAVER_CLIENT_ID", "NAVER_CLIENT_SECRET", "OPENAI_API_KEY", "OPEN_AI_KEY", "OPEN_AI"]) delete next[name];
+  }
   return next;
+}
+
+function analysisMode(env: Record<string, string | undefined>): "full" | "model_only" {
+  if (!env.PIPELINE_ANALYSIS_MODE || env.PIPELINE_ANALYSIS_MODE === "full") return "full";
+  if (env.PIPELINE_ANALYSIS_MODE === "model_only") return "model_only";
+  throw new Error("Unsupported analysis mode.");
 }
 
 async function preparePipelineInputs(inputs: PipelineInputs): Promise<PipelineInputs> {
@@ -380,8 +397,27 @@ async function countJsonObjectRows(newsOutputPath: string): Promise<number> {
   }
 }
 
-async function executeCandidateAnalysis(env = process.env): Promise<CandidateAnalysisRunResult> {
-  const startedAt = Date.now();
+async function executeCandidateAnalysis(env = process.env, startedAt = Date.now(), identity = { runId: randomUUID(), kind: runKind(env) }): Promise<CandidateAnalysisRunResult> {
+  await beginRun(identity.runId, identity.kind, analysisMode(env), startedAt, env);
+  try {
+    const result = await executeCandidatePipeline(env, startedAt, identity);
+    const record = await completeRun(identity.runId, startedAt, env);
+    await writePipelineRunMarker({ status: "completed", mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.parse(record.finishedAt!), rows: result.rows, newsRows: result.newsRows }, env);
+    return { ...result, ...identity };
+  } catch (error) {
+    await failRun(identity.runId, publicCandidateAnalysisError(error), env);
+    await writePipelineRunMarker({ status: "failed", mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.now(), error: publicCandidateAnalysisError(error) }, env);
+    throw error;
+  }
+}
+function runKind(env: Record<string, string | undefined>): RunKind {
+  if (!env.PIPELINE_RUN_KIND || env.PIPELINE_RUN_KIND === "adhoc") return "adhoc";
+  if (env.PIPELINE_RUN_KIND === "official") return "official";
+  throw new Error("Unsupported run classification.");
+}
+async function executeCandidatePipeline(env: Record<string, string | undefined>, startedAt: number, identity: { runId: string; kind: RunKind }): Promise<CandidateAnalysisRunResult> {
+  const mode = analysisMode(env), modelOnly = mode === "model_only";
+  const marker = (value: Parameters<typeof writePipelineRunMarker>[0]) => writePipelineRunMarker({ ...value, ...identity });
   const root = projectRoot(env);
   const scriptPath = join(root, "integrated_pipeline.py");
   const outputDir = pipelineOutputDir(env);
@@ -394,11 +430,11 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
   updateCandidateAnalysisProgress(progressSnapshot(0, 5, "파이프라인 파일과 실행 환경을 확인하는 중입니다."));
   await requireExistingFile(scriptPath, "Pipeline script");
   await mkdir(outputDir, { recursive: true });
-  await writePipelineRunMarker({ startedAt, status: "running" }, env);
+  await marker({ startedAt, status: "running", ...(modelOnly ? { mode } : {}) });
 
   try {
     const inputs = await preparePipelineInputs(resolvePipelineInputs(root, env));
-    const args = [scriptPath, "--run-news", "--output-dir", outputDir, ...pipelineInputArgs(inputs)];
+    const args = [scriptPath, ...(modelOnly ? [] : ["--run-news"]), "--output-dir", outputDir, ...pipelineInputArgs(inputs)];
 
     optionalNumericArg(args, "--candidate-pool", env.PIPELINE_CANDIDATE_POOL);
     optionalNumericArg(args, "--final-max", env.PIPELINE_FINAL_MAX ?? env.PIPELINE_RUN_TOP);
@@ -406,44 +442,50 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
     optionalNumericArg(args, "--supply-window", env.PIPELINE_SUPPLY_WINDOW);
     optionalNumericArg(args, "--supply-min-positive-days", env.PIPELINE_SUPPLY_MIN_POSITIVE_DAYS);
 
+    // Removing provider keys from the child env is not a barrier (the pipeline may fall back to a dotenv file),
+    // so the only guarantee that no news/LLM step runs is that --run-news is absent.
+    if (modelOnly && args.includes("--run-news")) throw new Error("Model-only analysis must not run the news step.");
     updateCandidateAnalysisProgress(progressSnapshot(0, 8, "integrated_pipeline.py 실행을 시작했습니다."));
-    await runProcess(python, args, root, pipelineEnv(env), timeoutMs, recordCandidateAnalysisOutput);
+    await runProcess(python, args, root, pipelineEnv(env, modelOnly), timeoutMs, recordCandidateAnalysisOutput);
+
+    if (modelOnly) {
+      updateCandidateAnalysisProgress(progressSnapshot(6, 95, "모델 원본 순위와 모델 선별 결과를 검증하는 중입니다. 뉴스는 실행하지 않았습니다."));
+      const validated = await validateModelOnlyOutputs(outputDir, startedAt);
+      const result: CandidateAnalysisRunResult = { status: "completed", mode, candidateKind: "not_produced", dashboardUpdated: false,
+        elapsedMs: Date.now() - startedAt, rows: validated.rows, modelSelectionRows: validated.modelSelectionRows, newsRows: 0 };
+      return result;
+    }
 
     updateCandidateAnalysisProgress((current) => progressSnapshot(6, 95, "생성된 step2·step3 결과 파일을 검증하는 중입니다.", current));
     await requireFreshFile(top10CsvPath, "앙상블 Top10 CSV", startedAt);
     await requireFreshFile(step3CsvPath, "STEP3 final Top-5 CSV", startedAt);
     await requireFreshFile(step3JsonPath, "STEP3 news event evidence", startedAt);
-    await writePipelineRunMarker({
+    await marker({
       finishedAt: Date.now(),
       startedAt,
       status: "completed",
-    }, env);
+    });
 
     updateCandidateAnalysisProgress((current) => progressSnapshot(6, 98, "분석 결과를 대시보드 데이터로 변환하는 중입니다.", current));
     const rows = await getCandidatesPayload();
     const result = {
+      mode,
       dashboardUpdated: await refreshDashboardAiFieldsFromPipelineOutput(),
       elapsedMs: Date.now() - startedAt,
       rows: rows.length,
       newsRows: await countJsonObjectRows(step3JsonPath),
       status: "completed" as const,
     };
-    await writePipelineRunMarker({
+    await marker({
       finishedAt: Date.now(),
       newsRows: result.newsRows,
       rows: result.rows,
       startedAt,
       status: "completed",
-    }, env);
+    });
 
     return result;
   } catch (error) {
-    await writePipelineRunMarker({
-      error: publicCandidateAnalysisError(error),
-      finishedAt: Date.now(),
-      startedAt,
-      status: "failed",
-    }, env);
     throw error;
   }
 }
@@ -455,6 +497,9 @@ async function executeCandidateAnalysis(env = process.env): Promise<CandidateAna
  * job in the background and clients poll this status until it settles.
  */
 export type CandidateAnalysisStatus = {
+  runId?: string;
+  kind?: RunKind;
+  mode?: "full" | "model_only";
   status: "idle" | "running" | "completed" | "failed";
   startedAt?: number;
   finishedAt?: number;
@@ -471,6 +516,14 @@ type RunState =
   | { status: "failed"; startedAt: number; finishedAt: number; progress: CandidateAnalysisProgress; error: string };
 
 let runState: RunState = { status: "idle" };
+let runMode: "full" | "model_only" | undefined;
+let runIdentity: { runId: string; kind: RunKind } | undefined;
+
+/** Read-only connection diagnostics: no stale-run transition or marker writes. */
+export function getCandidateAnalysisSnapshot(): { status: RunState["status"]; runId?: string; kind?: RunKind; startedAt?: number; finishedAt?: number } {
+  return { status: runState.status, ...(runState.status !== "idle" ? { ...runIdentity, startedAt: runState.startedAt } : {}),
+    ...(runState.status === "completed" || runState.status === "failed" ? { finishedAt: runState.finishedAt } : {}) };
+}
 
 function candidateProgressStaleMs(): number {
   const parsed = Number(process.env.PIPELINE_PROGRESS_STALE_MS);
@@ -511,6 +564,8 @@ export function getCandidateAnalysisStatus(): CandidateAnalysisStatus {
   switch (runState.status) {
     case "running":
       return {
+        mode: runMode,
+        ...runIdentity,
         status: "running",
         startedAt: runState.startedAt,
         elapsedMs: Date.now() - runState.startedAt,
@@ -518,6 +573,8 @@ export function getCandidateAnalysisStatus(): CandidateAnalysisStatus {
       };
     case "completed":
       return {
+        mode: runMode,
+        ...runIdentity,
         status: "completed",
         startedAt: runState.startedAt,
         finishedAt: runState.finishedAt,
@@ -527,6 +584,8 @@ export function getCandidateAnalysisStatus(): CandidateAnalysisStatus {
       };
     case "failed":
       return {
+        mode: runMode,
+        ...runIdentity,
         status: "failed",
         startedAt: runState.startedAt,
         finishedAt: runState.finishedAt,
@@ -545,11 +604,15 @@ export function getCandidateAnalysisStatus(): CandidateAnalysisStatus {
  * enough to hit the tunnel's gateway timeout. Poll {@link getCandidateAnalysisStatus}.
  */
 export function startCandidateAnalysis(env = process.env): CandidateAnalysisStatus {
+  const mode = analysisMode(env);
+  const kind = runKind(env);
   if (!activeRun) {
+    runMode = mode;
     const startedAt = Date.now();
+    runIdentity = { runId: randomUUID(), kind };
     runState = { status: "running", startedAt, progress: initialProgress() };
 
-    activeRun = executeCandidateAnalysis(env);
+    activeRun = executeCandidateAnalysis(env, startedAt, runIdentity);
     activeRun
       .then((result) => {
         const progress =
@@ -687,6 +750,7 @@ export function startStockNewsAnalysis(
   tickerValue: string,
   env = process.env,
 ): StockNewsAnalysisStatus {
+  if (analysisMode(env) === "model_only") throw new Error("News analysis is disabled in model-only mode.");
   const ticker = normalizedTicker(tickerValue);
   if (!stockNewsRuns.has(ticker)) {
     const startedAt = Date.now();

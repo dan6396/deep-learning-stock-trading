@@ -1,0 +1,20 @@
+﻿PASS whole rank has 199 records paginated in 20-row native table
+PASS original model rank starts ascending without fabricated screen rank
+PASS first prediction sort is descending and aria-sort matches
+PASS all 199 descending values keep measured zero/negative and missing last
+PASS all 199 ascending values keep missing last
+PASS rank search includes a stock outside five final candidates
+PASS 0-or-negative filter includes actual zero and excludes missing
+PASS candidate filter is exactly five confirmed members
+PASS non-candidate actual LLM news is retained instead of labelled unanalysed
+PASS absent watchlist never seeds sample/default codes
+PASS legacy deliberately empty [] survives reload
+PASS watch toggle keeps a fixed accessible name and pressed state
+PASS selected code survives real page reload
+PASS sessionStorage event cannot change localStorage watchlist
+PASS outside-universe saved code keeps unknown name, missing analysis and report link
+PASS real cross-tab newValue [] clears the visible watchlist
+PASS real cross-tab localStorage.clear synchronizes the watchlist
+PASS outside-universe saved code can be removed
+PASS save failure preserves action with explicit session-only notice
+PASS watchlist pending does not assert missing analysis

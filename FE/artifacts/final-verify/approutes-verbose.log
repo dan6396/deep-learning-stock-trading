@@ -1,0 +1,19 @@
+﻿
+ RUN  v3.2.7 C:/Users/PC/Desktop/deep-learning-stock-trading/FE
+
+ ✓ src/app/AppRoutes.test.tsx > mounts the rebuilt home and shell at / 576ms
+ ✓ src/app/AppRoutes.test.tsx > mounts the rebuilt home and shell at /next 35ms
+ ✓ src/app/AppRoutes.test.tsx > keeps dashboard query and adapts its table deep link 34ms
+ ✓ src/app/AppRoutes.test.tsx > preserves /legacy 14ms
+ ✓ src/app/AppRoutes.test.tsx > preserves /legacy/dashboard 16ms
+ ✓ src/app/AppRoutes.test.tsx > preserves /legacy/stock/005930 8ms
+ ✓ src/app/AppRoutes.test.tsx > keeps the shell and correct home link for /missing 85ms
+ ✓ src/app/AppRoutes.test.tsx > keeps the shell and correct home link for /next/missing 46ms
+ ✓ src/app/AppRoutes.test.tsx > restores a preexisting robots policy after leaving the unknown route 30ms
+ ✓ src/app/AppRoutes.test.tsx > integrates search close focus, report navigation, and theme changes 147ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  18:34:31
+   Duration  3.34s (transform 322ms, setup 282ms, collect 297ms, tests 992ms, environment 1.08s, prepare 277ms)
+
