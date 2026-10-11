@@ -28,7 +28,8 @@ describe("briefing comparison rows", () => {
     expect(document.querySelector(".briefing-quote-meta")).toHaveTextContent("시세 API 조회 · 조회/저장 2026. 10. 08. 18:00 · 1건 조회 실패");
     expect([...document.querySelectorAll('[data-value="rank"]')].map(cell => cell.textContent)).toEqual(["06", "07", "08", "09", "10"]);
     const bars = document.querySelectorAll<HTMLElement>(".briefing-prediction-bar i"); expect(bars).toHaveLength(2); expect(bars[0].style.width).toBe("100%"); expect(bars[1].style.width).toBe("50%");
-    expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(10);
+    expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(0);
+    expect(screen.queryByRole("columnheader", { name: "수급" })).not.toBeInTheDocument();
     const first = screen.getAllByRole("button")[0]; first.focus(); fireEvent.keyDown(first, { key: "ArrowDown" });
     expect(select).toHaveBeenLastCalledWith("100002", "keyboard"); expect(screen.getAllByRole("button")[1]).toHaveFocus();
     fireEvent.click(document.querySelectorAll("tbody tr")[2]); expect(select).toHaveBeenLastCalledWith("100003");
@@ -39,8 +40,10 @@ describe("briefing comparison rows", () => {
     expect(sample).toHaveTextContent("—예시"); expect(sample).not.toHaveTextContent("10,000"); expect(sample).not.toHaveTextContent("-1.00%");
     expect(document.querySelector(".briefing-quote-meta")).toHaveTextContent("시세 혼합 · 조회/저장");
   });
-  it("retains the news column and three evidence dots when final candidates exist", async () => {
+  it("retains news when final candidates exist while omitting supply and agreement", async () => {
     mount(true); await waitFor(() => expect(document.querySelectorAll(".briefing-quote-cell strong")[0]).toHaveTextContent("10,000원"));
-    expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(15);
+    expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(0);
+    expect(screen.queryByRole("columnheader", { name: "근거 일치" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "수급" })).not.toBeInTheDocument();
   });
 });

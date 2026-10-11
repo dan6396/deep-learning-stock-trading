@@ -65,6 +65,6 @@ export function ReportChart({ code }: { code: string }) {
     {chart.isPending ? <p className="report-empty" role="status">선택한 기간의 가격 이력을 조회하고 있습니다.</p>
       : chart.data && !allowed ? <p className="report-empty">{chart.data.source === "sample" ? "예시 데이터이므로 실제 가격 이력 차트를 제공하지 않습니다." : "가격 이력 출처 미확인으로 차트를 제공하지 않습니다."}</p>
         : chart.data && allowed ? <PricePlot key={`${range}-${mode}`} data={chart.data.data} mode={mode} /> : null}
-    <p className="report-muted report-footnote">각 점은 제공된 관측 시각의 가격입니다. 가격 이력은 모델의 실현 성과가 아닙니다. 실제 제공 관측 범위와 부분 제공 안내를 확인하세요. 원본 관측이 없는 구간은 연결하지 않습니다.</p>
+    <p className="report-muted report-footnote">각 점은 제공된 관측 시각의 가격입니다. 실제 제공 관측 범위와 부분 제공 안내를 확인하세요. 원본 관측이 없는 구간은 연결하지 않습니다.</p>
   </section>;
 }

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, X, ArrowUpRight } from "lucide-react";
 import { useAppPaths } from "../../app/paths";
 import { queries } from "../../shared/api/queries";
-import { formatPercent } from "../../shared/lib/format";
+import { predictionDirectionLabel } from "../briefing/PredictionDirection";
 import { matchStock } from "../rank/rankData";
 import { SourceMeta } from "../briefing/SourceMeta";
 import { WatchToggle, WatchlistNotice } from "../watchlist/WatchToggle";
@@ -41,7 +41,7 @@ function SearchContent({ close, dialog }: { close: (restore?: boolean) => void; 
     {rank.data?.source === "sample" && <p className="search-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
     {rank.isError && <p className="search-notice" role="status">{rank.data ? "이전 조회 결과 · 검색 자료 갱신 실패" : "전체 순위 조회 실패"}<button className="search-retry" onClick={() => void rank.refetch({ cancelRefetch: true })}>다시 조회</button></p>}
     <p className="search-count" aria-live="polite">{rank.isPending ? "전체 순위를 조회하고 있습니다." : !rank.data ? "검색 자료 미확인" : `전체 ${rank.data.data.length}종목 중 ${rows.length}종목 일치`}</p>
-    <div className="stock-search-results">{visible.length ? <ul>{visible.map(row => <li key={row.code} data-search-code={row.code}><Link to={paths.stock(row.code)} onClick={() => close(false)}><span><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code} · 모델 예측 {formatPercent(row.predictedReturn)}</small></span><ArrowUpRight aria-hidden="true" size={17} /></Link><WatchToggle code={row.code} name={row.name} /></li>)}</ul>
+    <div className="stock-search-results">{visible.length ? <ul>{visible.map(row => <li key={row.code} data-search-code={row.code}><Link to={paths.stock(row.code)} onClick={() => close(false)}><span><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code} · 모델 예측 {predictionDirectionLabel(row.predictedReturn)}</small></span><ArrowUpRight aria-hidden="true" size={17} /></Link><WatchToggle code={row.code} name={row.name} /></li>)}</ul>
       : !rank.isPending && !rank.isError && <p className="stock-search-empty">{rank.data?.data.length ? "검색 조건에 맞는 종목이 없습니다." : "최신 전체 분석 결과가 비어 있습니다."}</p>}
       {rows.length > visible.length && <p className="search-count">처음 30종목을 표시합니다. 이름이나 코드를 더 입력해 좁혀 주세요.</p>}</div>
     <p className="search-footer">최종 후보 목록으로 검색 범위를 줄이지 않습니다. 예측은 실제 성과가 아닙니다. Esc로 닫기</p>

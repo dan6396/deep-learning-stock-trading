@@ -6,10 +6,30 @@ import { apiClient } from "../../shared/api/client";
 import { formatDate, formatPercent } from "../../shared/lib/format";
 import { useAppPaths } from "../../app/paths";
 import type { PerformanceRun } from "../../types/performance";
+import { predictionDirectionLabel } from "../briefing/PredictionDirection";
 import "./performance.css";
 
 export function classificationLabel(run: Pick<PerformanceRun, "kind" | "officialEligible">) {
   return run.kind === "adhoc" ? "수시 · 공식 집계 제외" : run.officialEligible === true ? "공식 · 검증 통과" : run.officialEligible === false ? "공식 요청 · 집계 제외" : "공식 요청 · 검증 대기";
+}
+const VISIBLE_RUNS = 3;
+function runItem(run: PerformanceRun, showMagnitude: boolean) {
+  const prediction = (value: number | null | undefined) => showMagnitude ? formatPercent(value) : predictionDirectionLabel(value);
+  return <li key={run.runId}>
+    <div className="performance-run-heading"><strong>{run.mode === "model_only" ? "모델 예측만" : "뉴스 포함"}</strong><span>{classificationLabel(run)}</span></div>
+    <p className="performance-run-id">실행 식별자 {run.runId}</p>
+    <dl><div><dt>예측 기준일 → 목표 거래일</dt><dd>{run.baseDate ?? "분석 완료 후 생성"} → {run.targetDate ?? "KIS 거래일 확인 대기"}</dd></div>
+      <div><dt>선별 / 가격 확보</dt><dd>{run.selectedCount} / {run.measuredCount}종목</dd></div>
+      <div><dt>고정 예측 / 실제 가격 수익률</dt><dd>{prediction(run.predictedReturn)} / {formatPercent(run.actualReturn)}</dd></div>
+      <div><dt>완료 / 수집 시각</dt><dd>{formatDate(run.finishedAt, true)} / {formatDate(run.lastCollectedAt, true)}</dd></div></dl>
+    <p className="performance-reason">{run.reason}</p>{run.error && <p className="performance-reason">{run.error}</p>}
+    {!!run.measurements?.length && <details className="performance-measurements"><summary>종목별 예측·실제 가격 {run.measurements.length}종목</summary>
+      <ul>{run.measurements.map(item => <li key={item.code}><strong>{item.name} · {item.code}</strong>
+        <p>{item.date ?? "목표 거래일 확인 대기"} · 고정 예측 {prediction(item.predictedReturn)}</p>
+        <p>KIS 시가 {item.open === null ? "가격 수집 대기" : `${item.open.toLocaleString("ko-KR")}원`} → 종가 {item.close === null ? "가격 수집 대기" : `${item.close.toLocaleString("ko-KR")}원`} · 수익률 {formatPercent(item.actualReturn)}</p>
+      </li>)}</ul>
+    </details>}
+    </li>;
 }
 export function PerformancePanel({ detailed = false, code }: { detailed?: boolean; code?: string }) {
   const paths = useAppPaths(), client = useQueryClient(), query = useQuery(queries.performance(code));
@@ -35,21 +55,10 @@ export function PerformancePanel({ detailed = false, code }: { detailed?: boolea
       {detailed && <>
         <p className="performance-description">로컬 서버는 한국시간 18시 이후·익일 오전에 15분마다 수집을 확인하며, 목표일 18:30 이후 종가를 수집합니다. 서버가 꺼져 있던 기간은 다음 실행 시 재수집합니다.</p>
         <p className="performance-description">수집 확인 {formatDate(data.collector.checkedAt, true)} · 저장 기준 {formatDate(data.asOf, true)} · 최근 실행 최대 100건 표시</p>
-        <ol className="performance-runs">{data.runs.map(run => <li key={run.runId}>
-          <div className="performance-run-heading"><strong>{run.mode === "model_only" ? "모델 예측만" : "뉴스 포함"}</strong><span>{classificationLabel(run)}</span></div>
-          <p className="performance-run-id">실행 식별자 {run.runId}</p>
-          <dl><div><dt>예측 기준일 → 목표 거래일</dt><dd>{run.baseDate ?? "분석 완료 후 생성"} → {run.targetDate ?? "KIS 거래일 확인 대기"}</dd></div>
-            <div><dt>선별 / 가격 확보</dt><dd>{run.selectedCount} / {run.measuredCount}종목</dd></div>
-            <div><dt>고정 예측 / 실제 가격 수익률</dt><dd>{formatPercent(run.predictedReturn)} / {formatPercent(run.actualReturn)}</dd></div>
-            <div><dt>완료 / 수집 시각</dt><dd>{formatDate(run.finishedAt, true)} / {formatDate(run.lastCollectedAt, true)}</dd></div></dl>
-          <p className="performance-reason">{run.reason}</p>{run.error && <p className="performance-reason">{run.error}</p>}
-          {!!run.measurements?.length && <details className="performance-measurements"><summary>종목별 예측·실제 가격 {run.measurements.length}종목</summary>
-            <ul>{run.measurements.map(item => <li key={item.code}><strong>{item.name} · {item.code}</strong>
-              <p>{item.date ?? "목표 거래일 확인 대기"} · 고정 예측 {formatPercent(item.predictedReturn)}</p>
-              <p>KIS 시가 {item.open === null ? "가격 수집 대기" : `${item.open.toLocaleString("ko-KR")}원`} → 종가 {item.close === null ? "가격 수집 대기" : `${item.close.toLocaleString("ko-KR")}원`} · 수익률 {formatPercent(item.actualReturn)}</p>
-            </li>)}</ul>
-          </details>}
-        </li>)}</ol>
+        <ol className="performance-runs">{data.runs.slice(0, VISIBLE_RUNS).map(run => runItem(run, Boolean(code)))}</ol>
+        {data.runs.length > VISIBLE_RUNS && <details className="performance-older"><summary>이전 실행 {data.runs.length - VISIBLE_RUNS}건 더 보기</summary>
+          <ol className="performance-runs" start={VISIBLE_RUNS + 1}>{data.runs.slice(VISIBLE_RUNS).map(run => runItem(run, Boolean(code)))}</ol>
+        </details>}
       </>}
     </>}
     {!detailed && <Link className="performance-link" to={paths.history}>실행별 기록과 수집 상태 보기 →</Link>}

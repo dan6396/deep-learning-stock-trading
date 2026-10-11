@@ -1,5 +1,5 @@
-﻿import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { BriefingPage, INTRO_STORAGE_KEY } from "./BriefingPage";
@@ -15,7 +15,7 @@ import { chartBundle } from "../stock/reportFixtures";
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
 function row(code: string, name: string, prediction: unknown = 0.01) {
-  const value = pipelineRow({ ticker: code, ensemble_pred_return: prediction, pred_rank: 50 });
+  const value = pipelineRow({ ticker: code, ensemble_pred_return: prediction, pred_rank: code === "005930" ? 1 : 2 });
   value.result.ticker = code; value.result.company_name = name;
   return value;
 }
@@ -25,7 +25,7 @@ function mockBackend(overrides?: (path: string, options?: RequestInit) => Promis
   const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url, options) => {
     const path = String(url), custom = overrides?.(path, options);
     if (custom) return custom;
-    if (path === "/api/candidates") return jsonResponse(rows());
+    if (path === "/api/candidates" || path === "/api/rank") return jsonResponse(rows());
     if (path === "/api/korean-market/indices") return jsonResponse([
       { symbol: "KOSPI", value: 2700, changeRate: 0.4, source: "cache", asOf: "2026-10-07T09:00:00Z", miniSeriesSource: "history" },
       { symbol: "KOSDAQ", value: 800, changeRate: -0.2, source: "sample", asOf: "2026-10-07T09:00:00Z", miniSeriesSource: "interpolated" },
@@ -52,143 +52,95 @@ function mount(entries = ["/next"], index = entries.length - 1) {
   return client;
 }
 
-describe("briefing with fetch fixtures", () => {
-  it("selects through native buttons, ArrowDown and URL history without a meaningless close button", async () => {
+describe("briefing with raw model rank fixtures", () => {
+  it("selects through buttons, keyboard and URL history", async () => {
     mockBackend(); mount();
     const a = await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
-    fireEvent.click(a);
-    await screen.findByRole("heading", { name: "종목 A" });
-    expect(screen.getByTestId("location")).toHaveTextContent("/next?code=005930");
-    fireEvent.keyDown(a, { key: "ArrowDown" });
-    await screen.findByRole("heading", { name: "종목 B" });
+    fireEvent.click(a); await screen.findByRole("heading", { name: "종목 A" });
+    expect(screen.getByTestId("location")).toHaveTextContent("code=005930");
+    fireEvent.keyDown(a, { key: "ArrowDown" }); await screen.findByRole("heading", { name: "종목 B" });
     expect(screen.getByRole("button", { name: "종목 B 000660 · 선택됨 상세 보기" })).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "테스트 뒤로" }));
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(/^\/next$/));
-    fireEvent.click(a);
-    await screen.findByRole("heading", { name: "종목 A" });
-    expect(screen.queryByRole("button", { name: "종목 상세 닫기" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "표로 돌아가기" })).toHaveAttribute("href", "#candidate-heading");
   });
-  it("keeps a valid deeplink on mount and rejects invalid six-digit selection", async () => {
-    mockBackend(); mount(["/next?code=000660"]);
-    await screen.findByRole("heading", { name: "종목 B" });
+  it("uses raw rank and never requests a news-adjusted candidate list or news analysis", async () => {
+    const fetcher = mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([row("999999", "보정 후보", .99)])) : undefined);
+    mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+    expect(screen.queryByText("보정 후보")).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([url]) => String(url) === "/api/rank")).toBe(true);
+    expect(fetcher.mock.calls.some(([url]) => String(url) === "/api/candidates")).toBe(false);
+    expect(fetcher.mock.calls.some(([url]) => String(url).includes("stock-analysis"))).toBe(false);
+    expect(fetcher.mock.calls.every(([, options]) => options?.method !== "POST")).toBe(true);
+  });
+  it("keeps a valid deeplink", async () => {
+    mockBackend(); mount(["/next?code=000660"]); await screen.findByRole("heading", { name: "종목 B" });
     expect(screen.getByTestId("location")).toHaveTextContent("code=000660");
   });
-  it("ignores a late A response after switching to B and forwards cancellation", async () => {
-    const pending = deferred<Response>();
-    const fetcher = mockBackend(path => path === "/api/stock-analysis?ticker=005930" ? pending.promise : undefined);
-    mount();
-    fireEvent.click(await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ }));
-    await waitFor(() => expect(fetcher.mock.calls.some(([url]) => String(url).includes("ticker=005930"))).toBe(true));
-    fireEvent.click(screen.getByRole("button", { name: "종목 B 000660 상세 보기" }));
-    await screen.findByRole("heading", { name: "종목 B" });
-    const aCall = fetcher.mock.calls.find(([url]) => String(url).includes("ticker=005930"));
-    expect(aCall?.[1]?.signal?.aborted).toBe(true);
-    pending.resolve(jsonResponse(row("005930", "오래된 A 상세")));
-    await Promise.resolve();
-    expect(screen.queryByRole("heading", { name: "오래된 A 상세" })).not.toBeInTheDocument();
-    expect(document.getElementById("briefing-detail")).toHaveAttribute("data-detail-code", "000660");
+  it.each(["bad", "000000"])("rejects invalid selection %s", async code => {
+    mockBackend(); mount(["/next?code=" + code]); await screen.findByText("유효한 6자리 종목 코드가 필요합니다.");
+    expect(document.querySelector("[data-detail-code]")).not.toBeInTheDocument();
   });
-  it("replaces candidates with a genuinely empty result", async () => {
+  it("replaces predictions with an authoritative empty rank result", async () => {
     let empty = false;
-    mockBackend(path => path === "/api/candidates" && empty ? Promise.resolve(jsonResponse([])) : undefined);
+    mockBackend(path => path === "/api/rank" && empty ? Promise.resolve(jsonResponse([])) : undefined);
     mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
     empty = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("최신 분석 결과가 비어 있습니다.");
-    expect(screen.queryByRole("button", { name: /종목 A 005930/ })).not.toBeInTheDocument();
+    await screen.findByText("표시할 모델 예측이 없습니다.");
+    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
   });
-  it("keeps pending deeplink membership/model unavailable until the candidate list succeeds", async () => {
-    const list = deferred<Response>();
-    mockBackend(path => path === "/api/candidates" ? list.promise : undefined);
-    mount(["/next?code=005930"]);
-    await screen.findByRole("heading", { name: "종목 A" });
-    const panel = document.getElementById("briefing-detail")!;
-    expect(panel).toHaveTextContent("최종 후보 여부 확인 중");
-    expect(panel.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "unavailable");
-    list.resolve(jsonResponse(rows()));
-    await waitFor(() => expect(panel.querySelector('[data-membership]')).toHaveAttribute("data-membership", "candidate"));
-    expect(panel.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "positive");
-    expect(document.title).toBe(`브리핑 · ${BRAND_NAME}`);
+  it("shows rank loading independently of candidate generation", async () => {
+    const pending = deferred<Response>(); mockBackend(path => path === "/api/rank" ? pending.promise : undefined); mount();
+    await screen.findByText("모델 예측 순위를 조회하고 있습니다.");
+    pending.resolve(jsonResponse(rows())); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
   });
-  it("does not call an error deeplink non-candidate even when stock analysis succeeds", async () => {
-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
-    mount(["/next?code=005930"]);
-    await screen.findByRole("heading", { name: "종목 A" });
-    await screen.findByText("후보 조회 실패 · 분석 결과를 가져오지 못했습니다.");
-    const panel = document.getElementById("briefing-detail")!;
-    expect(panel).toHaveTextContent("최종 후보 여부 미확인");
-    expect(panel).not.toHaveTextContent("최종 후보 외 종목");
-    expect(panel.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "unavailable");
-  });
-  it("identifies non-membership only from a successful empty list", async () => {
-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : undefined);
-    mount(["/next?code=005930"]);
-    await screen.findByRole("heading", { name: "종목 A" });
-    await screen.findByText("최신 분석 결과가 비어 있습니다.");
-    expect(document.querySelector('[data-membership]')).toHaveAttribute("data-membership", "nonCandidate");
-    expect(document.getElementById("briefing-detail")).toHaveTextContent("최종 후보 외 종목");
-  });
-  it("fails model membership closed in both old table and panel after background list failure", async () => {
+  it("keeps cached rank with a visible refresh failure label", async () => {
     let failure = false;
-    mockBackend(path => path === "/api/candidates" && failure ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
-    mount(["/next?code=005930"]);
-    await screen.findByRole("button", { name: "종목 A 005930 · 선택됨 상세 보기" });
-    failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("이전 조회 결과 · 후보 갱신 실패");
-    expect(document.querySelector('[data-membership]')).toHaveAttribute("data-membership", "unknown");
-    expect(document.querySelector('[data-candidate-code="005930"] [data-signal]')).toHaveAttribute("data-signal", "unavailable");
-    expect(document.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "unavailable");
-  });
-  it("distinguishes initial error from empty and background error from successful stale data", async () => {
-    let failure = false;
-    mockBackend(path => path === "/api/candidates" && failure ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
+    mockBackend(path => path === "/api/rank" && failure ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
     mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
     failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("이전 조회 결과 · 후보 갱신 실패");
-    expect(screen.getByRole("button", { name: /종목 A 005930.*상세 보기/ })).toBeInTheDocument();
-    expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+    await screen.findByText("이전 조회 결과 · 모델 순위 갱신 실패");
+    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(2);
   });
-  it("shows an initial API failure without a sample table", async () => {
-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
-    mount(); await screen.findByText("후보 조회 실패 · 분석 결과를 가져오지 못했습니다.");
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+  it("shows initial rank failure without fabricating results", async () => {
+    mockBackend(path => path === "/api/rank" ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
+    mount(); await screen.findByText("모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다.");
+    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
   });
-  it("marks sample candidates and cache/sample/interpolated market evidence", async () => {
-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse(rows().map(row => ({ ...row, data_meta: { ...row.data_meta, source: "sample" } })))) : undefined);
+  it("marks sample predictions", async () => {
+    mockBackend(path => path === "/api/rank" ? Promise.resolve(jsonResponse(rows().map(value => ({ ...value, data_meta: { ...value.data_meta, source: "sample" } })))) : undefined);
     mount(); await screen.findByText("예시 데이터 · 실제 분석 결과가 아닙니다.");
-    expect(screen.getAllByText("예시 데이터").length).toBeGreaterThan(0);
-    expect(document.querySelector(".briefing-index-grid")).not.toBeInTheDocument();
-    expect(screen.getByText(/확인 가능한 지수가 부족합니다/)).toBeInTheDocument();
   });
-  it("does not render a fabricated model zero from legacy summary prose", async () => {
-    const missing = row("005930", "원본 누락", null); missing.result.summary = "Huber 예상수익률 0.00%.";
-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([missing])) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(missing)) : undefined);
-    mount(["/next?code=005930"]);
-    await screen.findByRole("heading", { name: "원본 누락" });
-    expect(document.getElementById("briefing-detail")).not.toHaveTextContent("Huber 예상수익률 0.00%");
-    expect(screen.getByText(/원본 모델 예측값이 없어 수익률 요약/)).toBeInTheDocument();
-    expect(within(document.getElementById("briefing-detail")!).getByText("모델 예측수익률").nextElementSibling).toHaveTextContent("—");
+  it("does not invent zero from prose and keeps 0.01 as 1 percent", async () => {
+    const missing = row("005930", "원본 누락", null); missing.result.summary = "예상수익률 0.00%";
+    mockBackend(path => path === "/api/rank" ? Promise.resolve(jsonResponse([missing, row("000660", "실제 예측", .01)])) : undefined);
+    mount(); await screen.findByText("원본 예측값 없음");
+    expect(document.querySelector('[data-model-code="005930"] .briefing-top-prediction')).toHaveTextContent("—");
+    expect(document.querySelector('[data-model-code="000660"] .briefing-top-prediction')).toHaveTextContent("상승");
+    expect(document.querySelector('[data-model-code="000660"] .briefing-top-prediction')).not.toHaveTextContent("%");
+    expect(document.getElementById("briefing-detail")).not.toHaveTextContent("예상수익률 0.00%");
   });
-  it("dismisses first-visit introduction persistently without automatically launching analysis", async () => {
-    const fetcher = mockBackend(); mount();
-    fireEvent.click(screen.getByRole("button", { name: "서비스 안내 닫기" }));
+  it.each([undefined, "close_to_close"])("does not assert a period for target %s", async target => {
+    const value = row("005930", "기준 미확인"); value.input_row.prediction_target = target as string;
+    mockBackend(path => path === "/api/rank" ? Promise.resolve(jsonResponse([value])) : undefined);
+    mount(); await screen.findByText("기준 미확인", { selector: "strong" });
+    expect(document.querySelector('[data-model-code] .briefing-top-prediction')).toHaveTextContent("예측 기간 미확인");
+    expect(document.querySelector('[data-model-code] .briefing-top-prediction')).not.toHaveTextContent("다음 거래일");
+  });
+  it("dismisses the introduction without launching analysis", async () => {
+    const fetcher = mockBackend(); mount(); fireEvent.click(screen.getByRole("button", { name: "서비스 안내 닫기" }));
     expect(localStorage.getItem(INTRO_STORAGE_KEY)).toBe("dismissed");
-    expect(screen.queryByRole("region", { name: "서비스 첫 방문 안내" })).not.toBeInTheDocument();
     await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
-    expect(screen.queryByRole("button", { name: "분석 시작" })).not.toBeInTheDocument();
     expect(fetcher.mock.calls.every(([, options]) => options?.method !== "POST")).toBe(true);
-    expect(screen.queryByRole("region", { name: "성과 기록" })).not.toBeInTheDocument();
-    expect(screen.getByText("모의투자 기록 · 10/6–10/8")).toBeInTheDocument();
-    expect(screen.queryByText(/\d+\/20/)).not.toBeInTheDocument();
+    expect(document.title).toBe("브리핑 · " + BRAND_NAME);
   });
-  it("reattaches to GET analysis completion and invalidates an older candidate read", async () => {
-    let version = 1;
-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([row("005930", `버전 ${version}`)])) : undefined);
-    const client = mount(); await screen.findByRole("button", { name: /버전 1 005930.*상세 보기/ });
-    version = 2;
-    client.setQueryData(queryKeys.analysisRun(), { data: { status: "completed", elapsedMs: 10, progress: { updatedAt: 2 }, result: { rows: 1 } }, source: "unknown", asOf: null });
-    await screen.findByRole("button", { name: /버전 2 005930.*상세 보기/ });
+  it("refreshes the visible rank query after invalidation", async () => {
+    let latest = false;
+    mockBackend(path => path === "/api/rank" && latest ? Promise.resolve(jsonResponse([row("000660", "새 결과")])) : undefined);
+    const client = mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+    latest = true; await client.invalidateQueries({ queryKey: queryKeys.rank() });
+    await screen.findByRole("button", { name: /새 결과 000660.*상세 보기/ });
+    expect(screen.queryByRole("button", { name: /종목 A 005930.*상세 보기/ })).not.toBeInTheDocument();
   });
 });
 

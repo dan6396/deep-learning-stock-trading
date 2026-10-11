@@ -26,5 +26,7 @@
 .performance-measurements ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .performance-measurements li { padding: 12px; background: var(--ds-surface-2); border-radius: 10px; overflow-wrap: anywhere; }
 .performance-measurements p { margin-top: 7px !important; color: var(--ds-fg-2); }
+.performance-older { margin-top: 14px; }
+.performance-older > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--ds-link); font-size: 13px; }
 .performance-link { display: inline-flex; align-items: center; color: var(--ds-link); min-height: 44px; font-size: 13px; margin-top: 12px; }
 @media (max-width: 600px) { .performance-summaries { grid-template-columns: 1fr; } .performance-heading { align-items: stretch; flex-direction: column; } .performance-runs > li { padding: 14px; } }

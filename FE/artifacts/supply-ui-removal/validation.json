@@ -1,0 +1,318 @@
+{
+  "updatedAt": "2026-10-11T10:35:53.360Z",
+  "status": "completed_with_documented_verification_limits",
+  "scope": {
+    "changedFiles": [
+      "FE/scripts/verify/supply-ui-smoke.mjs",
+      "FE/src/features/briefing/topFiveSummary.test.ts",
+      "FE/src/features/briefing/topFiveSummary.ts",
+      "FE/src/shared/lib/analysisDisplay.test.ts",
+      "FE/src/shared/lib/analysisDisplay.ts",
+      "FE/index.html",
+      "FE/scripts/verify/fixture-server.mjs",
+      "FE/src/components/landing/FeatureOrbitSection.tsx",
+      "FE/src/components/landing/HeroSection.tsx",
+      "FE/src/components/landing/ProcessSection.tsx",
+      "FE/src/components/market/MarketWorkspace.tsx",
+      "FE/src/features/about/AboutContent.tsx",
+      "FE/src/features/about/AboutPage.test.tsx",
+      "FE/src/features/briefing/AnalysisControl.tsx",
+      "FE/src/features/briefing/BriefingPage.tsx",
+      "FE/src/features/briefing/BriefingSummary.test.tsx",
+      "FE/src/features/briefing/BriefingSummary.tsx",
+      "FE/src/features/briefing/CandidateTable.test.tsx",
+      "FE/src/features/briefing/CandidateTable.tsx",
+      "FE/src/features/briefing/DetailPanel.tsx",
+      "FE/src/features/briefing/briefingDashboard.css",
+      "FE/src/features/briefing/briefingData.test.ts",
+      "FE/src/features/briefing/briefingData.ts",
+      "FE/src/features/history/HistoryPage.test.tsx",
+      "FE/src/features/history/HistoryPage.tsx",
+      "FE/src/features/rank/RankPage.test.tsx",
+      "FE/src/features/rank/RankPage.tsx",
+      "FE/src/features/rank/RankTable.tsx",
+      "FE/src/features/stock/StockReportPage.test.tsx",
+      "FE/src/features/stock/StockReportPage.tsx",
+      "FE/src/pages/StockDetailPage.tsx"
+    ],
+    "baseline": "baseline-files.json and baseline.diff",
+    "previousTrackedChangesPreserved": true,
+    "preservedPreviousFiles": [
+      "FE/docs/api-contract.md",
+      "FE/server/pipelineResults.ts",
+      "FE/server/pipelineRunner.ts",
+      "FE/server/routes.ts",
+      "FE/src/entities/candidate.ts",
+      "FE/src/features/briefing/AnalysisControl.test.tsx",
+      "FE/src/features/briefing/AnalysisDialog.test.tsx",
+      "FE/src/features/briefing/BriefingPage.test.tsx",
+      "FE/src/features/briefing/ModelTopFiveTable.test.tsx",
+      "FE/src/features/briefing/ModelTopFiveTable.tsx",
+      "FE/src/features/briefing/candidateProduction.test.tsx",
+      "FE/src/features/connection/ConnectionNotice.test.tsx",
+      "FE/src/features/connection/ConnectionNotice.tsx",
+      "FE/src/features/stock/reportData.ts",
+      "FE/src/test/pipelineResults.test.js",
+      "FE/src/test/pipelineRunner.test.js",
+      "FE/src/test/routes.test.js",
+      "FE/tsconfig.app.json",
+      "FE/tsconfig.node.json"
+    ],
+    "unexpectedChanges": [],
+    "backendPythonData": "직접 수정하지 않았습니다. root가 별도 Python/server 19개 파일 해시 보존을 확인했습니다.",
+    "contracts": "Candidate types, adapters, supplySignal/evidenceAgreement calculations and modelTopFive selection remain unchanged from baseline."
+  },
+  "validation": {
+    "typecheck": {
+      "command": "npm run typecheck --prefix FE",
+      "passed": true
+    },
+    "build": {
+      "command": "npm run build --prefix FE",
+      "passed": true,
+      "log": "build.log"
+    },
+    "tests": {
+      "command": "npm test --prefix FE -- --maxWorkers=2 --reporter=json --outputFile=artifacts/supply-ui-removal/tests.json",
+      "testFiles": 41,
+      "total": 464,
+      "passed": 464,
+      "failed": 0,
+      "report": "tests.json",
+      "timeoutChanged": false
+    },
+    "earlierRuns": [
+      {
+        "report": "tests-concurrent-failure.json",
+        "passed": 463,
+        "failed": 1,
+        "context": "Build/browser overlapped; RankPage pagination test failed at about 5.3s."
+      },
+      {
+        "report": "tests-separated-default-failure.json",
+        "passed": 463,
+        "failed": 1,
+        "context": "Browser stopped, default Vitest workers; same test failed at about 5.9s."
+      },
+      {
+        "report": "rank-tests.json",
+        "passed": 11,
+        "failed": 0,
+        "context": "Standalone RankPage file passed all 11 tests."
+      }
+    ],
+    "failureAssessment": "단독 RankPage는 통과하고 maxWorkers=2 전체 464개도 통과해 병렬 CPU 부하에 의한 시간 제한 실패 가능성이 높습니다. 원인 확정은 아닙니다. 리뷰어도 병렬 AppRoutes 실패 후 단독 10/10 통과를 보고했습니다.",
+    "regression": "추가 순위/문맥 필터/History 회귀 38개 통과. 샘플 10종목 summary/tradingInsight 전체 검사, 일반 기관 문장·매수 의견·부지 매수·지분율 보존, 뉴스 원본 불변 확인."
+  },
+  "browser": {
+    "command": "node FE/scripts/verify/supply-ui-smoke.mjs",
+    "completed": true,
+    "functionChecks": 24,
+    "screenshotCases": 39,
+    "horizontalOverflowCases": 0,
+    "axeCleanCaptures": 31,
+    "axeViolationOccurrences": 8,
+    "axeIssues": [
+      {
+        "name": "legacy-landing-1440-light",
+        "violations": [
+          {
+            "id": "label-content-name-mismatch",
+            "impact": "serious",
+            "targets": [
+              [
+                ".brand-mark"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-landing-1440-dark",
+        "violations": [
+          {
+            "id": "label-content-name-mismatch",
+            "impact": "serious",
+            "targets": [
+              [
+                ".brand-mark"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-landing-375-light",
+        "violations": [
+          {
+            "id": "label-content-name-mismatch",
+            "impact": "serious",
+            "targets": [
+              [
+                ".brand-mark"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-landing-375-dark",
+        "violations": [
+          {
+            "id": "label-content-name-mismatch",
+            "impact": "serious",
+            "targets": [
+              [
+                ".brand-mark"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-dashboard-1440-light",
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "targets": [
+              [
+                ".regime-card__head > em"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-dashboard-1440-dark",
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "targets": [
+              [
+                ".regime-card__head > em"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-dashboard-375-light",
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "targets": [
+              [
+                ".regime-card__head > em"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      },
+      {
+        "name": "legacy-dashboard-375-dark",
+        "violations": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "targets": [
+              [
+                ".regime-card__head > em"
+              ]
+            ]
+          }
+        ],
+        "baseline": "미확인",
+        "relation": "이번 diff의 해당 aria/CSS는 변경되지 않음. 기존 문제 추정."
+      }
+    ],
+    "themeChecks": [
+      {
+        "page": "legacy-landing-1440",
+        "identical": true
+      },
+      {
+        "page": "legacy-landing-375",
+        "identical": true
+      },
+      {
+        "page": "legacy-dashboard-1440",
+        "identical": true
+      },
+      {
+        "page": "legacy-dashboard-375",
+        "identical": true
+      },
+      {
+        "page": "legacy-report-1440",
+        "identical": true
+      },
+      {
+        "page": "legacy-report-375",
+        "identical": true
+      },
+      {
+        "page": "legacy-saved-commentary-375",
+        "identical": null
+      }
+    ],
+    "storedRank": {
+      "codes": [
+        "001800",
+        "029780",
+        "000270",
+        "007070",
+        "323410"
+      ],
+      "summary": "TOP5 예측 요약\n\n+0.38% ~ +0.40%\n\n예측값 양수 5종목\n\n다음 거래일 시가→종가 · 분석 기준일 2026. 10. 08.\n원본 모델 예측 · 실제 성과 아님"
+    },
+    "exceptions": [],
+    "consoleErrors": [],
+    "report": "browser-report.json",
+    "manuallyViewed": [
+      "briefing-1440-light.png",
+      "stored-top5-375-dark.png",
+      "legacy-report-375-light.png",
+      "history-375-dark.png",
+      "legacy-saved-commentary-375-light.png"
+    ]
+  },
+  "limitations": [
+    "화면 검증은 로컬 fixture 서버에서 수행했습니다. 저장 TOP5는 localhost /api/rank 읽기 전용 GET으로 보관한 응답을 fixture에 주입했습니다. 실제 서버에 연결한 화면 동작과 새 분석 실행은 검증하지 않았습니다.",
+    "script failure 없음은 스크립트 완주를 뜻하며 모든 axe 검사가 통과했다는 뜻이 아닙니다.",
+    "legacy 브랜드 링크 이름 불일치와 시장 국면 배지 색 대비는 이번 diff의 해당 aria/CSS 변경과 관련이 없습니다. 기존 문제로 추정하지만 baseline 브라우저 검증은 하지 않아 기준선은 미확인입니다.",
+    "legacy 라이트·다크 캡처의 MD5가 같습니다. 테마 미지원 또는 테마 적용 실패로 실제 별도 다크 화면을 검증하지 못했습니다.",
+    "문맥 필터는 현재 저장 샘플과 회귀 사례를 검증했지만 미래 동적 분석문의 모든 수급 표현을 포괄한다고 보장하지 않습니다.",
+    "실제 저장값 화면은 fixture API의 시세·기록과 함께 표시됩니다. 실제 서버의 전체 데이터 연결을 검증한 결과가 아닙니다."
+  ],
+  "cleanup": {
+    "fixtureServerAndBrowser": "smoke script finally closed only its fixture server and temporary browser/profile",
+    "existingUserServer": "localhost:5173 PID 11892 유지 확인",
+    "committed": false,
+    "pushed": false,
+    "deployed": false,
+    "paidOrRealAnalysisRun": false
+  },
+  "review": {
+    "diff": "review.diff",
+    "sha256": "7cc1818fa6898ce2d6364c4267cc6bda12b756b089d920f2daaadb70b328e152",
+    "changedFiles": "changed-files.json",
+    "reviewer": "root가 기존 리뷰어 재검토 차단 없음 확인"
+  }
+}

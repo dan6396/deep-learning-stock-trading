@@ -1102,7 +1102,9 @@ export async function fetchKisTargetSession(baseDate: string, env = process.env)
     const date = String(row.bass_dt ?? "");
     if (/^\d{8}$/.test(date) && ["Y", "N"].includes(String(row.opnd_yn)) && ["Y", "N"].includes(String(row.tr_day_yn))) days[`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`] = row.opnd_yn === "Y" && row.tr_day_yn === "Y";
       }
-    } catch { /* Account calendar is unavailable with some quote-only app keys. Verify observed sessions below. */ }
+    } catch (error) { /* Account calendar is unavailable with some quote-only app keys. Verify observed sessions below. */
+      console.warn("[KIS calendar] chk-holiday unavailable:", error instanceof Error ? error.message : error);
+    }
   }
   cache = { fetchedDate: today, days, observedTargets: { ...cache?.observedTargets } };
   const calendarTarget = target(cache);

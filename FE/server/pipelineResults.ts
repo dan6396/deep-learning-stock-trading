@@ -5,6 +5,7 @@ import { readLastSnapshot, writeDashboardSnapshot } from "./dashboardCache";
 import { isFreshForRun, readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshness";
 import { isNewsCollectionSuccess } from "../src/types/newsCollection";
 import type { PipelineAvailability } from "../src/types/backendStatus";
+import { attachRelatedNews, RELATED_NEWS_FILE, type RelatedNewsSnapshot } from "./relatedNews";
 
 declare const process: {
   cwd: () => string;
@@ -910,6 +911,10 @@ export async function getStockAnalysisPayload(ticker: string): Promise<PipelineO
     return null;
   }
 
+  if (marker?.mode === "model_only") {
+    return (await getRankPayload()).find(row => tickerFromRow(row) === normalized) ?? null;
+  }
+
   const top10Rows = await loadPipelineRows();
   const top10Match = top10Rows?.find(
     (row) => String(row.input_row?.ticker ?? row.result?.ticker ?? "").padStart(6, "0") === normalized,
@@ -931,7 +936,20 @@ export async function getRankPayload(): Promise<PipelineOutputRow[]> {
   const marker = await readPipelineRunMarker();
   if ((!marker && process.env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && marker.status !== "completed")) return [];
   const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false);
-  return rank && markerAllowsLoadedFile(marker, rank.mtimeMs) ? overlayNewsResult(rank.rows) : [];
+  if (!rank || !markerAllowsLoadedFile(marker, rank.mtimeMs)) return [];
+  let related: RelatedNewsSnapshot | null = null;
+  for (const path of candidatePaths([RELATED_NEWS_FILE], false)) {
+    try {
+      const snapshot = JSON.parse(await readFile(path, "utf8")) as RelatedNewsSnapshot;
+      if (snapshot?.version === 1 && snapshot.startedAt === marker?.startedAt) { related = snapshot; break; }
+    } catch { /* no current article cache */ }
+  }
+  // Model rank and prediction stay exactly as written by STEP2, including old full runs.
+  const supply = marker?.mode === "model_only" ? await loadModelOnlySupply(marker) : new Map<string, Record<string, string>>();
+  const rows = rank.rows.map(row => applyModelSupply(marker?.mode === "model_only" ? { ...row,
+    data_meta: { ...row.data_meta, rawFinalPrediction: null, rawFinalRank: null },
+    input_row: { ...row.input_row, final_pred_return: null, news_adjustment: null, news_applied: false } } : row, supply.get(tickerFromRow(row))));
+  return attachRelatedNews(rows, related, marker?.startedAt);
 }
 
 /** Diagnostic only. Reuses the production parsers/loaders without changing their API contracts. */

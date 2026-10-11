@@ -11,5 +11,5 @@
     "strict": true,
     "noEmit": true
   },
-  "include": ["api", "server", "src/types", "vite.config.ts"]
+  "include": ["api", "server", "src/types", "src/shared/lib/articleUrl.ts", "src/shared/lib/relatedArticles.ts", "vite.config.ts"]
 }

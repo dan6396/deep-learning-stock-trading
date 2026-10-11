@@ -1,0 +1,1217 @@
+diff --git a/FE/docs/api-contract.md b/FE/docs/api-contract.md
+index b7c322c..7121c08 100644
+--- a/FE/docs/api-contract.md
++++ b/FE/docs/api-contract.md
+@@ -2,6 +2,16 @@
+ 
+ This contract maps the Python pipeline outputs to frontend-facing landing and dashboard data.
+ 
++## 브리핑 TOP5 계약
++
++- 브리핑은 후보 생성 상태와 관계없이 `GET /api/rank`의 원본 `pred_rank` 상위 5종목을 사용한다. 뉴스 보정 순위나 수익률로 대체하지 않는다.
++- `ensemble_pred_return`은 fraction 단위다(`0.01 = 1%`). 누락값은 `—`로 표시한다. `prediction_target === "next_session_open_to_close"`일 때만 다음 거래일 시가→종가로 안내하며, 그 외에는 예측 기간 미확인으로 표시한다.
++- `POST /api/candidates/run`은 모드 생략 또는 `mode=model_only`에서 모델 추론 후 TOP5의 관련 기사만 수집한다. `mode=full`은 이 브리핑 API에서 거절한다. 독립 Python 연구 흐름과 과거 분석 결과는 보존한다.
++- 기사 수집은 고정 Google News RSS 공급자를 사용하며, 본문·감성 분석·LLM 호출·순위 보정을 하지 않는다. UI 링크는 Google News 경유 링크임을 표시한다. 별칭만 있는 제목은 누락될 수 있으며, 동명이 일반어·스포츠팀인 회사명에는 기업 관련 문맥도 요구한다.
++- `related_news.json`은 `startedAt`, 종목 코드, 회사명, 분석 기준일이 현재 모델 결과와 일치해야 연결한다. 관련 제목을 필터링하고 발행 시각 내림차순으로 최대 3건을 표시한다.
++- `data_meta.newsStatus`의 `collected`와 빈 기사 배열은 정상 수집 0건, `collection_failed`는 수집 실패, `not_collected`는 현재 분석에 연결할 기사 기록이 없음을 뜻한다. 기사 캐시 저장 실패는 검증된 모델 완료 상태를 무효화하지 않으며 실행 결과의 `articleCollectionStatus`가 `unavailable`이 된다.
++- model_only의 실측 수급 overlay는 유지한다. full 모드의 원본 rank에 별도 수급 파일을 새로 덧씌우지 않는다.
++
+ ## Source Files
+ 
+ The current Python project writes final analysis results to:
+diff --git a/FE/scripts/verify/fixture-server.mjs b/FE/scripts/verify/fixture-server.mjs
+index 2b2dc01..57ddcfc 100644
+--- a/FE/scripts/verify/fixture-server.mjs
++++ b/FE/scripts/verify/fixture-server.mjs
+@@ -110,7 +110,7 @@ export async function startFixtureServer({ port = 0 } = {}) {
+           if (snapshot.backendScenario === "error") json({ error: "Fixture status unavailable" }, 502, "unknown");
+           else json(backendStatusFixture(snapshot.backendScenario), 200, "unknown");
+         } else if (url.pathname === "/api/rank") {
+-          const rows = rankFixtures(snapshot.version).map(row => snapshot.backendScenario === "model_only" ? modelOnlyRow(row) : row);
++          const rows = snapshot.rankRows ?? rankFixtures(snapshot.version).map(row => snapshot.backendScenario === "model_only" ? modelOnlyRow(row) : row);
+           if (snapshot.rankScenario === "sample") rows.forEach(row => { row.data_meta.source = "sample"; });
+           if (snapshot.rankDelayMs) await new Promise(resolve => setTimeout(resolve, snapshot.rankDelayMs));
+           if (snapshot.rankScenario === "error") json({ error: "fixture rank failure" }, 502);
+diff --git a/FE/server/pipelineResults.ts b/FE/server/pipelineResults.ts
+index b8049ad..b5392e3 100644
+--- a/FE/server/pipelineResults.ts
++++ b/FE/server/pipelineResults.ts
+@@ -5,6 +5,7 @@ import { readLastSnapshot, writeDashboardSnapshot } from "./dashboardCache";
+ import { isFreshForRun, readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshness";
+ import { isNewsCollectionSuccess } from "../src/types/newsCollection";
+ import type { PipelineAvailability } from "../src/types/backendStatus";
++import { attachRelatedNews, RELATED_NEWS_FILE, type RelatedNewsSnapshot } from "./relatedNews";
+ 
+ declare const process: {
+   cwd: () => string;
+@@ -910,6 +911,10 @@ export async function getStockAnalysisPayload(ticker: string): Promise<PipelineO
+     return null;
+   }
+ 
++  if (marker?.mode === "model_only") {
++    return (await getRankPayload()).find(row => tickerFromRow(row) === normalized) ?? null;
++  }
++
+   const top10Rows = await loadPipelineRows();
+   const top10Match = top10Rows?.find(
+     (row) => String(row.input_row?.ticker ?? row.result?.ticker ?? "").padStart(6, "0") === normalized,
+@@ -931,7 +936,20 @@ export async function getRankPayload(): Promise<PipelineOutputRow[]> {
+   const marker = await readPipelineRunMarker();
+   if ((!marker && process.env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && marker.status !== "completed")) return [];
+   const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false);
+-  return rank && markerAllowsLoadedFile(marker, rank.mtimeMs) ? overlayNewsResult(rank.rows) : [];
++  if (!rank || !markerAllowsLoadedFile(marker, rank.mtimeMs)) return [];
++  let related: RelatedNewsSnapshot | null = null;
++  for (const path of candidatePaths([RELATED_NEWS_FILE], false)) {
++    try {
++      const snapshot = JSON.parse(await readFile(path, "utf8")) as RelatedNewsSnapshot;
++      if (snapshot?.version === 1 && snapshot.startedAt === marker?.startedAt) { related = snapshot; break; }
++    } catch { /* no current article cache */ }
++  }
++  // Model rank and prediction stay exactly as written by STEP2, including old full runs.
++  const supply = marker?.mode === "model_only" ? await loadModelOnlySupply(marker) : new Map<string, Record<string, string>>();
++  const rows = rank.rows.map(row => applyModelSupply(marker?.mode === "model_only" ? { ...row,
++    data_meta: { ...row.data_meta, rawFinalPrediction: null, rawFinalRank: null },
++    input_row: { ...row.input_row, final_pred_return: null, news_adjustment: null, news_applied: false } } : row, supply.get(tickerFromRow(row))));
++  return attachRelatedNews(rows, related, marker?.startedAt);
+ }
+ 
+ /** Diagnostic only. Reuses the production parsers/loaders without changing their API contracts. */
+diff --git a/FE/server/pipelineRunner.ts b/FE/server/pipelineRunner.ts
+index 279c9f8..22d28d4 100644
+--- a/FE/server/pipelineRunner.ts
++++ b/FE/server/pipelineRunner.ts
+@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
+ import { access, mkdir, readFile, stat } from "node:fs/promises";
+ import { join, resolve } from "node:path";
+ import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
+-import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput, validateModelOnlyOutputs } from "./pipelineResults";
++import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput, validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
++import { collectTopFiveArticles } from "./relatedNews";
+ import { randomUUID } from "node:crypto";
+ import { beginRun, completeRun, failRun } from "./runLedger";
+ import type { RunKind } from "../src/types/performance";
+@@ -23,6 +24,7 @@ export type CandidateAnalysisRunResult = {
+   rows: number;
+   /** Number of stocks the Gemini news step analyzed; 0 when the step was skipped or failed. */
+   newsRows: number;
++  articleCollectionStatus?: "collected" | "unavailable";
+   status: "completed";
+ };
+ 
+@@ -42,9 +44,9 @@ const CANDIDATE_PROGRESS_STAGES = [
+   "실행 준비",
+   "KOSPI200 후보 풀 로드",
+   "OHLCV 수집·앙상블 예측",
+-  "외국인·기관 수급 조회",
++  "모델·수급 결과 확인",
+   "뉴스 크롤링",
+-  "Gemini 기사 사건 추출",
++  "관련 기사 정리",
+   "결과 파일 검증",
+ ] as const;
+ 
+@@ -148,7 +150,8 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress):
+   } else if (log.includes("저장:") && log.includes("step3")) {
+     advance(6, 94, "STEP3 결과 파일을 저장하고 검증하는 중입니다.");
+   } else if (log.includes("[ALL DONE]")) {
+-    advance(6, 100, "전체 파이프라인이 완료되었습니다.");
++    if (runMode === "model_only") advance(3, 70, "모델 추론이 완료되었습니다. 관련 기사 수집을 준비합니다.");
++    else advance(6, 100, "전체 파이프라인이 완료되었습니다.");
+   }
+ 
+   return {
+@@ -300,7 +303,8 @@ function pipelineEnv(env: Record<string, string | undefined>, modelOnly = false)
+ }
+ 
+ function analysisMode(env: Record<string, string | undefined>): "full" | "model_only" {
+-  if (!env.PIPELINE_ANALYSIS_MODE || env.PIPELINE_ANALYSIS_MODE === "full") return "full";
++  if (!env.PIPELINE_ANALYSIS_MODE) return "model_only";
++  if (env.PIPELINE_ANALYSIS_MODE === "full") return "full";
+   if (env.PIPELINE_ANALYSIS_MODE === "model_only") return "model_only";
+   throw new Error("Unsupported analysis mode.");
+ }
+@@ -449,10 +453,17 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
+     await runProcess(python, args, root, pipelineEnv(env, modelOnly), timeoutMs, recordCandidateAnalysisOutput);
+ 
+     if (modelOnly) {
+-      updateCandidateAnalysisProgress(progressSnapshot(6, 95, "모델 원본 순위와 모델 선별 결과를 검증하는 중입니다. 뉴스는 실행하지 않았습니다."));
++      updateCandidateAnalysisProgress(progressSnapshot(3, 90, "모델 원본 순위와 모델 선별 결과를 검증하는 중입니다."));
+       const validated = await validateModelOnlyOutputs(outputDir, startedAt);
++      updateCandidateAnalysisProgress(progressSnapshot(4, 94, "모델 TOP5의 관련 기사를 수집하는 중입니다."));
++      let articleCollectionStatus: "collected" | "unavailable" = "unavailable";
++      try {
++        await collectTopFiveArticles(parseCsv(await readFile(join(outputDir, "step2_all_transformer_rank.csv"), "utf8")), outputDir, startedAt);
++        articleCollectionStatus = "collected";
++      } catch { /* Article/cache failure must never invalidate validated model predictions. */ }
++      updateCandidateAnalysisProgress(progressSnapshot(5, 98, articleCollectionStatus === "collected" ? "관련 기사 수집 상태를 저장했습니다." : "기사 수집 기록 저장 실패 · 모델 결과를 유지합니다."));
+       const result: CandidateAnalysisRunResult = { status: "completed", mode, candidateKind: "not_produced", dashboardUpdated: false,
+-        elapsedMs: Date.now() - startedAt, rows: validated.rows, modelSelectionRows: validated.modelSelectionRows, newsRows: 0 };
++        elapsedMs: Date.now() - startedAt, rows: validated.rows, modelSelectionRows: validated.modelSelectionRows, newsRows: 0, articleCollectionStatus };
+       return result;
+     }
+ 
+diff --git a/FE/server/routes.ts b/FE/server/routes.ts
+index df30ec3..e813592 100644
+--- a/FE/server/routes.ts
++++ b/FE/server/routes.ts
+@@ -84,13 +84,9 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
+       const kind = query(request, "kind");
+       if (kind !== undefined && kind !== "official" && kind !== "adhoc") throw new MissingParameter("실행 구분은 official 또는 adhoc이어야 합니다.");
+       const selectedEnv = kind === undefined ? env : { ...env, PIPELINE_RUN_KIND: kind };
+-      if (mode === undefined) return analysisStatus(deps.startCandidateAnalysis(selectedEnv));
+-      if (mode !== "model_only" && mode !== "full") throw new MissingParameter("분석 모드는 model_only 또는 full이어야 합니다.");
+-      if (mode === "full" && [env.NAVER_CLIENT_ID, env.NAVER_CLIENT_SECRET, env.GEMINI_API_KEY].some(value => !value?.trim())) {
+-        throw new MissingParameter("뉴스 포함 분석에는 네이버 뉴스와 Gemini API 설정이 필요합니다.");
+-      }
++      if (mode !== undefined && mode !== "model_only") throw new MissingParameter("브리핑은 모델 예측과 관련 기사 수집만 지원합니다.");
+       // A request-scoped override: never change the server default or another job.
+-      return analysisStatus(deps.startCandidateAnalysis({ ...selectedEnv, PIPELINE_ANALYSIS_MODE: mode }));
++      return analysisStatus(deps.startCandidateAnalysis({ ...selectedEnv, PIPELINE_ANALYSIS_MODE: "model_only" }));
+     }),
+     "/api/performance": route(["GET"], request => {
+       const code = query(request, "symbol");
+diff --git a/FE/src/entities/candidate.ts b/FE/src/entities/candidate.ts
+index b2cf11a..4f90ab6 100644
+--- a/FE/src/entities/candidate.ts
++++ b/FE/src/entities/candidate.ts
+@@ -64,7 +64,7 @@ export function adaptCandidate(value: unknown, isFinalCandidate = false): DataRe
+   const methodValue = meta.newsMethod ?? input.news_method;
+   // Old CSV output has news:[] even when collection never ran. Absence alone proves nothing.
+   const rawStatus = textValue(meta.newsStatus ?? input.news_analysis_status)?.toLowerCase() ?? null;
+-  const newsCollected = isNewsCollectionSuccess(rawStatus) && (meta.newsCollected === true || (meta.newsCollected !== false && input.news_collected === true));
++  const newsCollected = (rawStatus === "collected" || isNewsCollectionSuccess(rawStatus)) && (meta.newsCollected === true || (meta.newsCollected !== false && input.news_collected === true));
+   const points = Array.isArray(result.key_data_points) ? result.key_data_points : [];
+   const explicitTally = tally(Object.prototype.hasOwnProperty.call(meta, "newsTally") ? meta.newsTally : input.news_sentiment_tally ?? points.find(point => typeof point === "string" && /긍정\s*\d+\s*건/.test(point)));
+   const newsMethod = methodValue === "keyword" ? "keyword"
+diff --git a/FE/src/features/briefing/AnalysisControl.test.tsx b/FE/src/features/briefing/AnalysisControl.test.tsx
+index 8d09c68..7ceabbc 100644
+--- a/FE/src/features/briefing/AnalysisControl.test.tsx
++++ b/FE/src/features/briefing/AnalysisControl.test.tsx
+@@ -43,7 +43,7 @@ describe("analysis launch control", () => {
+     const test = setup();
+     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+     expect(test.posts()).toHaveLength(0);
+-    expect(screen.getByText(/모델 전용 · 뉴스 호출 없이/)).toBeInTheDocument();
++    expect(screen.getByText(/모델 예측 순위를 계산한 뒤 TOP5의 관련 기사를 수집/)).toBeInTheDocument();
+     expect(screen.getByRole("link", { name: "전체 순위 보기" })).toHaveAttribute("href", "/next/rank");
+   });
+   it("guards rapid clicks while a request is pending and attaches to the running job", async () => {
+@@ -65,56 +65,15 @@ describe("analysis launch control", () => {
+     expect(screen.getByRole("progressbar")).not.toHaveAttribute("value");
+     expect(test.posts()).toHaveLength(0);
+   });
+-  it("shows paid-call information before launching full mode", async () => {
+-    const test = setup({ mode: "full" });
++  it.each(["full", "unknown", "model_only"] as const)("always submits model inference + collection for server default %s, without paid options", async mode => {
++    const test = setup({ mode, newsReady: false });
+     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+-    expect(screen.getByText(/Gemini 유료 API 호출이 포함됩니다/)).toBeInTheDocument();
+-    fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
+-    await waitFor(() => expect(test.posts()).toHaveLength(1));
+-  });
+-  it("blocks unknown modes", async () => {
+-    const test = setup({ mode: "unknown" });
+-    await screen.findByText(/실행 모드 미확인/);
+-    expect(screen.getByRole("button", { name: "분석 시작" })).toBeDisabled();
+-    expect(test.posts()).toHaveLength(0);
+-  });
+-  it("sends the visible selected mode even when the server default changes", async () => {
+-    const test = setup();
+-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+-    fireEvent.click(screen.getByRole("radio", { name: /모델 예측만/ }));
+-    test.setMode("full");
++    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
++    expect(screen.queryByText(/Gemini/)).not.toBeInTheDocument();
+     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
+     await waitFor(() => expect(test.posts()).toHaveLength(1));
+     expect(test.posts()[0][0]).toBe("/api/candidates/run?mode=model_only&kind=adhoc");
+   });
+-  it("selects news mode without launching and submits it explicitly", async () => {
+-    const test = setup();
+-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+-    fireEvent.click(screen.getByRole("radio", { name: /뉴스 포함/ }));
+-    expect(test.posts()).toHaveLength(0);
+-    expect(screen.getByText(/Gemini 유료 API 호출이 포함됩니다/)).toBeInTheDocument();
+-    fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
+-    await waitFor(() => expect(test.posts()).toHaveLength(1));
+-    expect(test.posts()[0][0]).toBe("/api/candidates/run?mode=full&kind=adhoc");
+-    expect(screen.getByRole("radio", { name: /뉴스 포함/ })).toBeDisabled();
+-  });
+-  it("blocks missing news settings while allowing model-only analysis", async () => {
+-    const test = setup({ newsReady: false });
+-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+-    fireEvent.click(screen.getByRole("radio", { name: /뉴스 포함/ }));
+-    expect(screen.getByRole("button", { name: "분석 시작" })).toBeDisabled();
+-    expect(screen.getByText(/네이버 뉴스와 Gemini API 설정이 필요합니다/)).toBeInTheDocument();
+-    fireEvent.click(screen.getByRole("radio", { name: /모델 예측만/ }));
+-    expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled();
+-    expect(test.posts()).toHaveLength(0);
+-  });
+-  it("shows the server job mode when attaching to a run from another screen", async () => {
+-    const test = setup({ run: { status: "running", mode: "full" } });
+-    await screen.findByRole("button", { name: "분석 진행 중" });
+-    expect(screen.getByRole("radio", { name: /뉴스 포함/ })).toBeChecked();
+-    expect(screen.getByRole("radio", { name: /모델 예측만/ })).toBeDisabled();
+-    expect(test.posts()).toHaveLength(0);
+-  });
+   it("rechecks status after an ambiguous POST failure without retrying the launch", async () => {
+     const test = setup({ post: async () => { test.setRun({ status: "running" }); throw new Error("connection lost"); } });
+     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+@@ -129,7 +88,7 @@ describe("analysis launch control", () => {
+     test.client.setQueryData(queryKeys.candidates(), { data: [] });
+     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
+-    await screen.findByText(/모델 분석 완료 · 전체 순위에서/);
++    await screen.findByText(/최근 분석 완료 · 브리핑에서 모델 TOP5/);
+     expect(test.client.getQueryState(queryKeys.rank())?.isInvalidated).toBe(true);
+     expect(test.client.getQueryState(queryKeys.candidates())?.isInvalidated).toBe(true);
+   });
+diff --git a/FE/src/features/briefing/AnalysisControl.tsx b/FE/src/features/briefing/AnalysisControl.tsx
+index 906f016..881fd04 100644
+--- a/FE/src/features/briefing/AnalysisControl.tsx
++++ b/FE/src/features/briefing/AnalysisControl.tsx
+@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
+ import { Link } from "react-router-dom";
+ import { ArrowRight, LoaderCircle, Play, RefreshCw } from "lucide-react";
+ import { useAppPaths } from "../../app/paths";
+-import { useAnalysisRun, useStartAnalysis, type AnalysisMode } from "../../shared/api/analysis";
++import { useAnalysisRun, useStartAnalysis } from "../../shared/api/analysis";
+ import { queries } from "../../shared/api/queries";
+ import type { RunKind } from "../../types/performance";
+ 
+@@ -11,98 +11,55 @@ export function AnalysisControl() {
+   const paths = useAppPaths(), backend = useQuery(queries.backendStatus());
+   const analysis = useAnalysisRun(), start = useStartAnalysis();
+   const [checking, setChecking] = useState(false), [requestError, setRequestError] = useState<string | null>(null);
+-  const [selectedMode, setSelectedMode] = useState<AnalysisMode | null>(null);
+   const [kind, setKind] = useState<RunKind>("adhoc");
+-  const submitting = useRef(false);
+-  const run = analysis.data?.data;
+-  const mode = (run?.status === "running" ? run.mode : undefined) ?? selectedMode ?? backend.data?.analysisMode;
+-  const newsReady = backend.data?.news.configuration === "configured" && backend.data?.news.collectionConfiguration === "configured";
+-  const missingNews = mode === "full" && !newsReady;
++  const submitting = useRef(false), run = analysis.data?.data;
+   const running = run?.status === "running" || backend.data?.runtime.state === "running";
+   const busy = checking || start.isPending || running;
+-  const uncertain = backend.isError || analysis.isError || !backend.data || !run || mode === "unknown";
++  const uncertain = backend.isError || analysis.isError || !backend.data || !run;
+   const progress = run?.progress?.progressPercent;
+   const percent = typeof progress === "number" && Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : undefined;
+   const message = typeof run?.progress?.message === "string" ? run.progress.message : "서버에서 분석을 진행하고 있습니다.";
+   const elapsed = run?.elapsedMs;
+   const elapsedLabel = typeof elapsed === "number" && Number.isFinite(elapsed) && elapsed >= 0
+-    ? `${Math.floor(elapsed / 60000)}분 ${Math.floor(elapsed % 60000 / 1000)}초 경과` : null;
++    ? Math.floor(elapsed / 60000) + "분 " + Math.floor(elapsed % 60000 / 1000) + "초 경과" : null;
+ 
+   async function launch() {
+-    if (submitting.current || busy || uncertain || missingNews || (mode !== "model_only" && mode !== "full")) return;
+-    submitting.current = true;
+-    setSelectedMode(mode);
+-    setChecking(true);
+-    setRequestError(null);
++    if (submitting.current || busy || uncertain) return;
++    submitting.current = true; setChecking(true); setRequestError(null);
+     try {
+-      // Recheck configuration and runtime before a paid or long-running action.
+       const [configuration, status] = await Promise.all([backend.refetch(), analysis.refetch()]);
+       if (configuration.isError || status.isError || !configuration.data || !status.data) {
+-        setRequestError("실행 설정과 상태를 확인하지 못했습니다. 상태를 다시 확인해 주세요.");
+-        return;
++        setRequestError("실행 설정과 상태를 확인하지 못했습니다. 상태를 다시 확인해 주세요."); return;
+       }
+       if (configuration.data.runtime.state === "running" || status.data.data.status === "running") return;
+-      if (mode === "full" && (configuration.data.news.configuration !== "configured" || configuration.data.news.collectionConfiguration !== "configured")) {
+-        setRequestError("뉴스 포함 분석에는 네이버 뉴스와 Gemini API 설정이 필요합니다.");
+-        return;
+-      }
+-      await start.mutateAsync({ mode, kind });
++      await start.mutateAsync({ mode: "model_only", kind });
+     } catch {
+       setRequestError("실행 요청을 확인하지 못했습니다. 서버에서 시작됐을 수 있으니 상태를 다시 확인해 주세요.");
+       await Promise.all([backend.refetch(), analysis.refetch()]);
+-    } finally {
+-      submitting.current = false;
+-      setChecking(false);
+-    }
+-  }
+-
+-  async function recheck() {
+-    setRequestError(null);
+-    await Promise.all([backend.refetch(), analysis.refetch()]);
++    } finally { submitting.current = false; setChecking(false); }
+   }
++  async function recheck() { setRequestError(null); await Promise.all([backend.refetch(), analysis.refetch()]); }
+ 
+   return <section className="briefing-card analysis-control" aria-labelledby="analysis-control-heading">
+     <div className="analysis-control-main">
+       <div className="analysis-control-copy">
+         <p className="briefing-eyebrow">NEW ANALYSIS</p>
+         <h2 id="analysis-control-heading">새 분석 실행</h2>
+-        <p className="analysis-control-caption">이번 실행에 사용할 모드를 선택하세요. 서버 기본 설정은 변경되지 않습니다.</p>
+-        <fieldset className="analysis-mode-picker" disabled={busy || !backend.data || backend.isError} aria-describedby="analysis-mode-description">
+-          <legend>분석 모드</legend>
+-          <div className="analysis-mode-options">
+-            <label className={`analysis-mode-option${mode === "model_only" ? " is-selected" : ""}`}>
+-              <input type="radio" name="analysis-mode" value="model_only" checked={mode === "model_only"} onChange={() => { setSelectedMode("model_only"); setRequestError(null); }} />
+-              <span><strong>모델 예측만</strong><small>예측 순위 · 뉴스 API 호출 없음</small></span>
+-            </label>
+-            <label className={`analysis-mode-option${mode === "full" ? " is-selected" : ""}`}>
+-              <input type="radio" name="analysis-mode" value="full" checked={mode === "full"} onChange={() => { setSelectedMode("full"); setRequestError(null); }} />
+-              <span><strong>뉴스 포함</strong><small>뉴스 수집 + Gemini 분석 · 유료 API</small></span>
+-            </label>
+-          </div>
+-        </fieldset>
++        <p id="analysis-mode-description" className="analysis-control-description">모델 예측 순위를 계산한 뒤 TOP5의 관련 기사를 수집합니다.</p>
+         <label className="analysis-official-choice"><input type="checkbox" checked={(running ? run?.kind : kind) === "official"} disabled={busy || !backend.data} onChange={event => setKind(event.target.checked ? "official" : "adhoc")} />공식 성과 기록 요청</label>
+-        <p className="analysis-control-caption">기본은 수시 실행입니다. 공식 요청은 기준일·모드별 첫 완료 예측을 고정하고, 목표일 09:00 한국시간 전 완료 여부를 검증합니다.</p>
+-        <p id="analysis-mode-description" className="analysis-control-description">
+-          {backend.isError || !backend.data ? "실행 모드를 확인하고 있습니다. 상태를 다시 확인해 주세요."
+-            : mode === "model_only" ? "모델 전용 · 뉴스 호출 없이 예측 순위를 계산합니다. 최종 후보는 생성하지 않습니다."
+-            : mode === "full" ? "뉴스 포함 · 모델 예측과 뉴스 분석을 실행합니다. Gemini 유료 API 호출이 포함됩니다."
+-            : "실행 모드 미확인 · 서버의 분석 모드 설정을 확인해 주세요."}
+-        </p>
+-        {missingNews && <p className="analysis-control-error" role="status">뉴스 포함 분석에는 네이버 뉴스와 Gemini API 설정이 필요합니다. 모델 예측만 실행할 수 있습니다.</p>}
++        <p className="analysis-control-caption">기본은 수시 실행입니다. 공식 요청은 기준일별 첫 완료 예측을 고정하고, 목표일 09:00 한국시간 전 완료 여부를 검증합니다.</p>
+       </div>
+       <button type="button" className="briefing-button analysis-start-button" onClick={() => void launch()}
+-        disabled={busy || uncertain || missingNews} aria-describedby="analysis-mode-description" aria-busy={busy}>
++        disabled={busy || uncertain} aria-describedby="analysis-mode-description" aria-busy={busy}>
+         {busy ? <LoaderCircle className="analysis-spinner" aria-hidden="true" size={18} /> : <Play aria-hidden="true" size={18} />}
+         {running ? "분석 진행 중" : checking || start.isPending ? "실행 요청 중" : "분석 시작"}
+       </button>
+     </div>
+     <div className="analysis-control-status" role="status" aria-live="polite" aria-atomic="true">
+       {run?.runId && <p className="analysis-control-caption">{run.kind === "official" ? "공식 기록 요청" : "수시 실행"} · 실행 식별자 {run.runId}</p>}
+-      {running ? <><p>{analysis.isError ? "진행 상태 갱신 실패 · 마지막 확인 상태는 분석 진행 중입니다." : message}{elapsedLabel ? ` · ${elapsedLabel}` : ""}</p>
++      {running ? <><p>{analysis.isError ? "진행 상태 갱신 실패 · 마지막 확인 상태는 분석 진행 중입니다." : message}{elapsedLabel ? " · " + elapsedLabel : ""}</p>
+         <progress aria-label="분석 진행률" max={100} value={percent} /><p className="analysis-control-caption">서버가 제공한 단계별 진행 상태 · 진행 중에는 5초마다 확인합니다.</p></>
+-        : run?.status === "completed" ? <p>{run.result?.mode === "model_only"
+-          ? "모델 분석 완료 · 전체 순위에서 결과를 확인하세요. 뉴스 보정 최종 후보는 생성되지 않았습니다."
+-          : "최근 분석 완료 · 저장된 결과를 갱신했습니다."}</p>
++        : run?.status === "completed" ? <p>최근 분석 완료 · 브리핑에서 모델 TOP5와 기사 수집 상태를 확인하세요.</p>
+         : run?.status === "failed" ? <p className="analysis-control-error">분석 실패 · {run.error || "분석 기록과 서버 로그를 확인해 주세요."}</p>
+         : <p>새 분석은 서버에서 실행됩니다. ‘다시 조회’는 저장된 결과만 불러옵니다.</p>}
+       {requestError && <p className="analysis-control-error">{requestError}</p>}
+@@ -110,7 +67,7 @@ export function AnalysisControl() {
+     </div>
+     <div className="analysis-control-links">
+       <Link to={paths.history}>분석 기록 보기<ArrowRight aria-hidden="true" size={14} /></Link>
+-      {(mode === "model_only" || run?.result?.mode === "model_only") && <Link to={paths.rank}>전체 순위 보기<ArrowRight aria-hidden="true" size={14} /></Link>}
++      <Link to={paths.rank}>전체 순위 보기<ArrowRight aria-hidden="true" size={14} /></Link>
+       {(uncertain || requestError || run?.status === "failed") && <button type="button" onClick={() => void recheck()} disabled={backend.isFetching || analysis.isFetching || busy}>
+         <RefreshCw aria-hidden="true" size={14} />실행 상태 다시 확인</button>}
+     </div>
+diff --git a/FE/src/features/briefing/AnalysisDialog.test.tsx b/FE/src/features/briefing/AnalysisDialog.test.tsx
+index 9d10707..7a64131 100644
+--- a/FE/src/features/briefing/AnalysisDialog.test.tsx
++++ b/FE/src/features/briefing/AnalysisDialog.test.tsx
+@@ -28,7 +28,7 @@ describe("header analysis dialog", () => {
+     trigger.focus(); fireEvent.click(trigger);
+     const dialog = screen.getByRole("dialog", { name: "AI 분석 실행" }), close = within(dialog).getByRole("button", { name: "분석 실행 대화상자 닫기" });
+     expect(close).toHaveFocus(); await screen.findByRole("button", { name: "분석 시작" });
+-    await waitFor(() => expect(screen.getByRole("radio", { name: /모델 예측만/ })).toBeEnabled());
++    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+     expect(document.body.style.overflow).toBe("hidden"); expect(document.documentElement.style.overflow).toBe("hidden");
+     const stops = dialogTabStops(dialog), last = stops[stops.length - 1];
+     close.focus(); fireEvent.keyDown(close, { key: "Tab", shiftKey: true }); expect(last).toHaveFocus();
+diff --git a/FE/src/features/briefing/BriefingPage.test.tsx b/FE/src/features/briefing/BriefingPage.test.tsx
+index 0acf088..15e6ed9 100644
+--- a/FE/src/features/briefing/BriefingPage.test.tsx
++++ b/FE/src/features/briefing/BriefingPage.test.tsx
+@@ -1,5 +1,5 @@
+-﻿import { afterEach, describe, expect, it, vi } from "vitest";
+-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
+ import { BriefingPage, INTRO_STORAGE_KEY } from "./BriefingPage";
+@@ -15,7 +15,7 @@ import { chartBundle } from "../stock/reportFixtures";
+ const clients: QueryClient[] = [];
+ afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
+ function row(code: string, name: string, prediction: unknown = 0.01) {
+-  const value = pipelineRow({ ticker: code, ensemble_pred_return: prediction, pred_rank: 50 });
++  const value = pipelineRow({ ticker: code, ensemble_pred_return: prediction, pred_rank: code === "005930" ? 1 : 2 });
+   value.result.ticker = code; value.result.company_name = name;
+   return value;
+ }
+@@ -25,7 +25,7 @@ function mockBackend(overrides?: (path: string, options?: RequestInit) => Promis
+   const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url, options) => {
+     const path = String(url), custom = overrides?.(path, options);
+     if (custom) return custom;
+-    if (path === "/api/candidates") return jsonResponse(rows());
++    if (path === "/api/candidates" || path === "/api/rank") return jsonResponse(rows());
+     if (path === "/api/korean-market/indices") return jsonResponse([
+       { symbol: "KOSPI", value: 2700, changeRate: 0.4, source: "cache", asOf: "2026-10-07T09:00:00Z", miniSeriesSource: "history" },
+       { symbol: "KOSDAQ", value: 800, changeRate: -0.2, source: "sample", asOf: "2026-10-07T09:00:00Z", miniSeriesSource: "interpolated" },
+@@ -52,143 +52,94 @@ function mount(entries = ["/next"], index = entries.length - 1) {
+   return client;
+ }
+ 
+-describe("briefing with fetch fixtures", () => {
+-  it("selects through native buttons, ArrowDown and URL history without a meaningless close button", async () => {
++describe("briefing with raw model rank fixtures", () => {
++  it("selects through buttons, keyboard and URL history", async () => {
+     mockBackend(); mount();
+     const a = await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+-    fireEvent.click(a);
+-    await screen.findByRole("heading", { name: "종목 A" });
+-    expect(screen.getByTestId("location")).toHaveTextContent("/next?code=005930");
+-    fireEvent.keyDown(a, { key: "ArrowDown" });
+-    await screen.findByRole("heading", { name: "종목 B" });
++    fireEvent.click(a); await screen.findByRole("heading", { name: "종목 A" });
++    expect(screen.getByTestId("location")).toHaveTextContent("code=005930");
++    fireEvent.keyDown(a, { key: "ArrowDown" }); await screen.findByRole("heading", { name: "종목 B" });
+     expect(screen.getByRole("button", { name: "종목 B 000660 · 선택됨 상세 보기" })).toHaveFocus();
+     fireEvent.click(screen.getByRole("button", { name: "테스트 뒤로" }));
+     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(/^\/next$/));
+-    fireEvent.click(a);
+-    await screen.findByRole("heading", { name: "종목 A" });
+-    expect(screen.queryByRole("button", { name: "종목 상세 닫기" })).not.toBeInTheDocument();
+     expect(screen.getByRole("link", { name: "표로 돌아가기" })).toHaveAttribute("href", "#candidate-heading");
+   });
+-  it("keeps a valid deeplink on mount and rejects invalid six-digit selection", async () => {
+-    mockBackend(); mount(["/next?code=000660"]);
+-    await screen.findByRole("heading", { name: "종목 B" });
++  it("uses raw rank and never requests a news-adjusted candidate list or news analysis", async () => {
++    const fetcher = mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([row("999999", "보정 후보", .99)])) : undefined);
++    mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
++    expect(screen.queryByText("보정 후보")).not.toBeInTheDocument();
++    expect(fetcher.mock.calls.some(([url]) => String(url) === "/api/rank")).toBe(true);
++    expect(fetcher.mock.calls.some(([url]) => String(url) === "/api/candidates")).toBe(false);
++    expect(fetcher.mock.calls.some(([url]) => String(url).includes("stock-analysis"))).toBe(false);
++    expect(fetcher.mock.calls.every(([, options]) => options?.method !== "POST")).toBe(true);
++  });
++  it("keeps a valid deeplink", async () => {
++    mockBackend(); mount(["/next?code=000660"]); await screen.findByRole("heading", { name: "종목 B" });
+     expect(screen.getByTestId("location")).toHaveTextContent("code=000660");
+   });
+-  it("ignores a late A response after switching to B and forwards cancellation", async () => {
+-    const pending = deferred<Response>();
+-    const fetcher = mockBackend(path => path === "/api/stock-analysis?ticker=005930" ? pending.promise : undefined);
+-    mount();
+-    fireEvent.click(await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ }));
+-    await waitFor(() => expect(fetcher.mock.calls.some(([url]) => String(url).includes("ticker=005930"))).toBe(true));
+-    fireEvent.click(screen.getByRole("button", { name: "종목 B 000660 상세 보기" }));
+-    await screen.findByRole("heading", { name: "종목 B" });
+-    const aCall = fetcher.mock.calls.find(([url]) => String(url).includes("ticker=005930"));
+-    expect(aCall?.[1]?.signal?.aborted).toBe(true);
+-    pending.resolve(jsonResponse(row("005930", "오래된 A 상세")));
+-    await Promise.resolve();
+-    expect(screen.queryByRole("heading", { name: "오래된 A 상세" })).not.toBeInTheDocument();
+-    expect(document.getElementById("briefing-detail")).toHaveAttribute("data-detail-code", "000660");
+-  });
+-  it("replaces candidates with a genuinely empty result", async () => {
++  it.each(["bad", "000000"])("rejects invalid selection %s", async code => {
++    mockBackend(); mount(["/next?code=" + code]); await screen.findByText("유효한 6자리 종목 코드가 필요합니다.");
++    expect(document.querySelector("[data-detail-code]")).not.toBeInTheDocument();
++  });
++  it("replaces predictions with an authoritative empty rank result", async () => {
+     let empty = false;
+-    mockBackend(path => path === "/api/candidates" && empty ? Promise.resolve(jsonResponse([])) : undefined);
++    mockBackend(path => path === "/api/rank" && empty ? Promise.resolve(jsonResponse([])) : undefined);
+     mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+     empty = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+-    await screen.findByText("최신 분석 결과가 비어 있습니다.");
+-    expect(screen.queryByRole("button", { name: /종목 A 005930/ })).not.toBeInTheDocument();
+-  });
+-  it("keeps pending deeplink membership/model unavailable until the candidate list succeeds", async () => {
+-    const list = deferred<Response>();
+-    mockBackend(path => path === "/api/candidates" ? list.promise : undefined);
+-    mount(["/next?code=005930"]);
+-    await screen.findByRole("heading", { name: "종목 A" });
+-    const panel = document.getElementById("briefing-detail")!;
+-    expect(panel).toHaveTextContent("최종 후보 여부 확인 중");
+-    expect(panel.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "unavailable");
+-    list.resolve(jsonResponse(rows()));
+-    await waitFor(() => expect(panel.querySelector('[data-membership]')).toHaveAttribute("data-membership", "candidate"));
+-    expect(panel.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "positive");
+-    expect(document.title).toBe(`브리핑 · ${BRAND_NAME}`);
+-  });
+-  it("does not call an error deeplink non-candidate even when stock analysis succeeds", async () => {
+-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
+-    mount(["/next?code=005930"]);
+-    await screen.findByRole("heading", { name: "종목 A" });
+-    await screen.findByText("후보 조회 실패 · 분석 결과를 가져오지 못했습니다.");
+-    const panel = document.getElementById("briefing-detail")!;
+-    expect(panel).toHaveTextContent("최종 후보 여부 미확인");
+-    expect(panel).not.toHaveTextContent("최종 후보 외 종목");
+-    expect(panel.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "unavailable");
+-  });
+-  it("identifies non-membership only from a successful empty list", async () => {
+-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : undefined);
+-    mount(["/next?code=005930"]);
+-    await screen.findByRole("heading", { name: "종목 A" });
+-    await screen.findByText("최신 분석 결과가 비어 있습니다.");
+-    expect(document.querySelector('[data-membership]')).toHaveAttribute("data-membership", "nonCandidate");
+-    expect(document.getElementById("briefing-detail")).toHaveTextContent("최종 후보 외 종목");
+-  });
+-  it("fails model membership closed in both old table and panel after background list failure", async () => {
+-    let failure = false;
+-    mockBackend(path => path === "/api/candidates" && failure ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
+-    mount(["/next?code=005930"]);
+-    await screen.findByRole("button", { name: "종목 A 005930 · 선택됨 상세 보기" });
+-    failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+-    await screen.findByText("이전 조회 결과 · 후보 갱신 실패");
+-    expect(document.querySelector('[data-membership]')).toHaveAttribute("data-membership", "unknown");
+-    expect(document.querySelector('[data-candidate-code="005930"] [data-signal]')).toHaveAttribute("data-signal", "unavailable");
+-    expect(document.querySelector('.briefing-detail-signals [data-signal]')).toHaveAttribute("data-signal", "unavailable");
++    await screen.findByText("표시할 모델 예측이 없습니다.");
++    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
++  });
++  it("shows rank loading independently of candidate generation", async () => {
++    const pending = deferred<Response>(); mockBackend(path => path === "/api/rank" ? pending.promise : undefined); mount();
++    await screen.findByText("모델 예측 순위를 조회하고 있습니다.");
++    pending.resolve(jsonResponse(rows())); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+   });
+-  it("distinguishes initial error from empty and background error from successful stale data", async () => {
++  it("keeps cached rank with a visible refresh failure label", async () => {
+     let failure = false;
+-    mockBackend(path => path === "/api/candidates" && failure ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
++    mockBackend(path => path === "/api/rank" && failure ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
+     mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+     failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+-    await screen.findByText("이전 조회 결과 · 후보 갱신 실패");
+-    expect(screen.getByRole("button", { name: /종목 A 005930.*상세 보기/ })).toBeInTheDocument();
+-    expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+-  });
+-  it("shows an initial API failure without a sample table", async () => {
+-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
+-    mount(); await screen.findByText("후보 조회 실패 · 분석 결과를 가져오지 못했습니다.");
+-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+-    expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+-  });
+-  it("marks sample candidates and cache/sample/interpolated market evidence", async () => {
+-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse(rows().map(row => ({ ...row, data_meta: { ...row.data_meta, source: "sample" } })))) : undefined);
++    await screen.findByText("이전 조회 결과 · 모델 순위 갱신 실패");
++    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(2);
++  });
++  it("shows initial rank failure without fabricating results", async () => {
++    mockBackend(path => path === "/api/rank" ? Promise.resolve(new Response("failed", { status: 502 })) : undefined);
++    mount(); await screen.findByText("모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다.");
++    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
++  });
++  it("marks sample predictions", async () => {
++    mockBackend(path => path === "/api/rank" ? Promise.resolve(jsonResponse(rows().map(value => ({ ...value, data_meta: { ...value.data_meta, source: "sample" } })))) : undefined);
+     mount(); await screen.findByText("예시 데이터 · 실제 분석 결과가 아닙니다.");
+-    expect(screen.getAllByText("예시 데이터").length).toBeGreaterThan(0);
+-    expect(document.querySelector(".briefing-index-grid")).not.toBeInTheDocument();
+-    expect(screen.getByText(/확인 가능한 지수가 부족합니다/)).toBeInTheDocument();
+-  });
+-  it("does not render a fabricated model zero from legacy summary prose", async () => {
+-    const missing = row("005930", "원본 누락", null); missing.result.summary = "Huber 예상수익률 0.00%.";
+-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([missing])) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(missing)) : undefined);
+-    mount(["/next?code=005930"]);
+-    await screen.findByRole("heading", { name: "원본 누락" });
+-    expect(document.getElementById("briefing-detail")).not.toHaveTextContent("Huber 예상수익률 0.00%");
+-    expect(screen.getByText(/원본 모델 예측값이 없어 수익률 요약/)).toBeInTheDocument();
+-    expect(within(document.getElementById("briefing-detail")!).getByText("모델 예측수익률").nextElementSibling).toHaveTextContent("—");
+-  });
+-  it("dismisses first-visit introduction persistently without automatically launching analysis", async () => {
+-    const fetcher = mockBackend(); mount();
+-    fireEvent.click(screen.getByRole("button", { name: "서비스 안내 닫기" }));
++  });
++  it("does not invent zero from prose and keeps 0.01 as 1 percent", async () => {
++    const missing = row("005930", "원본 누락", null); missing.result.summary = "예상수익률 0.00%";
++    mockBackend(path => path === "/api/rank" ? Promise.resolve(jsonResponse([missing, row("000660", "실제 예측", .01)])) : undefined);
++    mount(); await screen.findByText("원본 예측값 없음");
++    expect(document.querySelector('[data-model-code="005930"] .briefing-top-prediction')).toHaveTextContent("—");
++    expect(document.querySelector('[data-model-code="000660"] .briefing-top-prediction')).toHaveTextContent("+1.00%");
++    expect(document.getElementById("briefing-detail")).not.toHaveTextContent("예상수익률 0.00%");
++  });
++  it.each([undefined, "close_to_close"])("does not assert a period for target %s", async target => {
++    const value = row("005930", "기준 미확인"); value.input_row.prediction_target = target as string;
++    mockBackend(path => path === "/api/rank" ? Promise.resolve(jsonResponse([value])) : undefined);
++    mount(); await screen.findByText("기준 미확인", { selector: "strong" });
++    expect(document.querySelector('[data-model-code] .briefing-top-prediction')).toHaveTextContent("예측 기간 미확인");
++    expect(document.querySelector('[data-model-code] .briefing-top-prediction')).not.toHaveTextContent("다음 거래일");
++  });
++  it("dismisses the introduction without launching analysis", async () => {
++    const fetcher = mockBackend(); mount(); fireEvent.click(screen.getByRole("button", { name: "서비스 안내 닫기" }));
+     expect(localStorage.getItem(INTRO_STORAGE_KEY)).toBe("dismissed");
+-    expect(screen.queryByRole("region", { name: "서비스 첫 방문 안내" })).not.toBeInTheDocument();
+     await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
+-    expect(screen.queryByRole("button", { name: "분석 시작" })).not.toBeInTheDocument();
+     expect(fetcher.mock.calls.every(([, options]) => options?.method !== "POST")).toBe(true);
+-    expect(screen.queryByRole("region", { name: "성과 기록" })).not.toBeInTheDocument();
+-    expect(screen.getByText("모의투자 기록 · 10/6–10/8")).toBeInTheDocument();
+-    expect(screen.queryByText(/\d+\/20/)).not.toBeInTheDocument();
+-  });
+-  it("reattaches to GET analysis completion and invalidates an older candidate read", async () => {
+-    let version = 1;
+-    mockBackend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([row("005930", `버전 ${version}`)])) : undefined);
+-    const client = mount(); await screen.findByRole("button", { name: /버전 1 005930.*상세 보기/ });
+-    version = 2;
+-    client.setQueryData(queryKeys.analysisRun(), { data: { status: "completed", elapsedMs: 10, progress: { updatedAt: 2 }, result: { rows: 1 } }, source: "unknown", asOf: null });
+-    await screen.findByRole("button", { name: /버전 2 005930.*상세 보기/ });
++    expect(document.title).toBe("브리핑 · " + BRAND_NAME);
++  });
++  it("refreshes the visible rank query after invalidation", async () => {
++    let latest = false;
++    mockBackend(path => path === "/api/rank" && latest ? Promise.resolve(jsonResponse([row("000660", "새 결과")])) : undefined);
++    const client = mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
++    latest = true; await client.invalidateQueries({ queryKey: queryKeys.rank() });
++    await screen.findByRole("button", { name: /새 결과 000660.*상세 보기/ });
++    expect(screen.queryByRole("button", { name: /종목 A 005930.*상세 보기/ })).not.toBeInTheDocument();
+   });
+ });
+ 
+diff --git a/FE/src/features/briefing/BriefingPage.tsx b/FE/src/features/briefing/BriefingPage.tsx
+index 75ebc0f..fbff4bb 100644
+--- a/FE/src/features/briefing/BriefingPage.tsx
++++ b/FE/src/features/briefing/BriefingPage.tsx
+@@ -1,17 +1,12 @@
+-﻿import { useState } from "react";
++import { useState } from "react";
+ import { useQuery, useQueryClient } from "@tanstack/react-query";
+ import { Link, useSearchParams } from "react-router-dom";
+ import { Info, X, RefreshCw, ArrowRight } from "lucide-react";
+ import { useAppPaths } from "../../app/paths";
+ import { queries, queryKeys } from "../../shared/api/queries";
+-import { SIGNAL_DESCRIPTIONS, SIGNAL_RULE_VERSION } from "../../entities/signals";
+-import { MODEL_SUMMARY } from "../../entities/model";
+ import { formatDate, formatNumber } from "../../shared/lib/format";
+ import { usePageTitle } from "../../hooks/usePageTitle";
+-import { CandidateTable } from "./CandidateTable";
+-import { modelTopFive } from "./ModelTopFiveTable";
+-import { useCandidateProduction, productionNotice } from "./candidateProduction";
+-import { resolveMembership } from "./membership";
++import { modelTopFive, ModelTopFiveList } from "./ModelTopFiveTable";
+ import { DetailPanel } from "./DetailPanel";
+ import { BriefingSummary } from "./BriefingSummary";
+ import { SourceMeta } from "./SourceMeta";
+@@ -24,23 +19,20 @@ function showIntro() { try { return localStorage.getItem(INTRO_STORAGE_KEY) !==
+ 
+ export function BriefingPage() {
+   usePageTitle("브리핑");
+-  const candidates = useQuery(queries.candidates()), indices = useQuery(queries.indices());
+-  const paths = useAppPaths(), production = useCandidateProduction(candidates), client = useQueryClient(), [params, setParams] = useSearchParams(), [intro, setIntro] = useState(showIntro);
+-  const rank = useQuery({ ...queries.rank(), enabled: production === "unproduced" });
+-  const modelOnly = production === "unproduced", modelRows = modelOnly && rank.isSuccess && !rank.isError ? modelTopFive(rank.data.data) : [];
+-  const rows = candidates.data?.data ?? [], showModel = modelRows.length > 0, displayRows = showModel ? modelRows : rows, result = showModel ? rank : candidates;
++  const rank = useQuery(queries.rank()), indices = useQuery(queries.indices());
++  const paths = useAppPaths(), client = useQueryClient(), [params, setParams] = useSearchParams(), [intro, setIntro] = useState(showIntro);
++  // Always use original model rank, including runs that also produced news-adjusted candidates.
++  const rows = modelTopFive(rank.data?.data ?? []);
+   const rawCode = params.get("code"), code = rawCode && /^\d{6}$/.test(rawCode) && rawCode !== "000000" ? rawCode : null;
+-  const selectedCode = code ?? (!rawCode ? displayRows[0]?.code ?? null : null);
+-  const selected = displayRows.find(row => row.code === selectedCode) ?? (modelOnly ? rank.data?.data.find(row => row.code === selectedCode) : undefined);
+-  const membership = resolveMembership(candidates, rows.some(row => row.code === selectedCode), production), notice = productionNotice(production);
+-  const dates = [...new Set(displayRows.map(row => row.baseDate).filter((date): date is string => date !== null))];
++  const selectedCode = code ?? (!rawCode ? rows[0]?.code ?? null : null);
++  const selected = rank.data?.data.find(row => row.code === selectedCode);
++  const dates = [...new Set(rows.map(row => row.baseDate).filter((date): date is string => date !== null))];
+   const baseDate = dates.length === 1 ? formatDate(dates[0]) : dates.length > 1 ? "종목별 상이" : "—";
+-  const pools = [...new Set(displayRows.map(row => row.poolSize).filter((size): size is number => size !== null && size >= 1))], pool = pools.length === 1 ? pools[0] : null;
+-  const consecutiveRanks = displayRows.every((row, index) => row.rank === index + 1);
++  const pools = [...new Set(rows.map(row => row.poolSize).filter((size): size is number => size !== null && size >= 1))], pool = pools.length === 1 ? pools[0] : null;
+   function select(nextCode: string, reason: "pointer" | "keyboard" = "pointer") { const next = new URLSearchParams(params); next.set("code", nextCode); setParams(next, { replace: reason === "keyboard" }); }
+   function dismissIntro() { setIntro(false); try { localStorage.setItem(INTRO_STORAGE_KEY, "dismissed"); } catch { /* session-only dismissal */ } }
+   async function refresh() {
+-    const keys = [queryKeys.candidates(), queryKeys.indices(), queryKeys.backendStatus(), ...(modelOnly ? [queryKeys.rank()] : []), ...displayRows.map(row => queryKeys.quote(row.code)), ...(selectedCode ? [queryKeys.stock(selectedCode), queryKeys.chart(selectedCode, "1M")] : [])];
++    const keys = [queryKeys.rank(), queryKeys.indices(), queryKeys.backendStatus(), ...rows.map(row => queryKeys.quote(row.code)), ...(selectedCode ? [queryKeys.stock(selectedCode), queryKeys.chart(selectedCode, "1M")] : [])];
+     await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey, exact: true })));
+     await Promise.all(keys.map(queryKey => client.refetchQueries({ queryKey, exact: true, type: "active" })));
+   }
+@@ -48,25 +40,21 @@ export function BriefingPage() {
+     <div className="briefing-title-row"><h1>오늘의 브리핑</h1><button type="button" className="briefing-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={14} />다시 조회</button></div>
+     <WatchlistNotice />
+     <div className="briefing-columns"><div className="briefing-primary">
+-      <BriefingSummary indices={indices.data?.data ?? []} pending={indices.isPending} error={indices.isError} count={pool ?? null} />
+       <section className="briefing-card briefing-comparison-card" aria-labelledby="candidate-heading">
+-        <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>{showModel ? "Transformer Ensemble Top-5" : rows.length ? `후보 ${rows.length}종목 비교` : "최종 후보 비교"}</h2><span className="briefing-muted">원본 예측 순위 · 행 선택으로 근거 보기</span></div>
+-        <p className="briefing-model-summary">{MODEL_SUMMARY}</p>
+-        <div className="briefing-result-meta"><span>분석 기준일 <strong>{baseDate}</strong> · 모집단 {formatNumber(pool)}종목</span>{result.data && <SourceMeta source={result.data.source} asOf={result.data.asOf} label="저장 시각" />}</div>
+-        {result.data?.source === "sample" && <p className="briefing-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
+-        {candidates.isError && <p className="briefing-notice" role="status">{candidates.data ? "이전 조회 결과 · 후보 갱신 실패" : "후보 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
+-        {candidates.isPending ? <p className="briefing-empty" role="status">후보를 조회하고 있습니다.</p> : displayRows.length ? <div data-candidate-production={production}><CandidateTable candidates={displayRows} selectedCode={selectedCode} onSelect={select} membershipConfirmed={!candidates.isError} production={production} /></div> : !candidates.isError && (production === "produced" ? <p className="briefing-empty">최종 후보가 없습니다.<small>최신 분석 결과가 비어 있습니다.</small></p>
+-          : production === "pending" ? <p className="briefing-empty" role="status">최종 후보 생성 여부를 확인하고 있습니다.</p>
+-          : <p className="briefing-empty" role="status" data-candidate-production={production}>{notice}<small>모델 예측 순위는 <Link to={paths.rank}>전체 순위</Link>에서 확인하세요.</small></p>)}
+-        {displayRows.length > 0 && <div className="briefing-comparison-footer"><span>{modelOnly && consecutiveRanks && pool !== null && pool >= displayRows.length ? `원본 순위 ${displayRows.length + 1}위 이하 ${formatNumber(pool - displayRows.length)}종목은 전체 순위에서 확인` : "나머지 종목은 전체 순위에서 확인"}</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>}
+-        <p className="briefing-table-help">예측수익률: 다음 거래일 시가→종가 모델 예측 · 실제 성과 아님{modelOnly ? " · 모델·수급 2개 근거 기준" : " · 모델·뉴스·수급 3개 근거 기준"}</p>
++        <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>모델 예측 TOP5</h2><span className="briefing-muted">원본 예측 순위</span></div>
++        <div className="briefing-result-meta"><span>분석 기준일 <strong>{baseDate}</strong> · 모집단 {formatNumber(pool)}종목</span>{rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="저장 시각" />}</div>
++        {rank.data?.source === "sample" && <p className="briefing-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
++        {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
++        {rank.isPending ? <p className="briefing-empty" role="status">모델 예측 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} /> : !rank.isError && <p className="briefing-empty">표시할 모델 예측이 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
++        <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
++        <p className="briefing-table-help">예상 수익률은 모델 예측이며 실제 성과가 아닙니다. 기사 시각은 한국시간입니다.</p>
+       </section>
++      <BriefingSummary indices={indices.data?.data ?? []} pending={indices.isPending} error={indices.isError} count={pool} />
+       {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>예측과 근거를 읽는 기준은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
+-      <details className="briefing-card briefing-rules"><summary>근거 판정 기준 <span>{SIGNAL_RULE_VERSION}</span></summary><dl>{Object.entries(SIGNAL_DESCRIPTIONS).filter(([key]) => !modelOnly || key !== "news").map(([key, text]) => <div key={key}><dt>{key === "model" ? "모델" : key === "news" ? "뉴스" : key === "supply" ? "수급" : key === "agreement" ? "근거 일치도" : "다음 거래일"}</dt><dd>{key === "agreement" ? `${modelOnly ? "모델·수급 2개" : "모델·뉴스·수급 3개"} 근거 중 긍정 개수입니다. 판정 불가는 별도로 표시합니다.` : text}</dd></div>)}</dl></details>
+       <p className="briefing-disclaimer">모델 예측과 모의투자 기록은 투자 추천·수익 보장·실제 성과가 아닙니다.</p>
+     </div>
+-      {selectedCode ? <DetailPanel key={selectedCode} code={selectedCode} candidate={selected} candidateMeta={selected ? modelOnly ? rank.data : candidates.data : undefined} membership={membership} production={production} />
+-        : <aside id="briefing-detail" className="briefing-card briefing-detail-empty" aria-labelledby="detail-empty-heading"><Info aria-hidden="true" size={24} /><h2 id="detail-empty-heading">근거를 더 가까이</h2><p>{rawCode ? "유효한 6자리 종목 코드가 필요합니다." : "후보를 조회하면 첫 종목의 근거가 표시됩니다."}</p></aside>}
++      {selectedCode ? <DetailPanel key={selectedCode} code={selectedCode} candidate={selected} candidateMeta={selected ? rank.data : undefined} membership={rank.isPending ? "pending" : "unknown"} production="unproduced" />
++        : <aside id="briefing-detail" className="briefing-card briefing-detail-empty" aria-labelledby="detail-empty-heading"><Info aria-hidden="true" size={24} /><h2 id="detail-empty-heading">종목 상세</h2><p>{rawCode ? "유효한 6자리 종목 코드가 필요합니다." : "모델 예측을 조회하면 첫 종목의 상세가 표시됩니다."}</p></aside>}
+     </div>
+   </div>;
+ }
+diff --git a/FE/src/features/briefing/DetailPanel.tsx b/FE/src/features/briefing/DetailPanel.tsx
+index 37dddc4..9d6cc53 100644
+--- a/FE/src/features/briefing/DetailPanel.tsx
++++ b/FE/src/features/briefing/DetailPanel.tsx
+@@ -14,6 +14,7 @@ import { evidenceSummary, formatBillions } from "./briefingData";
+ import { WatchToggle } from "../watchlist/WatchToggle";
+ import { safeArticleUrl } from "../stock/reportData";
+ import { useAppPaths } from "../../app/paths";
++import { predictionPeriod, RelatedArticles } from "./ModelTopFiveTable";
+ 
+ /** Candidate membership/model fields are authoritative for both table and panel. */
+ export function mergeCandidateDetail(candidate: CandidateData | undefined, detail: CandidateData | null | undefined): CandidateData | null {
+@@ -46,6 +47,7 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
+     </div>)}</div> : <p className="briefing-muted">분석 근거 조회 중</p>}
+     <dl className="briefing-detail-stats"><div><dt>모델 예측수익률</dt><dd>{formatPercent(detail?.predictedReturn)}</dd></div></dl>
+     {detail?.predictedReturn === null && <p className="briefing-footnote">원본 모델 예측값이 없어 수익률 요약을 제공하지 않습니다.</p>}
++    {modelOnly && detail && <><p className="briefing-footnote">{predictionPeriod(detail)} · 분석 기준일 {formatDate(detail.baseDate)}</p><RelatedArticles candidate={detail} /></>}
+     {!modelOnly && <><h3>대표 기사</h3>{detail?.news.length ? <ul className="briefing-news">{detail.news.slice(0, 3).map((news, index) => { const url = safeArticleUrl(news.url); return <li key={`${news.title}-${index}`}><strong>{url ? <a href={url} target="_blank" rel="noopener noreferrer">{news.title ?? "제목 미확인"}</a> : news.title ?? "제목 미확인"}</strong><small>{news.source ?? "출처 미확인"} · {formatDate(news.publishedAt)}</small></li>; })}</ul> : <p className="briefing-muted briefing-footnote">{detail?.newsCollected ? "수집된 기사 0건" : "뉴스 수집 여부 미확인"}</p>}</>}
+     {analysisMeta && <SourceMeta source={analysisMeta.source} asOf={analysisMeta.asOf} label="분석 저장 시각" />}
+     <p className="briefing-muted briefing-footnote">예측과 가격 이력은 실제 투자 성과가 아닙니다.</p>
+diff --git a/FE/src/features/briefing/ModelTopFiveTable.test.tsx b/FE/src/features/briefing/ModelTopFiveTable.test.tsx
+index 0c86f83..6bebc0c 100644
+--- a/FE/src/features/briefing/ModelTopFiveTable.test.tsx
++++ b/FE/src/features/briefing/ModelTopFiveTable.test.tsx
+@@ -1,9 +1,30 @@
+ import { describe, expect, it } from "vitest";
+ import { adaptCandidate } from "../../entities/candidate";
+ import { pipelineRow } from "../../test/dataFixtures";
+-import { modelTopFive } from "./ModelTopFiveTable";
++import { modelTopFive, predictionPeriod, RelatedArticles } from "./ModelTopFiveTable";
++import { render, screen } from "@testing-library/react";
+ 
+ describe("original model Top-5 selection", () => {
++  it.each([null, "close_to_close"])("does not claim a target for %s", predictionTarget => {
++    expect(predictionPeriod({ ...adaptCandidate(pipelineRow()).data, predictionTarget })).toBe("예측 기간 미확인");
++  });
++  it("shows only safe related links with publisher and Korean-time timestamp", () => {
++    const candidate = adaptCandidate(pipelineRow()).data;
++    candidate.name = "삼성전자";
++    candidate.news = [
++      { title: "삼성전자는 실적 발표", url: "https://example.com/real", source: "테스트일보", publishedAt: "2026-10-10T10:30:00Z", sentiment: null },
++      { title: "삼성전자서비스 실적", url: "https://example.com/peer", source: "다른일보", publishedAt: null, sentiment: null },
++      { title: "삼성전자 실적", url: "javascript:alert(1)", source: "위험", publishedAt: null, sentiment: null },
++    ];
++    render(<RelatedArticles candidate={candidate} />);
++    expect(screen.getAllByRole("link")).toHaveLength(1);
++    expect(screen.getByRole("link")).toHaveAttribute("href", "https://example.com/real");
++    expect(screen.getByText(/테스트일보/)).toHaveTextContent("19:30");
++  });
++  it.each([["collection_failed", false, "기사 수집 실패"], ["collected", true, "관련 기사 0건"], ["not_collected", false, "기사 수집 기록 없음"]] as const)("distinguishes %s from successful zero", (newsStatus, newsCollected, expected) => {
++    render(<RelatedArticles candidate={{ ...adaptCandidate(pipelineRow()).data, newsStatus, newsCollected }} />);
++    expect(screen.getByRole("status")).toHaveTextContent(expected);
++  });
+   it("excludes absent and invalid ranks without renumbering, fabricating predictions or mutating the input", () => {
+     const ranks = [42, null, 17, 6, 29, 8, 11, 0, -1, 1.5, NaN];
+     const rows = ranks.map((rank, index) => ({ ...adaptCandidate(pipelineRow()).data, code: String(100001 + index), rank, predictedReturn: index === 3 ? null : index === 5 ? 0 : -.01, finalRank: index + 1 }));
+diff --git a/FE/src/features/briefing/ModelTopFiveTable.tsx b/FE/src/features/briefing/ModelTopFiveTable.tsx
+index 0853118..f9fb493 100644
+--- a/FE/src/features/briefing/ModelTopFiveTable.tsx
++++ b/FE/src/features/briefing/ModelTopFiveTable.tsx
+@@ -1,6 +1,45 @@
+-﻿import type { CandidateData } from "../../entities/candidate";
++import type { CandidateData } from "../../entities/candidate";
++import { useQueries } from "@tanstack/react-query";
++import { queries } from "../../shared/api/queries";
++import { formatDate, formatPercent, formatWon } from "../../shared/lib/format";
++import { safeArticleUrl } from "../stock/reportData";
++import { isRelatedArticle } from "../../shared/lib/relatedArticles";
++import { WatchToggle } from "../watchlist/WatchToggle";
+ 
+ export function modelTopFive(rows: readonly CandidateData[]) {
+   return rows.filter(row => row.rank !== null && Number.isInteger(row.rank) && row.rank >= 1)
+     .sort((left, right) => left.rank! - right.rank! || left.code.localeCompare(right.code)).slice(0, 5);
+ }
++
++export function predictionPeriod(row: CandidateData): string {
++  return row.predictionTarget === "next_session_open_to_close" ? "다음 거래일 시가→종가" : "예측 기간 미확인";
++}
++
++export function RelatedArticles({ candidate }: { candidate: CandidateData }) {
++  const articles = candidate.news.filter(article => isRelatedArticle(article.title, candidate.name) && safeArticleUrl(article.url)).slice(0, 3);
++  return <div className="briefing-related-news"><h3>관련 기사</h3>{articles.length ? <ul>{articles.map((article, index) => <li key={index}>
++    <a href={safeArticleUrl(article.url)!} target="_blank" rel="noopener noreferrer">{article.title}</a>
++    <small>{article.source || "매체 미확인"} · {article.publishedAt ? formatDate(article.publishedAt, true) : "발행 시각 미확인"}{new URL(safeArticleUrl(article.url)!).hostname === "news.google.com" && " · Google News 경유"}</small>
++  </li>)}</ul> : <p className="briefing-muted" role="status">{candidate.newsStatus === "collection_failed" ? "기사 수집 실패 · 다시 분석하면 재수집합니다." : candidate.newsStatus === "collected" && candidate.newsCollected ? "최근 7일 검색에서 관련 기사 0건" : "현재 분석의 기사 수집 기록 없음"}</p>}</div>;
++}
++
++export function ModelTopFiveList({ rows, selectedCode, onSelect }: { rows: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void }) {
++  const quotes = useQueries({ queries: rows.map(row => ({ ...queries.quote(row.code), retry: false, staleTime: 30_000, refetchOnMount: false })) });
++  return <ol className="briefing-top-five" aria-label="모델 예측 순위 TOP5">{rows.map((row, index) => {
++    const quote = quotes[index], price = quote.isError || quote.data?.source === "sample" ? null : quote.data?.data;
++    return <li key={row.code} data-model-code={row.code} data-selected={row.code === selectedCode ? "true" : undefined}>
++      <div className="briefing-top-stock"><span className="briefing-top-rank">{String(row.rank).padStart(2, "0")}</span>
++        <button type="button" className="briefing-stock-button" aria-label={row.name + " " + row.code + (row.code === selectedCode ? " · 선택됨" : "") + " 상세 보기"} aria-pressed={row.code === selectedCode} onClick={() => onSelect(row.code)} onKeyDown={event => {
++          const offset = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
++          const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? rows.length - 1 : index + offset;
++          if (!offset && event.key !== "Home" && event.key !== "End") return;
++          event.preventDefault(); const next = rows[Math.max(0, Math.min(rows.length - 1, nextIndex))]; onSelect(next.code, "keyboard");
++          event.currentTarget.closest("ol")?.querySelector<HTMLButtonElement>('[data-model-code="' + next.code + '"] .briefing-stock-button')?.focus();
++        }}><strong>{row.name ?? "종목명 미확인"}</strong>{" "}<small>{row.code}</small></button><WatchToggle code={row.code} name={row.name} />
++      </div>
++      <div className="briefing-top-prediction"><span>모델 예상 수익률</span><strong>{formatPercent(row.predictedReturn)}</strong><small>{predictionPeriod(row)} · 기준일 {formatDate(row.baseDate)}</small>{row.predictedReturn === null && <small>원본 예측값 없음</small>}</div>
++      <div className="briefing-top-price"><span>현재가</span><strong>{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small></div>
++      <RelatedArticles candidate={row} />
++    </li>;
++  })}</ol>;
++}
+diff --git a/FE/src/features/briefing/briefingDashboard.css b/FE/src/features/briefing/briefingDashboard.css
+index b3edc5f..f0587e9 100644
+--- a/FE/src/features/briefing/briefingDashboard.css
++++ b/FE/src/features/briefing/briefingDashboard.css
+@@ -1,4 +1,23 @@
+ @layer components {
++  .briefing-top-five { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
++  .briefing-top-five > li { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(210px, 1.3fr) minmax(110px, .8fr); gap: 12px; padding: 16px; border: 1px solid var(--ds-line); border-radius: 12px; min-width: 0; }
++  .briefing-top-five > li[data-selected="true"] { border-color: var(--ds-link); }
++  .briefing-top-stock { display: flex; align-items: center; gap: 10px; min-width: 0; }
++  .briefing-top-rank { font-size: 20px; font-weight: 700; color: var(--ds-fg-2); }
++  .briefing-top-stock .briefing-stock-button { flex: 1; min-width: 0; min-height: 44px; text-align: left; overflow-wrap: anywhere; }
++  .briefing-top-stock .briefing-stock-button strong { display: block; font-size: 16px; }
++  .briefing-top-prediction, .briefing-top-price { display: flex; flex-direction: column; gap: 4px; }
++  .briefing-top-prediction > strong { font-size: 26px; letter-spacing: -.5px; }
++  .briefing-top-price > strong { font-size: 18px; }
++  .briefing-top-five small, .briefing-top-five .briefing-top-price > span, .briefing-top-five .briefing-top-prediction > span { color: var(--ds-fg-2); font-size: 12px; }
++  .briefing-related-news { grid-column: 1 / -1; min-width: 0; border-top: 1px solid var(--ds-line); padding-top: 10px; }
++  .briefing-related-news h3 { font-size: 13px; margin: 0 0 6px; }
++  .briefing-related-news ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
++  .briefing-related-news a { color: var(--ds-link); overflow-wrap: anywhere; line-height: 1.5; }
++  .briefing-related-news small { display: block; margin-top: 2px; color: var(--ds-fg-2); font-size: 12px; }
++  .briefing-related-news p { margin: 0; font-size: 12px; }
++  @media (max-width: 1250px) { .briefing-top-five > li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .briefing-top-stock { grid-column: 1 / -1; } }
++  @media (max-width: 480px) { .briefing-top-five > li { padding: 12px; gap: 12px 8px; } .briefing-top-prediction > strong { font-size: 24px; } }
+   .ds-root .ds-main-briefing { padding: 12px 24px 28px !important; }
+   .ds-main-briefing .connection-notice { margin-bottom: 10px; border-radius: 10px; padding: 0 12px; }
+   .ds-main-briefing .connection-notice-heading { min-height: 32px; }
+diff --git a/FE/src/features/briefing/candidateProduction.test.tsx b/FE/src/features/briefing/candidateProduction.test.tsx
+index 3adac47..a78e668 100644
+--- a/FE/src/features/briefing/candidateProduction.test.tsx
++++ b/FE/src/features/briefing/candidateProduction.test.tsx
+@@ -1,5 +1,5 @@
+ import { afterEach, describe, expect, it, vi } from "vitest";
+-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
++import { render, screen, waitFor } from "@testing-library/react";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+ import { BriefingPage } from "./BriefingPage";
+@@ -7,10 +7,9 @@ import { RankPage } from "../rank/RankPage";
+ import { StockReportPage } from "../stock/StockReportPage";
+ import { wholeRank } from "../rank/rankFixtures";
+ import { chartBundle, reportRow } from "../stock/reportFixtures";
+-import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
+-import { briefingSignals, resolveMembership, UNPRODUCED_REASON } from "./membership";
++import { backendStatusBody, jsonResponse } from "../../test/dataFixtures";
++import { briefingSignals, resolveMembership } from "./membership";
+ import { adaptCandidate } from "../../entities/candidate";
+-import { formatDate } from "../../shared/lib/format";
+ 
+ const clients: QueryClient[] = [];
+ afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
+@@ -37,7 +36,6 @@ function mount(element: JSX.Element, path: string) {
+   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, refetchOnWindowFocus: false } } }); clients.push(client);
+   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><LocationProbe /><Routes><Route path="/next/stock/:code" element={element} /><Route path="*" element={element} /></Routes></MemoryRouter></QueryClientProvider>);
+ }
+-const statusCalls = (fetcher: ReturnType<typeof backend>) => fetcher.mock.calls.filter(([url]) => String(url) === "/api/backend/status").length;
+ 
+ describe("membership resolution for an authoritative empty candidate list", () => {
+   const settled = { isPending: false, isError: false };
+@@ -59,89 +57,14 @@ describe("membership resolution for an authoritative empty candidate list", () =
+   });
+ });
+ 
+-describe("briefing with model-only (not_produced) candidates", () => {
+-  it("shows model Top-5 instead of asserting zero final candidates", async () => {
+-    backend([], { state: "not_produced" }); mount(<BriefingPage />, "/next");
+-    await screen.findByRole("heading", { name: "Transformer Ensemble Top-5" });
+-    expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+-    expect(document.querySelector(".briefing-count")).not.toBeInTheDocument();
++describe("briefing always uses model TOP5", () => {
++  it.each(["not_produced", "available", "empty", "unknown"])("uses raw model ranks when candidate state is %s", async state => {
++    const fetcher = backend([], { state }); mount(<BriefingPage />, "/next");
++    await screen.findByRole("button", { name: "검증종목001 100001 · 선택됨 상세 보기" });
+     expect(document.querySelectorAll("[data-model-code]")).toHaveLength(5);
+-    expect(document.querySelector('.briefing-table-help')).toHaveTextContent("모델·수급 2개 근거 기준");
+-    expect(screen.queryByText(/뉴스 보정 최종 후보 미생성/)).not.toBeInTheDocument();
+-    expect(screen.getByRole("button", { name: "검증종목001 100001 · 선택됨 상세 보기" })).toHaveAttribute("aria-pressed", "true");
+-    expect(screen.getByTestId("location")).toHaveTextContent(/^\/next$/);
+-    expect(document.querySelector('[data-model-code="100001"] [data-value="rank"]')).toHaveTextContent("01");
+-    expect(document.querySelector('.briefing-result-meta')).toHaveTextContent("모집단 199종목");
+-    expect(document.querySelector('.briefing-comparison-footer')).toHaveTextContent("원본 순위 6위 이하 194종목은 전체 순위에서 확인");
+-    expect(document.querySelector('#briefing-detail')).toHaveTextContent(`분석 저장 시각 ${formatDate("2026-10-07T09:00:00Z", true)}`);
+-    expect(document.querySelectorAll('[data-model-code] .briefing-evidence-dots i')).toHaveLength(10);
++    expect(document.querySelector('[data-model-code="100001"] .briefing-top-rank')).toHaveTextContent("01");
++    expect(fetcher.mock.calls.some(([url]) => String(url) === "/api/candidates")).toBe(false);
+     expect(document.querySelector('[data-detail-evidence="news"]')).not.toBeInTheDocument();
+-    expect(document.querySelector('[data-model-code="100001"] [data-value="predictedReturn"]')).toHaveTextContent("0.00%");
+-    expect(screen.getByText(/다음 거래일 시가→종가 모델 예측 · 실제 성과 아님/)).toBeInTheDocument();
+-  });
+-  it("selects only ranked rows by original rank and keeps source dates, pool and a short count", async () => {
+-    const rows = wholeRank().slice(0, 4);
+-    [42, null, 17, 6].forEach((rank, index) => Object.assign(rows[index].input_row, { pred_rank: rank, prediction_base_date: "2026-10-08" }));
+-    backend([], { state: "not_produced" }, rows); mount(<BriefingPage />, "/next");
+-    await screen.findByRole("heading", { name: "Transformer Ensemble Top-5" });
+-    expect([...document.querySelectorAll("[data-model-code]")].map(row => row.getAttribute("data-model-code"))).toEqual(["100004", "100003", "100001"]);
+-    expect([...document.querySelectorAll('[data-model-code] [data-value="rank"]')].map(cell => cell.textContent)).toEqual(["06", "17", "42"]);
+-    expect(document.querySelector(".briefing-result-meta")).toHaveTextContent(formatDate("2026-10-08"));
+-    expect(document.querySelector(".briefing-result-meta")).toHaveTextContent(`저장 시각 ${formatDate("2026-10-07T09:00:00Z", true)}`);
+-    expect(document.querySelector('.briefing-comparison-footer')).toHaveTextContent("나머지 종목은 전체 순위에서 확인");
+-    fireEvent.click(document.querySelector('[data-model-code="100004"] [data-value="rank"]')!);
+-    expect(screen.getByTestId("location")).toHaveTextContent("/next?code=100004");
+-  });
+-  it("does not infer a final-candidate cutoff from consecutive original model ranks", async () => {
+-    backend(wholeRank().slice(0, 5), { state: "available", count: 5 }); mount(<BriefingPage />, "/next");
+-    await screen.findByRole("heading", { name: "후보 5종목 비교" });
+-    expect(document.querySelector('.briefing-comparison-footer')).toHaveTextContent("나머지 종목은 전체 순위에서 확인");
+-    expect(document.querySelector('.briefing-comparison-footer')).not.toHaveTextContent("6위 이하");
+-  });
+-  it.each(["empty", "error", "unranked"])("falls back to the existing notice for %s rank results without samples", async scenario => {
+-    const rows = wholeRank().map(row => ({ ...row, input_row: { ...row.input_row, pred_rank: null } }));
+-    backend([], { state: "not_produced" }, scenario === "error" ? "error" : scenario === "empty" ? [] : rows); mount(<BriefingPage />, "/next");
+-    await screen.findByText(/뉴스 보정 최종 후보 미생성/);
+-    expect(screen.queryByRole("heading", { name: "Transformer Ensemble Top-5" })).not.toBeInTheDocument();
+-    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
+-    expect(screen.getByRole("link", { name: "전체 순위" })).toBeInTheDocument();
+-  });
+-  it("removes cached Top-5 after a rank refresh fails", async () => {
+-    let failure = false;
+-    const fetcher = backend([], { state: "not_produced" }), healthy = fetcher.getMockImplementation()!;
+-    fetcher.mockImplementation(async (url, options) => String(url) === "/api/rank" && failure ? new Response("{}", { status: 502 }) : healthy(url, options));
+-    mount(<BriefingPage />, "/next"); await screen.findByRole("heading", { name: "Transformer Ensemble Top-5" });
+-    failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+-    await screen.findByText(/뉴스 보정 최종 후보 미생성/);
+-    expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
+-    expect(screen.queryByRole("heading", { name: "Transformer Ensemble Top-5" })).not.toBeInTheDocument();
+-  });
+-  it("leaves final membership unknown while evaluating the raw model prediction", async () => {
+-    backend([], { state: "not_produced" }); mount(<BriefingPage />, "/next?code=005930");
+-    await waitFor(() => expect(document.querySelector("#briefing-detail [data-membership]")).toHaveAttribute("data-membership", "unknown"));
+-    expect(document.getElementById("briefing-detail")).not.toHaveTextContent("최종 후보 외 종목");
+-    expect(document.querySelector("#briefing-detail .briefing-detail-signals [data-signal]")).toHaveAttribute("data-signal", "negative");
+-    expect(document.getElementById("briefing-detail")).not.toHaveTextContent("뉴스");
+-  });
+-  it("stays pending while the status read is in flight, then resolves a produced empty list to non-candidate", async () => {
+-    const status = deferred<Response>(); backend([], status.promise); mount(<BriefingPage />, "/next?code=005930");
+-    await waitFor(() => expect(document.querySelector("#briefing-detail [data-membership]")).toHaveAttribute("data-membership", "pending"));
+-    expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+-    status.resolve(jsonResponse(backendStatusBody({ state: "empty", count: 0 })));
+-    await waitFor(() => expect(document.querySelector("#briefing-detail [data-membership]")).toHaveAttribute("data-membership", "nonCandidate"));
+-    await screen.findByText("최종 후보가 없습니다.");
+-  });
+-  it.each([["status request fails", "error" as const], ["missing result", { state: "missing" }], ["stale result", { state: "stale" }], ["blocked by failed run", { state: "blocked" }], ["unknown availability", { state: "unknown" }]])(
+-    "does not assert non-candidate when %s", async (_name, status) => {
+-      backend([], status); mount(<BriefingPage />, "/next?code=005930");
+-      await waitFor(() => expect(document.querySelector("#briefing-detail [data-membership]")).toHaveAttribute("data-membership", "unknown"));
+-      expect(screen.queryByText("최종 후보가 없습니다.")).not.toBeInTheDocument();
+-      expect(document.getElementById("briefing-detail")).not.toHaveTextContent("최종 후보 외 종목");
+-    });
+-  it("shares the launch-control status read and preserves membership from a non-empty list", async () => {
+-    const fetcher = backend([reportRow()], { state: "not_produced" }); mount(<BriefingPage />, "/next?code=005930");
+-    await waitFor(() => expect(document.querySelector("#briefing-detail [data-membership]")).toHaveAttribute("data-membership", "candidate"));
+-    expect(statusCalls(fetcher)).toBe(1);
+   });
+ });
+ 
+diff --git a/FE/src/features/connection/ConnectionNotice.test.tsx b/FE/src/features/connection/ConnectionNotice.test.tsx
+index 798a3b6..734f962 100644
+--- a/FE/src/features/connection/ConnectionNotice.test.tsx
++++ b/FE/src/features/connection/ConnectionNotice.test.tsx
+@@ -23,7 +23,8 @@ describe("compact connection status", () => {
+     fireEvent.click(document.querySelector(".connection-notice-heading")!);
+     await waitFor(() => expect(document.querySelector(".connection-disclosure")).toHaveAttribute("open"));
+     expect(screen.getByRole("button", { name: "연결 상태 다시 확인" })).toBeVisible();
+-    expect(screen.getByText(/이 상태 API는 키 설정 유무만 확인/)).toBeVisible();
++    expect(screen.queryByText(/이 상태 API는 키 설정 유무만 확인/)).not.toBeInTheDocument();
++    expect(screen.queryByText(/Gemini 유료 API/)).not.toBeInTheDocument();
+   });
+   it("automatically exposes a failed status request and offers a read-only retry", async () => {
+     mount(async () => new Response("{}", { status: 502 }));
+diff --git a/FE/src/features/connection/ConnectionNotice.tsx b/FE/src/features/connection/ConnectionNotice.tsx
+index da59f21..31f9138 100644
+--- a/FE/src/features/connection/ConnectionNotice.tsx
++++ b/FE/src/features/connection/ConnectionNotice.tsx
+@@ -48,9 +48,7 @@ export function ConnectionNotice() {
+       <p>{status.market.configuration === "configured" ? "시장 데이터 설정 확인 · 조회 검증 필요" : "시장 데이터 연결 대기"}</p>
+       <p>{analysisMessage(status)}</p>
+       <div className="connection-notice-results"><span>{availabilityMessage("전체 순위", status.results.rank)}</span><span>{availabilityMessage("최종 후보", status.results.candidates)}</span></div>
+-      <div className="connection-explanation"><p>이 상태 API는 키 설정 유무만 확인하며 외부 API에 접속하지 않습니다. KIS 조회 성공 여부는 여기 저장되지 않습니다. 가격·지수의 실제 출처와 기준 시각은 각 화면에서 확인하세요.</p>
+-        <p>{status.analysisMode === "model_only" ? "서버 기본값: 모델 전용. 새 분석 실행에서 뉴스 포함 모드를 선택할 수 있습니다." : status.analysisMode === "unknown" ? "분석 실행 설정 미확인" : "서버 기본값: 뉴스 포함. 새 분석 실행에서 모드를 선택하세요. Gemini 유료 API가 포함됩니다."}</p>
+-        <p>{status.news.configuration === "configured" ? "뉴스 평가 설정 확인" : "뉴스 평가 연결 대기"} · {status.news.collectionConfiguration === "configured" ? "기사 수집 설정 확인" : "기사 수집 연결 대기"}. 설정 여부만 확인했으며 수집·평가는 검증하지 않았습니다.</p>
++      <div className="connection-explanation">
+         <p>상태 확인 시각 {formatDate(status.checkedAt, true)} · 분석 자료는 저장 결과이며 실시간 가격이 아닙니다.</p>
+       </div>
+     </>}
+diff --git a/FE/src/features/stock/reportData.ts b/FE/src/features/stock/reportData.ts
+index 7516c0d..c76e199 100644
+--- a/FE/src/features/stock/reportData.ts
++++ b/FE/src/features/stock/reportData.ts
+@@ -1,9 +1,6 @@
+ import type { ChartData } from "../../entities/market";
+ 
+-export function safeArticleUrl(value: string | null | undefined): string | null {
+-  if (!value || !/^https?:\/\//i.test(value)) return null;
+-  try { const url = new URL(value); return url.hostname && !url.username && !url.password ? url.href : null; } catch { return null; }
+-}
++export { safeArticleUrl } from "../../shared/lib/articleUrl";
+ 
+ /** Strict observation dates: Date.parse alone normalizes impossible days. */
+ export function observationTime(value: string | null): number | null {
+diff --git a/FE/src/test/pipelineResults.test.js b/FE/src/test/pipelineResults.test.js
+index 75ea667..df2155a 100644
+--- a/FE/src/test/pipelineResults.test.js
++++ b/FE/src/test/pipelineResults.test.js
+@@ -25,6 +25,15 @@ import { getCandidatesPayload, getRankPayload, getStockAnalysisPayload } from ".
+ const headers = "ticker,company_name,prediction_target,ensemble_pred_return,pred_rank,pred_pool_size,supply_data_enough,supply_status";
+ beforeEach(() => fixtureFiles.clear());
+ describe("pipeline file provenance through API", () => {
++  it("keeps STEP2 model ranks and returns when old event analysis has a different final order", async () => {
++    fixtureFiles.set("step2_all_transformer_rank.csv", `${headers}\n005930,삼성전자,next_session_open_to_close,0.01,1,200,true,ok\n000660,SK하이닉스,next_session_open_to_close,0.005,2,200,true,ok\n`);
++    fixtureFiles.set("step3_final_news_event_analysis.json", JSON.stringify({ "005930": { status: "analyzed", final_score: -0.5, final_rank: 99, news: [] } }));
++    const rows = await getRankPayload();
++    expect(rows.map(row => row.input_row.pred_rank)).toEqual([1, 2]);
++    expect(rows.map(row => row.input_row.ensemble_pred_return)).toEqual([0.01, 0.005]);
++    expect(rows[0].input_row).not.toHaveProperty("final_pred_return");
++    expect(rows[0].news).toEqual([]);
++  });
+   it.each(["api_key_missing", "api_budget_reached", "news_fetch_failed", "disabled", "pending", "unknown", undefined])("does not count %s as a successful zero-news collection", async status => {
+     fixtureFiles.set("step3_final_top5.csv", `${headers}\n005930,Fixture,next_session_open_to_close,0.02,5,200,true,ok\n`);
+     fixtureFiles.set("step3_final_news_event_analysis.json", JSON.stringify({ "005930": { status, news: [], final_score: 0.02 } }));
+diff --git a/FE/src/test/pipelineRunner.test.js b/FE/src/test/pipelineRunner.test.js
+index 28aefa0..2e0ef66 100644
+--- a/FE/src/test/pipelineRunner.test.js
++++ b/FE/src/test/pipelineRunner.test.js
+@@ -1,6 +1,7 @@
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ import { EventEmitter } from "node:events";
+ vi.mock("../../server/runLedger", () => ({ beginRun: vi.fn(async () => ({})), completeRun: vi.fn(async () => ({ finishedAt: new Date().toISOString() })), failRun: vi.fn(async () => ({})) }));
++vi.mock("../../server/relatedNews", () => ({ collectTopFiveArticles: vi.fn(async () => ({})) }));
+ const mock = vi.hoisted(() => ({ spawned: [], validationError: false, oldFile: false }));
+ vi.mock("node:child_process", () => { const mocks = { spawn: vi.fn((command, args, options) => {
+   mock.spawned.push({ command, args, options });
+@@ -10,9 +11,11 @@ vi.mock("node:child_process", () => { const mocks = { spawn: vi.fn((command, arg
+ vi.mock("node:fs/promises", () => { const mocks = { access: vi.fn(async () => {}), mkdir: vi.fn(async () => {}),
+   readFile: vi.fn(async () => '{"005930":{}}'), stat: vi.fn(async () => ({ mtimeMs: mock.oldFile ? 0 : Date.now(), isFile: () => true })) }; return { ...mocks, default: mocks }; });
+ vi.mock("../../server/pipelineFreshness", () => ({ pipelineProjectRoot: () => "fixture-root", pipelineOutputDir: () => "fixture-output", writePipelineRunMarker: vi.fn(async () => {}) }));
+-vi.mock("../../server/pipelineResults", () => ({ getCandidatesPayload: vi.fn(async () => [{}]), refreshDashboardAiFieldsFromPipelineOutput: vi.fn(async () => true),
++vi.mock("../../server/pipelineResults", () => ({ inspectPipelineResultAvailability: vi.fn(async () => ({})), getRankPayload: vi.fn(async () => []), getStockAnalysisPayload: vi.fn(async () => null), parseCsv: vi.fn(() => []), getCandidatesPayload: vi.fn(async () => [{}]), refreshDashboardAiFieldsFromPipelineOutput: vi.fn(async () => true),
+   validateModelOnlyOutputs: vi.fn(async () => { if (mock.validationError) throw new Error("Invalid model output schema."); return { rows: 199, modelSelectionRows: 10 }; }) }));
+-import { runCandidateAnalysis, startCandidateAnalysis, startStockNewsAnalysis, getCandidateAnalysisSnapshot } from "../../server/pipelineRunner";
++import { runCandidateAnalysis, startCandidateAnalysis, startStockNewsAnalysis, getCandidateAnalysisSnapshot, getCandidateAnalysisStatus } from "../../server/pipelineRunner";
++import { createRoutes } from "../../server/routes";
++import { collectTopFiveArticles } from "../../server/relatedNews";
+ import { writePipelineRunMarker } from "../../server/pipelineFreshness";
+ import { validateModelOnlyOutputs, refreshDashboardAiFieldsFromPipelineOutput } from "../../server/pipelineResults";
+ beforeEach(() => { vi.clearAllMocks(); mock.spawned.length = 0; mock.validationError = false; mock.oldFile = false; });
+@@ -24,13 +27,19 @@ describe("model-only process safety (mock child; never executes Python)", () =>
+     for (const name of ["GEMINI_API_KEY", "NAVER_CLIENT_ID", "NAVER_CLIENT_SECRET", "OPENAI_API_KEY", "OPEN_AI_KEY", "OPEN_AI"]) expect(child.options.env).not.toHaveProperty(name);
+     expect(env.GEMINI_API_KEY).toBe("fixture-gemini"); expect(child.options.env.APP_KEY).toBe("fixture-kis");
+     expect(result).toMatchObject({ mode: "model_only", rows: 199, modelSelectionRows: 10, newsRows: 0, candidateKind: "not_produced", dashboardUpdated: false });
+-    expect(validateModelOnlyOutputs).toHaveBeenCalledOnce(); expect(refreshDashboardAiFieldsFromPipelineOutput).not.toHaveBeenCalled();
++    expect(validateModelOnlyOutputs).toHaveBeenCalledOnce(); expect(collectTopFiveArticles).toHaveBeenCalledOnce();
++    expect(validateModelOnlyOutputs.mock.invocationCallOrder[0]).toBeLessThan(collectTopFiveArticles.mock.invocationCallOrder[0]); expect(refreshDashboardAiFieldsFromPipelineOutput).not.toHaveBeenCalled();
+     expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "completed"]);
+     expect(writePipelineRunMarker.mock.calls[1][0]).toMatchObject({ mode: "model_only", newsRows: 0 });
+     expect(validateModelOnlyOutputs.mock.invocationCallOrder[0]).toBeLessThan(writePipelineRunMarker.mock.invocationCallOrder[1]);
+   });
++  it("defaults to model inference and article collection without a news-analysis flag", async () => {
++    await runCandidateAnalysis({});
++    expect(mock.spawned[0].args).not.toContain("--run-news");
++    expect(collectTopFiveArticles).toHaveBeenCalledOnce();
++  });
+   it("keeps full mode flag, credentials, step3 validation and dashboard behavior", async () => {
+-    const result = await runCandidateAnalysis({ GEMINI_API_KEY: "fixture-full" });
++    const result = await runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "full", GEMINI_API_KEY: "fixture-full" });
+     expect(mock.spawned[0].args).toContain("--run-news"); expect(mock.spawned[0].options.env.GEMINI_API_KEY).toBe("fixture-full");
+     expect(result).toMatchObject({ status: "completed", rows: 1, newsRows: 1, dashboardUpdated: true });
+     expect(validateModelOnlyOutputs).not.toHaveBeenCalled();
+@@ -40,8 +49,14 @@ describe("model-only process safety (mock child; never executes Python)", () =>
+     expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "failed"]);
+     expect(writePipelineRunMarker.mock.calls[1][0].mode).toBe("model_only");
+   });
++  it("preserves model completion when article cache writing fails", async () => {
++    collectTopFiveArticles.mockRejectedValueOnce(new Error("EACCES: fixture article cache write failed"));
++    const result = await runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "model_only" });
++    expect(result).toMatchObject({ status: "completed", rows: 199, articleCollectionStatus: "unavailable", newsRows: 0 });
++    expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "completed"]);
++  });
+   it("full mode still requires fresh STEP3 output", async () => {
+-    mock.oldFile = true; await expect(runCandidateAnalysis({})).rejects.toThrow("not updated");
++    mock.oldFile = true; await expect(runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "full" })).rejects.toThrow("not updated");
+     expect(writePipelineRunMarker.mock.calls.at(-1)[0].status).toBe("failed");
+   });
+   it("rejects unknown modes and individual news launches before spawning", async () => {
+@@ -53,4 +68,25 @@ describe("model-only process safety (mock child; never executes Python)", () =>
+   it("read-only memory snapshot does not invoke marker writes", () => {
+     expect(getCandidateAnalysisSnapshot()).toEqual({ status: "idle" }); expect(writePipelineRunMarker).not.toHaveBeenCalled();
+   });
++  it("executes POST -> status -> model process -> collection even when the server default is full", async () => {
++    const stages = [];
++    validateModelOnlyOutputs.mockImplementationOnce(async () => {
++      stages.push(getCandidateAnalysisStatus().progress.stageIndex);
++      return { rows: 199, modelSelectionRows: 10 };
++    });
++    collectTopFiveArticles.mockImplementationOnce(async () => { stages.push(getCandidateAnalysisStatus().progress.stageIndex); return {}; });
++    const handlers = createRoutes({ startCandidateAnalysis, getCandidateAnalysisStatus }, { PIPELINE_ANALYSIS_MODE: "full" });
++    let body;
++    const response = { statusCode: 0, setHeader: vi.fn(), end: text => { body = JSON.parse(text); } };
++    await handlers["/api/candidates/run"]({ method: "POST", url: "/api/candidates/run" }, response);
++    expect(response.statusCode).toBe(200);
++    expect(body).toMatchObject({ status: "running", mode: "model_only" });
++    await vi.waitFor(() => expect(getCandidateAnalysisStatus().status).toBe("completed"));
++    expect(mock.spawned).toHaveLength(1);
++    expect(mock.spawned[0].args).not.toContain("--run-news");
++    expect(collectTopFiveArticles).toHaveBeenCalledOnce();
++    expect(getCandidateAnalysisStatus().result).toMatchObject({ mode: "model_only", newsRows: 0 });
++    expect(stages).toEqual([3, 4]);
++    expect(getCandidateAnalysisStatus().progress.stageIndex).toBe(6);
++  });
+ });
+diff --git a/FE/src/test/routes.test.js b/FE/src/test/routes.test.js
+index 962cda7..f33b7fb 100644
+--- a/FE/src/test/routes.test.js
++++ b/FE/src/test/routes.test.js
+@@ -59,17 +59,17 @@ describe("shared legacy route contracts", () => {
+     expect(result.body()).toMatchObject({ source: "live", asOf: "2026-10-09T11:47:34.355Z" });
+   });
+   it("applies the requested mode only to this job and preserves the server default", async () => {
+-    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "model_only", NAVER_CLIENT_ID: "fixture", NAVER_CLIENT_SECRET: "fixture", GEMINI_API_KEY: "fixture" };
++    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "full", NAVER_CLIENT_ID: "fixture", NAVER_CLIENT_SECRET: "fixture", GEMINI_API_KEY: "fixture" };
+     const handler = createRoutes(deps, env)["/api/candidates/run"];
+-    for (const mode of ["full", "model_only"]) {
++    for (const mode of ["model_only"]) {
+       const result = response();
+       await handler({ method: "POST", url: `/api/candidates/run?mode=${mode}` }, result.res);
+       expect(result.res.statusCode).toBe(200);
+       expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: mode });
+     }
+-    expect(env.PIPELINE_ANALYSIS_MODE).toBe("model_only");
++    expect(env.PIPELINE_ANALYSIS_MODE).toBe("full");
+     await handler({ method: "POST" }, response().res);
+-    expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith(env);
++    expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: "model_only" });
+   });
+   it("rejects invalid modes and missing news credentials before starting a job", async () => {
+     const deps = dependencies(), handler = createRoutes(deps, {})["/api/candidates/run"];
+diff --git a/FE/tsconfig.app.json b/FE/tsconfig.app.json
+index 7708ef2..f3aaa12 100644
+--- a/FE/tsconfig.app.json
++++ b/FE/tsconfig.app.json
+@@ -18,5 +18,5 @@
+     "noEmit": true,
+     "jsx": "react-jsx"
+   },
+-  "include": ["src"]
++  "include": ["src", "server/relatedNews.ts", "server/node-shims.d.ts"]
+ }
+diff --git a/FE/tsconfig.node.json b/FE/tsconfig.node.json
+index 0759715..9156eb6 100644
+--- a/FE/tsconfig.node.json
++++ b/FE/tsconfig.node.json
+@@ -11,5 +11,5 @@
+     "strict": true,
+     "noEmit": true
+   },
+-  "include": ["api", "server", "src/types", "vite.config.ts"]
++  "include": ["api", "server", "src/types", "src/shared/lib/articleUrl.ts", "src/shared/lib/relatedArticles.ts", "vite.config.ts"]
+ }

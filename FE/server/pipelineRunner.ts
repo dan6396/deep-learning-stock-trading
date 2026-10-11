@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
-import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput, validateModelOnlyOutputs } from "./pipelineResults";
+import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput, validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
+import { collectTopFiveArticles } from "./relatedNews";
 import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
 import type { RunKind } from "../src/types/performance";
@@ -23,6 +24,7 @@ export type CandidateAnalysisRunResult = {
   rows: number;
   /** Number of stocks the Gemini news step analyzed; 0 when the step was skipped or failed. */
   newsRows: number;
+  articleCollectionStatus?: "collected" | "unavailable";
   status: "completed";
 };
 
@@ -42,9 +44,9 @@ const CANDIDATE_PROGRESS_STAGES = [
   "실행 준비",
   "KOSPI200 후보 풀 로드",
   "OHLCV 수집·앙상블 예측",
-  "외국인·기관 수급 조회",
+  "모델·수급 결과 확인",
   "뉴스 크롤링",
-  "Gemini 기사 사건 추출",
+  "관련 기사 정리",
   "결과 파일 검증",
 ] as const;
 
@@ -148,7 +150,8 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
   } else if (log.includes("저장:") && log.includes("step3")) {
     advance(6, 94, "STEP3 결과 파일을 저장하고 검증하는 중입니다.");
   } else if (log.includes("[ALL DONE]")) {
-    advance(6, 100, "전체 파이프라인이 완료되었습니다.");
+    if (runMode === "model_only") advance(3, 70, "모델 추론이 완료되었습니다. 관련 기사 수집을 준비합니다.");
+    else advance(6, 100, "전체 파이프라인이 완료되었습니다.");
   }
 
   return {
@@ -300,7 +303,8 @@ function pipelineEnv(env: Record<string, string | undefined>, modelOnly = false)
 }
 
 function analysisMode(env: Record<string, string | undefined>): "full" | "model_only" {
-  if (!env.PIPELINE_ANALYSIS_MODE || env.PIPELINE_ANALYSIS_MODE === "full") return "full";
+  if (!env.PIPELINE_ANALYSIS_MODE) return "model_only";
+  if (env.PIPELINE_ANALYSIS_MODE === "full") return "full";
   if (env.PIPELINE_ANALYSIS_MODE === "model_only") return "model_only";
   throw new Error("Unsupported analysis mode.");
 }
@@ -449,10 +453,17 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
     await runProcess(python, args, root, pipelineEnv(env, modelOnly), timeoutMs, recordCandidateAnalysisOutput);
 
     if (modelOnly) {
-      updateCandidateAnalysisProgress(progressSnapshot(6, 95, "모델 원본 순위와 모델 선별 결과를 검증하는 중입니다. 뉴스는 실행하지 않았습니다."));
+      updateCandidateAnalysisProgress(progressSnapshot(3, 90, "모델 원본 순위와 모델 선별 결과를 검증하는 중입니다."));
       const validated = await validateModelOnlyOutputs(outputDir, startedAt);
+      updateCandidateAnalysisProgress(progressSnapshot(4, 94, "모델 TOP5의 관련 기사를 수집하는 중입니다."));
+      let articleCollectionStatus: "collected" | "unavailable" = "unavailable";
+      try {
+        await collectTopFiveArticles(parseCsv(await readFile(join(outputDir, "step2_all_transformer_rank.csv"), "utf8")), outputDir, startedAt);
+        articleCollectionStatus = "collected";
+      } catch { /* Article/cache failure must never invalidate validated model predictions. */ }
+      updateCandidateAnalysisProgress(progressSnapshot(5, 98, articleCollectionStatus === "collected" ? "관련 기사 수집 상태를 저장했습니다." : "기사 수집 기록 저장 실패 · 모델 결과를 유지합니다."));
       const result: CandidateAnalysisRunResult = { status: "completed", mode, candidateKind: "not_produced", dashboardUpdated: false,
-        elapsedMs: Date.now() - startedAt, rows: validated.rows, modelSelectionRows: validated.modelSelectionRows, newsRows: 0 };
+        elapsedMs: Date.now() - startedAt, rows: validated.rows, modelSelectionRows: validated.modelSelectionRows, newsRows: 0, articleCollectionStatus };
       return result;
     }
 

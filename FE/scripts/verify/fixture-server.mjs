@@ -110,7 +110,7 @@ export async function startFixtureServer({ port = 0 } = {}) {
           if (snapshot.backendScenario === "error") json({ error: "Fixture status unavailable" }, 502, "unknown");
           else json(backendStatusFixture(snapshot.backendScenario), 200, "unknown");
         } else if (url.pathname === "/api/rank") {
-          const rows = rankFixtures(snapshot.version).map(row => snapshot.backendScenario === "model_only" ? modelOnlyRow(row) : row);
+          const rows = snapshot.rankRows ?? rankFixtures(snapshot.version).map(row => snapshot.backendScenario === "model_only" ? modelOnlyRow(row) : row);
           if (snapshot.rankScenario === "sample") rows.forEach(row => { row.data_meta.source = "sample"; });
           if (snapshot.rankDelayMs) await new Promise(resolve => setTimeout(resolve, snapshot.rankDelayMs));
           if (snapshot.rankScenario === "error") json({ error: "fixture rank failure" }, 502);
@@ -154,7 +154,7 @@ export async function startFixtureServer({ port = 0 } = {}) {
           if (snapshot.chartScenario === "partial") bundle.chartData.ranges["5Y"] = { ...bundle.chartData.ranges["1Y"], coverage: { requestedRange: "5Y", sourceRange: "1Y", method: "fallback", status: "partial", requestedStart: "2021-10-07", requestedEnd: "2026-10-07", observedStart: "2026-01-25", observedEnd: "2026-10-07" } };
           if (snapshot.chartScenario === "error") json({ error: "fixture chart failure" }, 502); else json(bundle, 200, bundle.source);
         } else if (url.pathname === "/api/candidates/run") {
-          json({ source: "live", asOf: observedAt, status: snapshot.analysis, elapsedMs: 20000, progress: { updatedAt: Date.parse(observedAt) + snapshot.version, message: "검증용 분석 상태" }, result: snapshot.analysis === "completed" ? { rows: snapshot.backendScenario === "model_only" ? 199 : 5, elapsedMs: 20000, status: "completed", ...(snapshot.backendScenario === "model_only" ? { mode: "model_only", candidateKind: "not_produced", newsRows: 0 } : {}) } : null }, 200, "live");
+          json({ source: "live", asOf: observedAt, status: snapshot.analysis, elapsedMs: 20000, progress: { updatedAt: Date.parse(observedAt) + snapshot.version, message: snapshot.analysisProgressMessage ?? "검증용 분석 상태" }, error: snapshot.analysisError ?? null, result: snapshot.analysis === "completed" ? { rows: snapshot.backendScenario === "model_only" ? 199 : 5, elapsedMs: 20000, status: "completed", ...(snapshot.backendScenario === "model_only" ? { mode: "model_only", candidateKind: "not_produced", newsRows: 0 } : {}) } : null }, 200, "live");
         } else json({ error: "Unknown fixture API" }, 404);
         return;
       }

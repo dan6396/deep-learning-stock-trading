@@ -18,7 +18,7 @@ export function HeroSection({ data }: HeroSectionProps) {
           </p>
           <h1>AI가 시장을 읽고, 전략은 데이터로 검증합니다</h1>
           <p className="hero-description">
-            코스피 종목의 가격, 수급, 뉴스, 공시, 시장 주도 흐름을 분석해 자동매매
+            코스피 종목의 가격, 뉴스, 공시, 시장 주도 흐름을 분석해 자동매매
             의사결정을 보조하는 트레이딩 데스크형 시스템입니다.
           </p>
           <div className="hero-actions">

@@ -43,7 +43,7 @@ describe("analysis launch control", () => {
     const test = setup();
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     expect(test.posts()).toHaveLength(0);
-    expect(screen.getByText(/모델 전용 · 뉴스 호출 없이/)).toBeInTheDocument();
+    expect(screen.getByText(/모델 예측 순위를 계산한 뒤 TOP5의 관련 기사를 수집/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "전체 순위 보기" })).toHaveAttribute("href", "/next/rank");
   });
   it("guards rapid clicks while a request is pending and attaches to the running job", async () => {
@@ -65,55 +65,14 @@ describe("analysis launch control", () => {
     expect(screen.getByRole("progressbar")).not.toHaveAttribute("value");
     expect(test.posts()).toHaveLength(0);
   });
-  it("shows paid-call information before launching full mode", async () => {
-    const test = setup({ mode: "full" });
+  it.each(["full", "unknown", "model_only"] as const)("always submits model inference + collection for server default %s, without paid options", async mode => {
+    const test = setup({ mode, newsReady: false });
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
-    expect(screen.getByText(/Gemini 유료 API 호출이 포함됩니다/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
-    await waitFor(() => expect(test.posts()).toHaveLength(1));
-  });
-  it("blocks unknown modes", async () => {
-    const test = setup({ mode: "unknown" });
-    await screen.findByText(/실행 모드 미확인/);
-    expect(screen.getByRole("button", { name: "분석 시작" })).toBeDisabled();
-    expect(test.posts()).toHaveLength(0);
-  });
-  it("sends the visible selected mode even when the server default changes", async () => {
-    const test = setup();
-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("radio", { name: /모델 예측만/ }));
-    test.setMode("full");
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Gemini/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
     await waitFor(() => expect(test.posts()).toHaveLength(1));
     expect(test.posts()[0][0]).toBe("/api/candidates/run?mode=model_only&kind=adhoc");
-  });
-  it("selects news mode without launching and submits it explicitly", async () => {
-    const test = setup();
-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("radio", { name: /뉴스 포함/ }));
-    expect(test.posts()).toHaveLength(0);
-    expect(screen.getByText(/Gemini 유료 API 호출이 포함됩니다/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
-    await waitFor(() => expect(test.posts()).toHaveLength(1));
-    expect(test.posts()[0][0]).toBe("/api/candidates/run?mode=full&kind=adhoc");
-    expect(screen.getByRole("radio", { name: /뉴스 포함/ })).toBeDisabled();
-  });
-  it("blocks missing news settings while allowing model-only analysis", async () => {
-    const test = setup({ newsReady: false });
-    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("radio", { name: /뉴스 포함/ }));
-    expect(screen.getByRole("button", { name: "분석 시작" })).toBeDisabled();
-    expect(screen.getByText(/네이버 뉴스와 Gemini API 설정이 필요합니다/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: /모델 예측만/ }));
-    expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled();
-    expect(test.posts()).toHaveLength(0);
-  });
-  it("shows the server job mode when attaching to a run from another screen", async () => {
-    const test = setup({ run: { status: "running", mode: "full" } });
-    await screen.findByRole("button", { name: "분석 진행 중" });
-    expect(screen.getByRole("radio", { name: /뉴스 포함/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /모델 예측만/ })).toBeDisabled();
-    expect(test.posts()).toHaveLength(0);
   });
   it("rechecks status after an ambiguous POST failure without retrying the launch", async () => {
     const test = setup({ post: async () => { test.setRun({ status: "running" }); throw new Error("connection lost"); } });
@@ -129,7 +88,7 @@ describe("analysis launch control", () => {
     test.client.setQueryData(queryKeys.candidates(), { data: [] });
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
-    await screen.findByText(/모델 분석 완료 · 전체 순위에서/);
+    await screen.findByText(/분석 완료 · 모델 TOP5가 준비됐습니다/);
     expect(test.client.getQueryState(queryKeys.rank())?.isInvalidated).toBe(true);
     expect(test.client.getQueryState(queryKeys.candidates())?.isInvalidated).toBe(true);
   });

@@ -1,0 +1,510 @@
+{
+  "fixtureOnly": true,
+  "checks": [
+    "summary uses displayed mixed-sign original TOP5",
+    "briefing keeps model and removes supply and agreement",
+    "summary adds no candidate, prediction, or launch requests",
+    "watch action still works",
+    "mixed-date range is withheld",
+    "partial TOP5 range is withheld",
+    "failed rank request has no range",
+    "all HTML description tags match service introduction",
+    "/rank: no retired supply/agreement widgets",
+    "/stock/005930: no retired supply/agreement widgets",
+    "/watchlist: no retired supply/agreement widgets",
+    "/about: no retired supply/agreement widgets",
+    "history progress and error omit retired evidence",
+    "/history: no retired supply/agreement widgets",
+    "/legacy: no retired supply/agreement widgets",
+    "/legacy/dashboard: no retired supply/agreement widgets",
+    "/legacy/stock/005930: no retired supply/agreement widgets",
+    "legacy saved sample commentary omits investor flows",
+    "legacy article titles stay unchanged",
+    "legacy original article descriptions stay unchanged",
+    "stored TOP5 summary is +0.38% to +0.40%",
+    "stored TOP5 uses the correct five stocks",
+    "browser has no script exceptions",
+    "no product POST or real analysis ran"
+  ],
+  "screens": [
+    {
+      "name": "briefing-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "briefing-1440-light.png",
+      "md5": "46531e74d1ace0bd3c3acee386ceee4a"
+    },
+    {
+      "name": "briefing-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "briefing-1440-dark.png",
+      "md5": "807799d7da26324e0abb3b2f8009a27b"
+    },
+    {
+      "name": "briefing-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "briefing-375-light.png",
+      "md5": "32a50e11ce268ff3c131800f2de50115"
+    },
+    {
+      "name": "briefing-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "briefing-375-dark.png",
+      "md5": "1c2026ced4eb3c43f39fab5d2d22775c"
+    },
+    {
+      "name": "rank-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "rank-1440-light.png",
+      "md5": "ec6a969fd0a5dd9a9becd53977019dc7"
+    },
+    {
+      "name": "rank-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "rank-1440-dark.png",
+      "md5": "0dadbadcaa043a8c142d403ea471c8d6"
+    },
+    {
+      "name": "rank-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "rank-375-light.png",
+      "md5": "00b6669285ae648f53003b7efc7450a2"
+    },
+    {
+      "name": "rank-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "rank-375-dark.png",
+      "md5": "831d7e99e7048c9efcd474512f1ecc7d"
+    },
+    {
+      "name": "report-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "report-1440-light.png",
+      "md5": "6b91a90037caf956cc947059adf8832e"
+    },
+    {
+      "name": "report-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "report-1440-dark.png",
+      "md5": "21e2252e13fff31ae41b75dfab7b5eaf"
+    },
+    {
+      "name": "report-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "report-375-light.png",
+      "md5": "066283932c3a8c8085fe408e8ee19d97"
+    },
+    {
+      "name": "report-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "report-375-dark.png",
+      "md5": "dff12a0ed741b4e51ff7827dbd79a846"
+    },
+    {
+      "name": "watchlist-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "watchlist-1440-light.png",
+      "md5": "7ba7189a4089f2906c6be9f86d8f1338"
+    },
+    {
+      "name": "watchlist-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "watchlist-1440-dark.png",
+      "md5": "c3817f483cc2d3b89f27763aa386680b"
+    },
+    {
+      "name": "watchlist-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "watchlist-375-light.png",
+      "md5": "d3db8f9f0fad83c0e4e42a98c379dc55"
+    },
+    {
+      "name": "watchlist-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "watchlist-375-dark.png",
+      "md5": "1ad2cca8e9fef4290e79330f5a34091f"
+    },
+    {
+      "name": "about-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "about-1440-light.png",
+      "md5": "af78da8f557af822d26aa1988744b799"
+    },
+    {
+      "name": "about-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "about-1440-dark.png",
+      "md5": "fe1ffbf7d32d11f0c0982a3df14070bf"
+    },
+    {
+      "name": "about-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "about-375-light.png",
+      "md5": "0ae6be727cc18ff7314202258d76f18f"
+    },
+    {
+      "name": "about-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "about-375-dark.png",
+      "md5": "b03296c81744b53977134d6b71d8a6f2"
+    },
+    {
+      "name": "history-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "history-1440-light.png",
+      "md5": "02adfd9c9035c9b9acfea061f0cf1a77"
+    },
+    {
+      "name": "history-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "history-1440-dark.png",
+      "md5": "d3af80f5ee661760fd794eeacfe611d2"
+    },
+    {
+      "name": "history-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "history-375-light.png",
+      "md5": "ca07e70d42cb987ec6a0769210eb99b1"
+    },
+    {
+      "name": "history-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "history-375-dark.png",
+      "md5": "52c8e4b62e64f25b38d9a64ac4df044d"
+    },
+    {
+      "name": "legacy-landing-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "targets": [
+            [
+              ".brand-mark"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-landing-1440-light.png",
+      "md5": "d4f0708d3d6308aceec7f557212b06f2"
+    },
+    {
+      "name": "legacy-landing-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "targets": [
+            [
+              ".brand-mark"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-landing-1440-dark.png",
+      "md5": "d4f0708d3d6308aceec7f557212b06f2"
+    },
+    {
+      "name": "legacy-landing-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "targets": [
+            [
+              ".brand-mark"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-landing-375-light.png",
+      "md5": "788c95cb25065e897921217a6854270a"
+    },
+    {
+      "name": "legacy-landing-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "targets": [
+            [
+              ".brand-mark"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-landing-375-dark.png",
+      "md5": "788c95cb25065e897921217a6854270a"
+    },
+    {
+      "name": "legacy-dashboard-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "targets": [
+            [
+              ".regime-card__head > em"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-dashboard-1440-light.png",
+      "md5": "ffeedc642b312df29e314f2a5b973b59"
+    },
+    {
+      "name": "legacy-dashboard-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "targets": [
+            [
+              ".regime-card__head > em"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-dashboard-1440-dark.png",
+      "md5": "ffeedc642b312df29e314f2a5b973b59"
+    },
+    {
+      "name": "legacy-dashboard-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "targets": [
+            [
+              ".regime-card__head > em"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-dashboard-375-light.png",
+      "md5": "4490c3d57ef55a658624ea61ef27fb6d"
+    },
+    {
+      "name": "legacy-dashboard-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "targets": [
+            [
+              ".regime-card__head > em"
+            ]
+          ]
+        }
+      ],
+      "screenshot": "legacy-dashboard-375-dark.png",
+      "md5": "4490c3d57ef55a658624ea61ef27fb6d"
+    },
+    {
+      "name": "legacy-report-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "legacy-report-1440-light.png",
+      "md5": "dd4b5edf02ae33874d7412f4f6e87d9c"
+    },
+    {
+      "name": "legacy-report-1440-dark",
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "legacy-report-1440-dark.png",
+      "md5": "dd4b5edf02ae33874d7412f4f6e87d9c"
+    },
+    {
+      "name": "legacy-report-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "legacy-report-375-light.png",
+      "md5": "5c0931e34d1525a39822b5ce32321778"
+    },
+    {
+      "name": "legacy-report-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "legacy-report-375-dark.png",
+      "md5": "5c0931e34d1525a39822b5ce32321778"
+    },
+    {
+      "name": "legacy-saved-commentary-375-light",
+      "width": 375,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "legacy-saved-commentary-375-light.png",
+      "md5": "699eef7d955ff9cbd8c121b83e4d6d0e"
+    },
+    {
+      "name": "stored-top5-1440-light",
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "stored-top5-1440-light.png",
+      "md5": "53b362b58fd208fff947f1a52d26d061"
+    },
+    {
+      "name": "stored-top5-375-dark",
+      "width": 375,
+      "theme": "dark",
+      "overflow": false,
+      "violations": [],
+      "screenshot": "stored-top5-375-dark.png",
+      "md5": "1ec1be89d5b7aaeb1f69090b8971420a"
+    }
+  ],
+  "storedRank": {
+    "codes": [
+      "001800",
+      "029780",
+      "000270",
+      "007070",
+      "323410"
+    ],
+    "summary": "TOP5 예측 요약\n\n+0.38% ~ +0.40%\n\n예측값 양수 5종목\n\n다음 거래일 시가→종가 · 분석 기준일 2026. 10. 08.\n원본 모델 예측 · 실제 성과 아님"
+  },
+  "exceptions": [],
+  "limitations": [
+    "화면 검증은 로컬 fixture 서버에서 수행했습니다. 저장 TOP5는 localhost /api/rank 읽기 전용 GET으로 보관한 응답을 fixture에 주입했습니다. 실제 서버에 연결한 화면 동작과 새 분석 실행은 검증하지 않았습니다.",
+    "script failure 없음은 스크립트 완주를 뜻하며 모든 axe 검사가 통과했다는 뜻이 아닙니다.",
+    "legacy 브랜드 링크 이름 불일치와 시장 국면 배지 색 대비는 이번 diff의 해당 aria/CSS 변경과 관련이 없습니다. 기존 문제로 추정하지만 baseline 브라우저 검증은 하지 않아 기준선은 미확인입니다.",
+    "legacy 라이트·다크 캡처의 MD5가 같습니다. 테마 미지원 또는 테마 적용 실패로 실제 별도 다크 화면을 검증하지 못했습니다."
+  ],
+  "consoleErrors": [],
+  "themeChecks": [
+    {
+      "page": "legacy-landing-1440",
+      "identical": true
+    },
+    {
+      "page": "legacy-landing-375",
+      "identical": true
+    },
+    {
+      "page": "legacy-dashboard-1440",
+      "identical": true
+    },
+    {
+      "page": "legacy-dashboard-375",
+      "identical": true
+    },
+    {
+      "page": "legacy-report-1440",
+      "identical": true
+    },
+    {
+      "page": "legacy-report-375",
+      "identical": true
+    },
+    {
+      "page": "legacy-saved-commentary-375",
+      "identical": null
+    }
+  ]
+}

@@ -2,6 +2,16 @@
 
 This contract maps the Python pipeline outputs to frontend-facing landing and dashboard data.
 
+## 브리핑 TOP5 계약
+
+- 브리핑은 후보 생성 상태와 관계없이 `GET /api/rank`의 원본 `pred_rank` 상위 5종목을 사용한다. 뉴스 보정 순위나 수익률로 대체하지 않는다.
+- `ensemble_pred_return`은 fraction 단위다(`0.01 = 1%`). 누락값은 `—`로 표시한다. `prediction_target === "next_session_open_to_close"`일 때만 다음 거래일 시가→종가로 안내하며, 그 외에는 예측 기간 미확인으로 표시한다.
+- `POST /api/candidates/run`은 모드 생략 또는 `mode=model_only`에서 모델 추론 후 TOP5의 관련 기사만 수집한다. `mode=full`은 이 브리핑 API에서 거절한다. 독립 Python 연구 흐름과 과거 분석 결과는 보존한다.
+- 기사 수집은 고정 Google News RSS 공급자를 사용하며, 본문·감성 분석·LLM 호출·순위 보정을 하지 않는다. UI 링크는 Google News 경유 링크임을 표시한다. 별칭만 있는 제목은 누락될 수 있으며, 동명이 일반어·스포츠팀인 회사명에는 기업 관련 문맥도 요구한다.
+- `related_news.json`은 `startedAt`, 종목 코드, 회사명, 분석 기준일이 현재 모델 결과와 일치해야 연결한다. 관련 제목을 필터링하고 발행 시각 내림차순으로 최대 3건을 표시한다.
+- `data_meta.newsStatus`의 `collected`와 빈 기사 배열은 정상 수집 0건, `collection_failed`는 수집 실패, `not_collected`는 현재 분석에 연결할 기사 기록이 없음을 뜻한다. 기사 캐시 저장 실패는 검증된 모델 완료 상태를 무효화하지 않으며 실행 결과의 `articleCollectionStatus`가 `unavailable`이 된다.
+- model_only의 실측 수급 overlay는 유지한다. full 모드의 원본 rank에 별도 수급 파일을 새로 덧씌우지 않는다.
+
 ## Source Files
 
 The current Python project writes final analysis results to:

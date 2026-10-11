@@ -14,9 +14,9 @@ const baseFeatures: Feature[] = [
     description: "추세, 거래대금, 변동성 흐름을 함께 읽어 후보 종목의 기술적 신뢰도를 정리합니다.",
   },
   {
-    category: "Flow Analyst",
-    title: "수급 변화의 방향을 먼저 확인",
-    description: "외국인과 기관의 누적 수급, 섹터 회전, 시장 주도 흐름을 후보 랭킹에 반영합니다.",
+    category: "Model Ranking",
+    title: "모델 예측의 상대 위치 확인",
+    description: "모델 원본 순위와 예측 기준일을 함께 확인합니다. 예측은 실제 성과를 보장하지 않습니다.",
   },
   {
     category: "News & Disclosure",

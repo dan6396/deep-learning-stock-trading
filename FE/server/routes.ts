@@ -1,7 +1,8 @@
-import { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, refreshDashboardSnapshot } from "./kisDashboard";
+import { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, fetchKisTargetSession, refreshDashboardSnapshot } from "./kisDashboard";
 import { getCandidatesPayload, getRankPayload, getStockAnalysisPayload } from "./pipelineResults";
 import { getCandidateAnalysisStatus, getStockNewsAnalysisStatus, startCandidateAnalysis, startStockNewsAnalysis } from "./pipelineRunner";
 import { getBackendStatus } from "./backendStatus";
+import { nextKrxSession } from "./krxCalendar";
 import { getPerformancePayload, startPerformanceCollection, runPerformanceCollection } from "./performance";
 
 declare const process: { env: Record<string, string | undefined> };
@@ -11,7 +12,7 @@ export type ApiRequest = {
   headers?: Record<string, string | string[] | undefined>;
 };
 export type ApiResponse = { end: (body: string) => void; setHeader: (name: string, value: string) => void; statusCode: number };
-const providers = { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote,
+const providers = { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, fetchKisTargetSession,
   refreshDashboardSnapshot, getCandidatesPayload, getRankPayload, getStockAnalysisPayload,
   getCandidateAnalysisStatus, getStockNewsAnalysisStatus, startCandidateAnalysis, startStockNewsAnalysis, getBackendStatus, getPerformancePayload, startPerformanceCollection, runPerformanceCollection };
 export type RouteProviders = typeof providers;
@@ -75,6 +76,16 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
     "/api/korean-market/indices": route(["GET"], () => deps.buildKisIndices()),
     "/api/korean-market/quote": route(["GET"], request => deps.buildKisStockQuote(symbol(request))),
     "/api/korean-market/stock-chart": route(["GET"], request => deps.buildKisStockChart(symbol(request))),
+    // Next KRX session after an analysis base date, from the KIS holiday calendar (cached on disk once per day).
+    "/api/korean-market/next-session": route(["GET"], async request => {
+      const baseDate = required(query(request, "baseDate"), "baseDate");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(baseDate) || new Date(`${baseDate}T00:00:00Z`).toISOString().slice(0, 10) !== baseDate) throw new MissingParameter("baseDate must be YYYY-MM-DD.");
+      // KIS needs a real-trading key; otherwise fall back to the built-in KRX closure table.
+      let kisSession: string | null = null;
+      try { kisSession = await deps.fetchKisTargetSession(baseDate, env); } catch { kisSession = null; }
+      const nextSession = kisSession ?? nextKrxSession(baseDate);
+      return { baseDate, nextSession, calendar: kisSession ? "kis" : nextSession ? "krx-table" : null, source: kisSession ? "live" : nextSession ? "cache" : "unknown", asOf: new Date().toISOString() };
+    }),
     "/api/candidates": route(["GET"], () => deps.getCandidatesPayload(), "cache"),
     "/api/rank": route(["GET"], () => deps.getRankPayload(), "cache"),
     "/api/stock-analysis": route(["GET"], request => deps.getStockAnalysisPayload(ticker(request)), "cache"),
@@ -84,13 +95,9 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
       const kind = query(request, "kind");
       if (kind !== undefined && kind !== "official" && kind !== "adhoc") throw new MissingParameter("실행 구분은 official 또는 adhoc이어야 합니다.");
       const selectedEnv = kind === undefined ? env : { ...env, PIPELINE_RUN_KIND: kind };
-      if (mode === undefined) return analysisStatus(deps.startCandidateAnalysis(selectedEnv));
-      if (mode !== "model_only" && mode !== "full") throw new MissingParameter("분석 모드는 model_only 또는 full이어야 합니다.");
-      if (mode === "full" && [env.NAVER_CLIENT_ID, env.NAVER_CLIENT_SECRET, env.GEMINI_API_KEY].some(value => !value?.trim())) {
-        throw new MissingParameter("뉴스 포함 분석에는 네이버 뉴스와 Gemini API 설정이 필요합니다.");
-      }
+      if (mode !== undefined && mode !== "model_only") throw new MissingParameter("브리핑은 모델 예측과 관련 기사 수집만 지원합니다.");
       // A request-scoped override: never change the server default or another job.
-      return analysisStatus(deps.startCandidateAnalysis({ ...selectedEnv, PIPELINE_ANALYSIS_MODE: mode }));
+      return analysisStatus(deps.startCandidateAnalysis({ ...selectedEnv, PIPELINE_ANALYSIS_MODE: "model_only" }));
     }),
     "/api/performance": route(["GET"], request => {
       const code = query(request, "symbol");

@@ -5,11 +5,11 @@ import { backendStatusBody, pipelineRow } from "../../test/dataFixtures";
 import { evidenceSummary, formatBillions, savedRunDuration } from "./briefingData";
 
 describe("briefing factual summaries", () => {
-  it("uses raw supply totals and rank without recommendations, filling neither missing nor zero", () => {
+  it("summarizes model rank without exposing retained supply data", () => {
     const row = adaptCandidate(pipelineRow({ pred_rank: 1, pred_pool_size: 199, foreign_net_buy_sum: -430_000_000, inst_net_buy_sum: -450_000_000, supply_window: 5 })).data;
     const summary = evidenceSummary({ ...row, supply: { ...row.supply, window: 5 } });
-    expect(summary).toBe("모델 예측 199종목 중 1위 · 외국인·기관 5일 합계 순매도 -8.8억");
-    expect(evidenceSummary({ ...row, rank: null, supply: { ...row.supply, window: null, combinedNetBuy: null } })).toBe("모델 원본 순위 미제공 · 외국인·기관 기간 미확인 합계 미제공");
+    expect(summary).toBe("모델 예측 199종목 중 1위");
+    expect(evidenceSummary({ ...row, rank: null, supply: { ...row.supply, window: null, combinedNetBuy: null } })).toBe("모델 원본 순위 미제공");
     expect(formatBillions(0)).toBe("0.0억"); expect(formatBillions(null)).toBe("—");
   });
   it.each([-4_999_999, -1, -0, 0, 1, 4_999_999])("avoids signed rounded zero for amount %s", amount => {

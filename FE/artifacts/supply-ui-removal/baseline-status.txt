@@ -1,0 +1,31 @@
+ M FE/docs/api-contract.md
+ M FE/scripts/verify/fixture-server.mjs
+ M FE/server/pipelineResults.ts
+ M FE/server/pipelineRunner.ts
+ M FE/server/routes.ts
+ M FE/src/entities/candidate.ts
+ M FE/src/features/briefing/AnalysisControl.test.tsx
+ M FE/src/features/briefing/AnalysisControl.tsx
+ M FE/src/features/briefing/AnalysisDialog.test.tsx
+ M FE/src/features/briefing/BriefingPage.test.tsx
+ M FE/src/features/briefing/BriefingPage.tsx
+ M FE/src/features/briefing/DetailPanel.tsx
+ M FE/src/features/briefing/ModelTopFiveTable.test.tsx
+ M FE/src/features/briefing/ModelTopFiveTable.tsx
+ M FE/src/features/briefing/briefingDashboard.css
+ M FE/src/features/briefing/candidateProduction.test.tsx
+ M FE/src/features/connection/ConnectionNotice.test.tsx
+ M FE/src/features/connection/ConnectionNotice.tsx
+ M FE/src/features/stock/reportData.ts
+ M FE/src/test/pipelineResults.test.js
+ M FE/src/test/pipelineRunner.test.js
+ M FE/src/test/routes.test.js
+ M FE/tsconfig.app.json
+ M FE/tsconfig.node.json
+?? FE/artifacts/supply-ui-removal/
+?? FE/artifacts/top-five/
+?? FE/scripts/verify/top-five-smoke.mjs
+?? FE/server/relatedNews.ts
+?? FE/src/shared/lib/articleUrl.ts
+?? FE/src/shared/lib/relatedArticles.ts
+?? FE/src/test/relatedNews.test.ts

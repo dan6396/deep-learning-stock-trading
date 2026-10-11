@@ -43,7 +43,7 @@ it("does not turn an unproduced model-only candidate list into zero final candid
   expect(screen.queryByText("최신 실행 완료")).not.toBeInTheDocument();
   expect(screen.getByTestId("history-model-only")).toHaveTextContent("실행 완료만으로 공식 성과가 확정되지 않습니다");
   await waitFor(() => expect(screen.getByTestId("history-candidate-count")).toHaveTextContent(/^미생성$/));
-  expect(screen.getByText(/뉴스 보정 최종 후보 미생성/)).toBeInTheDocument();
+  expect(screen.getByText(/뉴스 보정은 실행하지 않았습니다/)).toBeInTheDocument();
   expect(screen.queryByText("현재 조회된 최종 후보가 없습니다.")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "전체 모델 순위 보기" })).toHaveAttribute("href", "/next/rank");
 });
@@ -114,6 +114,18 @@ it("shows a failed run independently of saved candidates and refreshes with GET"
   await screen.findByText("실행 중인 분석 없음");
   expect(screen.queryByText("원본 오류")).not.toBeInTheDocument();
   expect(fetcher.mock.calls.length).toBeGreaterThanOrEqual(4);
+  expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
+});
+it("hides supply progress and errors while preserving unrelated messages after refresh", async () => {
+  let hidden = true;
+  const fetcher = backend(() => ({ status: "failed", progress: { message: hidden ? "외국인·기관 수급 조회 중" : "전문기관 연구 결과 확인 중" }, error: hidden ? "기관 순매수 조회 실패" : "원본 오류" }));
+  mount(); await screen.findByText("최신 실행 실패");
+  expect(screen.getByText("분석 데이터 처리 중")).toBeInTheDocument();
+  expect(screen.getByText("분석 기록을 확인해 주세요.")).toBeInTheDocument();
+  expect(document.querySelector(".history-facts")).not.toHaveTextContent(/수급|순매수/);
+  hidden = false; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+  expect(await screen.findByText("전문기관 연구 결과 확인 중")).toBeInTheDocument();
+  expect(screen.getByText("원본 오류")).toBeInTheDocument();
   expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
 });
 it("reports an unavailable status without inventing a completed record and recovers", async () => {

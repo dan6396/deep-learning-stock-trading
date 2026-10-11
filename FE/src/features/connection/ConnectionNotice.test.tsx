@@ -23,7 +23,8 @@ describe("compact connection status", () => {
     fireEvent.click(document.querySelector(".connection-notice-heading")!);
     await waitFor(() => expect(document.querySelector(".connection-disclosure")).toHaveAttribute("open"));
     expect(screen.getByRole("button", { name: "연결 상태 다시 확인" })).toBeVisible();
-    expect(screen.getByText(/이 상태 API는 키 설정 유무만 확인/)).toBeVisible();
+    expect(screen.queryByText(/이 상태 API는 키 설정 유무만 확인/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Gemini 유료 API/)).not.toBeInTheDocument();
   });
   it("automatically exposes a failed status request and offers a read-only retry", async () => {
     mount(async () => new Response("{}", { status: 502 }));
@@ -51,7 +52,14 @@ describe("compact connection status", () => {
     expect(screen.queryByText("키 설정 확인 · 접속 별도 확인")).not.toBeInTheDocument();
     expect(document.querySelector(".connection-notice-heading")).not.toHaveTextContent("검증됨");
   });
-  it.each(["missing", "empty", "invalid", "stale", "sample", "unknown"])("opens when model results are %s", async state => {
+  it("stays collapsed when a full-mode server's latest completed run was model-only", async () => {
+    const body = backendStatusBody({ state: "not_produced" }, { marker: { state: "completed", mode: "model_only" } });
+    body.analysisMode = "full";
+    mount(async () => jsonResponse(body));
+    await screen.findByText(/모델 결과 저장됨 · 저장 시각/);
+    expect(document.querySelector(".connection-disclosure")).not.toHaveAttribute("open");
+  });
+  it.each(["missing","empty", "invalid", "stale", "sample", "unknown"])("opens when model results are %s", async state => {
     const body = backendStatusBody({ state: "not_produced" }); body.results.rank.state = state;
     mount(async () => jsonResponse(body));
     await screen.findByText("확인 필요");

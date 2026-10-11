@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAppPaths } from "../../app/paths";
 import { useQuery } from "@tanstack/react-query";
 import { Play, LoaderCircle, X } from "lucide-react";
 import { queries } from "../../shared/api/queries";
@@ -20,6 +21,7 @@ export function dialogTabStops(dialog: HTMLElement) {
 
 function DialogContent({ close, running }: { close: (restore?: boolean) => void; running: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null), closeButton = useRef<HTMLButtonElement>(null);
+  const navigate = useNavigate(), paths = useAppPaths();
   useEffect(() => {
     const node = dialog.current, bodyOverflow = document.body.style.overflow, rootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden"; document.documentElement.style.overflow = "hidden";
@@ -27,6 +29,13 @@ function DialogContent({ close, running }: { close: (restore?: boolean) => void;
     return () => { if (node?.open) node.close?.(); document.body.style.overflow = bodyOverflow; document.documentElement.style.overflow = rootOverflow; };
   }, []);
   function dismiss() { if (dialog.current?.open) dialog.current.close?.(); close(); }
+  function showTopFive() {
+    if (dialog.current?.open) dialog.current.close?.();
+    close(false);
+    // Drop any ?code= so the fresh TOP1 is selected, then land on the TOP5 heading.
+    navigate(paths.briefing);
+    requestAnimationFrame(() => { window.scrollTo({ top: 0, behavior: "auto" }); document.getElementById("candidate-heading")?.focus({ preventScroll: true }); });
+  }
   return createPortal(<dialog ref={dialog} className="ds-root briefing-page analysis-dialog" aria-labelledby="analysis-dialog-title" onCancel={event => { event.preventDefault(); dismiss(); }} onKeyDown={event => {
     if (event.key !== "Tab") return;
     // Leave interior navigation to showModal, wrapping only the first/last
@@ -37,7 +46,7 @@ function DialogContent({ close, running }: { close: (restore?: boolean) => void;
   }}>
     <div className="analysis-dialog-heading"><h2 id="analysis-dialog-title">AI 분석 실행</h2><button ref={closeButton} type="button" className="briefing-icon-button" aria-label="분석 실행 대화상자 닫기" onClick={dismiss}><X aria-hidden="true" size={20} /></button></div>
     {running && <p className="analysis-dialog-running" role="status">대화상자를 닫아도 분석은 서버에서 계속 진행됩니다.</p>}
-    <AnalysisControl />
+    <AnalysisControl onShowTopFive={showTopFive} />
   </dialog>, document.body);
 }
 export function AnalysisDialog() {

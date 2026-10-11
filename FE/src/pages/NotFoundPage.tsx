@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useAppPaths } from "../app/paths";
+import "./notFound.css";
 
 export function NotFoundPage() {
   usePageTitle("페이지를 찾을 수 없습니다");
@@ -21,18 +22,13 @@ export function NotFoundPage() {
   }, []);
 
   return (
-    <section className="mx-auto max-w-2xl rounded-card bg-surface p-8 my-10">
-      <div className="grid gap-5">
-        <p className="eyebrow">
-          <span aria-hidden="true" />
-          404
-        </p>
-        <h1>페이지를 찾을 수 없습니다</h1>
-        <p>요청하신 주소가 변경되었거나 더 이상 존재하지 않습니다.</p>
-        <Link className="text-link min-h-10 inline-flex items-center" to={paths.briefing}>
-          브리핑으로 돌아가기
-        </Link>
-      </div>
+    <section className="not-found" aria-labelledby="not-found-title">
+      <p className="not-found-code">404</p>
+      <h1 id="not-found-title">페이지를 찾을 수 없습니다</h1>
+      <p className="not-found-text">요청하신 주소가 변경되었거나 더 이상 존재하지 않습니다.</p>
+      <Link className="not-found-link" to={paths.briefing}>
+        브리핑으로 돌아가기
+      </Link>
     </section>
   );
 }

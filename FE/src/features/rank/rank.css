@@ -39,6 +39,7 @@
   @media(max-width:600px) { .rank-card { padding:20px 16px; }.rank-title-row { align-items:flex-start; }.rank-title-row h1 { font-size:28px; }.rank-controls { gap:12px; }.rank-search { width:100%; }.rank-section-heading { gap:8px; }.rank-table th,.rank-table td { padding:14px 10px; } }
   @media(max-width:600px) {
     .rank-table-scroll { scroll-padding-inline-start: 174px; }
+    .rank-table.rank-model-table { min-width: 0; }
     .rank-table th:first-child,.rank-table td:first-child { min-width: 154px; max-width: 154px; width: 154px; white-space: normal; }
     .rank-stock { min-width: 134px; max-width: 134px; gap: 6px; }
     .rank-stock a { min-width: 0; overflow-wrap: anywhere; }

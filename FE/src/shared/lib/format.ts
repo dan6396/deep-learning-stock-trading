@@ -31,6 +31,12 @@ export function formatDate(value: unknown, includeTime = false): string {
     ...(includeTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}) }).format(date);
 }
 
+/** Trading-session date with weekday, e.g. "10. 12. (월)". */
+export function formatSessionDate(value: unknown): string {
+  if (formatDate(value) === MISSING_VALUE) return MISSING_VALUE;
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", weekday: "short" }).format(new Date(`${String(value).slice(0, 10)}T00:00:00+09:00`));
+}
+
 export function formatAgreement(ratio: number | null): string {
   return ratio !== null && Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? formatPercent(ratio, "fraction", 0).replace(/^\+/, "") : MISSING_VALUE;
 }

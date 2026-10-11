@@ -30,7 +30,7 @@ export function analysisMessage(status: BackendStatus): string {
 export function ConnectionNotice() {
   const query = useQuery(queries.backendStatus()), status = query.data;
   const storedResults = status?.results.rank.state === "available" && (status.results.candidates.state === "available" || status.results.candidates.state === "empty"
-    || (status.analysisMode === "model_only" && status.results.candidates.state === "not_produced"));
+    || ((status.analysisMode === "model_only" || (status.marker.state === "completed" && status.marker.mode === "model_only")) && status.results.candidates.state === "not_produced"));
   const needsAttention = query.isError || Boolean(status && (
     status.runtime.state === "failed" || status.runtime.state === "unknown" || status.marker.state === "failed" || status.marker.state === "invalid"
     || status.analysisMode === "unknown" || (!storedResults && status.runtime.state !== "running")
@@ -48,9 +48,7 @@ export function ConnectionNotice() {
       <p>{status.market.configuration === "configured" ? "시장 데이터 설정 확인 · 조회 검증 필요" : "시장 데이터 연결 대기"}</p>
       <p>{analysisMessage(status)}</p>
       <div className="connection-notice-results"><span>{availabilityMessage("전체 순위", status.results.rank)}</span><span>{availabilityMessage("최종 후보", status.results.candidates)}</span></div>
-      <div className="connection-explanation"><p>이 상태 API는 키 설정 유무만 확인하며 외부 API에 접속하지 않습니다. KIS 조회 성공 여부는 여기 저장되지 않습니다. 가격·지수의 실제 출처와 기준 시각은 각 화면에서 확인하세요.</p>
-        <p>{status.analysisMode === "model_only" ? "서버 기본값: 모델 전용. 새 분석 실행에서 뉴스 포함 모드를 선택할 수 있습니다." : status.analysisMode === "unknown" ? "분석 실행 설정 미확인" : "서버 기본값: 뉴스 포함. 새 분석 실행에서 모드를 선택하세요. Gemini 유료 API가 포함됩니다."}</p>
-        <p>{status.news.configuration === "configured" ? "뉴스 평가 설정 확인" : "뉴스 평가 연결 대기"} · {status.news.collectionConfiguration === "configured" ? "기사 수집 설정 확인" : "기사 수집 연결 대기"}. 설정 여부만 확인했으며 수집·평가는 검증하지 않았습니다.</p>
+      <div className="connection-explanation">
         <p>상태 확인 시각 {formatDate(status.checkedAt, true)} · 분석 자료는 저장 결과이며 실시간 가격이 아닙니다.</p>
       </div>
     </>}

@@ -5,6 +5,7 @@ import { useAnalysisRun } from "../../shared/api/analysis";
 import { queries } from "../../shared/api/queries";
 import { SOURCE_LABELS } from "../../entities/source";
 import { formatDate } from "../../shared/lib/format";
+import { analysisProgressText } from "../../shared/lib/analysisDisplay";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useAppPaths } from "../../app/paths";
 import { useCandidateProduction, productionNotice } from "../briefing/candidateProduction";
@@ -14,9 +15,6 @@ import "./history.css";
 import { PerformancePanel } from "./PerformancePanel";
 
 const statusLabels = { idle: "실행 중인 분석 없음", running: "분석 진행 중", completed: "최신 실행 완료", failed: "최신 실행 실패" };
-function rawValue(value: unknown): string {
-  return typeof value === "string" && value.trim() ? value : typeof value === "number" && Number.isFinite(value) ? String(value) : "—";
-}
 export function elapsedLabel(milliseconds: number | null | undefined): string {
   if (milliseconds === null || milliseconds === undefined || !Number.isFinite(milliseconds) || milliseconds < 0) return "—";
   const minutes = Math.floor(milliseconds / 60000);
@@ -80,8 +78,8 @@ export function HistoryPage() {
         <dl className="history-facts">
           <div><dt>측정된 경과 시간</dt><dd data-testid="history-elapsed">{elapsedLabel(run?.elapsedMs)}</dd></div>
           <div><dt>최근 상태 갱신</dt><dd data-testid="history-progress-updated">{progressUpdatedLabel(run?.progress?.updatedAt)}</dd></div>
-          <div><dt>진행 메시지</dt><dd>{rawValue(run?.progress?.message)}</dd></div>
-          <div><dt>제공된 오류</dt><dd>{run?.error || (run?.status === "completed" ? "없음" : run?.status === "failed" ? "오류 내용 미제공" : "—")}</dd></div>
+          <div><dt>진행 메시지</dt><dd>{analysisProgressText(run?.progress?.message, run?.progress?.message ? "분석 데이터 처리 중" : "—")}</dd></div>
+          <div><dt>제공된 오류</dt><dd>{analysisProgressText(run?.error, run?.error ? "분석 기록을 확인해 주세요." : run?.status === "completed" ? "없음" : run?.status === "failed" ? "오류 내용 미제공" : "—")}</dd></div>
           <div><dt>공식 / 수시 구분</dt><dd>{run?.status === "idle" ? "현재 실행 없음" : kindLabel(run?.kind)}</dd></div>
           <div><dt>실행 식별자</dt><dd>{run?.runId ?? (run?.status === "idle" ? "새 실행 시 발급" : "구현 이전 기록에는 식별자가 없습니다.")}</dd></div>
           <div><dt>출처</dt><dd>{analysis.data ? SOURCE_LABELS[analysis.data.source] : "—"}</dd></div>

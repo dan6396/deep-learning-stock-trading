@@ -17,7 +17,7 @@ export function useCandidateProduction(candidates: { isSuccess: boolean; isError
 }
 
 export function productionNotice(production: CandidateProduction): string | null {
-  if (production === "unproduced") return "모델 분석만 완료 · 뉴스 보정 최종 후보 미생성. 최종 후보 여부는 미확인이며 뉴스 보정 수치와 순위는 제공되지 않습니다.";
+  if (production === "unproduced") return "모델 예측 결과입니다 · 뉴스 보정은 실행하지 않았습니다.";
   if (production === "unknown") return "최종 후보 생성 여부를 확인하지 못했습니다. 후보 여부는 미확인입니다.";
   return null;
 }

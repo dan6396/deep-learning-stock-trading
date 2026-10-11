@@ -1,9 +1,6 @@
 import type { ChartData } from "../../entities/market";
 
-export function safeArticleUrl(value: string | null | undefined): string | null {
-  if (!value || !/^https?:\/\//i.test(value)) return null;
-  try { const url = new URL(value); return url.hostname && !url.username && !url.password ? url.href : null; } catch { return null; }
-}
+export { safeArticleUrl } from "../../shared/lib/articleUrl";
 
 /** Strict observation dates: Date.parse alone normalizes impossible days. */
 export function observationTime(value: string | null): number | null {

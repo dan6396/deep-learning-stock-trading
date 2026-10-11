@@ -64,7 +64,7 @@ export function adaptCandidate(value: unknown, isFinalCandidate = false): DataRe
   const methodValue = meta.newsMethod ?? input.news_method;
   // Old CSV output has news:[] even when collection never ran. Absence alone proves nothing.
   const rawStatus = textValue(meta.newsStatus ?? input.news_analysis_status)?.toLowerCase() ?? null;
-  const newsCollected = isNewsCollectionSuccess(rawStatus) && (meta.newsCollected === true || (meta.newsCollected !== false && input.news_collected === true));
+  const newsCollected = (rawStatus === "collected" || isNewsCollectionSuccess(rawStatus)) && (meta.newsCollected === true || (meta.newsCollected !== false && input.news_collected === true));
   const points = Array.isArray(result.key_data_points) ? result.key_data_points : [];
   const explicitTally = tally(Object.prototype.hasOwnProperty.call(meta, "newsTally") ? meta.newsTally : input.news_sentiment_tally ?? points.find(point => typeof point === "string" && /긍정\s*\d+\s*건/.test(point)));
   const newsMethod = methodValue === "keyword" ? "keyword"

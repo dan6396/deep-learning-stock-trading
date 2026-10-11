@@ -3,7 +3,7 @@ vi.mock("../../server/backendStatus", () => ({ getBackendStatus: vi.fn() }));
 
 vi.mock("../../server/kisDashboard", () => ({
   buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
-  buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), refreshDashboardSnapshot: vi.fn(),
+  buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn(), refreshDashboardSnapshot: vi.fn(),
 }));
 vi.mock("../../server/pipelineResults", () => ({ getCandidatesPayload: vi.fn(), getRankPayload: vi.fn(), getStockAnalysisPayload: vi.fn() }));
 vi.mock("../../server/pipelineRunner", () => ({ getCandidateAnalysisStatus: vi.fn(), getStockNewsAnalysisStatus: vi.fn(), startCandidateAnalysis: vi.fn(), startStockNewsAnalysis: vi.fn() }));
@@ -23,7 +23,7 @@ function response() {
 }
 function dependencies() {
   return { buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
-    buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), refreshDashboardSnapshot: vi.fn().mockResolvedValue({ generatedAt: "2026-10-07T09:00:00Z", stocks: [{}, {}] }),
+    buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn().mockResolvedValue("2026-10-12"), refreshDashboardSnapshot: vi.fn().mockResolvedValue({ generatedAt: "2026-10-07T09:00:00Z", stocks: [{}, {}] }),
     getCandidatesPayload: vi.fn().mockResolvedValue([]), getRankPayload: vi.fn().mockResolvedValue([]), getStockAnalysisPayload: vi.fn().mockResolvedValue(null),
     getCandidateAnalysisStatus: vi.fn().mockReturnValue({ status: "idle" }), getStockNewsAnalysisStatus: vi.fn(),
     startCandidateAnalysis: vi.fn().mockReturnValue({ status: "running" }), startStockNewsAnalysis: vi.fn() };
@@ -51,6 +51,20 @@ describe("shared legacy route contracts", () => {
     const local = response(); await handler({ method: "POST" }, local.res);
     expect(local.body().status).toBe("running"); expect(deps.startPerformanceCollection).toHaveBeenCalledOnce();
   });
+  it("returns the KIS next session for a base date and rejects malformed dates", async () => {
+    const deps = dependencies(), env = { KIS_ENV: "real" }, handler = createRoutes(deps, env)["/api/korean-market/next-session"];
+    const ok = response(); await handler({ method: "GET", url: "/api/korean-market/next-session?baseDate=2026-10-08" }, ok.res);
+    expect(deps.fetchKisTargetSession).toHaveBeenCalledWith("2026-10-08", env);
+    expect(ok.res.statusCode).toBe(200); expect(ok.body()).toMatchObject({ baseDate: "2026-10-08", nextSession: "2026-10-12", source: "live" });
+    const bad = response(); await handler({ method: "GET", url: "/api/korean-market/next-session?baseDate=2026-02-30" }, bad.res);
+    expect(bad.res.statusCode).toBe(400);
+    deps.fetchKisTargetSession.mockRejectedValueOnce(new Error("Settlement requires the real KIS calendar."));
+    const fallback = response(); await handler({ method: "GET", url: "/api/korean-market/next-session?baseDate=2026-10-08" }, fallback.res);
+    expect(fallback.res.statusCode).toBe(200); expect(fallback.body()).toMatchObject({ nextSession: "2026-10-12", calendar: "krx-table" });
+    deps.fetchKisTargetSession.mockResolvedValueOnce(null);
+    const uncovered = response(); await handler({ method: "GET", url: "/api/korean-market/next-session?baseDate=2027-03-02" }, uncovered.res);
+    expect(uncovered.body()).toMatchObject({ nextSession: null, calendar: null, source: "unknown" });
+  });
   it("reports the runtime status source and the actual numeric progress timestamp", async () => {
     const deps = dependencies();
     deps.getCandidateAnalysisStatus.mockReturnValue({ status: "completed", progress: { updatedAt: 1791546454355 } });
@@ -59,17 +73,17 @@ describe("shared legacy route contracts", () => {
     expect(result.body()).toMatchObject({ source: "live", asOf: "2026-10-09T11:47:34.355Z" });
   });
   it("applies the requested mode only to this job and preserves the server default", async () => {
-    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "model_only", NAVER_CLIENT_ID: "fixture", NAVER_CLIENT_SECRET: "fixture", GEMINI_API_KEY: "fixture" };
+    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "full", NAVER_CLIENT_ID: "fixture", NAVER_CLIENT_SECRET: "fixture", GEMINI_API_KEY: "fixture" };
     const handler = createRoutes(deps, env)["/api/candidates/run"];
-    for (const mode of ["full", "model_only"]) {
+    for (const mode of ["model_only"]) {
       const result = response();
       await handler({ method: "POST", url: `/api/candidates/run?mode=${mode}` }, result.res);
       expect(result.res.statusCode).toBe(200);
       expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: mode });
     }
-    expect(env.PIPELINE_ANALYSIS_MODE).toBe("model_only");
+    expect(env.PIPELINE_ANALYSIS_MODE).toBe("full");
     await handler({ method: "POST" }, response().res);
-    expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith(env);
+    expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: "model_only" });
   });
   it("rejects invalid modes and missing news credentials before starting a job", async () => {
     const deps = dependencies(), handler = createRoutes(deps, {})["/api/candidates/run"];

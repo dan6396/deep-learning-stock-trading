@@ -10,8 +10,7 @@ export function formatBillions(value: number | null | undefined) {
 }
 export function evidenceSummary(row: CandidateData) {
   const ranking = row.rank === null ? "모델 원본 순위 미제공" : `모델 예측 ${row.poolSize ?? "—"}종목 중 ${row.rank}위`;
-  const { combinedNetBuy: amount, window } = row.supply;
-  return `${ranking} · 외국인·기관 ${window === null ? "기간 미확인" : `${window}일`} 합계 ${amount === null ? "미제공" : amount > 0 ? "순매수" : amount < 0 ? "순매도" : "0원"}${amount === null || amount === 0 ? "" : ` ${formatBillions(amount)}`}`;
+  return ranking;
 }
 export function savedRunDuration(status?: BackendStatus, run?: AnalysisStatus): number | null {
   if (status?.marker.state !== "completed") return null;

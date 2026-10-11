@@ -39,7 +39,7 @@ describe("whole-rank page fetch interactions", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "negative" } });
     expect(document.querySelectorAll("[data-rank-code]")).toHaveLength(2);
-    expect(document.querySelector('[data-rank-code="100001"] [data-value="predictedReturn"]')).toHaveTextContent("0.00%");
+    expect(document.querySelector('[data-rank-code="100001"] [data-value="predictedReturn"]')).toHaveTextContent("보합");
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "missing" } });
     expect(document.querySelector('[data-rank-code="100003"]')).toBeInTheDocument();
   });
@@ -86,7 +86,7 @@ describe("whole-rank page fetch interactions", () => {
     if (produced) {
       expect(await screen.findByRole("columnheader", { name: "최종 보정 순위" })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "근거 일치도" })).toBeInTheDocument();
+      expect(screen.queryByRole("columnheader", { name: "근거 일치도" })).not.toBeInTheDocument();
       expect(screen.getByRole("option", { name: "최종 후보만" })).toBeInTheDocument();
     }
     else {
@@ -98,7 +98,7 @@ describe("whole-rank page fetch interactions", () => {
       await screen.findByText("뉴스 보정 미사용 · 모델 예측 순위 기준");
       expect(screen.queryByRole("columnheader", { name: "최종 보정 순위" })).not.toBeInTheDocument();
       expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "근거 일치도" })).toBeInTheDocument();
+      expect(screen.queryByRole("columnheader", { name: "근거 일치도" })).not.toBeInTheDocument();
     }
   });
   it("hides news, agreement and candidate filter when production is unknown", async () => {

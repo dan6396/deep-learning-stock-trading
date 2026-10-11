@@ -1,3 +1,4 @@
+import { analysisProgressText } from "../../shared/lib/analysisDisplay";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PanelRightClose, PanelRightOpen, X } from "lucide-react";
@@ -177,7 +178,7 @@ function buildMarketRegime(index: IndexSnapshot): MarketRegimeView {
     return {
       action: "선별 매수 환경",
       label: "상승 우위",
-      note: "지수 흐름이 개선될 때는 AI 후보 중 수급과 뉴스가 함께 받쳐주는 종목을 우선 확인합니다.",
+      note: "지수 흐름과 모델의 분석 기준일을 함께 확인합니다.",
       reasons: [
         `${index.symbol} 전일 대비 ${formatRate(displayChangeRate)}`,
         flowText,
@@ -206,7 +207,7 @@ function buildMarketRegime(index: IndexSnapshot): MarketRegimeView {
   return {
     action: "보수적 선별",
     label: "중립 장세",
-    note: "지수 방향성이 뚜렷하지 않을 때는 예측수익률보다 뉴스와 수급 근거의 일치 여부를 더 엄격하게 확인합니다.",
+    note: "지수 방향성이 뚜렷하지 않을 때는 모델 예측의 불확실성을 함께 확인합니다.",
     reasons: [
       `${index.symbol} 전일 대비 ${formatRate(displayChangeRate)}`,
       flowText,
@@ -378,11 +379,11 @@ function MarketOverview({
         {/* Always mounted so screen readers announce the completion message
             when it appears (a freshly inserted live region is often missed). */}
         <p className="candidate-analysis-status" role="status">
-          {analysisPhase !== "running" ? candidateAnalysis.message : null}
+          {analysisPhase !== "running" ? analysisProgressText(candidateAnalysis.message, "") : null}
         </p>
         {candidateAnalysis.errorMessage ? (
           <p className="candidate-analysis-status candidate-analysis-status--error" role="alert">
-            AI 후보 분석 실패: {candidateAnalysis.errorMessage}
+            AI 후보 분석 실패: {analysisProgressText(candidateAnalysis.errorMessage, "분석 기록을 확인해 주세요.")}
           </p>
         ) : null}
         {syncStatus.errorMessage ? (
@@ -428,10 +429,6 @@ function SelectionMethod() {
         <li>
           <span>1차 모델</span>
           <strong>앙상블 시가→종가 수익률 예측</strong>
-        </li>
-        <li>
-          <span>보조 데이터</span>
-          <strong>거래량 변화 + 외국인·기관 수급</strong>
         </li>
         <li>
           <span>2차 판단</span>
@@ -519,7 +516,7 @@ const analysisStages = [
   "실행 준비",
   "KOSPI200 후보 풀 로드",
   "OHLCV 수집·Huber 앙상블 예측",
-  "외국인·기관 수급 조회",
+  "분석 데이터 처리",
   "뉴스 크롤링",
   "뉴스 사건 추출·검증 게이트",
   "결과 파일 검증",
@@ -561,7 +558,7 @@ function AnalysisGate({
         {/* Persistent live region: only the stage message is announced; the
             elapsed time ticks every poll and stays outside it. */}
         <p className="gate-stage">
-          <span role="status">{progress?.message ?? "진행 단계 정보를 기다리는 중입니다"}</span>
+          <span role="status">{analysisProgressText(progress?.message, "진행 단계 정보를 기다리는 중입니다")}</span>
           <span className="gate-elapsed">{elapsedText}</span>
         </p>
         {progressPercent !== undefined ? (

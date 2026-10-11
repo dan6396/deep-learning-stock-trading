@@ -1,0 +1,44 @@
+{
+  "fixtureOnly": true,
+  "checks": [
+    "raw rank selects five stocks",
+    "fraction mapping, missing value and unknown period",
+    "collection failure, successful zero and no cache are distinct",
+    "publisher, timestamp, safe article link and Google intermediary are visible",
+    "briefing-1440-dark: no horizontal page overflow",
+    "briefing-1440-dark: automated accessibility",
+    "briefing-375-light: no horizontal page overflow",
+    "briefing-375-light: automated accessibility",
+    "watchlist remains usable",
+    "analysis dialog has no news/Gemini mode options",
+    "briefing performs no candidate fetch or news-analysis launch",
+    "stored-result-1440-light: no horizontal page overflow",
+    "stored-result-1440-light: automated accessibility",
+    "browser has no script exceptions"
+  ],
+  "screenshots": [
+    "briefing-1440-dark.png",
+    "briefing-375-light.png",
+    "stored-result-1440-light.png"
+  ],
+  "axe": [
+    {
+      "name": "briefing-1440-dark",
+      "violations": []
+    },
+    {
+      "name": "briefing-375-light",
+      "violations": []
+    },
+    {
+      "name": "stored-result-1440-light",
+      "violations": []
+    }
+  ],
+  "storedRank": {
+    "rows": 0,
+    "source": "read-only localhost /api/rank snapshot"
+  },
+  "exceptions": [],
+  "consoleErrors": []
+}

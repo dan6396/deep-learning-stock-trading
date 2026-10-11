@@ -1,0 +1,1111 @@
+diff --git a/FE/scripts/verify/supply-ui-smoke.mjs b/FE/scripts/verify/supply-ui-smoke.mjs
+new file mode 100644
+--- /dev/null
++++ b/FE/scripts/verify/supply-ui-smoke.mjs
+@@ -0,0 +1,128 @@
++// Local fixtures and a read-only saved /api/rank snapshot. Never launches analysis.
++import assert from "node:assert/strict";
++import { mkdir, readFile, writeFile } from "node:fs/promises";
++import { createRequire } from "node:module";
++import { fileURLToPath } from "node:url";
++import { createHash } from "node:crypto";
++import { startFixtureServer, candidateFixture, fixtureCodes } from "./fixture-server.mjs";
++import { launchBrowser } from "./cdp-browser.mjs";
++
++const artifacts = fileURLToPath(new URL("../../artifacts/supply-ui-removal/", import.meta.url));
++await mkdir(artifacts, { recursive: true });
++const require = createRequire(import.meta.url), axe = await readFile(require.resolve("axe-core/axe.min.js"), "utf8");
++const fixture = await startFixtureServer(), browser = await launchBrowser(fixture.base);
++const report = { fixtureOnly: true, checks: [], screens: [], storedRank: null, exceptions: [], limitations: [
++  "화면 검증은 로컬 fixture 서버에서 수행했습니다. 저장 TOP5는 localhost /api/rank 읽기 전용 GET으로 보관한 응답을 fixture에 주입했습니다. 실제 서버에 연결한 화면 동작과 새 분석 실행은 검증하지 않았습니다.",
++  "script failure 없음은 스크립트 완주를 뜻하며 모든 axe 검사가 통과했다는 뜻이 아닙니다.",
++  "legacy 브랜드 링크 이름 불일치와 시장 국면 배지 색 대비는 이번 diff의 해당 aria/CSS 변경과 관련이 없습니다. 기존 문제로 추정하지만 baseline 브라우저 검증은 하지 않아 기준선은 미확인입니다.",
++] };
++const check = (label, condition) => { assert.ok(condition, label); report.checks.push(label); console.log(`PASS ${label}`); };
++const save = () => writeFile(`${artifacts}browser-report.json`, JSON.stringify(report, null, 2));
++async function control(change) {
++  const response = await fetch(`${fixture.base}/_fixture/control`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(change) });
++  assert.equal(response.status, 200);
++}
++async function navigate(path, selector) {
++  await browser.send("Page.navigate", { url: `${fixture.base}${path}` });
++  await browser.waitFor(`document.querySelector(${JSON.stringify(selector)})`, `${path} mounted`);
++  await browser.waitFor("document.fonts.status==='loaded'", "fonts loaded");
++}
++async function capture(name, width, theme) {
++  await browser.send("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 600 });
++  await browser.evaluate(`localStorage.setItem('kospi-theme.v1',${JSON.stringify(theme)}); document.documentElement.dataset.theme=${JSON.stringify(theme)}; window.scrollTo(0,0)`);
++  const overflow = await browser.evaluate("document.documentElement.scrollWidth > innerWidth + 1");
++  await browser.evaluate(axe);
++  const violations = await browser.evaluate("axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(result=>result.violations.map(v=>({id:v.id,impact:v.impact,targets:v.nodes.map(n=>n.target)})))");
++  const metrics = await browser.send("Page.getLayoutMetrics");
++  const shot = await browser.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.ceil(metrics.cssContentSize.height), scale: 1 } });
++  const pixels = Buffer.from(shot.data, "base64");
++  await writeFile(`${artifacts}${name}.png`, pixels);
++  report.screens.push({ name, width, theme, overflow, violations, screenshot: `${name}.png`, md5: createHash("md5").update(pixels).digest("hex") });
++  console.log(`${overflow || violations.length ? "ISSUE" : "PASS"} ${name}: overflow=${overflow}, axe=${violations.length}`);
++  await save();
++}
++try {
++  const rows = fixtureCodes.map((code, index) => {
++    const row = candidateFixture(code); row.input_row.pred_rank = index + 1;
++    row.input_row.ensemble_pred_return = [.01, .009, 0, -.001, .005][index];
++    return row;
++  });
++  await control({ rankRows: rows, backendScenario: "model_only" });
++  await navigate("/", ".briefing-dashboard");
++  await browser.waitFor("document.querySelectorAll('[data-model-code]').length===5 && document.querySelector('.briefing-summary-prediction')?.innerText.includes('예측값 양수 3종목')", "TOP5 summary ready");
++  check("summary uses displayed mixed-sign original TOP5", await browser.evaluate("document.querySelector('.briefing-summary-prediction').innerText.includes('-0.10% ~ +1.00%')"));
++  check("briefing keeps model and removes supply and agreement", await browser.evaluate("!!document.querySelector('[data-detail-evidence=model]') && !document.querySelector('[data-detail-evidence=supply],.briefing-evidence-agreement') && !document.querySelector('.briefing-detail').innerText.includes('외국인')"));
++  const before = await (await fetch(`${fixture.base}/_fixture/requests`)).json();
++  check("summary adds no candidate, prediction, or launch requests", !before.some(request => request.path === "/api/candidates" || request.path === "/api/stock-analysis" || request.method !== "GET"));
++  await browser.click('[data-model-code="005930"] [data-watch-code]');
++  check("watch action still works", await browser.evaluate("localStorage.getItem('kospi-watchlist.v1').includes('005930')"));
++  await capture("briefing-1440-light", 1440, "light");
++  await capture("briefing-1440-dark", 1440, "dark");
++  await capture("briefing-375-light", 375, "light");
++  await capture("briefing-375-dark", 375, "dark");
++  const mixedDate = structuredClone(rows); mixedDate[4].input_row.prediction_base_date = "2026-10-06";
++  await control({ rankRows: mixedDate }); await navigate("/", ".briefing-dashboard");
++  await browser.waitFor("document.querySelector('.briefing-summary-prediction')?.innerText.includes('분석 기준일·예측 기간 불일치')", "mixed date hidden");
++  check("mixed-date range is withheld", await browser.evaluate("document.querySelector('.briefing-summary-prediction strong').innerText==='—'"));
++  await control({ rankRows: rows.slice(0, 4) }); await navigate("/", ".briefing-dashboard");
++  await browser.waitFor("document.querySelector('.briefing-summary-prediction')?.innerText.includes('TOP5 미완성')", "partial top five hidden");
++  check("partial TOP5 range is withheld", await browser.evaluate("document.querySelector('.briefing-summary-prediction strong').innerText==='—'"));
++  await control({ rankRows: rows, rankScenario: "error" }); await navigate("/", ".briefing-dashboard");
++  await browser.waitFor("document.querySelector('.briefing-summary-prediction')?.innerText.includes('모델 예측 조회 실패')", "failed rank hidden");
++  check("failed rank request has no range", await browser.evaluate("document.querySelector('.briefing-summary-prediction strong').innerText==='—'"));
++  await control({ rankScenario: "populated" });
++  const description = (await readFile(new URL("../../src/features/about/AboutContent.tsx", import.meta.url), "utf8")).match(/ABOUT_DESCRIPTION = "([^"]+)"/)[1];
++  check("all HTML description tags match service introduction", await browser.evaluate(`[...document.querySelectorAll('meta[name="description"],meta[property="og:description"],meta[name="twitter:description"]')].every(el=>el.content===${JSON.stringify(description)})`));
++  const routes = [
++    ["rank", "/rank", "[data-rank-code]"],
++    ["report", "/stock/005930", "[data-report-signal=model]"],
++    ["watchlist", "/watchlist", "[data-rank-code]"],
++    ["about", "/about", ".about-grid"],
++    ["history", "/history", ".history-page"],
++    ["legacy-landing", "/legacy", "#top .hero-section"],
++    ["legacy-dashboard", "/legacy/dashboard", ".ai-brief"],
++    ["legacy-report", "/legacy/stock/005930", ".report-dashboard"],
++  ];
++  for (const [name, path, selector] of routes) {
++    if (name === "history") await control({ analysis: "failed", analysisProgressMessage: "외국인·기관 수급 조회 중", analysisError: "기관 순매수 조회 실패" });
++    await navigate(path, selector);
++    if (name === "history") {
++      await browser.waitFor("document.querySelector('.history-facts')?.innerText.includes('분석 데이터 처리 중')", "history progress filtered");
++      check("history progress and error omit retired evidence", await browser.evaluate("!document.querySelector('.history-facts').innerText.match(/수급|순매수/) && document.querySelector('.history-facts').innerText.includes('분석 기록을 확인해 주세요.')"));
++    }
++    check(`${path}: no retired supply/agreement widgets`, await browser.evaluate("!document.querySelector('[data-rank-signal=supply],[data-report-signal=supply],.report-agreement,.report-supply-panel,.supply-row,.briefing-evidence-agreement') && ![...document.querySelectorAll('th,h2,dt,.metric-tile__label')].some(el=>/수급|일치도|외국인 합계|기관 합계/.test(el.innerText))"));
++    for (const width of [1440, 375]) for (const theme of ["light", "dark"]) await capture(`${name}-${width}-${theme}`, width, theme);
++  }
++  // The generated sample record is preserved; only the legacy analysis prose is hidden.
++  await control({ stockScenario: "null" });
++  await navigate("/legacy/stock/007660", ".reco-reason");
++  await browser.waitFor("!document.querySelector('.detail-source-flag')?.innerText.includes('동기화 중')", "saved sample ready");
++  check("legacy saved sample commentary omits investor flows", await browser.evaluate("!document.querySelector('.reco-reason').innerText.match(/수급|순매수|순매도|매수세|매도세|매물 출회/) && document.querySelector('.reco-reason').innerText.includes('하반기 실적 개선')"));
++  const sampleText = await readFile(new URL("../../src/data/aiCandidates.ts", import.meta.url), "utf8");
++  const sample = JSON.parse(sampleText.slice(sampleText.indexOf("= [") + 2, sampleText.lastIndexOf("];") + 1)).find(row => row.ticker === "007660");
++  const articleTitles = await browser.evaluate("[...document.querySelectorAll('.ai-news-list__title')].map(el=>el.textContent).sort()");
++  check("legacy article titles stay unchanged", JSON.stringify(articleTitles) === JSON.stringify(sample.news.map(row => row.title).sort()));
++  const articleDescriptions = await browser.evaluate("[...document.querySelectorAll('.ai-news-list__desc')].map(el=>el.textContent).sort()");
++  check("legacy original article descriptions stay unchanged", JSON.stringify(articleDescriptions) === JSON.stringify(sample.news.map(row => row.description).filter(Boolean).sort()));
++  await capture("legacy-saved-commentary-375-light", 375, "light");
++  await control({ stockScenario: "populated", analysis: "idle", analysisProgressMessage: null, analysisError: null });
++  const stored = JSON.parse(await readFile(`${artifacts}stored-rank.json`, "utf8"));
++  await control({ rankRows: stored, backendScenario: "model_only" }); await navigate("/", ".briefing-dashboard");
++  await browser.waitFor("document.querySelector('.briefing-summary-prediction')?.innerText.includes('예측값 양수 5종목')", "stored TOP5 ready");
++  report.storedRank = await browser.evaluate("({codes:[...document.querySelectorAll('[data-model-code]')].map(el=>el.dataset.modelCode),summary:document.querySelector('.briefing-summary-prediction').innerText})");
++  check("stored TOP5 summary is +0.38% to +0.40%", report.storedRank.summary.includes("+0.38% ~ +0.40%"));
++  check("stored TOP5 uses the correct five stocks", report.storedRank.codes.join(",") === "001800,029780,000270,007070,323410");
++  await capture("stored-top5-1440-light", 1440, "light");
++  await capture("stored-top5-375-dark", 375, "dark");
++  await browser.settleInterceptions();
++  report.exceptions = browser.exceptions; report.consoleErrors = browser.consoleErrors;
++  check("browser has no script exceptions", browser.exceptions.length === 0);
++  const requests = await (await fetch(`${fixture.base}/_fixture/requests`)).json();
++  check("no product POST or real analysis ran", !requests.some(request => request.method !== "GET"));
++  report.themeChecks = report.screens.filter(screen => screen.theme === "light" && screen.name.startsWith("legacy-")).map(light => {
++    const dark = report.screens.find(screen => screen.name === light.name.replace(/-light$/, "-dark"));
++    return { page: light.name.replace(/-light$/, ""), identical: dark ? light.md5 === dark.md5 : null };
++  });
++  if (report.themeChecks.some(check => check.identical)) report.limitations.push("legacy 라이트·다크 캡처의 MD5가 같습니다. 테마 미지원 또는 테마 적용 실패로 실제 별도 다크 화면을 검증하지 못했습니다.");
++} catch (error) { report.failure = error.stack; throw error; }
++finally { await save(); await browser.close(); await fixture.close(); }
+diff --git a/FE/src/features/briefing/topFiveSummary.test.ts b/FE/src/features/briefing/topFiveSummary.test.ts
+new file mode 100644
+--- /dev/null
++++ b/FE/src/features/briefing/topFiveSummary.test.ts
+@@ -0,0 +1,35 @@
++import { describe, expect, it } from "vitest";
++import { topFiveSummary } from "./topFiveSummary";
++
++const rows = (values: (number | null)[] = [.0039577617929895705, .003919560499959298, .003840753026558162, .0038075680598780135, .0037625877410731798]) => values.map((predictedReturn, index) => ({ rank: index + 1, predictedReturn, baseDate: "2026-10-08", predictionTarget: "next_session_open_to_close" }));
++
++describe("displayed TOP5 prediction summary", () => {
++  it("converts fractions and summarizes the displayed original model values", () => {
++    expect(topFiveSummary(rows())).toEqual({ range: "+0.38% ~ +0.40%", count: "예측값 양수 5종목", period: "다음 거래일 시가→종가 · 분석 기준일 2026. 10. 08." });
++    expect(topFiveSummary(rows([-.02, -.01, 0, .01, .03]))).toMatchObject({ range: "-2.00% ~ +3.00%", count: "예측값 양수 2종목" });
++    expect(topFiveSummary(rows([-.02, 0, 0, 0, 0]))).toMatchObject({ range: "-2.00% ~ 0.00%", count: "예측값 양수 0종목" });
++  });
++  it.each([null, NaN, Infinity, -Infinity])("does not drop or impute unavailable prediction %s", value => {
++    const result = topFiveSummary(rows([.01, .02, value, .03, .04]));
++    expect(result.range).toBe("—"); expect(result.count).toContain("원본 예측값 미제공");
++  });
++  it.each([0, 1, 4])("does not present a partial list of %s as TOP5", count => {
++    expect(topFiveSummary(rows().slice(0, count)).range).toBe("—");
++    expect(topFiveSummary(rows().slice(0, count)).count).toContain(count ? "TOP5 미완성" : "표시할 모델 예측 없음");
++  });
++  it.each(["baseDate", "predictionTarget"] as const)("does not combine mismatched %s", key => {
++    const mixed = rows(); mixed[4][key] = key === "baseDate" ? "2026-10-07" : "different_period";
++    expect(topFiveSummary(mixed)).toMatchObject({ range: "—", count: "분석 기준일·예측 기간 불일치 · 범위 미제공" });
++  });
++  it("requires confirmed date and prediction period, even when every row matches", () => {
++    for (const baseDate of [null, "", "invalid", "2026-02-30"]) expect(topFiveSummary(rows().map(row => ({ ...row, baseDate }))).range).toBe("—");
++    for (const predictionTarget of [null, "", "unknown"]) expect(topFiveSummary(rows().map(row => ({ ...row, predictionTarget }))).range).toBe("—");
++  });
++  it("does not summarize stale results during a loading or failed request", () => {
++    expect(topFiveSummary(rows(), true).count).toBe("모델 예측 조회 중");
++    expect(topFiveSummary(rows(), false, true)).toMatchObject({ range: "—", count: "모델 예측 조회 실패 · 요약 미제공" });
++  });
++  it.each([[2, 3, 4, 5, 6], [1, 2, 3, 4, 4], [1, 2, 3, 4, 4.5], [1, 2, 3, 4, null]])("requires original integer ranks 1 through 5: %s", (...ranks) => {
++    expect(topFiveSummary(rows().map((row, index) => ({ ...row, rank: ranks[index] })))).toMatchObject({ range: "—", count: "원본 순위 1~5위 미확인 · 범위 미제공" });
++  });
++});
+diff --git a/FE/src/features/briefing/topFiveSummary.ts b/FE/src/features/briefing/topFiveSummary.ts
+new file mode 100644
+--- /dev/null
++++ b/FE/src/features/briefing/topFiveSummary.ts
+@@ -0,0 +1,26 @@
++import type { CandidateData } from "../../entities/candidate";
++import { formatDate, formatPercent } from "../../shared/lib/format";
++
++type PredictionRow = Pick<CandidateData, "rank" | "predictedReturn" | "baseDate" | "predictionTarget">;
++
++/** Summarize exactly the rows on screen, without inferring missing predictions or periods. */
++export function topFiveSummary(rows: readonly PredictionRow[], pending = false, error = false) {
++  const unavailable = (reason: string) => ({ range: "—", count: reason, period: "예측 기간 · 분석 기준일 미확인" });
++  if (pending) return unavailable("모델 예측 조회 중");
++  if (error) return unavailable("모델 예측 조회 실패 · 요약 미제공");
++  if (rows.length === 0) return unavailable("표시할 모델 예측 없음");
++  if (rows.length !== 5) return unavailable(`TOP5 미완성 · ${rows.length}종목 확인`);
++  if (new Set(rows.map(row => row.rank)).size !== 5 || rows.some(row => row.rank === null || !Number.isInteger(row.rank) || row.rank < 1 || row.rank > 5)) return unavailable("원본 순위 1~5위 미확인 · 범위 미제공");
++  if (rows.some(row => typeof row.predictedReturn !== "number" || !Number.isFinite(row.predictedReturn))) return unavailable("원본 예측값 미제공 · 요약 미완성");
++  const dates = new Set(rows.map(row => row.baseDate)), periods = new Set(rows.map(row => row.predictionTarget));
++  if (dates.size > 1 || periods.size > 1) return unavailable("분석 기준일·예측 기간 불일치 · 범위 미제공");
++  const date = rows[0].baseDate;
++  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) return unavailable("분석 기준일 미확인 · 범위 미제공");
++  if (rows[0].predictionTarget !== "next_session_open_to_close") return unavailable("예측 기간 미확인 · 범위 미제공");
++  const values = rows.map(row => row.predictedReturn!);
++  return {
++    range: `${formatPercent(Math.min(...values))} ~ ${formatPercent(Math.max(...values))}`,
++    count: `예측값 양수 ${values.filter(value => value > 0).length}종목`,
++    period: `다음 거래일 시가→종가 · 분석 기준일 ${formatDate(date)}`,
++  };
++}
+diff --git a/FE/src/shared/lib/analysisDisplay.test.ts b/FE/src/shared/lib/analysisDisplay.test.ts
+new file mode 100644
+--- /dev/null
++++ b/FE/src/shared/lib/analysisDisplay.test.ts
+@@ -0,0 +1,36 @@
++import { expect, it } from "vitest";
++import { analysisProgressText, visibleAnalysisText } from "./analysisDisplay";
++import { aiCandidates } from "../../data/aiCandidates";
++
++it("hides retired evidence prose without changing model text or its input", () => {
++  const original = "모델 예측은 1.25%입니다. 외국인·기관 수급은 순매도입니다. 예측은 실제 성과가 아닙니다.";
++  expect(visibleAnalysisText(original)).toBe("모델 예측은 1.25%입니다. 예측은 실제 성과가 아닙니다.");
++  expect(original).toContain("외국인·기관 수급");
++  expect(visibleAnalysisText("기관 순매수 흐름입니다.")).toBe("");
++  expect(visibleAnalysisText(null)).toBe("");
++});
++it("uses a neutral progress message for retired server stages", () => {
++  expect(analysisProgressText("외국인·기관 수급 조회 중")).toBe("서버에서 분석을 진행하고 있습니다.");
++  expect(analysisProgressText("모델 추론 중")).toBe("모델 추론 중");
++});
++it("preserves ordinary institution and foreign participant sentences", () => {
++  const text = "금융기관 협약을 체결했습니다. 전문기관 연구 결과를 공개했습니다. 외국인 고객 대상 서비스를 확대합니다.";
++  expect(visibleAnalysisText(text)).toBe(text);
++  expect(analysisProgressText("전문기관 연구 결과 확인 중")).toBe("전문기관 연구 결과 확인 중");
++  expect(visibleAnalysisText(`${text} 기관의 매도세가 이어집니다. 외국인 자금 유입이 늘었습니다.`)).toBe(text);
++  for (const ordinary of ["기관 리포트에서 매수 의견을 제시했습니다.", "기관이 부지 매수 계약을 체결했습니다.", "삼성생명의 삼성전자 지분율을 공개했습니다."]) expect(visibleAnalysisText(ordinary)).toBe(ordinary);
++});
++it("removes investor trading commentary from every saved sample without changing raw records or articles", () => {
++  const original = JSON.stringify(aiCandidates);
++  const expected = new Map([
++    ["000270", ["기아는 환율 효과, 친환경차 제품 믹스 개선, EV3 신차 효과 등으로 견조한 판매 성장과 실적 기대감을 높이고 있습니다.", "강력한 전기차 모멘텀과 애널리스트의 긍정적 전망은 단기 주가 상승 동력을 제공할 것으로 보입니다."]],
++    ["005490", ["", ""]],
++    ["007660", ["이수페타시스는 최근 AI 반도체 산업 성장과 함께 주요 자산운용사의 ETF 편입 및 하반기 실적 개선 기대로 긍정적인 평가를 받고 있습니다.", ""]],
++  ]);
++  for (const candidate of aiCandidates) {
++    const [summary, insight] = expected.get(candidate.ticker) ?? [candidate.summary, candidate.tradingInsight];
++    expect(visibleAnalysisText(candidate.summary), `${candidate.ticker} summary`).toBe(summary);
++    expect(visibleAnalysisText(candidate.tradingInsight), `${candidate.ticker} insight`).toBe(insight);
++  }
++  expect(JSON.stringify(aiCandidates)).toBe(original);
++});
+diff --git a/FE/src/shared/lib/analysisDisplay.ts b/FE/src/shared/lib/analysisDisplay.ts
+new file mode 100644
+--- /dev/null
++++ b/FE/src/shared/lib/analysisDisplay.ts
+@@ -0,0 +1,11 @@
++const hiddenEvidence = /수급|순매[수도]|근거\s*일치(?:도|율)|(?:외국인|기관)[^.!?\n]{0,40}(?:차익\s*실현|매물\s*출회|매[수도]세|매[수도]\s*(?:우위|연장|지속|흐름|금액|물량)|자금\s*(?:유입|유출))|매[수도]세\s*(?:유입|확산|진정|지속|약화|강화|증가|감소)/;
++
++/** Hide retired evidence in UI prose only. Stored analysis and article text stay intact. */
++export function visibleAnalysisText(value: string | null | undefined): string {
++  return (value ?? "").split(/(?<=[.!?。])\s+|[\r\n]+/).filter(sentence => !hiddenEvidence.test(sentence)).join(" ").trim();
++}
++
++/** A server stage may still process inputs that this website no longer displays. */
++export function analysisProgressText(value: unknown, fallback = "서버에서 분석을 진행하고 있습니다."): string {
++  return typeof value === "string" && value && !hiddenEvidence.test(value) ? value : fallback;
++}
+diff --git a/FE/index.html b/FE/index.html
+index 1240a3f..892ad96 100644
+--- a/FE/index.html
++++ b/FE/index.html
+@@ -9,7 +9,7 @@
+     <title>KOSPI AI Desk · 모델 예측과 투자 근거</title>
+     <meta
+       name="description"
+-      content="한국 주식의 모델 예측과 뉴스·수급 근거를 함께 비교하세요. 데이터 출처와 기준 시각을 확인하는 주식 분석 서비스입니다."
++      content="모델 예측과 관련 기사를 함께 읽는 한국 주식 분석 서비스. 데이터 출처와 확인 가능한 기록의 범위를 안내합니다."
+     />
+ 
+     <meta property="og:type" content="website" />
+@@ -17,7 +17,7 @@
+     <meta property="og:title" content="KOSPI AI Desk · 모델 예측과 투자 근거" />
+     <meta
+       property="og:description"
+-      content="한국 주식의 모델 예측과 뉴스·수급 근거, 데이터 출처와 기준 시각을 함께 확인하세요."
++      content="모델 예측과 관련 기사를 함께 읽는 한국 주식 분석 서비스. 데이터 출처와 확인 가능한 기록의 범위를 안내합니다."
+     />
+     <meta property="og:locale" content="ko_KR" />
+ 
+@@ -25,7 +25,7 @@
+     <meta name="twitter:title" content="KOSPI AI Desk · 모델 예측과 투자 근거" />
+     <meta
+       name="twitter:description"
+-      content="한국 주식의 모델 예측과 뉴스·수급 근거, 데이터 출처와 기준 시각을 함께 확인하세요."
++      content="모델 예측과 관련 기사를 함께 읽는 한국 주식 분석 서비스. 데이터 출처와 확인 가능한 기록의 범위를 안내합니다."
+     />
+   </head>
+   <body>
+diff --git a/FE/scripts/verify/fixture-server.mjs b/FE/scripts/verify/fixture-server.mjs
+index 57ddcfc..fc1cbfb 100644
+--- a/FE/scripts/verify/fixture-server.mjs
++++ b/FE/scripts/verify/fixture-server.mjs
+@@ -154,7 +154,7 @@ export async function startFixtureServer({ port = 0 } = {}) {
+           if (snapshot.chartScenario === "partial") bundle.chartData.ranges["5Y"] = { ...bundle.chartData.ranges["1Y"], coverage: { requestedRange: "5Y", sourceRange: "1Y", method: "fallback", status: "partial", requestedStart: "2021-10-07", requestedEnd: "2026-10-07", observedStart: "2026-01-25", observedEnd: "2026-10-07" } };
+           if (snapshot.chartScenario === "error") json({ error: "fixture chart failure" }, 502); else json(bundle, 200, bundle.source);
+         } else if (url.pathname === "/api/candidates/run") {
+-          json({ source: "live", asOf: observedAt, status: snapshot.analysis, elapsedMs: 20000, progress: { updatedAt: Date.parse(observedAt) + snapshot.version, message: "검증용 분석 상태" }, result: snapshot.analysis === "completed" ? { rows: snapshot.backendScenario === "model_only" ? 199 : 5, elapsedMs: 20000, status: "completed", ...(snapshot.backendScenario === "model_only" ? { mode: "model_only", candidateKind: "not_produced", newsRows: 0 } : {}) } : null }, 200, "live");
++          json({ source: "live", asOf: observedAt, status: snapshot.analysis, elapsedMs: 20000, progress: { updatedAt: Date.parse(observedAt) + snapshot.version, message: snapshot.analysisProgressMessage ?? "검증용 분석 상태" }, error: snapshot.analysisError ?? null, result: snapshot.analysis === "completed" ? { rows: snapshot.backendScenario === "model_only" ? 199 : 5, elapsedMs: 20000, status: "completed", ...(snapshot.backendScenario === "model_only" ? { mode: "model_only", candidateKind: "not_produced", newsRows: 0 } : {}) } : null }, 200, "live");
+         } else json({ error: "Unknown fixture API" }, 404);
+         return;
+       }
+diff --git a/FE/src/components/landing/FeatureOrbitSection.tsx b/FE/src/components/landing/FeatureOrbitSection.tsx
+index 1bb32dc..1b2ba6b 100644
+--- a/FE/src/components/landing/FeatureOrbitSection.tsx
++++ b/FE/src/components/landing/FeatureOrbitSection.tsx
+@@ -14,9 +14,9 @@ const baseFeatures: Feature[] = [
+     description: "추세, 거래대금, 변동성 흐름을 함께 읽어 후보 종목의 기술적 신뢰도를 정리합니다.",
+   },
+   {
+-    category: "Flow Analyst",
+-    title: "수급 변화의 방향을 먼저 확인",
+-    description: "외국인과 기관의 누적 수급, 섹터 회전, 시장 주도 흐름을 후보 랭킹에 반영합니다.",
++    category: "Model Ranking",
++    title: "모델 예측의 상대 위치 확인",
++    description: "모델 원본 순위와 예측 기준일을 함께 확인합니다. 예측은 실제 성과를 보장하지 않습니다.",
+   },
+   {
+     category: "News & Disclosure",
+diff --git a/FE/src/components/landing/HeroSection.tsx b/FE/src/components/landing/HeroSection.tsx
+index fa54e02..da863a8 100644
+--- a/FE/src/components/landing/HeroSection.tsx
++++ b/FE/src/components/landing/HeroSection.tsx
+@@ -18,7 +18,7 @@ export function HeroSection({ data }: HeroSectionProps) {
+           </p>
+           <h1>AI가 시장을 읽고, 전략은 데이터로 검증합니다</h1>
+           <p className="hero-description">
+-            코스피 종목의 가격, 수급, 뉴스, 공시, 시장 주도 흐름을 분석해 자동매매
++            코스피 종목의 가격, 뉴스, 공시, 시장 주도 흐름을 분석해 자동매매
+             의사결정을 보조하는 트레이딩 데스크형 시스템입니다.
+           </p>
+           <div className="hero-actions">
+diff --git a/FE/src/components/landing/ProcessSection.tsx b/FE/src/components/landing/ProcessSection.tsx
+index aa4954d..e29192b 100644
+--- a/FE/src/components/landing/ProcessSection.tsx
++++ b/FE/src/components/landing/ProcessSection.tsx
+@@ -1,6 +1,6 @@
+ const steps = [
+   ["Market Scan", "장 시작 전후 시장 흐름과 변동성, 섹터 온도를 스캔합니다."],
+-  ["Candidate Ranking", "기술 신호, 수급, 이벤트 점수를 합산해 후보를 정렬합니다."],
++  ["Candidate Ranking", "모델 원본 예측수익률로 종목의 상대 순위를 확인합니다."],
+   ["AI Review", "모델이 종목별 근거와 예상 시나리오를 비교합니다."],
+   ["Risk Gate", "손절폭, 포지션 한도, 진입 제한 조건을 검토합니다."],
+   ["Execution Plan", "실행 가능한 전략 슬롯과 대기 조건을 정리합니다."],
+diff --git a/FE/src/components/market/MarketWorkspace.tsx b/FE/src/components/market/MarketWorkspace.tsx
+index 690b4a6..3113b14 100644
+--- a/FE/src/components/market/MarketWorkspace.tsx
++++ b/FE/src/components/market/MarketWorkspace.tsx
+@@ -1,3 +1,4 @@
++import { analysisProgressText } from "../../shared/lib/analysisDisplay";
+ import { useEffect, useMemo, useState } from "react";
+ import { useNavigate } from "react-router-dom";
+ import { PanelRightClose, PanelRightOpen, X } from "lucide-react";
+@@ -177,7 +178,7 @@ function buildMarketRegime(index: IndexSnapshot): MarketRegimeView {
+     return {
+       action: "선별 매수 환경",
+       label: "상승 우위",
+-      note: "지수 흐름이 개선될 때는 AI 후보 중 수급과 뉴스가 함께 받쳐주는 종목을 우선 확인합니다.",
++      note: "지수 흐름과 모델의 분석 기준일을 함께 확인합니다.",
+       reasons: [
+         `${index.symbol} 전일 대비 ${formatRate(displayChangeRate)}`,
+         flowText,
+@@ -206,7 +207,7 @@ function buildMarketRegime(index: IndexSnapshot): MarketRegimeView {
+   return {
+     action: "보수적 선별",
+     label: "중립 장세",
+-    note: "지수 방향성이 뚜렷하지 않을 때는 예측수익률보다 뉴스와 수급 근거의 일치 여부를 더 엄격하게 확인합니다.",
++    note: "지수 방향성이 뚜렷하지 않을 때는 모델 예측의 불확실성을 함께 확인합니다.",
+     reasons: [
+       `${index.symbol} 전일 대비 ${formatRate(displayChangeRate)}`,
+       flowText,
+@@ -378,11 +379,11 @@ function MarketOverview({
+         {/* Always mounted so screen readers announce the completion message
+             when it appears (a freshly inserted live region is often missed). */}
+         <p className="candidate-analysis-status" role="status">
+-          {analysisPhase !== "running" ? candidateAnalysis.message : null}
++          {analysisPhase !== "running" ? analysisProgressText(candidateAnalysis.message, "") : null}
+         </p>
+         {candidateAnalysis.errorMessage ? (
+           <p className="candidate-analysis-status candidate-analysis-status--error" role="alert">
+-            AI 후보 분석 실패: {candidateAnalysis.errorMessage}
++            AI 후보 분석 실패: {analysisProgressText(candidateAnalysis.errorMessage, "분석 기록을 확인해 주세요.")}
+           </p>
+         ) : null}
+         {syncStatus.errorMessage ? (
+@@ -429,10 +430,6 @@ function SelectionMethod() {
+           <span>1차 모델</span>
+           <strong>앙상블 시가→종가 수익률 예측</strong>
+         </li>
+-        <li>
+-          <span>보조 데이터</span>
+-          <strong>거래량 변화 + 외국인·기관 수급</strong>
+-        </li>
+         <li>
+           <span>2차 판단</span>
+           <strong>기사 사건·근거 추출</strong>
+@@ -519,7 +516,7 @@ const analysisStages = [
+   "실행 준비",
+   "KOSPI200 후보 풀 로드",
+   "OHLCV 수집·Huber 앙상블 예측",
+-  "외국인·기관 수급 조회",
++  "분석 데이터 처리",
+   "뉴스 크롤링",
+   "뉴스 사건 추출·검증 게이트",
+   "결과 파일 검증",
+@@ -561,7 +558,7 @@ function AnalysisGate({
+         {/* Persistent live region: only the stage message is announced; the
+             elapsed time ticks every poll and stays outside it. */}
+         <p className="gate-stage">
+-          <span role="status">{progress?.message ?? "진행 단계 정보를 기다리는 중입니다"}</span>
++          <span role="status">{analysisProgressText(progress?.message, "진행 단계 정보를 기다리는 중입니다")}</span>
+           <span className="gate-elapsed">{elapsedText}</span>
+         </p>
+         {progressPercent !== undefined ? (
+diff --git a/FE/src/features/about/AboutContent.tsx b/FE/src/features/about/AboutContent.tsx
+index d7c8e0d..ef1b5d3 100644
+--- a/FE/src/features/about/AboutContent.tsx
++++ b/FE/src/features/about/AboutContent.tsx
+@@ -2,15 +2,14 @@
+ import { BRAND_NAME } from "../../shared/lib/brand";
+ import { MODEL_SUMMARY, MODEL_SELECTION_DESCRIPTION } from "../../entities/model";
+ 
+-export const ABOUT_DESCRIPTION = "모델 예측과 뉴스·수급 근거를 함께 읽는 한국 주식 분석 서비스. 데이터 출처와 확인 가능한 기록의 범위를 안내합니다.";
++export const ABOUT_DESCRIPTION = "모델 예측과 관련 기사를 함께 읽는 한국 주식 분석 서비스. 데이터 출처와 확인 가능한 기록의 범위를 안내합니다.";
+ export const ABOUT_SECTIONS = [
+   { title: "Transformer Ensemble → 순위 → Top-5", text: `${MODEL_SUMMARY}. ${MODEL_SELECTION_DESCRIPTION}` },
+-  { title: "예측과 근거를 함께 읽습니다", text: `${BRAND_NAME}는 한국 주식의 모델 예측, 뉴스, 수급 정보를 나란히 보여주는 의사결정 보조 서비스입니다. 특정 종목의 매수·매도 지시나 자동 주문을 제공하는 화면이 아닙니다.` },
+-  { title: "브리핑 → 전체 순위 → 종목 리포트", text: "브리핑에서 모델 Top-5를 비교하고, 전체 순위에서 모델 원본의 상대 위치를 확인하세요. 종목 리포트에서 예측 기준일, 가격 관측 시각과 수급 근거를 읽으세요. 뉴스 포함 분석으로 최종 후보가 생성된 경우에는 뉴스 근거도 함께 표시합니다. 관심 목록은 이 기기에 저장됩니다." },
++  { title: "예측과 근거를 함께 읽습니다", text: `${BRAND_NAME}는 한국 주식의 모델 예측과 관련 기사를 나란히 보여주는 의사결정 보조 서비스입니다. 특정 종목의 매수·매도 지시나 자동 주문을 제공하는 화면이 아닙니다.` },
++  { title: "브리핑 → 전체 순위 → 종목 리포트", text: "브리핑에서 모델 Top-5를 비교하고, 전체 순위에서 모델 원본의 상대 위치를 확인하세요. 종목 리포트에서 예측 기준일, 가격 관측 시각을 읽으세요. 뉴스 포함 분석으로 최종 후보가 생성된 경우에는 뉴스 근거도 함께 표시합니다. 관심 목록은 이 기기에 저장됩니다." },
+   { title: "모델 원본과 뉴스 반영 최종 결과", text: "모델 원본 순위와 뉴스 반영 후 최종 순위는 서로 다른 결과입니다. 원본 순위가 없으면 화면 정렬 순서로 대신하지 않습니다. 예측수익률은 다음 거래일 시가→종가에 대한 모델 예측이며, 실제 가격 변동이나 달성한 수익이 아닙니다." },
+   { title: "뉴스 미수집과 0건은 다릅니다", text: "미수집·한도 도달·판정 불가는 뉴스가 없거나 중립이라는 뜻이 아닙니다. 수집 여부와 감성 판정을 따로 확인하세요. 0건은 수집 결과가 실제로 비어 있다고 확인된 경우에만 읽을 수 있습니다." },
+-  { title: "수급이 없으면 미확인으로", text: "외국인·기관 수급이나 관측일 수가 부족하면 판정할 수 없습니다. 미제공 값은 0으로 바꾸지 않으며, 자료 부족을 매도나 부정 신호로 해석하지 않습니다." },
+-  { title: "일치도는 근거를 읽는 기준", text: "브리핑은 모델 전용에서 모델·수급 2개, 최종 후보가 생성된 경우 뉴스까지 3개 중 긍정 개수를 표시합니다. 전체 순위의 일치도 비율은 판정 가능한 근거만 분모에 넣고 모델 전용에서는 뉴스를 제외합니다. 판정 불가는 별도로 표시하며, 일치도는 승률이나 수익 확률이 아닙니다." },
++  { title: "TOP5 예측 요약", text: "화면에 표시한 5종목의 원본 예측수익률 최솟값과 최댓값, 예측값이 양수인 종목 수를 보여줍니다. 분석 기준일과 예측 기간이 모두 같고 값이 확인된 경우에만 범위를 표시합니다. 개별 예측의 범위이며 포트폴리오 수익률이나 수익 확률이 아닙니다." },
+   { title: "출처와 시각을 먼저 확인하세요", text: "API 조회, 저장된 결과, 예시 데이터, 출처 미확인을 구분합니다. 저장된 결과는 최신 실시간 가격을 뜻하지 않고, 예시 데이터는 실제 분석이 아닙니다. 가격 이력의 출처가 미확인이거나 보간된 값이라면 실제 관측 이력으로 읽지 마세요. 조회 시각과 데이터 기준 시각도 다를 수 있습니다." },
+   { title: "분석 기록과 실현 성과", text: "현재는 최신 실행 상태만 확인할 수 있습니다. 공식·수시 실행 구분, 과거 실행 목록과 20거래일 실현 성과는 확인되지 않습니다. 저장된 예측이 있다는 사실만으로 공식 실행이나 과거 성과를 입증할 수 없습니다." },
+ ];
+diff --git a/FE/src/features/about/AboutPage.test.tsx b/FE/src/features/about/AboutPage.test.tsx
+index 888192d..035ab26 100644
+--- a/FE/src/features/about/AboutPage.test.tsx
++++ b/FE/src/features/about/AboutPage.test.tsx
+@@ -9,7 +9,8 @@ it.each(["/about", "/next/about"])("keeps introduction links and evidence honest
+   render(<MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AboutPage /></MemoryRouter>);
+   expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(ABOUT_SECTIONS.length + 1);
+   expect(screen.getByText(/공식·수시 실행 구분/)).toBeInTheDocument();
+-  expect(screen.getByText(/일치도는 승률이나 수익 확률이 아닙니다/)).toBeInTheDocument();
++  expect(screen.getByRole("heading", { name: "TOP5 예측 요약" })).toBeInTheDocument();
++  expect(document.body).not.toHaveTextContent(/수급|외국인|기관|일치도/);
+   expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent?.startsWith(MODEL_SUMMARY) === true)).toHaveTextContent("OHLCV 파생 5개, RSI 1개, MACD 2개, 볼린저 밴드 3개");
+   expect(screen.getByRole("heading", { name: "Transformer Ensemble → 순위 → Top-5" })).toBeInTheDocument();
+   expect(screen.getByRole("link", { name: "브리핑 보기" })).toHaveAttribute("href", path.startsWith("/next/") ? "/next" : "/");
+diff --git a/FE/src/features/briefing/AnalysisControl.tsx b/FE/src/features/briefing/AnalysisControl.tsx
+index 881fd04..38a0fd9 100644
+--- a/FE/src/features/briefing/AnalysisControl.tsx
++++ b/FE/src/features/briefing/AnalysisControl.tsx
+@@ -1,4 +1,5 @@
+ import { useRef, useState } from "react";
++import { analysisProgressText } from "../../shared/lib/analysisDisplay";
+ import { useQuery } from "@tanstack/react-query";
+ import { Link } from "react-router-dom";
+ import { ArrowRight, LoaderCircle, Play, RefreshCw } from "lucide-react";
+@@ -18,7 +19,7 @@ export function AnalysisControl() {
+   const uncertain = backend.isError || analysis.isError || !backend.data || !run;
+   const progress = run?.progress?.progressPercent;
+   const percent = typeof progress === "number" && Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : undefined;
+-  const message = typeof run?.progress?.message === "string" ? run.progress.message : "서버에서 분석을 진행하고 있습니다.";
++  const message = analysisProgressText(run?.progress?.message);
+   const elapsed = run?.elapsedMs;
+   const elapsedLabel = typeof elapsed === "number" && Number.isFinite(elapsed) && elapsed >= 0
+     ? Math.floor(elapsed / 60000) + "분 " + Math.floor(elapsed % 60000 / 1000) + "초 경과" : null;
+@@ -60,7 +61,7 @@ export function AnalysisControl() {
+       {running ? <><p>{analysis.isError ? "진행 상태 갱신 실패 · 마지막 확인 상태는 분석 진행 중입니다." : message}{elapsedLabel ? " · " + elapsedLabel : ""}</p>
+         <progress aria-label="분석 진행률" max={100} value={percent} /><p className="analysis-control-caption">서버가 제공한 단계별 진행 상태 · 진행 중에는 5초마다 확인합니다.</p></>
+         : run?.status === "completed" ? <p>최근 분석 완료 · 브리핑에서 모델 TOP5와 기사 수집 상태를 확인하세요.</p>
+-        : run?.status === "failed" ? <p className="analysis-control-error">분석 실패 · {run.error || "분석 기록과 서버 로그를 확인해 주세요."}</p>
++        : run?.status === "failed" ? <p className="analysis-control-error">분석 실패 · {analysisProgressText(run.error, "분석 기록과 서버 로그를 확인해 주세요.")}</p>
+         : <p>새 분석은 서버에서 실행됩니다. ‘다시 조회’는 저장된 결과만 불러옵니다.</p>}
+       {requestError && <p className="analysis-control-error">{requestError}</p>}
+       {analysis.isError && !running && <p className="analysis-control-error">분석 실행 상태 조회 실패 · 상태를 다시 확인해 주세요.</p>}
+diff --git a/FE/src/features/briefing/BriefingPage.tsx b/FE/src/features/briefing/BriefingPage.tsx
+index fbff4bb..b790b86 100644
+--- a/FE/src/features/briefing/BriefingPage.tsx
++++ b/FE/src/features/briefing/BriefingPage.tsx
+@@ -49,9 +49,9 @@ export function BriefingPage() {
+         <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
+         <p className="briefing-table-help">예상 수익률은 모델 예측이며 실제 성과가 아닙니다. 기사 시각은 한국시간입니다.</p>
+       </section>
+-      <BriefingSummary indices={indices.data?.data ?? []} pending={indices.isPending} error={indices.isError} count={pool} />
++      <BriefingSummary indices={indices.data?.data ?? []} pending={indices.isPending} error={indices.isError} count={pool} rows={rows} rankPending={rank.isPending} rankError={rank.isError} rankSource={rank.data?.source} />
+       {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>예측과 근거를 읽는 기준은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
+-      <p className="briefing-disclaimer">모델 예측과 모의투자 기록은 투자 추천·수익 보장·실제 성과가 아닙니다.</p>
++      <p className="briefing-disclaimer">모델 예측은 투자 추천·수익 보장·실제 성과가 아닙니다.</p>
+     </div>
+       {selectedCode ? <DetailPanel key={selectedCode} code={selectedCode} candidate={selected} candidateMeta={selected ? rank.data : undefined} membership={rank.isPending ? "pending" : "unknown"} production="unproduced" />
+         : <aside id="briefing-detail" className="briefing-card briefing-detail-empty" aria-labelledby="detail-empty-heading"><Info aria-hidden="true" size={24} /><h2 id="detail-empty-heading">종목 상세</h2><p>{rawCode ? "유효한 6자리 종목 코드가 필요합니다." : "모델 예측을 조회하면 첫 종목의 상세가 표시됩니다."}</p></aside>}
+diff --git a/FE/src/features/briefing/BriefingSummary.test.tsx b/FE/src/features/briefing/BriefingSummary.test.tsx
+index a51837a..cc48243 100644
+--- a/FE/src/features/briefing/BriefingSummary.test.tsx
++++ b/FE/src/features/briefing/BriefingSummary.test.tsx
+@@ -2,25 +2,27 @@ import { afterEach, describe, expect, it, vi } from "vitest";
+ import { render, screen, within } from "@testing-library/react";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { BriefingSummary } from "./BriefingSummary";
+-import { backendStatusBody, jsonResponse } from "../../test/dataFixtures";
++import { backendStatusBody, jsonResponse, pipelineRow } from "../../test/dataFixtures";
++import { adaptCandidate } from "../../entities/candidate";
+ 
+ const clients: QueryClient[] = [];
+ afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
+ function mount(pending: boolean) {
+   const fetcher = vi.fn<typeof fetch>(async path => jsonResponse(String(path) === "/api/backend/status" ? backendStatusBody({ state: "not_produced" }, { marker: { state: "absent" } }) : { status: "idle" }));
+   vi.stubGlobal("fetch", fetcher); const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); clients.push(client);
+-  render(<QueryClientProvider client={client}><BriefingSummary indices={[]} pending={pending} error={false} count={199} /></QueryClientProvider>); return fetcher;
++  const rows = [.004, .0039, .00385, .0038, .00376].map((value, index) => adaptCandidate(pipelineRow({ ensemble_pred_return: value, pred_rank: index + 1, prediction_base_date: "2026-10-08" })).data);
++  render(<QueryClientProvider client={client}><BriefingSummary indices={[]} pending={pending} error={false} count={199} rows={rows} rankPending={false} rankError={false} rankSource="cache" /></QueryClientProvider>); return fetcher;
+ }
+ describe("briefing summary status", () => {
+-  it("shows loading before index assessment and labels the fixed record separately", async () => {
++  it("shows index loading separately from the displayed TOP5 model summary", async () => {
+     const fetcher = mount(true); expect(screen.getByText("지수 조회 중")).toBeInTheDocument(); expect(screen.queryByText(/판정 불가/)).not.toBeInTheDocument();
+-    expect(screen.getByText("모의투자 기록 · 10/6–10/8")).toBeInTheDocument(); expect(screen.getByText("고정 기록")).toBeInTheDocument();
++    expect(screen.queryByText(/모의투자 기록|고정 기록/)).not.toBeInTheDocument();
+     expect(screen.getByRole("region", { name: "브리핑 요약" })).toBeInTheDocument();
+     expect(screen.getByRole("article", { name: "최근 지수 흐름" })).toHaveTextContent("당일 지수 등락 기반 단순 판단");
+-    const paper = screen.getByRole("article", { name: "고정 모의투자 기록" });
+-    expect(paper.querySelector(".briefing-paper-capital")).toHaveTextContent("976.1만 원 -2.39%");
+-    expect(within(paper).getByText(/모의투자 · 3거래일/).closest("details")).toBeNull();
+-    expect(within(paper).getByText("고정 기록").closest("details")).toBeNull();
++    const summary = screen.getByRole("article", { name: "TOP5 예측 요약" });
++    expect(summary).toHaveTextContent("+0.38% ~ +0.40%");
++    expect(within(summary).getByText("예측값 양수 5종목")).toBeInTheDocument();
++    expect(summary).toHaveTextContent("다음 거래일 시가→종가 · 분석 기준일");
+     await screen.findByText("완료 시각 미확인"); expect(fetcher.mock.calls.some(call => String(call[0]).includes("performance"))).toBe(false);
+   });
+   it("never labels an absent marker as a completed analysis", async () => {
+diff --git a/FE/src/features/briefing/BriefingSummary.tsx b/FE/src/features/briefing/BriefingSummary.tsx
+index 9cdaae6..c0f70b5 100644
+--- a/FE/src/features/briefing/BriefingSummary.tsx
++++ b/FE/src/features/briefing/BriefingSummary.tsx
+@@ -2,26 +2,27 @@ import { useQuery } from "@tanstack/react-query";
+ import type { IndexData } from "../../entities/market";
+ import type { DataResult } from "../../entities/source";
+ import { SOURCE_LABELS } from "../../entities/source";
+-import { PAPER_TRADING } from "../../entities/paperTrading";
++import type { CandidateData } from "../../entities/candidate";
+ import { queries } from "../../shared/api/queries";
+ import { useAnalysisRun } from "../../shared/api/analysis";
+ import { formatDate, formatNumber, formatPercent } from "../../shared/lib/format";
+ import { marketAssessment } from "./MarketOverview";
+ import { formatDuration, savedRunDuration } from "./briefingData";
++import { topFiveSummary } from "./topFiveSummary";
+ 
+-export function BriefingSummary({ indices, pending, error, count }: { indices: DataResult<IndexData>[]; pending: boolean; error: boolean; count: number | null }) {
++export function BriefingSummary({ indices, pending, error, count, rows, rankPending, rankError, rankSource }: { indices: DataResult<IndexData>[]; pending: boolean; error: boolean; count: number | null; rows: CandidateData[]; rankPending: boolean; rankError: boolean; rankSource?: DataResult<unknown>["source"] }) {
+   const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
+   const index = indices.find(item => item.data.symbol === "KOSPI200"), assessment = marketAssessment(indices);
+   const completed = status?.marker.state === "completed", finishedAt = completed ? status.marker.finishedAt ?? status.marker.asOf : null;
+   const direction = pending ? "pending" : assessment.startsWith("상승") ? "positive" : assessment.startsWith("하락") ? "negative" : "neutral";
+-  const recordDate = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
++  const prediction = topFiveSummary(rows, rankPending, rankError);
+   return <section className="briefing-summary-strip" aria-label="브리핑 요약">
+     <article className="briefing-summary-market" aria-label="최근 지수 흐름"><p className="briefing-eyebrow">최근 지수 흐름</p><strong className="briefing-summary-value"><span className="briefing-regime-dot" data-direction={direction} aria-hidden="true" />{pending ? "지수 조회 중" : error && !indices.length ? "지수 조회 실패" : assessment}</strong>
+       <p>코스피200 {formatNumber(index?.data.value, 2)} <span className={index?.data.changeRate != null && index.data.changeRate < 0 ? "briefing-fall" : index?.data.changeRate != null && index.data.changeRate > 0 ? "briefing-rise" : ""}>{formatPercent(index?.data.changeRate, "percent")}</span>{index && <span className="briefing-source-tag">{SOURCE_LABELS[index.source]}</span>}</p>
+       <small>당일 지수 등락 기반 단순 판단{error && indices.length > 0 ? " · 이전 조회 결과" : ""}</small>
+     </article>
+-    <article className="briefing-summary-paper" aria-label="고정 모의투자 기록"><p className="briefing-eyebrow">모의투자 기록 · {recordDate(PAPER_TRADING.startDate)}–{recordDate(PAPER_TRADING.endDate)}</p><strong className="briefing-summary-value briefing-paper-capital">{formatNumber(PAPER_TRADING.finalCapital / 10_000, 1)}만 원 <span className="briefing-fall">{formatPercent(PAPER_TRADING.modelReturnPercent, "percent")}</span></strong>
+-      <p>코스피200 대비 <strong className="briefing-rise">+{formatNumber(PAPER_TRADING.excessReturnPoints, 2)}%p</strong></p><div className="briefing-paper-footnote"><small>모의투자 · {PAPER_TRADING.tradingDays}거래일 · <span className="briefing-source-tag">고정 기록</span></small><details className="briefing-paper-details"><summary>기준</summary><p>{PAPER_TRADING.startDate.replace(/-/g, ".")}–{PAPER_TRADING.endDate.slice(5).replace("-", ".")} · 시작 {formatNumber(PAPER_TRADING.initialCapital / 10_000)}만 원 · 코스피200 {formatPercent(PAPER_TRADING.benchmarkReturnPercent, "percent")} ({formatNumber(PAPER_TRADING.benchmarkStart, 2)}→{formatNumber(PAPER_TRADING.benchmarkEnd, 2)}pt). 같은 시작자금 기준의 모의 기록이며 실시간 성과가 아닙니다.</p></details></div>
++    <article className="briefing-summary-prediction" aria-label="TOP5 예측 요약"><p className="briefing-eyebrow">TOP5 예측 요약</p><strong className="briefing-summary-value">{prediction.range}</strong>
++      <p>{prediction.count}</p><small>{prediction.period}</small><small>원본 모델 예측 · 실제 성과 아님{rankSource === "sample" ? " · 예시 데이터" : ""}</small>
+     </article>
+     <article className="briefing-summary-data" aria-label="분석 및 데이터"><p className="briefing-eyebrow">분석 · 데이터</p><strong className="briefing-summary-value">{backend.isPending ? "실행 기록 조회 중" : finishedAt ? formatDate(finishedAt, true) : "완료 시각 미확인"}</strong>
+       <p>{formatNumber(count ?? status?.results.rank.count)}종목 · {formatDuration(savedRunDuration(status, analysis.data?.data))}</p><small><span className="briefing-source-tag">{SOURCE_LABELS[status?.results.rank.source ?? "unknown"]}</span>{status?.runtime.state === "running" ? " · 새 분석 진행 중" : completed ? " · 최근 완료 기록" : " · 완료 기록 미확인"}</small>
+diff --git a/FE/src/features/briefing/CandidateTable.test.tsx b/FE/src/features/briefing/CandidateTable.test.tsx
+index 41f3bf4..cd53d18 100644
+--- a/FE/src/features/briefing/CandidateTable.test.tsx
++++ b/FE/src/features/briefing/CandidateTable.test.tsx
+@@ -28,7 +28,8 @@ describe("briefing comparison rows", () => {
+     expect(document.querySelector(".briefing-quote-meta")).toHaveTextContent("시세 API 조회 · 조회/저장 2026. 10. 08. 18:00 · 1건 조회 실패");
+     expect([...document.querySelectorAll('[data-value="rank"]')].map(cell => cell.textContent)).toEqual(["06", "07", "08", "09", "10"]);
+     const bars = document.querySelectorAll<HTMLElement>(".briefing-prediction-bar i"); expect(bars).toHaveLength(2); expect(bars[0].style.width).toBe("100%"); expect(bars[1].style.width).toBe("50%");
+-    expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(10);
++    expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(0);
++    expect(screen.queryByRole("columnheader", { name: "수급" })).not.toBeInTheDocument();
+     const first = screen.getAllByRole("button")[0]; first.focus(); fireEvent.keyDown(first, { key: "ArrowDown" });
+     expect(select).toHaveBeenLastCalledWith("100002", "keyboard"); expect(screen.getAllByRole("button")[1]).toHaveFocus();
+     fireEvent.click(document.querySelectorAll("tbody tr")[2]); expect(select).toHaveBeenLastCalledWith("100003");
+@@ -39,8 +40,10 @@ describe("briefing comparison rows", () => {
+     expect(sample).toHaveTextContent("—예시"); expect(sample).not.toHaveTextContent("10,000"); expect(sample).not.toHaveTextContent("-1.00%");
+     expect(document.querySelector(".briefing-quote-meta")).toHaveTextContent("시세 혼합 · 조회/저장");
+   });
+-  it("retains the news column and three evidence dots when final candidates exist", async () => {
++  it("retains news when final candidates exist while omitting supply and agreement", async () => {
+     mount(true); await waitFor(() => expect(document.querySelectorAll(".briefing-quote-cell strong")[0]).toHaveTextContent("10,000원"));
+-    expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(15);
++    expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument(); expect(document.querySelectorAll(".briefing-evidence-dots i")).toHaveLength(0);
++    expect(screen.queryByRole("columnheader", { name: "근거 일치" })).not.toBeInTheDocument();
++    expect(screen.queryByRole("columnheader", { name: "수급" })).not.toBeInTheDocument();
+   });
+ });
+diff --git a/FE/src/features/briefing/CandidateTable.tsx b/FE/src/features/briefing/CandidateTable.tsx
+index e9b4816..68cbaee 100644
+--- a/FE/src/features/briefing/CandidateTable.tsx
++++ b/FE/src/features/briefing/CandidateTable.tsx
+@@ -7,7 +7,6 @@ import { SOURCE_LABELS } from "../../entities/source";
+ import { formatDate, formatPercent, formatWon } from "../../shared/lib/format";
+ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../shared/ui/table";
+ import { SignalView } from "./SignalView";
+-import { EvidenceAgreementView } from "./EvidenceAgreementView";
+ 
+ export function CandidateTable({ candidates, selectedCode, onSelect, membershipConfirmed = true, production = "produced" }: { candidates: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void; membershipConfirmed?: boolean; production?: CandidateProduction }) {
+   const buttons = useRef(new Map<string, HTMLButtonElement>()), modelOnly = production === "unproduced";
+@@ -25,7 +24,7 @@ export function CandidateTable({ candidates, selectedCode, onSelect, membershipC
+   return <><div className="briefing-table-scroll" role="region" tabIndex={0} aria-label="후보 비교표, 좁은 화면에서는 가로로 이동할 수 있습니다">
+     <Table className={`briefing-table briefing-comparison-table${modelOnly ? " briefing-model-table" : ""}`}>
+       <caption className="briefing-sr-only">후보 비교. 종목 버튼으로 오른쪽 상세를 열고 위·아래 화살표로 선택을 이동할 수 있습니다. 화면 순서를 원본 순위로 사용하지 않습니다.</caption>
+-      <TableHeader><TableRow><TableHead>원본 순위</TableHead><TableHead>종목</TableHead><TableHead>예측<small>시가→종가</small></TableHead><TableHead>모델</TableHead>{!modelOnly && <TableHead>뉴스</TableHead>}<TableHead>수급</TableHead><TableHead>근거 일치</TableHead><TableHead>현재가</TableHead></TableRow></TableHeader>
++      <TableHeader><TableRow><TableHead>원본 순위</TableHead><TableHead>종목</TableHead><TableHead>예측<small>시가→종가</small></TableHead><TableHead>모델</TableHead>{!modelOnly && <TableHead>뉴스</TableHead>}<TableHead>현재가</TableHead></TableRow></TableHeader>
+       <TableBody>{candidates.map((row, index) => {
+         const signals = briefingSignals(row, modelOnly ? "unknown" : membershipConfirmed ? "candidate" : "unknown", production), selected = selectedCode === row.code;
+         const quote = quotes[index], sample = quote.data?.source === "sample", price = quote.isError || sample ? null : quote.data?.data;
+@@ -35,8 +34,7 @@ export function CandidateTable({ candidates, selectedCode, onSelect, membershipC
+             <span><strong>{row.name ?? row.code}</strong><small>{row.code}{selected ? <span className="briefing-sr-only"> · 선택됨</span> : null}</small></span><span className="briefing-sr-only"> 상세 보기</span>
+           </button></TableCell>
+           <TableCell data-value="predictedReturn"><strong className={row.predictedReturn !== null && row.predictedReturn > 0 ? "briefing-rise" : row.predictedReturn !== null && row.predictedReturn < 0 ? "briefing-fall" : ""}>{formatPercent(row.predictedReturn)}</strong>{row.predictedReturn !== null && row.predictedReturn > 0 && maximum > 0 && <span className="briefing-prediction-bar" aria-hidden="true"><i style={{ width: `${row.predictedReturn / maximum * 100}%` }} /></span>}</TableCell>
+-          <TableCell><SignalView signal={signals.model} /></TableCell>{!modelOnly && <TableCell><SignalView signal={signals.news} /></TableCell>}<TableCell><SignalView signal={signals.supply} /></TableCell>
+-          <TableCell><EvidenceAgreementView signals={signals} modelOnly={modelOnly} /></TableCell>
++          <TableCell><SignalView signal={signals.model} /></TableCell>{!modelOnly && <TableCell><SignalView signal={signals.news} /></TableCell>}
+           <TableCell className="briefing-quote-cell" aria-label={quote.isError ? `${row.name ?? ""} ${row.code} 현재가 조회 실패` : sample ? `${row.name ?? ""} ${row.code} 예시 시세 · 실제 가격 미표시` : undefined} title={quote.isError ? "현재가 조회 실패" : sample ? "예시 시세 · 실제 가격 미표시" : undefined}><strong>{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><small className={price?.changeRate != null && price.changeRate > 0 ? "briefing-rise" : price?.changeRate != null && price.changeRate < 0 ? "briefing-fall" : ""}>{quote.isError ? "조회 실패" : sample ? "예시" : formatPercent(price?.changeRate, "percent")}</small></TableCell>
+         </TableRow>;
+       })}</TableBody>
+diff --git a/FE/src/features/briefing/DetailPanel.tsx b/FE/src/features/briefing/DetailPanel.tsx
+index 9d6cc53..29cfffd 100644
+--- a/FE/src/features/briefing/DetailPanel.tsx
++++ b/FE/src/features/briefing/DetailPanel.tsx
+@@ -9,8 +9,7 @@ import { formatDate, formatNumber, formatPercent, formatWon } from "../../shared
+ import { SignalView } from "./SignalView";
+ import { SourceMeta } from "./SourceMeta";
+ import { BriefingChart } from "./BriefingChart";
+-import { EvidenceAgreementView } from "./EvidenceAgreementView";
+-import { evidenceSummary, formatBillions } from "./briefingData";
++import { evidenceSummary } from "./briefingData";
+ import { WatchToggle } from "../watchlist/WatchToggle";
+ import { safeArticleUrl } from "../stock/reportData";
+ import { useAppPaths } from "../../app/paths";
+@@ -36,13 +35,13 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
+     {quote.isError && <p className="briefing-footnote" role="status">가격 조회 실패 · —</p>}
+     {stock.isPending && !candidate && <p role="status">종목 분석을 조회하고 있습니다.</p>}
+     {stock.isError && <p className="briefing-notice" role="status">{stock.data?.data ? "이전 조회 결과 · 상세 갱신 실패" : candidate ? "상세 조회 실패 · 후보 분석 결과 표시" : "종목 분석 조회 실패"}</p>}
+-    <div className="briefing-detail-rank"><span>예측 {formatNumber(detail?.rank)}위 / {formatNumber(detail?.poolSize)}</span>{signals && <EvidenceAgreementView signals={signals} modelOnly={modelOnly} />}</div>
++    <div className="briefing-detail-rank"><span>예측 {formatNumber(detail?.rank)}위 / {formatNumber(detail?.poolSize)}</span></div>
+     <p className="briefing-template-summary">{detail ? evidenceSummary(detail) : "확인 가능한 분석 근거가 없습니다."}</p>
+     <div className="briefing-detail-actions"><WatchToggle code={code} name={detail?.name} showLabel /><Link to={paths.stock(code)}>전체 리포트 열기<ArrowUpRight aria-hidden="true" size={14} /></Link></div>
+     <BriefingChart code={code} />
+     <h3>근거</h3>
+-    {signals && detail ? <div className="briefing-detail-signals">{(modelOnly ? ["model", "supply"] as const : ["model", "news", "supply"] as const).map(key => <div key={key} data-detail-evidence={key}><strong>{key === "model" ? "모델" : key === "news" ? "뉴스" : "수급"}</strong><SignalView signal={signals[key]} />
+-      {key === "model" ? <p>{formatNumber(detail.poolSize)}종목 중 {formatNumber(detail.rank)}위 · 예측수익률 {formatPercent(detail.predictedReturn)}</p> : key === "supply" ? <p>외국인 {formatBillions(detail.supply.foreignNetBuy)} / 기관 {formatBillions(detail.supply.institutionNetBuy)}<br />{detail.supply.window === null ? "조회 기간 미제공" : `${detail.supply.window}거래일`} · 합산 순매수 {formatNumber(detail.supply.combinedPositiveDays)}일 · 외국인 {formatNumber(detail.supply.foreignPositiveDays)}일 / 기관 {formatNumber(detail.supply.institutionPositiveDays)}일</p> : <p>{signals.news.reason}</p>}
++    {signals && detail ? <div className="briefing-detail-signals">{(modelOnly ? ["model"] as const : ["model", "news"] as const).map(key => <div key={key} data-detail-evidence={key}><strong>{key === "model" ? "모델" : "뉴스"}</strong><SignalView signal={signals[key]} />
++      {key === "model" ? <p>{formatNumber(detail.poolSize)}종목 중 {formatNumber(detail.rank)}위 · 예측수익률 {formatPercent(detail.predictedReturn)}</p> : <p>{signals.news.reason}</p>}
+       {signals[key].state === "unavailable" && key !== "news" && <p>{signals[key].reason}</p>}
+     </div>)}</div> : <p className="briefing-muted">분석 근거 조회 중</p>}
+     <dl className="briefing-detail-stats"><div><dt>모델 예측수익률</dt><dd>{formatPercent(detail?.predictedReturn)}</dd></div></dl>
+diff --git a/FE/src/features/briefing/briefingDashboard.css b/FE/src/features/briefing/briefingDashboard.css
+index f0587e9..ca5f0aa 100644
+--- a/FE/src/features/briefing/briefingDashboard.css
++++ b/FE/src/features/briefing/briefingDashboard.css
+@@ -35,7 +35,7 @@
+   .briefing-summary-strip .briefing-eyebrow { letter-spacing: 0; font-weight: 500; }
+   .briefing-summary-value { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 20px; line-height: 1.35; margin: 7px 0 6px; letter-spacing: -.5px; }
+   .briefing-summary-value > span:not(.briefing-regime-dot) { font-size: 12px; font-weight: 500; color: var(--ds-fg-2); letter-spacing: 0; }
+-  .briefing-summary-paper .briefing-paper-capital > span { font-size: 20px; font-weight: inherit; color: var(--ds-fall); letter-spacing: -.5px; }
++  .briefing-summary-prediction .briefing-summary-value { font-size: 20px; overflow-wrap: anywhere; }
+   .briefing-summary-market .briefing-summary-value { font-size: 19px; }
+   .briefing-summary-data .briefing-summary-value { font-size: 16px; letter-spacing: -.3px; min-height: 27px; }
+   .briefing-summary-strip p:not(.briefing-eyebrow), .briefing-summary-strip small { font-size: 12px; color: var(--ds-fg-2); }
+diff --git a/FE/src/features/briefing/briefingData.test.ts b/FE/src/features/briefing/briefingData.test.ts
+index 3ae9ce1..a533f86 100644
+--- a/FE/src/features/briefing/briefingData.test.ts
++++ b/FE/src/features/briefing/briefingData.test.ts
+@@ -5,11 +5,11 @@ import { backendStatusBody, pipelineRow } from "../../test/dataFixtures";
+ import { evidenceSummary, formatBillions, savedRunDuration } from "./briefingData";
+ 
+ describe("briefing factual summaries", () => {
+-  it("uses raw supply totals and rank without recommendations, filling neither missing nor zero", () => {
++  it("summarizes model rank without exposing retained supply data", () => {
+     const row = adaptCandidate(pipelineRow({ pred_rank: 1, pred_pool_size: 199, foreign_net_buy_sum: -430_000_000, inst_net_buy_sum: -450_000_000, supply_window: 5 })).data;
+     const summary = evidenceSummary({ ...row, supply: { ...row.supply, window: 5 } });
+-    expect(summary).toBe("모델 예측 199종목 중 1위 · 외국인·기관 5일 합계 순매도 -8.8억");
+-    expect(evidenceSummary({ ...row, rank: null, supply: { ...row.supply, window: null, combinedNetBuy: null } })).toBe("모델 원본 순위 미제공 · 외국인·기관 기간 미확인 합계 미제공");
++    expect(summary).toBe("모델 예측 199종목 중 1위");
++    expect(evidenceSummary({ ...row, rank: null, supply: { ...row.supply, window: null, combinedNetBuy: null } })).toBe("모델 원본 순위 미제공");
+     expect(formatBillions(0)).toBe("0.0억"); expect(formatBillions(null)).toBe("—");
+   });
+   it.each([-4_999_999, -1, -0, 0, 1, 4_999_999])("avoids signed rounded zero for amount %s", amount => {
+diff --git a/FE/src/features/briefing/briefingData.ts b/FE/src/features/briefing/briefingData.ts
+index edaecf2..c2ae9fe 100644
+--- a/FE/src/features/briefing/briefingData.ts
++++ b/FE/src/features/briefing/briefingData.ts
+@@ -10,8 +10,7 @@ export function formatBillions(value: number | null | undefined) {
+ }
+ export function evidenceSummary(row: CandidateData) {
+   const ranking = row.rank === null ? "모델 원본 순위 미제공" : `모델 예측 ${row.poolSize ?? "—"}종목 중 ${row.rank}위`;
+-  const { combinedNetBuy: amount, window } = row.supply;
+-  return `${ranking} · 외국인·기관 ${window === null ? "기간 미확인" : `${window}일`} 합계 ${amount === null ? "미제공" : amount > 0 ? "순매수" : amount < 0 ? "순매도" : "0원"}${amount === null || amount === 0 ? "" : ` ${formatBillions(amount)}`}`;
++  return ranking;
+ }
+ export function savedRunDuration(status?: BackendStatus, run?: AnalysisStatus): number | null {
+   if (status?.marker.state !== "completed") return null;
+diff --git a/FE/src/features/history/HistoryPage.test.tsx b/FE/src/features/history/HistoryPage.test.tsx
+index 18f2933..b2eb398 100644
+--- a/FE/src/features/history/HistoryPage.test.tsx
++++ b/FE/src/features/history/HistoryPage.test.tsx
+@@ -116,6 +116,18 @@ it("shows a failed run independently of saved candidates and refreshes with GET"
+   expect(fetcher.mock.calls.length).toBeGreaterThanOrEqual(4);
+   expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
+ });
++it("hides supply progress and errors while preserving unrelated messages after refresh", async () => {
++  let hidden = true;
++  const fetcher = backend(() => ({ status: "failed", progress: { message: hidden ? "외국인·기관 수급 조회 중" : "전문기관 연구 결과 확인 중" }, error: hidden ? "기관 순매수 조회 실패" : "원본 오류" }));
++  mount(); await screen.findByText("최신 실행 실패");
++  expect(screen.getByText("분석 데이터 처리 중")).toBeInTheDocument();
++  expect(screen.getByText("분석 기록을 확인해 주세요.")).toBeInTheDocument();
++  expect(document.querySelector(".history-facts")).not.toHaveTextContent(/수급|순매수/);
++  hidden = false; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
++  expect(await screen.findByText("전문기관 연구 결과 확인 중")).toBeInTheDocument();
++  expect(screen.getByText("원본 오류")).toBeInTheDocument();
++  expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
++});
+ it("reports an unavailable status without inventing a completed record and recovers", async () => {
+   let broken = true;
+   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async url => {
+diff --git a/FE/src/features/history/HistoryPage.tsx b/FE/src/features/history/HistoryPage.tsx
+index 2401980..9b2d091 100644
+--- a/FE/src/features/history/HistoryPage.tsx
++++ b/FE/src/features/history/HistoryPage.tsx
+@@ -5,6 +5,7 @@ import { useAnalysisRun } from "../../shared/api/analysis";
+ import { queries } from "../../shared/api/queries";
+ import { SOURCE_LABELS } from "../../entities/source";
+ import { formatDate } from "../../shared/lib/format";
++import { analysisProgressText } from "../../shared/lib/analysisDisplay";
+ import { usePageTitle } from "../../hooks/usePageTitle";
+ import { useAppPaths } from "../../app/paths";
+ import { useCandidateProduction, productionNotice } from "../briefing/candidateProduction";
+@@ -14,9 +15,6 @@ import "./history.css";
+ import { PerformancePanel } from "./PerformancePanel";
+ 
+ const statusLabels = { idle: "실행 중인 분석 없음", running: "분석 진행 중", completed: "최신 실행 완료", failed: "최신 실행 실패" };
+-function rawValue(value: unknown): string {
+-  return typeof value === "string" && value.trim() ? value : typeof value === "number" && Number.isFinite(value) ? String(value) : "—";
+-}
+ export function elapsedLabel(milliseconds: number | null | undefined): string {
+   if (milliseconds === null || milliseconds === undefined || !Number.isFinite(milliseconds) || milliseconds < 0) return "—";
+   const minutes = Math.floor(milliseconds / 60000);
+@@ -80,8 +78,8 @@ export function HistoryPage() {
+         <dl className="history-facts">
+           <div><dt>측정된 경과 시간</dt><dd data-testid="history-elapsed">{elapsedLabel(run?.elapsedMs)}</dd></div>
+           <div><dt>최근 상태 갱신</dt><dd data-testid="history-progress-updated">{progressUpdatedLabel(run?.progress?.updatedAt)}</dd></div>
+-          <div><dt>진행 메시지</dt><dd>{rawValue(run?.progress?.message)}</dd></div>
+-          <div><dt>제공된 오류</dt><dd>{run?.error || (run?.status === "completed" ? "없음" : run?.status === "failed" ? "오류 내용 미제공" : "—")}</dd></div>
++          <div><dt>진행 메시지</dt><dd>{analysisProgressText(run?.progress?.message, run?.progress?.message ? "분석 데이터 처리 중" : "—")}</dd></div>
++          <div><dt>제공된 오류</dt><dd>{analysisProgressText(run?.error, run?.error ? "분석 기록을 확인해 주세요." : run?.status === "completed" ? "없음" : run?.status === "failed" ? "오류 내용 미제공" : "—")}</dd></div>
+           <div><dt>공식 / 수시 구분</dt><dd>{run?.status === "idle" ? "현재 실행 없음" : kindLabel(run?.kind)}</dd></div>
+           <div><dt>실행 식별자</dt><dd>{run?.runId ?? (run?.status === "idle" ? "새 실행 시 발급" : "구현 이전 기록에는 식별자가 없습니다.")}</dd></div>
+           <div><dt>출처</dt><dd>{analysis.data ? SOURCE_LABELS[analysis.data.source] : "—"}</dd></div>
+diff --git a/FE/src/features/rank/RankPage.test.tsx b/FE/src/features/rank/RankPage.test.tsx
+index 20e63cc..225667d 100644
+--- a/FE/src/features/rank/RankPage.test.tsx
++++ b/FE/src/features/rank/RankPage.test.tsx
+@@ -86,7 +86,7 @@ describe("whole-rank page fetch interactions", () => {
+     if (produced) {
+       expect(await screen.findByRole("columnheader", { name: "최종 보정 순위" })).toBeInTheDocument();
+       expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument();
+-      expect(screen.getByRole("columnheader", { name: "근거 일치도" })).toBeInTheDocument();
++      expect(screen.queryByRole("columnheader", { name: "근거 일치도" })).not.toBeInTheDocument();
+       expect(screen.getByRole("option", { name: "최종 후보만" })).toBeInTheDocument();
+     }
+     else {
+@@ -98,7 +98,7 @@ describe("whole-rank page fetch interactions", () => {
+       await screen.findByText("뉴스 보정 미사용 · 모델 예측 순위 기준");
+       expect(screen.queryByRole("columnheader", { name: "최종 보정 순위" })).not.toBeInTheDocument();
+       expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument();
+-      expect(screen.getByRole("columnheader", { name: "근거 일치도" })).toBeInTheDocument();
++      expect(screen.queryByRole("columnheader", { name: "근거 일치도" })).not.toBeInTheDocument();
+     }
+   });
+   it("hides news, agreement and candidate filter when production is unknown", async () => {
+diff --git a/FE/src/features/rank/RankPage.tsx b/FE/src/features/rank/RankPage.tsx
+index abf93c9..e97374f 100644
+--- a/FE/src/features/rank/RankPage.tsx
++++ b/FE/src/features/rank/RankPage.tsx
+@@ -32,8 +32,8 @@ export function RankPage() {
+     {rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="전체 순위 저장 시각" />}
+     {rank.data?.source === "sample" && <p className="rank-notice" role="status">예시 데이터 · 실제 전체 분석 결과가 아닙니다.</p>}
+     {rank.isError && <p className="rank-notice" role="status">{rank.data ? "이전 조회 결과 · 전체 순위 갱신 실패" : "전체 순위 조회 실패 · 다시 조회해 주세요."}</p>}
+-    {notice && !candidates.isError && <p className={modelOnly ? "rank-muted" : "rank-notice"} role="status" data-candidate-production={production}>{modelOnly ? "뉴스 보정 미사용 · 모델 예측 순위 기준" : `${notice} 원본 뉴스·수급은 별도로 평가합니다.`}</p>}
+-    {candidates.isError && <p className="rank-notice" role="status">최종 후보 조회 실패 · 모델 신호의 후보 멤버십은 미확인입니다. 원본 뉴스·수급은 별도로 평가합니다.</p>}
++    {notice && !candidates.isError && <p className={modelOnly ? "rank-muted" : "rank-notice"} role="status" data-candidate-production={production}>{modelOnly ? "뉴스 보정 미사용 · 모델 예측 순위 기준" : `${notice} 원본 뉴스는 별도로 평가합니다.`}</p>}
++    {candidates.isError && <p className="rank-notice" role="status">최종 후보 조회 실패 · 모델 신호의 후보 멤버십은 미확인입니다. 원본 뉴스는 별도로 평가합니다.</p>}
+     {candidates.data?.source === "sample" && <p className="rank-notice" role="status">후보 목록은 예시 데이터입니다. 후보 멤버십과 관련 모델 신호를 실제 분석으로 해석하지 마세요.</p>}
+     <section className="rank-card" aria-labelledby="rank-list-heading"><div className="rank-section-heading"><h2 id="rank-list-heading">모델 원본 비교 <span>{rank.data?.data.length ?? "—"}종목</span></h2><p className="rank-muted">다음 거래일 시가→종가 예측 · 실제 성과 아님</p></div>
+       <div className="rank-controls"><label className="rank-search"><Search aria-hidden="true" size={17} /><span className="watch-sr-only">종목 이름 또는 코드</span><input type="search" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} placeholder="이름 또는 6자리 코드" /></label>
+@@ -41,6 +41,6 @@ export function RankPage() {
+       {rank.isPending ? <p className="rank-empty" role="status">전체 순위를 조회하고 있습니다.</p> : rows.length ? <RankTable production={production} showFinal={showFinal} modeReady={modeReady} rows={rows.slice(current * pageSize, (current + 1) * pageSize)} members={members} membershipState={membershipState} sort={activeSort} descending={activeDescending} onSort={changeSort} />
+         : !rank.isError && <p className="rank-empty">{rank.data?.data.length ? activeFilter === "candidate" && !confirmed ? "최종 후보 목록을 확인할 수 없어 필터 결과를 제공하지 않습니다." : "검색 조건에 맞는 종목이 없습니다." : "최신 전체 분석 결과가 비어 있습니다."}</p>}
+       {rows.length > 0 && <nav className="rank-pagination" aria-label="전체 순위 페이지"><span aria-live="polite">{current + 1} / {pages}페이지 · {rows.length}종목</span><button className="rank-button" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="이전 순위 페이지"><ChevronLeft aria-hidden="true" size={16} />이전</button><button className="rank-button" disabled={current === pages - 1} onClick={() => setPage(current + 1)} aria-label="다음 순위 페이지">다음<ChevronRight aria-hidden="true" size={16} /></button></nav>}
+-      <p className="rank-muted rank-help">누락값은 —이며 양방향 정렬 모두 마지막에 표시합니다. 화면 순서를 모델 순위로 만들지 않습니다. {modelOnly ? "근거 일치도는 판정 가능한 원본 모델·수급 근거의 긍정 비율이며, 뉴스 미실행은 분모에서 제외합니다." : "최종 후보 여부는 모델 판정에만 사용하고, 뉴스·수급은 실제 원본 근거로 평가합니다."}</p>
++      <p className="rank-muted rank-help">누락값은 —이며 양방향 정렬 모두 마지막에 표시합니다. 화면 순서를 모델 순위로 만들지 않습니다. {modelOnly ? "모델 원본 예측과 모델 신호를 표시합니다." : "최종 후보 여부는 모델 판정에만 사용하고, 뉴스는 실제 원본 근거로 평가합니다."}</p>
+     </section><p className="rank-muted">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 다음 거래일은 거래일 달력 미연결로 미확인입니다.</p></div>;
+ }
+diff --git a/FE/src/features/rank/RankTable.tsx b/FE/src/features/rank/RankTable.tsx
+index bbb5156..a482ab1 100644
+--- a/FE/src/features/rank/RankTable.tsx
++++ b/FE/src/features/rank/RankTable.tsx
+@@ -2,7 +2,7 @@ import type { FocusEvent } from "react";
+ import { Link } from "react-router-dom";
+ import { ArrowDown, ArrowUp, ArrowUpDown, MoveHorizontal } from "lucide-react";
+ import type { CandidateData } from "../../entities/candidate";
+-import { formatAgreement, formatNumber, formatPercent } from "../../shared/lib/format";
++import { formatNumber, formatPercent } from "../../shared/lib/format";
+ import { useAppPaths } from "../../app/paths";
+ import { SignalView } from "../briefing/SignalView";
+ import { WatchToggle } from "../watchlist/WatchToggle";
+@@ -48,7 +48,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
+     <table className={`rank-table${modelOnly ? " rank-model-table" : ""}`}><caption className="watch-sr-only">전체 순위 원본 비교. 예측값은 실제 성과가 아니며 누락값은 —입니다.</caption>
+       <thead><tr><th scope="col" aria-sort={onSort ? sort === "name" ? descending ? "descending" : "ascending" : "none" : undefined}>{sortHeading("name", "종목")}</th>
+         {visibleColumns.map(column => <th key={column.key} scope="col" aria-sort={onSort ? sort === column.key ? descending ? "descending" : "ascending" : "none" : undefined}>{sortHeading(column.key, column.label)}</th>)}
+-        <th scope="col">모델</th>{modeReady && !modelOnly && <th scope="col">뉴스</th>}<th scope="col">수급</th>{modeReady && <th scope="col">근거 일치도</th>}</tr></thead>
++        <th scope="col">모델</th>{modeReady && !modelOnly && <th scope="col">뉴스</th>}</tr></thead>
+       <tbody>{rows.map(row => {
+         const membership = membershipState === "confirmed" ? members.has(row.code) ? "candidate" : "nonCandidate" : membershipState;
+         const signals = rankSignals(row, membership, production), missing = missingCodes.has(row.code);
+@@ -61,8 +61,6 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
+           <td data-value="finalPredictedReturn"><strong className={row.finalPredictedReturn != null && row.finalPredictedReturn > 0 ? "rank-rise" : row.finalPredictedReturn != null && row.finalPredictedReturn < 0 ? "rank-fall" : ""}>{formatPercent(row.finalPredictedReturn)}</strong></td></>}
+           <td data-rank-signal="model"><SignalView signal={signals.model} /></td>
+           {modeReady && !modelOnly && <td data-rank-signal="news"><SignalView signal={signals.news} />{noNewsEvidence(row) && <small className="rank-row-note">뉴스 미분석 · 수집 미확인</small>}</td>}
+-          <td data-rank-signal="supply"><SignalView signal={signals.supply} />{signals.supply.state === "unavailable" && <small className="rank-row-note">{row.supply.foreignNetBuy === null && row.supply.institutionNetBuy === null ? "수급 미분석" : row.supply.combinedPositiveDays === null ? "합산 순매수 일수 미제공" : "수급 판정 자료 부족"}</small>}</td>
+-          {modeReady && <td><strong>{formatAgreement(signals.agreement.ratio)}</strong><small className="rank-row-note">긍정 {signals.agreement.positive}/{signals.agreement.evaluable} · {modelOnly ? "뉴스 미사용" : `판정 불가 ${signals.agreement.unavailable}`}</small>{signals.agreement.evaluable === 1 && <small className="rank-row-note">평가 가능한 근거 1개 기준</small>}</td>}
+         </tr>;
+       })}</tbody>
+     </table>
+diff --git a/FE/src/features/stock/StockReportPage.test.tsx b/FE/src/features/stock/StockReportPage.test.tsx
+index 72ce6b2..b9f6994 100644
+--- a/FE/src/features/stock/StockReportPage.test.tsx
++++ b/FE/src/features/stock/StockReportPage.test.tsx
+@@ -35,7 +35,11 @@ describe("stock report using actual fetch fixtures", () => {
+     expect(screen.getByTestId("report-final-prediction")).toHaveTextContent("+2.50%"); expect(screen.getByTestId("report-final-rank")).toHaveTextContent("2위");
+     expect(screen.getByText("판정 불명 원본 근거")).toBeInTheDocument(); expect(screen.getByText("감성 미확인")).toBeInTheDocument();
+     expect(screen.queryByRole("link", { name: /원본 기사/ })).not.toBeInTheDocument();
+-    expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원"); expect(screen.getByText("외국인 합계").nextElementSibling).toHaveTextContent("0원");
++    expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원");
++    expect(screen.queryByText("외국인 합계")).not.toBeInTheDocument();
++    expect(document.querySelector('[data-report-signal="supply"]')).toBeNull();
++    expect(document.querySelector(".report-agreement")).toBeNull();
++    expect(document.querySelector(".report-rules")).not.toHaveTextContent(/수급|일치도/);
+     expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
+   });
+   it("links only an absolute https original article with safe new-tab attributes", async () => {
+diff --git a/FE/src/features/stock/StockReportPage.tsx b/FE/src/features/stock/StockReportPage.tsx
+index 09452f4..b751661 100644
+--- a/FE/src/features/stock/StockReportPage.tsx
++++ b/FE/src/features/stock/StockReportPage.tsx
+@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
+ import { Link, useParams } from "react-router-dom";
+ import { ArrowLeft, ExternalLink, RefreshCw, BookOpen } from "lucide-react";
+ import { queries, queryKeys } from "../../shared/api/queries";
+-import { formatAgreement, formatDate, formatNumber, formatPercent, formatWon } from "../../shared/lib/format";
++import { formatDate, formatNumber, formatPercent, formatWon } from "../../shared/lib/format";
+ import { usePageTitle } from "../../hooks/usePageTitle";
+ import { PerformancePanel } from "../history/PerformancePanel";
+ import { SIGNAL_DESCRIPTIONS, SIGNAL_RULE_VERSION } from "../../entities/signals";
+@@ -60,14 +60,12 @@ function StockReport({ code }: { code: string }) {
+           : <p className="report-empty">{detail?.newsCollected ? "실제 뉴스 수집 결과 0건입니다." : "뉴스 수집 여부를 확인할 수 없습니다."}</p>}
+       </section>
+       <PerformancePanel code={code} />
+-    </div><div className="report-secondary"><section className="report-card" aria-labelledby="report-evidence-title"><p className="report-eyebrow">MODEL & EVIDENCE</p><h2 id="report-evidence-title">신호와 근거 일치도</h2>
+-      {signals ? <><div className="report-signals">{(["model", "news", "supply"] as const).map(key => <div key={key} data-report-signal={key}><div><strong>{key === "model" ? "모델" : key === "news" ? "뉴스" : "수급"}</strong><SignalView signal={signals[key]} /></div><p className="report-muted">{signals[key].reason}</p></div>)}</div><p className="report-agreement"><strong>{formatAgreement(signals.agreement.ratio)}</strong> · 긍정 {signals.agreement.positive}/{signals.agreement.evaluable}<small>판정 불가 {signals.agreement.unavailable}개는 분모에서 제외</small></p></> : <p className="report-empty">모델·뉴스·수급 — · 판정 불가. 확인 가능한 분석 근거가 없습니다.</p>}
++    </div><div className="report-secondary"><section className="report-card" aria-labelledby="report-evidence-title"><p className="report-eyebrow">MODEL & EVIDENCE</p><h2 id="report-evidence-title">모델과 뉴스 신호</h2>
++      {signals ? <><div className="report-signals">{(["model", "news"] as const).map(key => <div key={key} data-report-signal={key}><div><strong>{key === "model" ? "모델" : "뉴스"}</strong><SignalView signal={signals[key]} /></div><p className="report-muted">{signals[key].reason}</p></div>)}</div></> : <p className="report-empty">모델·뉴스 — · 판정 불가. 확인 가능한 분석 근거가 없습니다.</p>}
+       <p className="report-muted report-footnote">모델 긍정은 최종 후보 선정 멤버십을 뜻할 수 있습니다. 확정 규칙상 원본 예측이 음수인 최종 후보도 긍정이며, 상승이나 수익을 보장하지 않습니다.</p>
+       <p className="report-summary">{!detail || detail.predictedReturn === null ? "원본 모델 예측값이 없어 수익률 요약을 제공하지 않습니다." : `원본 모델 예측은 ${formatPercent(detail.predictedReturn)}이며 최종 보정 예측은 ${formatPercent(detail.finalPredictedReturn)}입니다. 예측값은 확률이나 실현 성과가 아닙니다.`}</p>
+-    </section><section className="report-card" aria-labelledby="report-supply-title"><p className="report-eyebrow">SUPPLY INPUTS</p><h2 id="report-supply-title">수급 원본</h2><dl className="report-stats"><div><dt>외국인 합계</dt><dd>{formatWon(detail?.supply.foreignNetBuy)}</dd></div><div><dt>기관 합계</dt><dd>{formatWon(detail?.supply.institutionNetBuy)}</dd></div><div><dt>외국인·기관 합계</dt><dd>{formatWon(detail?.supply.combinedNetBuy)}</dd></div><div><dt>외국인 양수일수</dt><dd>{formatNumber(detail?.supply.foreignPositiveDays)}</dd></div><div><dt>기관 양수일수</dt><dd>{formatNumber(detail?.supply.institutionPositiveDays)}</dd></div><div><dt>합산 순매수 일수</dt><dd>{formatNumber(detail?.supply.combinedPositiveDays)}</dd></div><div><dt>조회 기간 / 확보 일수</dt><dd>{formatNumber(detail?.supply.window)} / {formatNumber(detail?.supply.dataDays)}</dd></div><div><dt>충분성 / 상태</dt><dd>{detail?.supply.enough === true ? "충분" : detail?.supply.enough === false ? "불충분" : "미확인"} / {detail?.supply.status ?? "미확인"}</dd></div></dl>
+-      <p className="report-muted">합산 순매수 일수 원본이 없으면 수급 신호는 판정 불가입니다. 개별 양수일수를 더하거나 양쪽 각각 절반이라는 규칙으로 바꾸지 않습니다.</p>
+-    </section></div></div>
+-    <details className="report-card report-rules"><summary>근거 판정 기준 <span>{SIGNAL_RULE_VERSION}</span></summary><dl>{Object.entries(SIGNAL_DESCRIPTIONS).map(([key, description]) => <div key={key}><dt>{key === "model" ? "모델" : key === "news" ? "뉴스" : key === "supply" ? "수급" : key === "agreement" ? "근거 일치도" : "다음 거래일"}</dt><dd>{description}</dd></div>)}</dl></details>
++        </section></div></div>
++    <details className="report-card report-rules"><summary>근거 판정 기준 <span>{SIGNAL_RULE_VERSION}</span></summary><dl>{Object.entries(SIGNAL_DESCRIPTIONS).filter(([key]) => key !== "supply" && key !== "agreement").map(([key, description]) => <div key={key}><dt>{key === "model" ? "모델" : key === "news" ? "뉴스" : "다음 거래일"}</dt><dd>{description}</dd></div>)}</dl></details>
+     <p className="report-muted report-disclaimer">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.</p>
+   </div>;
+ }
+diff --git a/FE/src/pages/StockDetailPage.tsx b/FE/src/pages/StockDetailPage.tsx
+index bc5b00f..04176cb 100644
+--- a/FE/src/pages/StockDetailPage.tsx
++++ b/FE/src/pages/StockDetailPage.tsx
+@@ -1,6 +1,7 @@
+ import { useEffect, useState } from "react";
+ import { Link, useParams } from "react-router-dom";
+-import { ArrowLeft, Gauge, Newspaper, TrendingUp, Users, type LucideIcon } from "lucide-react";
++import { ArrowLeft, Gauge, Newspaper, TrendingUp, type LucideIcon } from "lucide-react";
++import { visibleAnalysisText } from "../shared/lib/analysisDisplay";
+ import { MarketTopBar } from "../components/market/MarketTopBar";
+ import { StockChartPanel } from "../components/market/stock-chart";
+ import { usePageTitle } from "../hooks/usePageTitle";
+@@ -24,14 +25,6 @@ function formatRate(value: number) {
+   return `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
+ }
+ 
+-/** Net-buy won amounts come in raw KRW; show them in 억원 for readability. */
+-function formatEok(won: number) {
+-  const abs = Math.abs(won / 100_000_000);
+-  const value =
+-    abs >= 10 ? Math.round(abs).toLocaleString("ko-KR") : abs >= 1 ? abs.toFixed(1) : abs > 0 ? abs.toFixed(2) : "0";
+-  return `${won > 0 ? "+" : won < 0 ? "-" : ""}${value}억원`;
+-}
+-
+ function directionLabel(direction: MarketDirection) {
+   return direction === "up" ? "상승" : direction === "down" ? "하락" : "보합";
+ }
+@@ -215,12 +208,9 @@ function RankSummary({ candidate }: { candidate: AiCandidate }) {
+         </>
+       ) : (
+         <>
+-          <span className="rank-summary__label">결합 점수</span>
+-          <strong className="rank-summary__value">
+-            {Math.round(candidate.finalCombinedScore)}
+-            <small>/100</small>
+-          </strong>
+-          <span className="rank-summary__sub">모델·뉴스·수급 합산 · 확률 아님</span>
++          <span className="rank-summary__label">예측수익률 순위</span>
++          <strong className="rank-summary__value">—</strong>
++          <span className="rank-summary__sub">원본 모델 순위 미제공</span>
+         </>
+       )}
+     </div>
+@@ -306,10 +296,6 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
+   const positivePct = total > 0 ? (tones.positive / total) * 100 : 0;
+   const neutralPct = total > 0 ? (tones.neutral / total) * 100 : 0;
+   const tone = sentimentTone(candidate.finalSentiment);
+-  const supplyMaxAbs = Math.max(Math.abs(candidate.foreignNetBuy), Math.abs(candidate.instNetBuy), Math.abs(candidate.totalSupplyNetBuy), 1);
+-  const supplyDays = candidate.foreignPositiveDays + candidate.instPositiveDays;
+-  const supplyDayTotal = Math.max(candidate.supplyWindow * 2, 1);
+-  const supplyParticipationScore = clampPercent((supplyDays / supplyDayTotal) * 100);
+   const signalBars = [
+     {
+       label: "모델 순위 백분위",
+@@ -321,16 +307,7 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
+       value: candidate.newsOverallScore * 10,
+       tone: candidate.newsOverallScore >= 5 ? "up" : "down",
+     }]),
+-    {
+-      label: "수급",
+-      value: supplyParticipationScore,
+-      tone: candidate.totalSupplyNetBuy >= 0 ? "up" : "down",
+-    },
+-    {
+-      label: candidate.finalPredReturn != null ? "최종 상대순위" : "최종",
+-      value: candidate.finalCombinedScore,
+-      tone,
+-    },
++    ...(candidate.finalPredReturn != null ? [{ label: "최종 상대순위", value: candidate.finalCombinedScore, tone }] : []),
+   ];
+ 
+   return (
+@@ -338,19 +315,19 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
+       <header className="report-dashboard__head">
+         <div>
+           <h2>AI 근거 리포트 대시보드</h2>
+-          <p className="detail-card-sub">모델 예측, 뉴스 감성, 수급 흐름을 한 화면에서 비교합니다.</p>
++          <p className="detail-card-sub">모델 예측과 뉴스 감성을 한 화면에서 비교합니다.</p>
+         </div>
+         <strong className={`report-dashboard__verdict tone-${tone}`}>{candidate.finalSentimentKo}</strong>
+       </header>
+ 
+       <div className="report-kpi-grid">
+-        <ReportKpiCard
++        {candidate.finalPredReturn != null && <ReportKpiCard
+           icon={Gauge}
+-          label={candidate.finalPredReturn != null ? "전체 상대순위" : "최종 결합 점수"}
++          label="전체 상대순위"
+           value={`${Math.round(candidate.finalCombinedScore)}점`}
+-          sub={candidate.finalPredReturn != null ? "예상수익률 순위 · 상승확률 아님" : "모델+뉴스+수급"}
++          sub="예상수익률 순위 · 상승확률 아님"
+           tone={tone === "up" ? "is-positive-text" : tone === "down" ? "is-negative-text" : undefined}
+-        />
++        />}
+         <ReportKpiCard
+           icon={TrendingUp}
+           label="예측수익률"
+@@ -367,13 +344,6 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
+             : `${candidate.newsOverallScore.toFixed(1)} / 10`}
+           tone={candidate.newsOverallScore >= 5 ? "is-positive-text" : "is-negative-text"}
+         />
+-        <ReportKpiCard
+-          icon={Users}
+-          label="수급 합산"
+-          value={formatEok(candidate.totalSupplyNetBuy)}
+-          sub={`매수 우위 ${supplyDays}/${supplyDayTotal}일`}
+-          tone={candidate.totalSupplyNetBuy >= 0 ? "is-positive-text" : "is-negative-text"}
+-        />
+       </div>
+ 
+       <div className="report-chart-grid">
+@@ -423,77 +393,12 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
+         </article>
+       </div>
+ 
+-      <div className="report-supply-panel">
+-        <div className="report-supply-panel__summary">
+-          <MetricTile
+-            label="외국인+기관 합산"
+-            value={formatEok(candidate.totalSupplyNetBuy)}
+-            sub="최근 누적 순매수 금액"
+-            tone={candidate.totalSupplyNetBuy >= 0 ? "is-positive-text" : "is-negative-text"}
+-          />
+-          <MetricTile
+-            label="매수 우위 일수"
+-            value={`${supplyDays}/${supplyDayTotal}일`}
+-            sub="외국인·기관 합산 관찰"
+-            tone={supplyDays >= supplyDayTotal / 2 ? "is-positive-text" : "is-negative-text"}
+-          />
+-        </div>
+-        <div className="supply-grid">
+-          <SupplyRow
+-            label="외국인"
+-            won={candidate.foreignNetBuy}
+-            days={candidate.foreignPositiveDays}
+-            maxAbs={supplyMaxAbs}
+-            window={candidate.supplyWindow}
+-          />
+-          <SupplyRow
+-            label="기관"
+-            won={candidate.instNetBuy}
+-            days={candidate.instPositiveDays}
+-            maxAbs={supplyMaxAbs}
+-            window={candidate.supplyWindow}
+-          />
+-        </div>
+-      </div>
+     </section>
+   );
+ }
+ 
+-function SupplyRow({
+-  days,
+-  label,
+-  maxAbs,
+-  window,
+-  won,
+-}: {
+-  days: number;
+-  label: string;
+-  maxAbs: number;
+-  window: number;
+-  won: number;
+-}) {
+-  const tone = won >= 0 ? "is-positive-text" : "is-negative-text";
+-  const amountFill = maxAbs > 0 ? Math.max(8, Math.min(100, (Math.abs(won) / maxAbs) * 100)) : 0;
+-  const dayFill = clampPercent((days / Math.max(window, 1)) * 100);
+-  return (
+-    <div className="supply-row">
+-      <span className="supply-row__label">{label}</span>
+-      <div className="supply-row__bar">
+-        <i className={won >= 0 ? "is-positive" : "is-negative"} style={{ width: `${amountFill}%` }} />
+-      </div>
+-      <strong className={`supply-row__won ${tone}`}>{formatEok(won)}</strong>
+-      <small className="supply-row__days">매수 우위 {days}/{window}일</small>
+-      <div className="supply-row__daysbar" aria-hidden="true">
+-        <i style={{ width: `${Math.max(dayFill, 4)}%` }} />
+-      </div>
+-    </div>
+-  );
+-}
+-
+ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
+   const tone = sentimentTone(candidate.finalSentiment);
+-  const supplyDays = candidate.foreignPositiveDays + candidate.instPositiveDays;
+-  const supplyDayTotal = Math.max(candidate.supplyWindow * 2, 1);
+   const { groups: newsGroups, items: newsItems, keywordCount } = groupedNews(candidate.news);
+ 
+   const renderNewsItem = (item: ClassifiedNews) => (
+@@ -544,19 +449,13 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
+                 : `${candidate.newsOverallScore.toFixed(1)} / 10`}
+               sub={candidate.newsSentimentTally || `뉴스 ${candidate.newsCount}건`}
+             />
+-            <MetricTile
+-              label="외국인·기관 수급"
+-              value={formatEok(candidate.totalSupplyNetBuy)}
+-              sub={`매수 우위 ${supplyDays}/${supplyDayTotal}일`}
+-              tone={candidate.totalSupplyNetBuy >= 0 ? "is-positive-text" : "is-negative-text"}
+-            />
+           </div>
+         </div>
+ 
+         <div className="reco-reason">
+           <span className="reco-reason__tag">핵심 근거</span>
+           <p>
+-            {[candidate.summary, candidate.tradingInsight].filter(Boolean).join(" ")}
++            {[candidate.summary, candidate.tradingInsight].map(visibleAnalysisText).filter(Boolean).join(" ") || "확인 가능한 요약이 없습니다."}
+           </p>
+         </div>
+ 
+@@ -745,7 +644,6 @@ export function StockDetailPage() {
+         <h2>데이터 출처 및 유의사항</h2>
+         <ul>
+           <li>다음 거래일 시가→종가 예측수익률·순위: Huber 회귀 앙상블{candidate?.baseDate ? ` (기준일 ${candidate.baseDate})` : ""}.</li>
+-          <li>수급(외국인·기관 순매수): 최근 거래일 누적 순매수 금액.</li>
+           <li>뉴스·감성: 네이버 뉴스 기사를 Gemini로 구조화 분석한 결과. LLM 결과가 없는 기사는 키워드로 추정합니다.</li>
+         </ul>
+         <p className="panel-note">

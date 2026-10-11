@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { AnalysisDialog, dialogTabStops } from "./AnalysisDialog";
 import { backendStatusBody, jsonResponse } from "../../test/dataFixtures";
 
@@ -13,22 +13,31 @@ beforeEach(() => {
   vi.spyOn(HTMLDialogElement.prototype, "close").mockImplementation(function(this: HTMLDialogElement) { this.removeAttribute("open"); });
 });
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-function RouteProbe() { const navigate = useNavigate(); return <button onClick={() => navigate("/rank")}>경로 이동</button>; }
-function mount(running = false) {
-  const fetcher = vi.fn<typeof fetch>(async path => jsonResponse(String(path) === "/api/backend/status" ? backendStatusBody({ state: "not_produced" }) : { status: running ? "running" : "idle", mode: "model_only" }));
+function RouteProbe() { const navigate = useNavigate(), location = useLocation(); return <><button onClick={() => navigate("/rank")}>경로 이동</button><output data-testid="route">{location.pathname + location.search}</output></>; }
+function mount(running = false, status = running ? "running" : "idle", initialEntries = ["/"]) {
+  const fetcher = vi.fn<typeof fetch>(async path => jsonResponse(String(path) === "/api/backend/status" ? backendStatusBody({ state: "not_produced" }) : { status, mode: "model_only" }));
   vi.stubGlobal("fetch", fetcher);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, refetchOnWindowFocus: false } } }); clients.push(client);
-  render(<QueryClientProvider client={client}><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AnalysisDialog /><RouteProbe /></MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AnalysisDialog /><RouteProbe /></MemoryRouter></QueryClientProvider>);
   return fetcher;
 }
 describe("header analysis dialog", () => {
+  it("offers a TOP5 shortcut after completion that closes the dialog and opens the briefing", async () => {
+    mount(false, "completed", ["/rank?code=005930"]);
+    fireEvent.click(screen.getByRole("button", { name: "AI 분석 실행" }));
+    const shortcut = await screen.findByRole("button", { name: "TOP5 보러가기" });
+    expect(screen.getByRole("button", { name: "분석 시작" })).toHaveClass("analysis-start-secondary");
+    fireEvent.click(shortcut);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("route")).toHaveTextContent(/^\/$/);
+  });
   it("locks background scrolling, closes the native modal before returning focus, and never starts analysis on opening", async () => {
     document.body.style.overflow = "auto";
     const fetcher = mount(), trigger = screen.getByRole("button", { name: "AI 분석 실행" });
     trigger.focus(); fireEvent.click(trigger);
     const dialog = screen.getByRole("dialog", { name: "AI 분석 실행" }), close = within(dialog).getByRole("button", { name: "분석 실행 대화상자 닫기" });
     expect(close).toHaveFocus(); await screen.findByRole("button", { name: "분석 시작" });
-    await waitFor(() => expect(screen.getByRole("radio", { name: /모델 예측만/ })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     expect(document.body.style.overflow).toBe("hidden"); expect(document.documentElement.style.overflow).toBe("hidden");
     const stops = dialogTabStops(dialog), last = stops[stops.length - 1];
     close.focus(); fireEvent.keyDown(close, { key: "Tab", shiftKey: true }); expect(last).toHaveFocus();

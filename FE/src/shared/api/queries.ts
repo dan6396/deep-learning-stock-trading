@@ -18,6 +18,7 @@ export const queryKeys = {
   quote: (code: string) => ["quote", requireCode(code)] as const,
   chart: (code: string, range: TimeRange) => ["chart", requireCode(code), range] as const,
   analysisRun: () => ["analysis-run"] as const,
+  nextSession: (baseDate: string) => ["next-session", baseDate] as const,
 };
 export function requireCode(code: string): string {
   const normalized = stockCode(code);
@@ -69,6 +70,12 @@ export function createQueries(client: ApiClient = apiClient) {
         return { ...adapted, source: aggregateSource([adapted.source, response.source]), asOf: adapted.asOf ?? response.asOf };
       } });
     },
+    /** Next trading session after baseDate; null when the KIS calendar cannot confirm it. */
+    nextSession: (baseDate: string) => queryOptions({ queryKey: queryKeys.nextSession(baseDate), staleTime: 3_600_000, retry: false, queryFn: async ({ signal }) => {
+      const response = await client.request(`/api/korean-market/next-session?baseDate=${encodeURIComponent(baseDate)}`, { signal });
+      const value = record(response.data).nextSession;
+      return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && value > baseDate ? value : null;
+    } }),
     quote: (code: string) => {
       const normalized = requireCode(code);
       return queryOptions({ queryKey: queryKeys.quote(normalized), queryFn: async ({ signal }) => {

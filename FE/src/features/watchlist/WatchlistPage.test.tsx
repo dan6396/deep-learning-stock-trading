@@ -29,7 +29,7 @@ describe("watchlist joins and persistence UI", () => {
     const link = await screen.findByRole("link", { name: "검증종목001 100001" }); expect(link).toHaveAttribute("href", "/next/stock/100001");
     expect(screen.getByRole("link", { name: "이름 미확인 999999" })).toHaveAttribute("href", "/next/stock/999999");
     expect(document.querySelector('[data-rank-code="999999"]')).toHaveTextContent("분석 미제공");
-    expect(document.querySelector('[data-rank-code="100001"] [data-value=predictedReturn]')).toHaveTextContent("0.00%");
+    expect(document.querySelector('[data-rank-code="100001"] [data-value=predictedReturn]')).toHaveTextContent("보합");
     fireEvent.click(screen.getByRole("button", { name: "999999 관심 종목" }));
     expect(document.querySelector('[data-rank-code="999999"]')).not.toBeInTheDocument(); expect(JSON.parse(localStorage.getItem(WATCHLIST_KEY)!)).toEqual(["100001"]);
   });

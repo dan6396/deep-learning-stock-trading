@@ -1,0 +1,14 @@
+{
+  "query": "삼성전자",
+  "provider": "https://news.google.com/rss/search",
+  "redirect": "error",
+  "status": 200,
+  "contentType": "application/xml; charset=utf-8",
+  "items": 103,
+  "rss": true,
+  "linkCheck": {
+    "status": 200,
+    "hostname": "news.google.com",
+    "redirected": true
+  }
+}

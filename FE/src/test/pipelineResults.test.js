@@ -25,6 +25,15 @@ import { getCandidatesPayload, getRankPayload, getStockAnalysisPayload } from ".
 const headers = "ticker,company_name,prediction_target,ensemble_pred_return,pred_rank,pred_pool_size,supply_data_enough,supply_status";
 beforeEach(() => fixtureFiles.clear());
 describe("pipeline file provenance through API", () => {
+  it("keeps STEP2 model ranks and returns when old event analysis has a different final order", async () => {
+    fixtureFiles.set("step2_all_transformer_rank.csv", `${headers}\n005930,삼성전자,next_session_open_to_close,0.01,1,200,true,ok\n000660,SK하이닉스,next_session_open_to_close,0.005,2,200,true,ok\n`);
+    fixtureFiles.set("step3_final_news_event_analysis.json", JSON.stringify({ "005930": { status: "analyzed", final_score: -0.5, final_rank: 99, news: [] } }));
+    const rows = await getRankPayload();
+    expect(rows.map(row => row.input_row.pred_rank)).toEqual([1, 2]);
+    expect(rows.map(row => row.input_row.ensemble_pred_return)).toEqual([0.01, 0.005]);
+    expect(rows[0].input_row).not.toHaveProperty("final_pred_return");
+    expect(rows[0].news).toEqual([]);
+  });
   it.each(["api_key_missing", "api_budget_reached", "news_fetch_failed", "disabled", "pending", "unknown", undefined])("does not count %s as a successful zero-news collection", async status => {
     fixtureFiles.set("step3_final_top5.csv", `${headers}\n005930,Fixture,next_session_open_to_close,0.02,5,200,true,ok\n`);
     fixtureFiles.set("step3_final_news_event_analysis.json", JSON.stringify({ "005930": { status, news: [], final_score: 0.02 } }));

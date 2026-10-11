@@ -33,9 +33,13 @@ describe("stock report using actual fetch fixtures", () => {
     await waitFor(() => expect(document.querySelector('[data-report-signal="news"] [data-signal]')).toHaveAttribute("data-signal", "unavailable"));
     expect(screen.getByTestId("report-prediction")).toHaveTextContent("+2.00%");
     expect(screen.getByTestId("report-final-prediction")).toHaveTextContent("+2.50%"); expect(screen.getByTestId("report-final-rank")).toHaveTextContent("2위");
-    expect(screen.getByText("판정 불명 원본 근거")).toBeInTheDocument(); expect(screen.getByText("감성 미확인")).toBeInTheDocument();
+    expect(screen.getByText("판정 불명 원본 근거")).toBeInTheDocument(); expect(screen.queryByText("감성 미확인")).not.toBeInTheDocument(); expect(screen.queryByText("판정 방법 미확인")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /원본 기사/ })).not.toBeInTheDocument();
-    expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원"); expect(screen.getByText("외국인 합계").nextElementSibling).toHaveTextContent("0원");
+    expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원");
+    expect(screen.queryByText("외국인 합계")).not.toBeInTheDocument();
+    expect(document.querySelector('[data-report-signal="supply"]')).toBeNull();
+    expect(document.querySelector(".report-agreement")).toBeNull();
+    expect(document.querySelector(".report-rules")).not.toHaveTextContent(/수급|일치도/);
     expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
   });
   it("links only an absolute https original article with safe new-tab attributes", async () => {

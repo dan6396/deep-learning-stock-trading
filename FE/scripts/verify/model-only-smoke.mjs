@@ -52,7 +52,7 @@ try {
   check("available raw model values remain evaluable under unknown final membership", await browser.evaluate("document.querySelector('[data-rank-signal=model] [data-signal]').dataset.signal==='positive'"));
   check("raw model rank and prediction render", await browser.evaluate("document.querySelector('[data-rank-code=\"005930\"] [data-value=rank]').textContent==='5' && document.querySelector('[data-rank-code=\"005930\"] [data-value=predictedReturn]').textContent!=='—'"));
   check("news-adjusted rank and prediction stay empty (—), never filled from the model", await browser.evaluate("[...document.querySelectorAll('[data-rank-code]')].every(row=>row.querySelector('[data-value=finalRank]').textContent==='—' && row.querySelector('[data-value=finalPredictedReturn]').textContent==='—')"));
-  check("rank page explains model-only state", (await text()).includes("모델 분석만 완료 · 뉴스 보정 최종 후보 미생성"));
+  check("rank page explains model-only state", (await text()).includes("모델 예측 결과입니다 · 뉴스 보정은 실행하지 않았습니다."));
   await audit("rank-model-only"); await screenshot("rank-1440-dark.png", 1440);
 
   // Watchlist: saved codes get raw model values, membership unknown.
