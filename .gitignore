@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 .claude/settings.local.json
+# 로컬 전용 스킬 (저장소에 올리지 않음)
+.claude/skills/
+.agents/skills/
 kis_token_cache.json
 
 # 파이썬 캐시
