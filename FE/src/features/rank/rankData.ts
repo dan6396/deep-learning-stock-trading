@@ -24,10 +24,11 @@ export function rankRows(rows: CandidateData[], candidates: CandidateData[], con
       if (!matchStock(row, query)) return false;
       if (filter === "all") return true;
       if (filter === "candidate") return confirmed && members.has(row.code);
-      if (filter === "missing") return row.predictedReturn === null;
+      if (filter === "missing") return row.scoreKind === "rank_zscore" ? row.rankScore == null : row.predictedReturn === null;
+      if (row.scoreKind === "rank_zscore") return filter === "positive" && candidateSignals(row).model.state === "positive";
       return row.predictedReturn !== null && (filter === "positive" ? row.predictedReturn > 0 : row.predictedReturn <= 0);
     })
-    .sort((left, right) => compareNullable(left[sort], right[sort], descending) || left.code.localeCompare(right.code));
+    .sort((left, right) => compareNullable(sort === "predictedReturn" && left.scoreKind === "rank_zscore" ? left.rankScore : left[sort], sort === "predictedReturn" && right.scoreKind === "rank_zscore" ? right.rankScore : right[sort], descending) || left.code.localeCompare(right.code));
 }
 export function rankSignals(row: CandidateData, membership: CandidateMembership, production: CandidateProduction = "produced") {
   const signals = candidateSignals({ ...row, isFinalCandidate: membership === "candidate" });

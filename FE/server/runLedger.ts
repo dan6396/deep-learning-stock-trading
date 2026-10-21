@@ -68,13 +68,17 @@ export function freezePredictions(rankCsv: string, selectionCsv: string, mode: R
   const rows: FrozenPrediction[] = [], codes = new Set<string>();
   for (const row of parseCsv(rankCsv)) {
     if (row.prediction_status !== "ok") continue;
-    const prediction = number(row.ensemble_pred_return), rank = number(row.pred_rank);
+    const rankModel = row.score_kind === "rank_zscore";
+    const prediction = number(rankModel ? row.rank_score : row.ensemble_pred_return), rank = number(row.pred_rank);
     if (!/^\d{6}$/.test(row.ticker) || !validDate(row.prediction_base_date) || row.prediction_target !== "next_session_open_to_close" || prediction === null || rank === null || !Number.isInteger(rank) || rank < 1 || codes.has(row.ticker)) throw new Error("Invalid prediction snapshot.");
     codes.add(row.ticker);
+    if (rankModel && mode === "full") throw new Error("Return news correction cannot be used with rank scores.");
     const final = selected.get(row.ticker), finalPrediction = mode === "full" && final ? number(final.final_pred_return) : prediction;
     if (final && (final.prediction_base_date !== row.prediction_base_date || finalPrediction === null)) throw new Error("Selected prediction is inconsistent.");
-    rows.push({ code: row.ticker, name: row.company_name || row.ticker, baseDate: row.prediction_base_date, prediction: finalPrediction!, rank, selected: !!final });
+    if (rankModel && (!row.model_id || number(row.ensemble_pred_return) !== null || (final && (final.score_kind !== row.score_kind || final.model_id !== row.model_id || number(final.rank_score) !== prediction || number(final.pred_rank) !== rank)))) throw new Error("Selected rank score is inconsistent.");
+    rows.push({ ...(rankModel ? { scoreKind: "rank_zscore", modelId: row.model_id } : {}), code: row.ticker, name: row.company_name || row.ticker, baseDate: row.prediction_base_date, prediction: finalPrediction!, rank, selected: !!final });
   }
+  if (new Set(rows.map(row => `${row.scoreKind ?? "return"}:${row.modelId ?? "legacy"}`)).size > 1) throw new Error("Mixed model snapshots are not allowed.");
   if (!rows.length || new Set(rows.map(row => row.baseDate)).size !== 1 || selection.some(row => !codes.has(row.ticker))) throw new Error("A single verified prediction base date is required.");
   return rows.sort((a, b) => a.rank - b.rank);
 }

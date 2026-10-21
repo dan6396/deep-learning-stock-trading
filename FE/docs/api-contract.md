@@ -1,3 +1,13 @@
+# 2026-10-21 기본 모델 계약 변경
+
+기본 모델은 `plain_20_120_rank_mean_v1`입니다. 새 CSV/API는 `score_kind=rank_zscore`, 유한한 `rank_score`와 기존 `pred_rank`/`pred_pool_size`/`prediction_base_date`를 제공합니다. `ensemble_pred_return`는 비우며 상승확률을 제공하지 않습니다. `prediction_target=next_session_open_to_close`는 순위를 학습한 정답의 대상이지 출력 단위가 수익률이라는 뜻이 아닙니다.
+
+프런트엔드는 점수를 소수로 표시하고 `%`와 상승·하락 방향 판정을 적용하지 않습니다. 성과 원장의 `prediction`은 `scoreKind`와 함께 해석해야 합니다. 새 성과 응답의 `predictedReturn`/방향 `hitRate`는 null이고 `rankScore`를 별도로 제공합니다. 실제 가격 기반 `actualReturn`는 유지합니다. 기존 수익률 모델 기록은 기존 방식으로 읽습니다. 모델 유형이 섞인 파일·원장·뉴스 보정은 허용하지 않습니다.
+
+아래 문서의 수익률·뉴스 보정 설명은 기존 모델 호환 경로에 해당합니다. 현재 계약과 실행법은 [루트 README](../../README.md)를 우선합니다.
+
+---
+
 # Frontend API Contract
 
 현재 새 화면은 `src/shared/api/`에서 same-origin `/api/*`를 호출한다. 개발 서버의 `server/routes.ts`와 배포용 `api/` 진입점이 공통 핸들러를 사용한다. `VITE_API_BASE_URL` 공란은 mock 사용이 아닌 same-origin 호출이다. `npm run preview`는 정적 번들만 제공하고 개발 API 미들웨어는 제공하지 않는다.

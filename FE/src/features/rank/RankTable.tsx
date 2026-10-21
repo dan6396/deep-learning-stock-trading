@@ -56,7 +56,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
         return <tr key={row.code} data-rank-code={row.code} data-membership={membership}>
           <td><div className="rank-stock"><WatchToggle code={row.code} name={row.name} /><Link to={paths.stock(row.code)}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link></div>
             {(!modelOnly || analysisState !== "confirmed" || missing) && <small className="rank-row-note">{analysisState === "pending" ? "분석 조회 중" : analysisState === "unknown" ? "분석 조회 실패 · 미확인" : analysisState === "previous" ? missing ? "이전 조회 결과 · 현재 분석 여부 미확인" : "이전 조회 결과" : missing ? "분석 미제공" : membership === "candidate" ? "최종 후보" : membership === "nonCandidate" ? "최종 후보 외 종목" : membership === "pending" ? "최종 후보 확인 중" : "최종 후보 미확인"}</small>}</td>
-          <td data-value="predictedReturn"><PredictionDirection value={row.predictedReturn} /></td>
+          <td data-value="predictedReturn"><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></td>
           <td data-value="rank">{formatNumber(row.rank)}</td>
           {showFinal && <><td data-value="finalRank">{formatNumber(row.finalRank)}</td>
           <td data-value="finalPredictedReturn"><PredictionDirection value={row.finalPredictedReturn} /></td></>}

@@ -1,0 +1,13 @@
+{
+  "description": "Three full date cross-sections exported from frozen plain_transformer_final_20261020 development predictions. Expected values predate service integration; raw outputs from original 6 checkpoints. Not a new performance test. Inputs are unscaled frozen features, without outcomes.",
+  "dates": [
+    "2024-12-30",
+    "2025-11-17",
+    "2026-09-29"
+  ],
+  "fixtures": {
+    "day_0.npz": "ac8aae3938be22644e1d1b1d8d30b1490c30aab454937ded1f4aef37f1a8f1dd",
+    "day_212.npz": "e0a136d5ce85230d3e442fb0c20461eca9942c77aea37fa9436c96cad79b8d99",
+    "day_423.npz": "5be3c3bd72d8c957055a04b3f440382553c117e514770910d13e8f73d3c8db73"
+  }
+}

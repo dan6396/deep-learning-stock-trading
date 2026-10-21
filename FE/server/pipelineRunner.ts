@@ -118,10 +118,10 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
       const ohlcvProgress = 26 + Math.min(18, Math.round((current / total) * 18));
       advance(2, ohlcvProgress, `KOSPI200 OHLCV를 수집하는 중입니다. (${current}/${total})`);
     }
-  } else if (log.includes("[Huber 앙상블 예측]")) {
+  } else if ((log.includes("[Huber 앙상블 예측]") || log.includes("[Transformer 앙상블 예측]"))) {
     advance(2, 46, "앙상블 배치 추론을 실행하는 중입니다.");
-  } else if (log.includes("예측수익률 예측 성공")) {
-    const countMatch = log.match(/예측수익률 예측 성공:\s*([0-9]+)\/([0-9]+)개/);
+  } else if ((log.includes("예측수익률 예측 성공") || log.includes("모델 점수 예측 성공"))) {
+    const countMatch = log.match(/(?:예측수익률|모델 점수) 예측 성공:\s*([0-9]+)\/([0-9]+)개/);
     advance(
       2,
       50,
@@ -247,7 +247,7 @@ function resolvePipelineInputs(root: string, env: Record<string, string | undefi
   return {
     mainModulePath: resolve(env.PIPELINE_MAIN_MODULE ?? join(root, "main.py")),
     predictModulePath: resolve(env.PIPELINE_PREDICT_MODULE ?? join(root, "predict.py")),
-    modelManifestPath: resolve(env.PIPELINE_MODEL_MANIFEST ?? join(root, "models", "huber_ensemble", "manifest.json")),
+    modelManifestPath: resolve(env.PIPELINE_MODEL_MANIFEST ?? join(root, "models", "final_rank_ensemble", "manifest.json")),
   };
 }
 

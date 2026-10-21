@@ -1,9 +1,9 @@
 import type { CandidateData, NewsTally } from "./candidate";
 import { isNewsCollectionSuccess, isNewsEvidenceStatus } from "../types/newsCollection";
 
-export const SIGNAL_RULE_VERSION = "m1-2026-10-08-v2";
+export const SIGNAL_RULE_VERSION = "m2-2026-10-21-rank";
 export const SIGNAL_DESCRIPTIONS = {
-  model: "원본 예측값이 있는 최종 후보는 긍정. 전체 순위는 예측수익률 0 이하이면 부정, 상위 5%이면서 양수이면 긍정, 나머지는 중립입니다.",
+  model: "새 순위 모델: 상위 5%는 상대 선호, 나머지는 중립이며 상승·하락 판정이 아닙니다. 과거 수익률 모델: 원본 예측값이 있는 최종 후보는 긍정. 전체 순위는 예측수익률 0 이하이면 부정, 상위 5%이면서 양수이면 긍정, 나머지는 중립입니다.",
   news: "LLM 기사별 판정 또는 명시 집계의 긍정·부정 건수를 비교합니다. 실제 수집 결과 0건은 중립이며 미수집·키워드 추정은 판정 불가입니다.",
   supply: "외국인·기관 합계 금액과 합산 순매수 일수/기간을 함께 봅니다. 개별 양수일수만으로 합산 순매수 일수를 계산하지 않습니다.",
   agreement: "긍정 신호 수 / 평가 가능한 신호 수. 판정 불가는 분모에서 제외하고, 모두 판정 불가이면 —로 표시합니다.",
@@ -16,6 +16,13 @@ const valid = (value: number | null): value is number => value !== null && Numbe
 const integer = (value: number | null): value is number => valid(value) && Number.isInteger(value) && value >= 0;
 
 export function modelSignal(candidate: CandidateData): Signal {
+  if (candidate.scoreKind === "rank_zscore") {
+    if (candidate.predictionTarget !== "next_session_open_to_close") return signal("unavailable", "순위 점수의 대상 기간 미확인");
+    if (!valid(candidate.rankScore ?? null) || !integer(candidate.rank) || !integer(candidate.poolSize) || candidate.rank < 1 || candidate.poolSize < candidate.rank) return signal("unavailable", "유효한 순위 점수와 비교 종목 수가 필요합니다.");
+    return candidate.rank / candidate.poolSize <= 0.05
+      ? signal("positive", "비교 종목 중 상위 5%입니다. 상승이나 양의 수익률을 뜻하지 않습니다.")
+      : signal("neutral", "상대 순위 상위 5% 밖입니다. 하락 예측이 아닙니다.");
+  }
   const prediction = candidate.predictedReturn;
   if (!valid(prediction)) return signal("unavailable", "원본 모델 예측값이 없습니다.");
   if (candidate.predictionTarget !== "next_session_open_to_close") return signal("unavailable", "예측수익률의 대상 기간이 확인되지 않습니다.");

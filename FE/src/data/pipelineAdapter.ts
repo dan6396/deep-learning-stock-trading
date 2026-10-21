@@ -64,7 +64,9 @@ export function rowToCandidate(row: PipelineOutputRow): AiCandidate {
     poolSize: Math.round(num(input.pred_pool_size)) || 0,
     pUp,
     baseDate: String(input.prediction_base_date ?? input.transformer_base_date ?? input.lstm_base_date ?? ""),
-    ensemblePredReturn: input.prediction_target === "next_session_open_to_close" && input.ensemble_pred_return != null ? num(input.ensemble_pred_return) : null,
+    rankScore: input.score_kind === "rank_zscore" && input.rank_score != null ? num(input.rank_score) : null,
+    scoreKind: input.score_kind,
+    ensemblePredReturn: input.score_kind !== "rank_zscore" && input.prediction_target === "next_session_open_to_close" && input.ensemble_pred_return != null ? num(input.ensemble_pred_return) : null,
     finalPredReturn: eventPipeline ? num(input.final_pred_return) : undefined,
     newsAdjustment: eventPipeline ? num(input.news_adjustment) : undefined,
     newsApplied: eventPipeline ? input.news_applied === true : undefined,
@@ -124,7 +126,7 @@ export function overlayLiveAnalysis(base: MarketDashboardData, rows: PipelineOut
         sentimentLabel: result.label ?? stock.sentimentLabel,
         confidence: result.confidence || stock.confidence,
         upProbability: row.input_row?.p_up == null ? null : num(row.input_row.p_up),
-        predictedReturn: row.input_row?.prediction_target === "next_session_open_to_close" ? num(row.input_row.ensemble_pred_return) : null,
+        predictedReturn: row.input_row?.score_kind !== "rank_zscore" && row.input_row?.ensemble_pred_return != null && row.input_row?.prediction_target === "next_session_open_to_close" ? num(row.input_row.ensemble_pred_return) : null,
       };
     })
     .sort((a, b) => orderOf(a.code) - orderOf(b.code));

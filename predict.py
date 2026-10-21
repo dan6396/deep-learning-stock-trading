@@ -1,29 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-predict.py -- Default: frozen Huber regression ensemble; explicit .pt: legacy inference.
+"""Frozen 20/120-session relative ranking; explicit old manifests/.pt supported.
 
-Usage (CLI):
-    python predict.py --data shared_test_raw.parquet --ticker 005930 --as-of 2026-05-29
-
-Usage (Python):
-    from predict import predict_next_return, predict_multiple
-
-    # Single ticker
-    ret = predict_next_return("transformer_5y.pt", df_ohlcv)
-    # regression  -> float  (e.g. 0.012 = +1.2% expected return)
-    # classification -> float  (e.g. 0.621 = 62.1% probability of up)
-
-    # Multiple tickers, sorted by score desc (most bullish first)
-    ticker_dfs = {"005930": df_samsung, "000660": df_sk}
-    results = predict_multiple("transformer_5y.pt", ticker_dfs)
-    for t, score in results.items():
-        print(t, score)
-
-Input DataFrame requirements:
-    - Index: Date (datetime)
-    - Columns: Open, High, Low, Close, Volume (int)
-    - Minimum rows: 60+ recommended (prefer full available history to stabilize exponential indicators)
-    - Single-ticker data (Ticker column may be present; auto-dropped)
+Rank mode: predict_multiple(manifest, full_universe, market_frames=..., as_of=...).
+Requires both KPI200 and KOSPI context. No target inversion or percent output.
+Legacy predict_next_return remains available only for return/classification assets.
+See README.md for complete CLI examples and required input history.
 """
 
 import argparse
@@ -41,7 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from data import _compute_indicators, FEATURE_COLS, SEQ_LEN, FeatureScaler, N_FEATURES
 from model import StockTransformer
-from ensemble import DEFAULT_MANIFEST, HuberEnsemble
+from ensemble import HuberEnsemble
+from rank_ensemble import DEFAULT_MANIFEST, RankEnsemble, is_rank_manifest
 
 
 def _load_inference_bundle(
@@ -50,6 +32,8 @@ def _load_inference_bundle(
 ) -> dict[str, Any]:
     """Load checkpoint/model/scaler once for one inference batch."""
     device = torch.device(device_str)
+    if is_rank_manifest(ckpt_path):
+        return {"device": device, "rank_ensemble": RankEnsemble(ckpt_path, device_str), "task": "rank"}
     if Path(ckpt_path).suffix.lower() == ".json":
         return {"device": device, "ensemble": HuberEnsemble(ckpt_path, device_str), "task": "regression"}
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
@@ -124,6 +108,8 @@ def predict_next_return(
 def _predict_with_bundle(bundle: dict[str, Any], df_ohlcv: pd.DataFrame) -> float:
     """Run inference using an already-loaded model bundle."""
     device = bundle["device"]
+    if "rank_ensemble" in bundle:
+        raise ValueError("Rank scores require predict_multiple with the complete universe and market_frames")
     if "ensemble" in bundle:
         return float(bundle["ensemble"].predict_windows(_build_window(df_ohlcv)[None])[0])
     model = bundle["model"]
@@ -147,11 +133,12 @@ def predict_multiple(
     ticker_dfs: dict,
     device_str: str = "cpu",
     return_errors: bool = False,
+    *, market_frames: dict | None = None, as_of=None,
 ) -> dict | tuple[dict, dict]:
     """
     Load the checkpoint once, then run inference for each ticker.
 
-    Returns dict sorted by score descending (most bullish first).
+    Returns dict sorted by score descending (relative preference for rank models).
     For regression: score = predicted return.
     For classification: score = P(up).
 
@@ -161,6 +148,11 @@ def predict_multiple(
     results = {}
     errors = {}
     bundle = _load_inference_bundle(ckpt_path, device_str)
+    if "rank_ensemble" in bundle:
+        if as_of is None:
+            raise ValueError("Explicit completed-session as_of is required for rank inference")
+        results, errors = bundle["rank_ensemble"].predict(ticker_dfs, market_frames, as_of)
+        return (results, errors) if return_errors else results
     if "ensemble" in bundle:
         windows, valid_tickers = [], []
         for ticker, df in ticker_dfs.items():
@@ -203,7 +195,9 @@ def predict_multiple(
 # ---------------------------------------------------------------------------
 
 def main():
-    p = argparse.ArgumentParser(description="Frozen Huber ensemble: next-session open-to-close return")
+    p = argparse.ArgumentParser(description="Frozen 20/120-session Transformer relative ranking")
+    p.add_argument("--kpi200", help="KOSPI200 index OHLCV parquet, required for rank model")
+    p.add_argument("--kospi", help="KOSPI index OHLCV parquet, required for rank model")
     p.add_argument("--ckpt", default=str(DEFAULT_MANIFEST))
     p.add_argument("--data",   required=True)
     p.add_argument("--ticker", default=None)
@@ -216,6 +210,17 @@ def main():
         df = df.set_index("Date")
     if args.as_of:
         df = df.loc[df.index <= pd.Timestamp(args.as_of)]
+    if is_rank_manifest(args.ckpt):
+        if not (args.as_of and args.kpi200 and args.kospi and "Ticker" in df):
+            p.error("Rank inference requires --as-of, --kpi200, --kospi and multi-ticker OHLCV")
+        frames = {str(t).zfill(6): g for t, g in df.groupby("Ticker")}
+        scores, errors = predict_multiple(args.ckpt, frames, args.device, True,
+            market_frames={"KPI200": pd.read_parquet(args.kpi200), "KOSPI": pd.read_parquet(args.kospi)}, as_of=args.as_of)
+        for ticker, score in scores.items():
+            if args.ticker is None or ticker == args.ticker:
+                print(f"{ticker}: rank_score={score:.6f} {errors.get(ticker, '')}")
+        print("Relative rank score within this universe; not a return or probability.")
+        return
     if "Ticker" in df.columns:
         tickers = df["Ticker"].unique()
         ticker  = args.ticker if args.ticker else tickers[0]
