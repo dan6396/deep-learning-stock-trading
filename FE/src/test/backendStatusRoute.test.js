@@ -44,9 +44,9 @@ describe("GET /api/backend/status is read-only and leak-free", () => {
   });
   it("reports configuration absence as not configured, never as verified", async () => {
     const body = JSON.parse((await call({})).text);
-    expect(body).toMatchObject({ market: { configuration: "not_configured", verification: "unverified" }, news: { configuration: "not_configured", collectionConfiguration: "not_configured" }, analysisMode: "full" });
+    expect(body).toMatchObject({ market: { configuration: "not_configured", verification: "unverified" }, news: { configuration: "not_configured", collectionConfiguration: "not_configured" }, analysisMode: "model_only" });
   });
-  it.each([["model_only", "model_only"], ["full", "full"], [undefined, "full"], ["", "full"], ["MODEL_ONLY", "unknown"], ["model-only", "unknown"], ["typo", "unknown"]])("reports analysis mode %j as %s", async (mode, expected) => {
+  it.each([["model_only", "model_only"], ["full", "full"], [undefined, "model_only"], ["", "model_only"], ["MODEL_ONLY", "unknown"], ["model-only", "unknown"], ["typo", "unknown"]])("reports analysis mode %j as %s", async (mode, expected) => {
     const body = JSON.parse((await call(mode === undefined ? {} : { PIPELINE_ANALYSIS_MODE: mode })).text);
     expect(body.analysisMode).toBe(expected);
   });

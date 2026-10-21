@@ -9,6 +9,10 @@ const empty = { state: "empty", count: 0, source: "cache", asOf: null };
 const deps = () => ({ runtime: vi.fn(() => ({ status: "idle" })), availability: vi.fn(async () => ({ candidates: empty, rank: empty })) });
 beforeEach(() => { disk.marker = { status: "completed", startedAt: 1791350000000, finishedAt: 1791350001000 }; disk.error = null; });
 describe("read-only public backend status", () => {
+  it.each([[undefined, "model_only"], ["", "model_only"], ["model_only", "model_only"], ["full", "full"], ["typo", "unknown"]])("reports configured mode %j as %s", async (mode, expected) => {
+    const env = mode === undefined ? {} : { PIPELINE_ANALYSIS_MODE: mode };
+    expect((await getBackendStatus(env, deps())).analysisMode).toBe(expected);
+  });
   it.each([
     [{}, "not_configured"], [{ KIS_MOCK_APP_KEY: "fixture-key" }, "not_configured"],
     [{ KIS_MOCK_APP_SECRET: "fixture-secret" }, "not_configured"],

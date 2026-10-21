@@ -38,6 +38,23 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(mock.spawned[0].args).not.toContain("--run-news");
     expect(collectTopFiveArticles).toHaveBeenCalledOnce();
   });
+  it.each(["model_only", "full"])("passes the custom output environment to every %s marker write", async mode => {
+    const env = { PIPELINE_ANALYSIS_MODE: mode, PIPELINE_OUTPUT_DIR: "fixture-custom-output" };
+    await runCandidateAnalysis(env);
+    expect(writePipelineRunMarker.mock.calls[0][0]).toMatchObject({ status: "running", runId: expect.any(String), kind: "adhoc" });
+    for (const [marker, markerEnv] of writePipelineRunMarker.mock.calls) {
+      expect(markerEnv).toBe(env);
+      expect(marker.runId).toBe(writePipelineRunMarker.mock.calls[0][0].runId);
+    }
+    expect(writePipelineRunMarker.mock.calls.at(-1)[0].status).toBe("completed");
+  });
+  it("keeps running and failed markers in the custom output environment", async () => {
+    const env = { PIPELINE_ANALYSIS_MODE: "model_only", PIPELINE_OUTPUT_DIR: "fixture-custom-output" };
+    mock.validationError = true;
+    await expect(runCandidateAnalysis(env)).rejects.toThrow("Invalid model");
+    expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "failed"]);
+    for (const [, markerEnv] of writePipelineRunMarker.mock.calls) expect(markerEnv).toBe(env);
+  });
   it("keeps full mode flag, credentials, step3 validation and dashboard behavior", async () => {
     const result = await runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "full", GEMINI_API_KEY: "fixture-full" });
     expect(mock.spawned[0].args).toContain("--run-news"); expect(mock.spawned[0].options.env.GEMINI_API_KEY).toBe("fixture-full");

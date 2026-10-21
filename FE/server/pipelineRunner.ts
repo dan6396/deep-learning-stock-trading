@@ -421,7 +421,7 @@ function runKind(env: Record<string, string | undefined>): RunKind {
 }
 async function executeCandidatePipeline(env: Record<string, string | undefined>, startedAt: number, identity: { runId: string; kind: RunKind }): Promise<CandidateAnalysisRunResult> {
   const mode = analysisMode(env), modelOnly = mode === "model_only";
-  const marker = (value: Parameters<typeof writePipelineRunMarker>[0]) => writePipelineRunMarker({ ...value, ...identity });
+  const marker = (value: Parameters<typeof writePipelineRunMarker>[0]) => writePipelineRunMarker({ ...value, ...identity }, env);
   const root = projectRoot(env);
   const scriptPath = join(root, "integrated_pipeline.py");
   const outputDir = pipelineOutputDir(env);
