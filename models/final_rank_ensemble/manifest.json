@@ -1,0 +1,129 @@
+{
+  "format": "plain-transformer-rank-ensemble-v1",
+  "model_id": "plain_20_120_rank_mean_v1",
+  "score_kind": "rank_zscore",
+  "prediction_target": "next_session_open_to_close",
+  "lookbacks": [
+    20,
+    120
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "weights": [
+    0.5,
+    0.5
+  ],
+  "history_start": "2019-06-03",
+  "minimum_universe": 30,
+  "features": [
+    "f_open",
+    "f_high",
+    "f_low",
+    "f_close",
+    "f_volume",
+    "f_rsi",
+    "f_macd",
+    "f_macd_signal",
+    "f_pct_b",
+    "f_norm_bw",
+    "f_rel_bw"
+  ],
+  "market_features": [
+    "KPI200_r1",
+    "KPI200_r5",
+    "KPI200_r20",
+    "KPI200_vol20",
+    "KPI200_vrel20",
+    "KOSPI_r1",
+    "KOSPI_r5",
+    "KOSPI_r20",
+    "KOSPI_vol20",
+    "KOSPI_vrel20"
+  ],
+  "models": [
+    {
+      "file": "temporal20_rank_s42_best.pt",
+      "sha256": "a6680de05c8c51f2d516d10d63b884109500e16713886109c05386162907146a",
+      "lookback": 20,
+      "seed": 42,
+      "source_sha256": "d4013bd389db9a338487612177084234126d36020e14b5a7d94fa2fea9aaf72c"
+    },
+    {
+      "file": "temporal20_rank_s43_best.pt",
+      "sha256": "089b0172e417f765f2e5667b2e492a22d6bfbc226ec365e757c36c69c0146f1d",
+      "lookback": 20,
+      "seed": 43,
+      "source_sha256": "6c88a8a8e329ee1b2cbafce67da798ba9fc30b2234bbc66a84faca6962df95c1"
+    },
+    {
+      "file": "temporal20_rank_s44_best.pt",
+      "sha256": "7f89e2b0ac2a3b49f8670ca854354d410e5fb4b02f316b7bd03e77fb6370296b",
+      "lookback": 20,
+      "seed": 44,
+      "source_sha256": "b48faf16bc480ce0fea9a7a8c03db777e723b76217b93c5c582d3c1687e41c56"
+    },
+    {
+      "file": "temporal120_rank_s42_best.pt",
+      "sha256": "8c14e37a4bdb79131712520c8f2008d7830a6ab461c88ef2e4b746ed3569d84f",
+      "lookback": 120,
+      "seed": 42,
+      "source_sha256": "ee79c5ab8a6a45a753de7266a26fb9783325f4fd6a24dcb1de3e9f513c498294"
+    },
+    {
+      "file": "temporal120_rank_s43_best.pt",
+      "sha256": "691a9f167aa3517055d12cd075084b912cf6b6b48960b0471e21500d1f09519c",
+      "lookback": 120,
+      "seed": 43,
+      "source_sha256": "1a56be336080945dcf224aef67b837dcb32bf4f5f82909c88a7c97847bbf488a"
+    },
+    {
+      "file": "temporal120_rank_s44_best.pt",
+      "sha256": "e3a3040445b891e62fc6533704c747bfd79426ccdff56e79180c01963bc70514",
+      "lookback": 120,
+      "seed": 44,
+      "source_sha256": "568afe5c14971687d6a7b17f1d3e551e20059aa0058b0f7ed20d035d617460ed"
+    }
+  ],
+  "scaler": {
+    "file": "scaler.npz",
+    "sha256": "8932dcdb274c4f4553162cb507b875a23f531e93a62f5051d1cb6c4baeebe094"
+  },
+  "source_bundle_sha256": "5ac48587e30e1a1e6adaecd62dc588bc8aba3fcd3f02e74d9be7762ac56e951c",
+  "aggregation": "Within each session: average-tie ranks -> population z-score for each seed -> mean 3 seeds per lookback -> 50:50 mean. Not predicted returns or up probabilities.",
+  "training_splits": {
+    "train": {
+      "rows": 212026,
+      "days": 1174,
+      "first_signal": "2019-12-20",
+      "last_signal": "2024-09-26",
+      "first_outcome": "2019-12-23",
+      "last_outcome": "2024-09-27"
+    },
+    "validation": {
+      "rows": 11552,
+      "days": 60,
+      "first_signal": "2024-09-30",
+      "last_signal": "2024-12-26",
+      "first_outcome": "2024-10-02",
+      "last_outcome": "2024-12-27"
+    },
+    "prediction": {
+      "rows": 83675,
+      "days": 424,
+      "first_signal": "2024-12-30",
+      "last_signal": "2026-09-29",
+      "first_outcome": "2025-01-02",
+      "last_outcome": "2026-09-30"
+    }
+  },
+  "training_recipe": "Unchanged original fit_expert:AdamW lr.0001 wd.01,Huber+.1pairwise;max30,min10,patience6,validation IC. No new hyperparameter/loss/K search",
+  "limitations": [
+    "2025/2026 already observed development,not independent finaltest",
+    "RemoveTCN by userdecision,not by picking newdevelopment winner",
+    "No pureTransformer rolling OOF/gate study;only missing final120day fits",
+    "Historical constituent proxy,adjusted snapshot,cost/market impact absent"
+  ]
+}

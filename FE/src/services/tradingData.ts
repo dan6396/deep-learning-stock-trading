@@ -29,6 +29,7 @@ function upProbability(row: PipelineOutputRow): number | null {
 }
 
 function modelScore(row: PipelineOutputRow): number | null {
+  if (row.input_row.score_kind === "rank_zscore") return null;
   const pUp = upProbability(row);
   if (pUp !== null) {
     return null;

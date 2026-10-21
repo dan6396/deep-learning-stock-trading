@@ -23,6 +23,8 @@ export type PipelineInputRow = {
   lstm_status?: string;
   lstm_pred_return?: number;
   ensemble_pred_return?: number;
+  rank_score?: number;
+  score_kind?: string;
   lstm_base_date?: string;
   p_up?: number; // Legacy classification output only.
   prediction_base_date?: string;

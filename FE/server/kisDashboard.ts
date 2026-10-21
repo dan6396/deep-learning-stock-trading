@@ -607,6 +607,7 @@ function upProbabilityFromRow(aiRow: PipelineOutputRow | undefined): number | nu
 }
 
 function modelScoreFromRow(aiRow: PipelineOutputRow | undefined): number | null {
+  if (aiRow?.input_row?.score_kind === "rank_zscore") return null;
   const pUp = upProbabilityFromRow(aiRow);
   if (pUp !== null) {
     return null;

@@ -1,28 +1,9 @@
-"""
-integrated_pipeline.py
-======================
-기본 실행 흐름:
-  1) main.py      -> KOSPI200 전체 후보 수집
-  2) Huber 앙상블  -> 다음 거래일 시가→종가 수익률 예측
-                  -> KOSPI200 전체 예측수익률 랭킹
-                  -> Huber 앙상블 Top10에 최근 N거래일 외국인/기관 수급 데이터 첨부
-                  -> 최종 Top10 + Huber 앙상블 순위/수급 CSV 저장
-  3) 종료
+"""KOSPI200 -> frozen 20/120-session relative ranking -> Top5 and supply context.
 
-필요 환경변수 (.env 또는 shell export):
-  APP_KEY, APP_SECRET          KIS 모의투자 API 키
-
-필요 파일 (동일 폴더):
-  models/huber_ensemble/manifest.json   학습된 Huber 앙상블 체크포인트 (세 seed, Huber 회귀)
-  ensemble.py         Conv 없는 Transformer 3개와 회귀 앙상블 로더
-  data.py             _compute_indicators / FEATURE_COLS / SEQ_LEN / FeatureScaler / N_FEATURES
-  predict.py          predict_multiple(ckpt_path, ticker_dfs) 추론 코드
-  pykrx               raw OHLCV 조회용
-
-실행 예시:
-  python integrated_pipeline.py
-  python integrated_pipeline.py --candidate-pool 200 --final-max 10
-  python integrated_pipeline.py --supply-window 5 --supply-min-positive-days 3
+Default assets: models/final_rank_ensemble/manifest.json.
+The six networks output cross-sectional rank scores, never percentages.
+Live histories start at the research indicator anchor (2019-06-03).
+Legacy return inference is supported by explicitly choosing the old manifest.
 """
 
 from __future__ import annotations
@@ -52,7 +33,7 @@ except Exception:
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_MAIN_MODULE       = BASE_DIR / "main.py"
-DEFAULT_MODEL_MANIFEST  = BASE_DIR / "models/huber_ensemble/manifest.json"
+DEFAULT_MODEL_MANIFEST  = BASE_DIR / "models/final_rank_ensemble/manifest.json"
 DEFAULT_PREDICT_MODULE    = BASE_DIR / "predict.py"
 DEFAULT_OUTPUT_DIR        = BASE_DIR / "outputs"
 MIN_OHLCV_ROWS            = 60
@@ -92,7 +73,7 @@ def step1_load_kospi200_pool(main_module_path: Path, pool_n: int) -> pd.DataFram
     main.py 의 load_kospi200_pool() 만 호출해 KOSPI200 종목코드/종목명 후보 풀을 만든다.
 
     KIS 현재가 API 호출, 등락률 필터, 거래대금 정렬은 하지 않는다.
-    Huber 앙상블(STEP 2)가 이 후보 전체에 대해 예측수익률을 계산하고 전체 랭킹을 만든다.
+    Transformer 앙상블(STEP 2)가 이 후보 전체에 대해 모델 점수를 계산하고 전체 랭킹을 만든다.
     """
     print(f"\n{'='*60}")
     print(f"[STEP 1] KOSPI200 후보 풀 로드 (목표 {pool_n}개, 정렬/현재가 조회 없음)")
@@ -139,20 +120,9 @@ def step1_load_kospi200_pool(main_module_path: Path, pool_n: int) -> pd.DataFram
 
 
 # ──────────────────────────────────────────────
-# STEP 2 : Huber 앙상블 시가→종가 수익률 예측수익률 전체 랭킹 + Top10 수급 데이터 첨부
-# ──────────────────────────────────────────────
-#
-# 흐름:
-#   1) 후보 종목들의 raw OHLCV(pykrx)를 모아 ticker_dfs(dict) 구성
-#      - index: Date(datetime), columns: Open/High/Low/Close/Volume, 종목당 60행+
-#      - 지표는 Huber 앙상블 쪽 data.py 가 스스로 계산 (가공 parquet 불필요)
-#   2) predict_multiple(models/huber_ensemble/manifest.json, ticker_dfs) → 종목별 예측수익률
-#   3) KOSPI200 전체를 예측수익률 내림차순으로 랭킹
-#   4) Huber 앙상블 예측수익률 상위 Top10에 최근 N거래일 외국인/기관 수급 데이터 첨부
-#   5) Top10 CSV 저장용 데이터를 반환
-#
-# 누수 방지: 수급 조회 기준일 = 각 종목 OHLCV 의 마지막(가장 최근 완료된) 거래일.
-#            예측 시점에 실제 존재한 데이터만 사용하므로 미래 정보가 새지 않는다.
+# STEP 2: rank all common-date valid candidates, then attach supply context.
+# New rank models require both market indices and common 120-session validity.
+# Supply cannot change the model ranking and uses the signal date as cutoff.
 
 
 def _load_predict_module(predict_module_path: Path):
@@ -164,7 +134,7 @@ def _load_predict_module(predict_module_path: Path):
 
 def _fetch_raw_ohlcv(ticker: str, lookback_days: int, as_of=None) -> pd.DataFrame | None:
     """
-    pykrx 에서 단일 종목 raw OHLCV 를 받아 Huber 앙상블 입력 형식으로 반환.
+    pykrx 에서 단일 종목 raw OHLCV 를 받아 Transformer 앙상블 입력 형식으로 반환.
       - index: DatetimeIndex(Date), columns: Open/High/Low/Close/Volume
       - 데이터 부족/실패 시 None
     as_of(기준일) 이후 데이터는 받지 않는다(미래 정보 차단). 기본은 오늘(KST).
@@ -194,6 +164,29 @@ def _fetch_raw_ohlcv(ticker: str, lookback_days: int, as_of=None) -> pd.DataFram
     df = df[df.index.date <= end]   # 기준일 이후 행 제거 (방어적 누수 차단)
     return df
 
+
+
+def _score_label(row):
+    if row.get("score_kind") == "rank_zscore":
+        return f"순위점수={float(row['rank_score']):.6f}"
+    return f"예측수익률={float(row['ensemble_pred_return'])*100:.2f}%"
+
+
+def _fetch_market_history():
+    """Completed daily index context only; no credential/account calls."""
+    from pykrx import stock
+    now = datetime.now(KST)
+    end = now.date() - (timedelta(days=1) if now.hour < 16 else timedelta())
+    frames = {}
+    for symbol, code in (("KPI200", "1028"), ("KOSPI", "1001")):
+        df = stock.get_index_ohlcv_by_date("20190603", end.strftime("%Y%m%d"), code)
+        if df is None or df.empty:
+            raise ValueError(f"No completed index history: {symbol}")
+        df = df.rename(columns={"종가": "Close", "거래량": "Volume"}).sort_index()
+        frames[symbol] = df.loc[df.index.date <= end, ["Close", "Volume"]]
+    if not frames["KPI200"].index.equals(frames["KOSPI"].index):
+        raise ValueError("Index calendars disagree; refusing a mixed-date ranking")
+    return frames
 
 def _date_yyyymmdd(value) -> str:
     if hasattr(value, "strftime"):
@@ -405,7 +398,7 @@ def _sort_rank_df(rank_df: pd.DataFrame) -> pd.DataFrame:
     status_order = {"ok": 0}
     df = rank_df.copy()
     df["_status_order"] = df["prediction_status"].map(status_order).fillna(1)
-    df["_ensemble_pred_return_sort"] = pd.to_numeric(df["ensemble_pred_return"], errors="coerce").fillna(float("-inf"))
+    df["_ensemble_pred_return_sort"] = pd.to_numeric(df["rank_score"] if "rank_score" in df else df["ensemble_pred_return"], errors="coerce").fillna(float("-inf"))
     df = df.sort_values(
         ["_status_order", "_ensemble_pred_return_sort", "ticker"],
         ascending=[True, False, True],
@@ -423,18 +416,25 @@ def step2_attach_ensemble(
     supply_min_positive_days: int = 3,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     print(f"\n{'='*60}")
-    print("[STEP 2] Huber 앙상블 예측수익률 전체 랭킹 + Top10 수급 데이터 첨부")
+    print("[STEP 2] Transformer 앙상블 모델 점수 전체 랭킹 + Top10 수급 데이터 첨부")
     print(f"  체크포인트 : {ckpt_path}")
     print(
-        f"  후보 {len(top_df)}개 전체 예측 → Huber 앙상블 Top{final_max} 수급 조회"
+        f"  후보 {len(top_df)}개 전체 예측 → Transformer 앙상블 Top{final_max} 수급 조회"
     )
     print(
         f"  수급 참고 기준: 최근 {supply_window}거래일, "
         f"외국인/기관 양수일 각각 {supply_min_positive_days}일 이상이면 supply_pass=True"
     )
 
-    from ensemble import HuberEnsemble
-    HuberEnsemble(ckpt_path)  # Fail before data/API calls if the frozen bundle is invalid.
+    from predict import _load_inference_bundle
+    bundle = _load_inference_bundle(str(ckpt_path))
+    rank_model = "rank_ensemble" in bundle
+    score_column = "rank_score" if rank_model else "ensemble_pred_return"
+    market_frames = _fetch_market_history() if rank_model else None
+    signal_date = min(df.index[-1] for df in market_frames.values()) if rank_model else None
+    if rank_model:
+        # Anchor exponential indicator history to the frozen research start.
+        ohlcv_lookback_days = (signal_date - pd.Timestamp("2019-06-03")).days
     predict_mod = _load_predict_module(predict_module_path)
 
     top_df = top_df.copy()
@@ -449,13 +449,17 @@ def step2_attach_ensemble(
     for position, (_, row) in enumerate(top_df.iterrows(), start=1):
         ticker = str(row["ticker"]).zfill(6)
         record = _base_step2_record(row)
+        if rank_model:
+            record.update(rank_score=float("nan"), score_kind="rank_zscore",
+                          model_id=bundle["rank_ensemble"].manifest["model_id"])
         records[ticker] = record
 
         if position == 1 or position % 10 == 0 or position == total_candidates:
             print(f"  [OHLCV 조회] {position}/{total_candidates} {ticker}", flush=True)
 
         try:
-            ohlcv = _fetch_raw_ohlcv(ticker, ohlcv_lookback_days)
+            ohlcv = (_fetch_raw_ohlcv(ticker, ohlcv_lookback_days, as_of=signal_date) if rank_model
+                     else _fetch_raw_ohlcv(ticker, ohlcv_lookback_days))
         except Exception as exc:
             record["prediction_status"] = "ohlcv_error"
             record["prediction_error"] = f"{type(exc).__name__}: {exc}"
@@ -482,7 +486,7 @@ def step2_attach_ensemble(
 
     # Rank only a common completed session; stale bars must not mix into today's ranking.
     if ticker_dfs:
-        latest = max(df.index[-1] for df in ticker_dfs.values())
+        latest = signal_date if rank_model else max(df.index[-1] for df in ticker_dfs.values())
         for ticker in list(ticker_dfs):
             df = ticker_dfs[ticker]
             if df.index[-1] != latest or df.iloc[-1]["Volume"] <= 0 or df.iloc[-1]["Open"] <= 0:
@@ -494,19 +498,22 @@ def step2_attach_ensemble(
     errors: dict[str, str] = {}
     if ticker_dfs:
         try:
-            print(f"  [Huber 앙상블 예측] 준비 종목 {len(ticker_dfs)}개 배치 추론 시작", flush=True)
+            print(f"  [Transformer 앙상블 예측] 준비 종목 {len(ticker_dfs)}개 배치 추론 시작", flush=True)
             predicted = predict_mod.predict_multiple(
                 str(ckpt_path),
                 ticker_dfs,
                 return_errors=True,
+                **({"market_frames": market_frames, "as_of": signal_date} if rank_model else {}),
             )
             scores, errors = predicted
         except TypeError:
+            if rank_model:
+                raise  # Never fall back to legacy inference for a rank bundle.
             scores = predict_mod.predict_multiple(str(ckpt_path), ticker_dfs)
             errors = {ticker: "" for ticker in ticker_dfs}
         except Exception as exc:
             message = f"{type(exc).__name__}: {exc}"
-            print(f"  [WARN] Huber 앙상블 배치 예측 실패: {message}")
+            print(f"  [WARN] Transformer 앙상블 배치 예측 실패: {message}")
             for ticker in ticker_dfs:
                 records[ticker]["prediction_status"] = "prediction_failed"
                 records[ticker]["prediction_error"] = message
@@ -518,7 +525,7 @@ def step2_attach_ensemble(
         score = scores.get(ticker, float("nan"))
         error = errors.get(ticker, "")
         if pd.notna(score) and np.isfinite(float(score)):
-            records[ticker]["ensemble_pred_return"] = float(score)
+            records[ticker][score_column] = float(score)
             records[ticker]["prediction_status"] = "ok"
             records[ticker]["prediction_error"] = ""
         else:
@@ -527,7 +534,7 @@ def step2_attach_ensemble(
 
     rank_df = pd.DataFrame(records.values())
     ok_mask = rank_df["prediction_status"].eq("ok")
-    ok_sorted = rank_df.loc[ok_mask].sort_values(["ensemble_pred_return", "ticker"], ascending=[False, True])
+    ok_sorted = rank_df.loc[ok_mask].sort_values([score_column, "ticker"], ascending=[False, True])
     pred_pool_size = len(ok_sorted)
     if pred_pool_size == 0:
         raise RuntimeError("No valid ensemble predictions; candidate output was not generated")
@@ -536,12 +543,12 @@ def step2_attach_ensemble(
     rank_df["pred_pool_size"] = pred_pool_size
     rank_df = _sort_rank_df(rank_df)
 
-    print(f"  예측수익률 예측 성공: {pred_pool_size}/{len(rank_df)}개")
+    print(f"  모델 점수 예측 성공: {pred_pool_size}/{len(rank_df)}개")
     for _, row in rank_df.head(10).iterrows():
         if row["prediction_status"] == "ok":
             print(
                 f"    #{int(row['pred_rank']):>3}/{pred_pool_size} "
-                f"{row['ticker']} {row['company_name']:12s} 예측수익률={row['ensemble_pred_return']*100:.2f}%"
+                f"{row['ticker']} {row['company_name']:12s} {_score_label(row)}"
             )
 
     supply_df = rank_df.copy()
@@ -568,7 +575,7 @@ def step2_attach_ensemble(
                     supply_df.at[idx, col] = value
 
     if token_manager is not None:
-        print(f"  Huber 앙상블 Top{len(supply_target_indices)} 수급 조회:")
+        print(f"  Transformer 앙상블 Top{len(supply_target_indices)} 수급 조회:")
         total_supply_targets = len(supply_target_indices)
         for supply_position, idx in enumerate(supply_target_indices, start=1):
             ticker = str(supply_df.at[idx, "ticker"]).zfill(6)
@@ -595,7 +602,7 @@ def step2_attach_ensemble(
             mark = "PASS" if trend["supply_pass"] else "drop"
             print(
                 f"    [{mark}] #{int(supply_df.at[idx, 'pred_rank']):>3}/{pred_pool_size} "
-                f"{ticker} 예측수익률={float(supply_df.at[idx, 'ensemble_pred_return'])*100:.2f}% "
+                f"{ticker} {_score_label(supply_df.loc[idx])} "
                 f"외국인합={trend['foreign_net_buy_sum']:,.0f} "
                 f"기관합={trend['inst_net_buy_sum']:,.0f} "
                 f"양수일={trend['foreign_positive_days']}/{trend['inst_positive_days']} "
@@ -609,12 +616,12 @@ def step2_attach_ensemble(
         .reset_index(drop=True)
     )
 
-    print(f"\n  Huber 앙상블 최종 Top{final_max}: {len(final_df)}개")
+    print(f"\n  Transformer 앙상블 최종 Top{final_max}: {len(final_df)}개")
     for _, row in final_df.iterrows():
         print(
             f"    #{int(row['pred_rank']):>3}/{pred_pool_size} "
             f"{row['ticker']} {row['company_name']:12s} "
-            f"예측수익률={row['ensemble_pred_return']*100:.2f}% supply_score={row['supply_score']:,.0f}"
+            f"{_score_label(row)} supply_score={row['supply_score']:,.0f}"
         )
 
     return rank_df.reset_index(drop=True), supply_df.reset_index(drop=True), final_df
@@ -627,6 +634,7 @@ def _build_top10_supply_csv(final_df: pd.DataFrame) -> pd.DataFrame:
         "pred_rank",
         "pred_pool_size",
         "ensemble_pred_return",
+        "rank_score", "score_kind", "model_id", "prediction_target",
         "prediction_base_date",
         "foreign_net_buy_sum",
         "inst_net_buy_sum",
@@ -762,8 +770,10 @@ def run_news_event_fusion(rank_df: pd.DataFrame, output_dir: Path,
 def run(args: argparse.Namespace) -> int:
     output_dir = Path(args.output_dir)
 
-    from ensemble import HuberEnsemble
-    HuberEnsemble(args.model_manifest)  # Validate assets before external requests.
+    from predict import _load_inference_bundle
+    bundle = _load_inference_bundle(args.model_manifest)
+    if "rank_ensemble" in bundle and args.run_news:
+        raise ValueError("The return-trained news correction cannot modify rank scores; use model-only mode")
 
     # ── STEP 1 : KOSPI200 후보 풀 로드 ──
     try:
@@ -777,7 +787,7 @@ def run(args: argparse.Namespace) -> int:
     top_df.to_csv(step1_csv, index=False, encoding="utf-8-sig")
     print(f"  저장: {step1_csv}")
 
-    # ── STEP 2 : Huber 앙상블 예측수익률 전체 랭킹 + Top10 수급 데이터 첨부 ──
+    # ── STEP 2 : Transformer 앙상블 모델 점수 전체 랭킹 + Top10 수급 데이터 첨부 ──
     try:
         all_rank_df, supply_checked_df, final_top10_df = step2_attach_ensemble(
             top_df,
@@ -814,7 +824,7 @@ def run(args: argparse.Namespace) -> int:
     print(f"\n{'='*60}")
     print("[ALL DONE] 전체 파이프라인 완료")
     print(f"  STEP 1 (후보 풀)      : {step1_csv}")
-    print(f"  STEP 2 (Huber 앙상블) : {step2_final_csv}")
+    print(f"  STEP 2 (Transformer 앙상블) : {step2_final_csv}")
     print(f"  STEP 2 (수급 정보)   : {step2_top10_supply_csv}")
     print(f"  STEP 3 (사건 근거)    : {output_dir / 'step3_final_news_event_analysis.json'}")
     return 0
@@ -826,20 +836,20 @@ def run(args: argparse.Namespace) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="KOSPI200 → Huber 전체 랭킹 → 본문 사건 추출 → 검증 게이트를 거친 Top-5"
+        description="KOSPI200 → 20일·120일 상대 순위 앙상블 → Top5와 수급 정보"
     )
     p.add_argument("--main-module",            default=str(DEFAULT_MAIN_MODULE),
                    help="main.py 경로 (기본: 같은 폴더의 main.py)")
     p.add_argument("--model-manifest", "--transformer-ckpt", dest="model_manifest", default=str(DEFAULT_MODEL_MANIFEST),
-                   help="확정된 회귀 앙상블 manifest.json 경로")
+                   help="확정된 20일·120일 순위 앙상블 manifest.json 경로")
     p.add_argument("--predict-module",         default=str(DEFAULT_PREDICT_MODULE),
                    help="predict.py 경로 (data.py/model.py 와 같은 폴더)")
     p.add_argument("--output-dir",             default=str(DEFAULT_OUTPUT_DIR),
                    help="결과 저장 폴더")
     p.add_argument("--candidate-pool",         type=int, default=200,
-                   help="Huber 앙상블 예측에 넣을 KOSPI200 후보 수 (기본 200)")
+                   help="Transformer 앙상블 예측에 넣을 KOSPI200 후보 수 (기본 200)")
     p.add_argument("--final-max",              type=int, default=5,
-                   help="Huber 앙상블 예측수익률 기준 최종 Top 개수 (기본 5)")
+                   help="Transformer 앙상블 모델 점수 기준 최종 Top 개수 (기본 5)")
     p.add_argument("--ohlcv-lookback-days",    type=int, default=200,
                    help="pykrx raw OHLCV 조회 기간(일). 지표 warmup+윈도우 확보용 (기본 200)")
     p.add_argument("--supply-window",          type=int, default=5,

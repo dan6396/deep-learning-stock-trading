@@ -181,6 +181,7 @@ function upProbabilityFromInput(input: PipelineInputRow | undefined): number | n
 }
 
 function modelScoreFromInput(input: PipelineInputRow | undefined): number | null {
+  if (input?.score_kind === "rank_zscore") return null;
   const pUp = upProbabilityFromInput(input);
   if (pUp !== null) {
     return null;
@@ -201,8 +202,9 @@ function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutpu
   }
 
   const companyName = stringValue(record.company_name ?? record["종목명"], ticker);
-  const pUp = toFiniteOrNull(record.p_up);
-  const predictedReturn = record.prediction_target === "next_session_open_to_close"
+  const pUp = record.score_kind === "rank_zscore" ? null : toFiniteOrNull(record.p_up);
+  const rankScore = record.score_kind === "rank_zscore" ? toFiniteOrNull(record.rank_score) : null;
+  const predictedReturn = record.score_kind !== "rank_zscore" && record.prediction_target === "next_session_open_to_close"
     ? toFiniteOrNull(record.ensemble_pred_return) : null;
   const predRank = toFiniteOrNull(record.pred_rank);
   const supplyPass = boolFromCsv(record.supply_pass);
@@ -210,7 +212,9 @@ function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutpu
   const supplyChecked = supplyStatus !== "" && supplyStatus !== "not_checked";
   const modelDirection = predictedReturn === null ? (pUp === null ? 0 : pUp - 0.5) : predictedReturn;
   const label = modelDirection > 0 ? "POSITIVE" : modelDirection < 0 ? "NEGATIVE" : "NEUTRAL";
-  const modelDescription = predictedReturn === null
+  const modelDescription = record.score_kind === "rank_zscore"
+    ? (rankScore === null ? "순위 점수 없음" : `20일·120일 앙상블 순위 점수 ${rankScore.toFixed(6)} (수익률·상승확률 아님)`)
+    : predictedReturn === null
     ? (pUp === null ? "예측값 없음" : `기존 모델 상승확률 ${(pUp * 100).toFixed(2)}%`)
     : `앙상블 다음 거래일 시가→종가 예측수익률 ${(predictedReturn * 100).toFixed(2)}%`;
   const pUpPercent = pUp === null ? null : Number((pUp * 100).toFixed(2));
@@ -232,7 +236,8 @@ function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutpu
     // CSV columns spread above arrive as strings; the detail page calls
     // `formatRate(...).toFixed` on these, so coerce to number | undefined.
     lstm_pred_return: toFiniteOrNull(record.lstm_pred_return) ?? undefined,
-    ensemble_pred_return: toFiniteOrNull(record.ensemble_pred_return) ?? undefined,
+    ensemble_pred_return: predictedReturn ?? undefined,
+    rank_score: rankScore ?? undefined,
   };
 
   return {
@@ -501,6 +506,7 @@ function toPipelineNews(value: unknown, evaluation: GeminiEvaluation = {}): Pipe
  * `hasLlmSentiment` keys on, so analyzed rows always get a non-zero floor.
  */
 function applyNewsToRow(row: PipelineOutputRow, entry: GeminiNewsEntry): PipelineOutputRow {
+  if (row.input_row.score_kind === "rank_zscore") return row; // Return-calibrated corrections are incompatible.
   const evaluation = entry.evaluation ?? {};
   const impact = toFiniteOrNull(evaluation.impact_score);
   const combinedScore = toFiniteOrNull(evaluation.final_combined_score);
@@ -577,6 +583,7 @@ function applyNewsToRow(row: PipelineOutputRow, entry: GeminiNewsEntry): Pipelin
 }
 
 function applyEventToRow(row: PipelineOutputRow, entry: EventEntry): PipelineOutputRow {
+  if (row.input_row.score_kind === "rank_zscore") return row;
   const finalScore = toFiniteOrNull(entry.final_score);
   const newsDelta = toFiniteOrNull(entry.news_delta);
   const rank = toFiniteOrNull(entry.final_rank);
@@ -762,11 +769,13 @@ async function loadModelOnlySupply(marker: PipelineRunMarker): Promise<Map<strin
 function applyModelSupply(row: PipelineOutputRow, record: Record<string, string> | undefined): PipelineOutputRow {
   if (!record) return row;
   const input = row.input_row, ticker = tickerFromRow(row);
-  const rank = toFiniteOrNull(input.pred_rank), prediction = toFiniteOrNull(input.ensemble_pred_return);
+  const rankModel = input.score_kind === "rank_zscore";
+  if (rankModel && (record.score_kind !== input.score_kind || record.model_id !== input.model_id)) return row;
+  const rank = toFiniteOrNull(input.pred_rank), prediction = toFiniteOrNull(rankModel ? input.rank_score : input.ensemble_pred_return);
   const baseDate = isoDate(record.prediction_base_date);
   if (record.ticker !== ticker || record.prediction_status !== "ok" || record.prediction_target !== MODEL_TARGET || input.prediction_target !== MODEL_TARGET ||
     baseDate === null || baseDate !== input.prediction_base_date || rank === null || positiveInteger(record.pred_rank) !== rank ||
-    prediction === null || toFiniteOrNull(record.ensemble_pred_return) !== prediction) return row;
+    prediction === null || toFiniteOrNull(rankModel ? record.rank_score : record.ensemble_pred_return) !== prediction) return row;
   const status = record.supply_status, window = positiveInteger(record.supply_window), dataDays = positiveInteger(record.supply_data_days);
   const foreignNet = toFiniteOrNull(record.foreign_net_buy_sum), institutionNet = toFiniteOrNull(record.inst_net_buy_sum);
   const foreignDays = nonNegativeInteger(record.foreign_positive_days), institutionDays = nonNegativeInteger(record.inst_positive_days);
@@ -875,8 +884,8 @@ export async function getCandidatesPayload(): Promise<PipelineOutputRow[]> {
   const events = await loadEventResult();
   if (events) {
     return [...rows].sort((a, b) => {
-      const aScore = toFiniteOrNull(a.input_row?.final_pred_return) ?? toFiniteOrNull(a.input_row?.ensemble_pred_return) ?? -Infinity;
-      const bScore = toFiniteOrNull(b.input_row?.final_pred_return) ?? toFiniteOrNull(b.input_row?.ensemble_pred_return) ?? -Infinity;
+      const aScore = toFiniteOrNull(a.input_row?.rank_score) ?? toFiniteOrNull(a.input_row?.final_pred_return) ?? toFiniteOrNull(a.input_row?.ensemble_pred_return) ?? -Infinity;
+      const bScore = toFiniteOrNull(b.input_row?.rank_score) ?? toFiniteOrNull(b.input_row?.final_pred_return) ?? toFiniteOrNull(b.input_row?.ensemble_pred_return) ?? -Infinity;
       return bScore - aScore || tickerFromRow(a).localeCompare(tickerFromRow(b));
     });
   }
@@ -1013,7 +1022,7 @@ function positiveInteger(value: string | undefined): number | null {
   return parsed !== null && Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
 }
 
-type ValidatedModelRow = { ticker: string; prediction: number; rank: number };
+type ValidatedModelRow = { ticker: string; prediction: number; rank: number; kind: string; model: string };
 /** One STEP2 CSV: fresh, schema-complete, and every ok row carries a finite prediction with the agreed target and date. */
 function validateModelRows(records: Record<string, string>[]): { ok: ValidatedModelRow[]; baseDate: string; poolSize: number; all: number } {
   const fail = (): never => { throw new Error("Invalid model output rows."); };
@@ -1028,10 +1037,14 @@ function validateModelRows(records: Record<string, string>[]): { ok: ValidatedMo
   const [baseDate] = [...dates];
   if (dates.size !== 1 || baseDate === null) fail();
   const rows = ok.map((row): ValidatedModelRow => {
-    const prediction = toFiniteOrNull(row.ensemble_pred_return), rank = positiveInteger(row.pred_rank);
+    const kind = row.score_kind || "return";
+    if (kind !== "rank_zscore" && kind !== "return") return fail();
+    if (kind === "rank_zscore" && (!row.model_id || toFiniteOrNull(row.ensemble_pred_return) !== null)) return fail();
+    const prediction = toFiniteOrNull(kind === "rank_zscore" ? row.rank_score : row.ensemble_pred_return), rank = positiveInteger(row.pred_rank);
     if (prediction === null || rank === null || row.prediction_target !== MODEL_TARGET) return fail();
-    return { ticker: row.ticker, prediction, rank };
+    return { ticker: row.ticker, prediction, rank, kind, model: row.model_id || "legacy" };
   });
+  if (new Set(rows.map(row => `${row.kind}:${row.model}`)).size !== 1) fail();
   const poolSizes = new Set(ok.map(row => positiveInteger(row.pred_pool_size)));
   return { ok: rows, baseDate: baseDate as string, poolSize: poolSizes.size === 1 ? [...poolSizes][0] ?? 0 : 0, all: records.length };
 }
@@ -1060,7 +1073,7 @@ export async function validateModelOnlyOutputs(outputDir: string, startedAt: num
   const byTicker = new Map(ranked.map(row => [row.ticker, row]));
   const picked = [...selection.ok].sort((a, b) => a.rank - b.rank);
   // The selection is the top-k of the same ranking with identical raw values.
-  if (picked.some((row, index) => row.rank !== index + 1 || byTicker.get(row.ticker)?.rank !== row.rank || byTicker.get(row.ticker)?.prediction !== row.prediction)) inconsistent();
+  if (picked.some((row, index) => row.rank !== index + 1 || byTicker.get(row.ticker)?.rank !== row.rank || byTicker.get(row.ticker)?.prediction !== row.prediction || byTicker.get(row.ticker)?.kind !== row.kind || byTicker.get(row.ticker)?.model !== row.model)) inconsistent();
   return { rows: rankRecords.length, modelSelectionRows: selectionRecords.length };
 }
 

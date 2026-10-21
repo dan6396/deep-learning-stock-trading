@@ -413,7 +413,7 @@ function SelectionMethod() {
       </summary>
       <div className="brief-intro">
         <p>
-          <strong>Huber 앙상블</strong>이 KOSPI200 전체 종목의 다음 거래일 시가→종가 수익률을 예측해 순위를 매기고,
+          <strong>20일·120일 앙상블</strong>이 KOSPI200 전체 종목의 다음 거래일 상대 순위 점수를 계산해 순위를 매기고,
           상위 종목을 1차 후보로 고릅니다. 순위는 상대 비교이며 상승 확률이 아닙니다.
         </p>
         <p>
@@ -515,7 +515,7 @@ function WatchlistRail({
 const analysisStages = [
   "실행 준비",
   "KOSPI200 후보 풀 로드",
-  "OHLCV 수집·Huber 앙상블 예측",
+  "OHLCV 수집·20일·120일 앙상블 예측",
   "분석 데이터 처리",
   "뉴스 크롤링",
   "뉴스 사건 추출·검증 게이트",

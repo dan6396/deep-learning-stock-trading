@@ -11,6 +11,7 @@ export type CandidateNews = {
 };
 export type CandidateData = {
   code: string; name: string | null; isFinalCandidate: boolean;
+  rankScore?: number | null; scoreKind?: string | null;
   predictedReturn: number | null; finalPredictedReturn: number | null;
   rank: number | null; poolSize: number | null; baseDate: string | null;
   finalRank?: number | null;
@@ -77,8 +78,10 @@ export function adaptCandidate(value: unknown, isFinalCandidate = false): DataRe
     ...resultMeta(row, { source: "cache" }),
     data: {
       code, name: textValue(result.company_name ?? input.company_name), isFinalCandidate,
-      predictedReturn: finiteNumber(input.ensemble_pred_return),
-      finalPredictedReturn: finiteNumber(Object.prototype.hasOwnProperty.call(meta, "rawFinalPrediction") ? meta.rawFinalPrediction : input.final_pred_return),
+      rankScore: input.score_kind === "rank_zscore" ? finiteNumber(input.rank_score) : null,
+      scoreKind: textValue(input.score_kind),
+      predictedReturn: input.score_kind === "rank_zscore" ? null : finiteNumber(input.ensemble_pred_return),
+      finalPredictedReturn: input.score_kind === "rank_zscore" ? null : finiteNumber(Object.prototype.hasOwnProperty.call(meta, "rawFinalPrediction") ? meta.rawFinalPrediction : input.final_pred_return),
       rank: nonnegativeInteger(Object.prototype.hasOwnProperty.call(meta, "rawModelRank") ? meta.rawModelRank : input.pred_rank), poolSize: nonnegativeInteger(input.pred_pool_size),
       finalRank: rawFinalRank !== null && rawFinalRank >= 1 ? rawFinalRank : null,
       baseDate: textValue(input.prediction_base_date ?? input.transformer_base_date ?? input.lstm_base_date),

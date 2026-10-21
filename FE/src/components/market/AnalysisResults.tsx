@@ -39,7 +39,7 @@ export function AnalysisResults({
         </p>
         <h2>AI가 선정한 단기 후보 {stocks.length}종목</h2>
         <p className="analysis-results__sub">
-          순위는 Huber 예상수익률을 기준으로 합니다. 뉴스 사건 보정은 별도 검증을 통과한 경우에만 적용하며,
+          순위는 20일·120일 모델의 상대 순위 점수를 기준으로 합니다. 뉴스는 관련 근거로 표시하며,
           <strong> 선정근거</strong>에서 가격 예측과 기사 근거를 각각 확인할 수 있습니다.
         </p>
       </header>

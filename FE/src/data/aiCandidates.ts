@@ -20,6 +20,7 @@ export type AiCandidate = {
   poolSize: number;
   pUp: number;
   baseDate: string;
+  rankScore?: number | null; scoreKind?: string;
   ensemblePredReturn: number | null;
   finalPredReturn?: number | null;
   newsAdjustment?: number;

@@ -1,7 +1,7 @@
 export type RunKind = "official" | "adhoc";
 export type RunMode = "model_only" | "full";
 export type OutcomeState = "waiting" | "complete" | "unavailable";
-export type FrozenPrediction = { code: string; name: string; baseDate: string; prediction: number; rank: number; selected: boolean };
+export type FrozenPrediction = { scoreKind?: string; modelId?: string; code: string; name: string; baseDate: string; prediction: number; rank: number; selected: boolean };
 export type PriceOutcome = { code: string; date: string; open: number; close: number; actualReturn: number; source: "kis"; collectedAt: string };
 export type AnalysisRecord = {
   version: 1; runId: string; kind: RunKind; mode: RunMode; status: "running" | "completed" | "failed";
@@ -11,9 +11,10 @@ export type AnalysisRecord = {
   outcomes: PriceOutcome[]; outcomeState: OutcomeState; lastCollectedAt: string | null;
 };
 export type PerformanceRun = Omit<AnalysisRecord, "predictions" | "predictionHash" | "outcomes"> & {
+  modelId?: string; scoreKind?: string;
   predictedCount: number; selectedCount: number; measuredCount: number;
-  actualReturn: number | null; predictedReturn: number | null; hitRate: number | null;
-  measurements: { code: string; name: string; predictedReturn: number; date: string | null; open: number | null; close: number | null; actualReturn: number | null }[];
+  actualReturn: number | null; predictedReturn: number | null; rankScore?: number | null; hitRate: number | null;
+  measurements: { code: string; name: string; predictedReturn: number | null; rankScore?: number | null; date: string | null; open: number | null; close: number | null; actualReturn: number | null }[];
 };
 export type PerformanceSummary = {
   mode: RunMode; tradingDays: number; measuredRuns: number; averageReturn: number | null;

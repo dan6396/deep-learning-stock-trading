@@ -20,26 +20,30 @@ export function runPerformance(record: AnalysisRecord, symbol?: string): Perform
     const outcome = record.outcomes.find(item => item.code === prediction.code && item.date === record.targetDate);
     return outcome ? [{ prediction, outcome }] : [];
   });
+  const rankModel = selected.some(row => row.scoreKind === "rank_zscore");
   const complete = selected.length > 0 && selected.length === measured.length;
   const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
   const { predictions, predictionHash, outcomes, ...rest } = record;
-  return { ...rest, predictedCount: predictions.length, selectedCount: selected.length, measuredCount: measured.length,
+  return { ...rest, modelId: selected[0]?.modelId ?? "legacy", scoreKind: selected[0]?.scoreKind ?? "return", predictedCount: predictions.length, selectedCount: selected.length, measuredCount: measured.length,
     measurements: selected.map(prediction => { const outcome = measured.find(item => item.prediction.code === prediction.code)?.outcome;
-      return { code: prediction.code, name: prediction.name, predictedReturn: prediction.prediction, date: outcome?.date ?? record.targetDate,
+      return { code: prediction.code, name: prediction.name, predictedReturn: prediction.scoreKind === "rank_zscore" ? null : prediction.prediction, rankScore: prediction.scoreKind === "rank_zscore" ? prediction.prediction : null, date: outcome?.date ?? record.targetDate,
         open: outcome?.open ?? null, close: outcome?.close ?? null, actualReturn: outcome?.actualReturn ?? null }; }),
     actualReturn: complete ? mean(measured.map(item => item.outcome.actualReturn)) : null,
-    predictedReturn: selected.length ? mean(selected.map(item => item.prediction)) : null,
-    hitRate: complete ? mean(measured.map(item => Number(Math.sign(item.prediction.prediction) === Math.sign(item.outcome.actualReturn)))) : null };
+    predictedReturn: !rankModel && selected.length ? mean(selected.map(item => item.prediction)) : null,
+    rankScore: rankModel && selected.length ? mean(selected.map(item => item.prediction)) : null,
+    hitRate: complete && !rankModel ? mean(measured.map(item => Number(Math.sign(item.prediction.prediction) === Math.sign(item.outcome.actualReturn)))) : null };
 }
 export function summarizePerformance(runs: PerformanceRun[], mode: RunMode): PerformanceSummary {
   const official = runs.filter(run => run.mode === mode && run.kind === "official" && run.officialEligible === true && run.outcomeState === "complete" && run.actualReturn !== null)
     .sort((a, b) => (b.targetDate ?? "").localeCompare(a.targetDate ?? ""));
   // One equally weighted selected portfolio per day; model-only/full series are never pooled.
-  const unique = [...new Map(official.map(run => [run.targetDate, run])).values()].slice(0, 20);
+  const latestModel = official[0]?.modelId ?? "legacy", latestKind = official[0]?.scoreKind ?? "return";
+  const sameModel = official.filter(run => (run.modelId ?? "legacy") === latestModel && (run.scoreKind ?? "return") === latestKind);
+  const unique = [...new Map(sameModel.map(run => [run.targetDate, run])).values()].slice(0, 20);
   return { mode, tradingDays: unique.length, measuredRuns: unique.length,
     averageReturn: unique.length ? unique.reduce((sum, run) => sum + run.actualReturn!, 0) / unique.length : null,
     cumulativeReturn: unique.length ? unique.reduce((value, run) => value * (1 + run.actualReturn!), 1) - 1 : null,
-    hitRate: unique.length ? unique.reduce((sum, run) => sum + run.hitRate!, 0) / unique.length : null };
+    hitRate: unique.length && unique.every(run => run.hitRate !== null) ? unique.reduce((sum, run) => sum + run.hitRate!, 0) / unique.length : null };
 }
 let collector: PerformancePayload["collector"] = { status: "idle", checkedAt: null, error: null };
 let collection: Promise<void> | null = null;

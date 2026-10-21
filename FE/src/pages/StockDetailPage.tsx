@@ -330,8 +330,8 @@ function EvidenceReportDashboard({ candidate }: { candidate: AiCandidate }) {
         />}
         <ReportKpiCard
           icon={TrendingUp}
-          label="예측수익률"
-          value={candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
+          label={candidate.scoreKind === "rank_zscore" ? "순위 점수" : "예측수익률"}
+          value={candidate.scoreKind === "rank_zscore" ? (candidate.rankScore?.toFixed(6) ?? "—") : candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
           sub={`${candidate.rank}위 / ${candidate.poolSize}개`}
           tone={(candidate.ensemblePredReturn ?? 0) >= 0 ? "is-positive-text" : "is-negative-text"}
         />
@@ -437,9 +437,9 @@ function AiRecommendation({ candidate }: { candidate: AiCandidate }) {
           <RankSummary candidate={candidate} />
           <div className="metric-tiles">
             <MetricTile
-              label="다음 거래일 예측수익률"
-              value={candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
-              sub="시가→종가 · Huber 앙상블"
+              label={candidate.scoreKind === "rank_zscore" ? "20일·120일 순위 점수" : "다음 거래일 예측수익률"}
+              value={candidate.scoreKind === "rank_zscore" ? (candidate.rankScore?.toFixed(6) ?? "—") : candidate.ensemblePredReturn === null ? "—" : `${(candidate.ensemblePredReturn * 100).toFixed(2)}%`}
+              sub={candidate.scoreKind === "rank_zscore" ? "상대 순위 · 수익률/상승확률 아님" : "시가→종가 · 과거 수익률 모델"}
               tone={(candidate.ensemblePredReturn ?? 0) >= 0 ? "is-positive-text" : "is-negative-text"}
             />
             <MetricTile
@@ -643,7 +643,7 @@ export function StockDetailPage() {
       <footer className="detail-sources">
         <h2>데이터 출처 및 유의사항</h2>
         <ul>
-          <li>다음 거래일 시가→종가 예측수익률·순위: Huber 회귀 앙상블{candidate?.baseDate ? ` (기준일 ${candidate.baseDate})` : ""}.</li>
+          <li>모델 출력은 해당 실행의 점수 유형을 따릅니다. 새 모델은 20일·120일 상대 순위 앙상블{candidate?.baseDate ? ` (기준일 ${candidate.baseDate})` : ""}.</li>
           <li>뉴스·감성: 네이버 뉴스 기사를 Gemini로 구조화 분석한 결과. LLM 결과가 없는 기사는 키워드로 추정합니다.</li>
         </ul>
         <p className="panel-note">
