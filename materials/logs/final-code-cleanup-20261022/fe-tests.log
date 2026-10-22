@@ -1,0 +1,5 @@
+
+> kospi-ai-trading-fe@0.1.0 test
+> vitest run --reporter=json --outputFile=../outputs/final-cleanup/fe-tests.json
+
+JSON report written to C:/Users/강승주/Documents/Codex/2026-09-13/https-github-com-dan6396-deep-learning/work/final_model_service_20261021/outputs/final-cleanup/fe-tests.json

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { safeArticleUrl, observationTime, validatedChart } from "./reportData";
-import { chartBundle } from "./reportFixtures";
+import { chartBundle } from "../../test/fixtures/reportFixtures";
 import { adaptChart, adaptQuote } from "../../entities/market";
 import { adaptCandidate } from "../../entities/candidate";
 import { pipelineRow } from "../../test/dataFixtures";

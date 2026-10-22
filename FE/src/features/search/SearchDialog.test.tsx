@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { SearchDialog } from "./SearchDialog";
-import { wholeRank } from "../rank/rankFixtures";
+import { wholeRank } from "../../test/fixtures/rankFixtures";
 import { jsonResponse } from "../../test/dataFixtures";
 const clients: QueryClient[] = [];
 beforeEach(() => {

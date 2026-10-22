@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { WatchlistPage } from "./WatchlistPage";
-import { wholeRank } from "../rank/rankFixtures";
+import { wholeRank } from "../../test/fixtures/rankFixtures";
 import { WATCHLIST_KEY, watchlistStore } from "../../shared/lib/watchlist";
 import { deferred, jsonResponse } from "../../test/dataFixtures";
 const clients: QueryClient[] = [];

@@ -35,7 +35,7 @@ export function createInterceptionTracker(waitMs = 300) {
 export async function launchBrowser(base) {
   const binary = process.env.BROWSER ?? ["C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"].find(existsSync);
   if (!binary) throw new Error("Installed Edge/Chrome not found; set BROWSER to an existing executable.");
-  const profile = mkdtempSync(join(tmpdir(), "m2-cdp-")), port = 9500 + Math.floor(Math.random() * 300);
+  const profile = mkdtempSync(join(tmpdir(), "final-model-cdp-")), port = 9500 + Math.floor(Math.random() * 300);
   const browser = spawn(binary, ["--headless=new", "--disable-gpu", "--disable-background-networking", "--no-first-run", "--no-default-browser-check", "--hide-scrollbars", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true, stdio: "ignore" });
   let ws, sequence = 0, pageTargetId;
   const pending = new Map(), events = new Map();
@@ -158,10 +158,14 @@ export async function launchBrowser(base) {
     return { send, evaluate, waitFor, click, key, clickDiagnostics, consoleErrors, exceptions, blocked, settleInterceptions,
       cancelledInterceptions: interception.cancelled, interceptionErrors: interception.errors,
       async close() {
-        ws.close(); browser.kill(); await pause(350);
+        // Ask the isolated browser to close before deleting its Windows profile.
+        await send("Browser.close").catch(() => {});
+        ws.close();
+        for (let attempt = 0; browser.exitCode === null && attempt < 20; attempt++) await pause(100);
+        if (browser.exitCode === null) { browser.kill(); await pause(1000); }
         const root = resolve(tmpdir());
         if (!resolve(profile).startsWith(`${root}${sep}`)) throw new Error("Browser profile escaped temporary directory");
-        rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+        rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
       } };
   } catch (error) { ws?.close(); browser.kill(); throw error; }
 }

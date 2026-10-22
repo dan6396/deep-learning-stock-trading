@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { BRAND_NAME } from "../../shared/lib/brand";
 import { MODEL_SUMMARY, MODEL_SELECTION_DESCRIPTION } from "../../entities/model";
 

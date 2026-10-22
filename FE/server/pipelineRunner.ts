@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
-import { getCandidatesPayload, refreshDashboardAiFieldsFromPipelineOutput, validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
+import { validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
 import { collectTopFiveArticles } from "./relatedNews";
 import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
@@ -16,13 +16,13 @@ declare const process: {
 export type CandidateAnalysisRunResult = {
   runId?: string;
   kind?: RunKind;
-  mode?: "full" | "model_only";
+  mode?: "model_only";
   modelSelectionRows?: number;
-  candidateKind?: "news_final" | "not_produced";
+  candidateKind?: "not_produced";
   dashboardUpdated: boolean;
   elapsedMs: number;
   rows: number;
-  /** Number of stocks the Gemini news step analyzed; 0 when the step was skipped or failed. */
+  /** The final model has no LLM reranking; always zero. */
   newsRows: number;
   articleCollectionStatus?: "collected" | "unavailable";
   status: "completed";
@@ -109,7 +109,7 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
   } else if (log.includes("로드 완료")) {
     advance(1, 20, "KOSPI200 후보 풀 로드가 완료되었습니다.");
   } else if (log.includes("[STEP 2]")) {
-    advance(2, 26, "OHLCV를 수집하고 앙상블 예측수익률을 계산하는 중입니다.");
+    advance(2, 26, "OHLCV를 수집하고 앙상블 순위 점수를 계산하는 중입니다.");
   } else if (log.includes("[OHLCV 조회]")) {
     const ohlcvMatch = log.match(/OHLCV 조회\]\s*([0-9]+)\/([0-9]+)/);
     if (ohlcvMatch) {
@@ -118,7 +118,7 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
       const ohlcvProgress = 26 + Math.min(18, Math.round((current / total) * 18));
       advance(2, ohlcvProgress, `KOSPI200 OHLCV를 수집하는 중입니다. (${current}/${total})`);
     }
-  } else if ((log.includes("[Huber 앙상블 예측]") || log.includes("[Transformer 앙상블 예측]"))) {
+  } else if (log.includes("[Transformer 앙상블 예측]")) {
     advance(2, 46, "앙상블 배치 추론을 실행하는 중입니다.");
   } else if ((log.includes("예측수익률 예측 성공") || log.includes("모델 점수 예측 성공"))) {
     const countMatch = log.match(/(?:예측수익률|모델 점수) 예측 성공:\s*([0-9]+)\/([0-9]+)개/);
@@ -139,19 +139,8 @@ function nextProgressFromLog(line: string, current: CandidateAnalysisProgress): 
     }
   } else if (log.includes("앙상블 최종")) {
     advance(3, 68, "수급 확인을 반영해 최종 후보를 구성하는 중입니다.");
-  } else if (log.includes("[STEP 3]")) {
-    advance(4, 72, "가격 상위 후보와 독립 뉴스 후보의 본문 분석을 시작합니다.");
-  } else if (log.includes("뉴스 크롤링")) {
-    advance(4, 78, "최신 뉴스를 수집하는 중입니다.");
-  } else if (log.includes("Gemini") || log.includes("LLM") || log.includes("API 호출")) {
-    advance(5, 84, "Gemini가 기사에서 사건과 근거 문장을 추출하는 중입니다.");
-  } else if (log.includes("[최종 결과]")) {
-    advance(5, 90, "종목별 기사 사건 근거를 정리하는 중입니다.");
-  } else if (log.includes("저장:") && log.includes("step3")) {
-    advance(6, 94, "STEP3 결과 파일을 저장하고 검증하는 중입니다.");
   } else if (log.includes("[ALL DONE]")) {
-    if (runMode === "model_only") advance(3, 70, "모델 추론이 완료되었습니다. 관련 기사 수집을 준비합니다.");
-    else advance(6, 100, "전체 파이프라인이 완료되었습니다.");
+    advance(3, 70, "모델 추론이 완료되었습니다. 관련 기사 수집을 준비합니다.");
   }
 
   return {
@@ -228,15 +217,6 @@ async function requireExistingFile(path: string, label: string): Promise<void> {
   }
 }
 
-async function requireFreshFile(path: string, label: string, startedAt: number): Promise<void> {
-  await requireExistingFile(path, label);
-
-  const file = await stat(path);
-  if (file.mtimeMs + 1000 < startedAt) {
-    throw new Error(`${label} was not updated by the latest pipeline run: ${path}`);
-  }
-}
-
 type PipelineInputs = {
   mainModulePath: string;
   predictModulePath: string;
@@ -302,9 +282,8 @@ function pipelineEnv(env: Record<string, string | undefined>, modelOnly = false)
   return next;
 }
 
-function analysisMode(env: Record<string, string | undefined>): "full" | "model_only" {
+function analysisMode(env: Record<string, string | undefined>): "model_only" {
   if (!env.PIPELINE_ANALYSIS_MODE) return "model_only";
-  if (env.PIPELINE_ANALYSIS_MODE === "full") return "full";
   if (env.PIPELINE_ANALYSIS_MODE === "model_only") return "model_only";
   throw new Error("Unsupported analysis mode.");
 }
@@ -389,18 +368,6 @@ function runProcess(
   });
 }
 
-/** File the on-demand per-stock Gemini news step writes and {@link pipelineResults} overlays. */
-const NEWS_RESULT_FILE = "news_gemini_result.json";
-
-async function countJsonObjectRows(newsOutputPath: string): Promise<number> {
-  try {
-    const parsed = JSON.parse(await readFile(newsOutputPath, "utf8")) as unknown;
-    return parsed && typeof parsed === "object" ? Object.keys(parsed as Record<string, unknown>).length : 0;
-  } catch {
-    return 0;
-  }
-}
-
 async function executeCandidateAnalysis(env = process.env, startedAt = Date.now(), identity = { runId: randomUUID(), kind: runKind(env) }): Promise<CandidateAnalysisRunResult> {
   await beginRun(identity.runId, identity.kind, analysisMode(env), startedAt, env);
   try {
@@ -425,9 +392,6 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
   const root = projectRoot(env);
   const scriptPath = join(root, "integrated_pipeline.py");
   const outputDir = pipelineOutputDir(env);
-  const top10CsvPath = join(outputDir, "step2_final_top10.csv");
-  const step3CsvPath = join(outputDir, "step3_final_top5.csv");
-  const step3JsonPath = join(outputDir, "step3_final_news_event_analysis.json");
   const timeoutMs = Number(env.PIPELINE_RUN_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
   const python = await pythonExecutable(root, env);
 
@@ -438,7 +402,7 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
 
   try {
     const inputs = await preparePipelineInputs(resolvePipelineInputs(root, env));
-    const args = [scriptPath, ...(modelOnly ? [] : ["--run-news"]), "--output-dir", outputDir, ...pipelineInputArgs(inputs)];
+    const args = [scriptPath, "--output-dir", outputDir, ...pipelineInputArgs(inputs)];
 
     optionalNumericArg(args, "--candidate-pool", env.PIPELINE_CANDIDATE_POOL);
     optionalNumericArg(args, "--final-max", env.PIPELINE_FINAL_MAX ?? env.PIPELINE_RUN_TOP);
@@ -452,7 +416,7 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
     updateCandidateAnalysisProgress(progressSnapshot(0, 8, "integrated_pipeline.py 실행을 시작했습니다."));
     await runProcess(python, args, root, pipelineEnv(env, modelOnly), timeoutMs, recordCandidateAnalysisOutput);
 
-    if (modelOnly) {
+    {
       updateCandidateAnalysisProgress(progressSnapshot(3, 90, "모델 원본 순위와 모델 선별 결과를 검증하는 중입니다."));
       const validated = await validateModelOnlyOutputs(outputDir, startedAt);
       updateCandidateAnalysisProgress(progressSnapshot(4, 94, "모델 TOP5의 관련 기사를 수집하는 중입니다."));
@@ -467,35 +431,7 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
       return result;
     }
 
-    updateCandidateAnalysisProgress((current) => progressSnapshot(6, 95, "생성된 step2·step3 결과 파일을 검증하는 중입니다.", current));
-    await requireFreshFile(top10CsvPath, "앙상블 Top10 CSV", startedAt);
-    await requireFreshFile(step3CsvPath, "STEP3 final Top-5 CSV", startedAt);
-    await requireFreshFile(step3JsonPath, "STEP3 news event evidence", startedAt);
-    await marker({
-      finishedAt: Date.now(),
-      startedAt,
-      status: "completed",
-    });
 
-    updateCandidateAnalysisProgress((current) => progressSnapshot(6, 98, "분석 결과를 대시보드 데이터로 변환하는 중입니다.", current));
-    const rows = await getCandidatesPayload();
-    const result = {
-      mode,
-      dashboardUpdated: await refreshDashboardAiFieldsFromPipelineOutput(),
-      elapsedMs: Date.now() - startedAt,
-      rows: rows.length,
-      newsRows: await countJsonObjectRows(step3JsonPath),
-      status: "completed" as const,
-    };
-    await marker({
-      finishedAt: Date.now(),
-      newsRows: result.newsRows,
-      rows: result.rows,
-      startedAt,
-      status: "completed",
-    });
-
-    return result;
   } catch (error) {
     throw error;
   }
@@ -510,7 +446,7 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
 export type CandidateAnalysisStatus = {
   runId?: string;
   kind?: RunKind;
-  mode?: "full" | "model_only";
+  mode?: "model_only";
   status: "idle" | "running" | "completed" | "failed";
   startedAt?: number;
   finishedAt?: number;
@@ -527,7 +463,7 @@ type RunState =
   | { status: "failed"; startedAt: number; finishedAt: number; progress: CandidateAnalysisProgress; error: string };
 
 let runState: RunState = { status: "idle" };
-let runMode: "full" | "model_only" | undefined;
+let runMode: "model_only" | undefined;
 let runIdentity: { runId: string; kind: RunKind } | undefined;
 
 /** Read-only connection diagnostics: no stale-run transition or marker writes. */
@@ -669,121 +605,4 @@ export async function runCandidateAnalysis(env = process.env): Promise<Candidate
   }
 
   return activeRun;
-}
-
-export type StockNewsAnalysisResult = {
-  elapsedMs: number;
-  status: "completed";
-  ticker: string;
-};
-
-export type StockNewsAnalysisStatus = {
-  status: "idle" | "running" | "completed" | "failed";
-  ticker: string;
-  startedAt?: number;
-  finishedAt?: number;
-  elapsedMs?: number;
-  result?: StockNewsAnalysisResult;
-  error?: string;
-};
-
-type StockNewsRunState =
-  | { status: "running"; ticker: string; startedAt: number }
-  | { status: "completed"; ticker: string; startedAt: number; finishedAt: number; result: StockNewsAnalysisResult }
-  | { status: "failed"; ticker: string; startedAt: number; finishedAt: number; error: string };
-
-const stockNewsRuns = new Map<string, Promise<StockNewsAnalysisResult>>();
-const stockNewsStates = new Map<string, StockNewsRunState>();
-
-function normalizedTicker(value: string): string {
-  const ticker = String(value ?? "").replace(/\D/g, "").padStart(6, "0").slice(-6);
-  if (!/^\d{6}$/.test(ticker) || ticker === "000000") {
-    throw new Error("A valid 6-digit ticker is required.");
-  }
-  return ticker;
-}
-
-async function executeStockNewsAnalysis(
-  ticker: string,
-  env: Record<string, string | undefined>,
-): Promise<StockNewsAnalysisResult> {
-  const startedAt = Date.now();
-  const root = projectRoot(env);
-  const outputDir = resolve(env.PIPELINE_OUTPUT_DIR ?? join(root, "outputs"));
-  const scriptPath = resolve(env.PIPELINE_NEWS_SCRIPT ?? join(root, "crolling.py"));
-  const inputPath = join(outputDir, "step2_all_transformer_rank.csv");
-  const outputPath = join(outputDir, NEWS_RESULT_FILE);
-  const python = await pythonExecutable(root, env);
-  const timeoutMs = Number(env.PIPELINE_RUN_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
-
-  await requireExistingFile(scriptPath, "News analysis script");
-  await requireExistingFile(inputPath, "Full 앙상블 ranking");
-
-  const args = [
-    scriptPath,
-    "--input",
-    inputPath,
-    "--ticker",
-    ticker,
-    "--output",
-    outputPath,
-    "--merge",
-  ];
-  optionalNumericArg(args, "--days", env.PIPELINE_RUN_NEWS_DAYS);
-  optionalNumericArg(args, "--max-news", env.PIPELINE_RUN_MAX_NEWS);
-
-  await runProcess(python, args, root, pipelineEnv(env), timeoutMs);
-
-  const parsed = JSON.parse(await readFile(outputPath, "utf8")) as Record<string, unknown>;
-  if (!parsed[ticker]) {
-    throw new Error(`Gemini analysis did not return a result for ${ticker}.`);
-  }
-
-  return { elapsedMs: Date.now() - startedAt, status: "completed", ticker };
-}
-
-export function getStockNewsAnalysisStatus(tickerValue: string): StockNewsAnalysisStatus {
-  const ticker = normalizedTicker(tickerValue);
-  const state = stockNewsStates.get(ticker);
-  if (!state) {
-    return { status: "idle", ticker };
-  }
-  if (state.status === "running") {
-    return { ...state, elapsedMs: Date.now() - state.startedAt };
-  }
-  return {
-    ...state,
-    elapsedMs: state.finishedAt - state.startedAt,
-  };
-}
-
-export function startStockNewsAnalysis(
-  tickerValue: string,
-  env = process.env,
-): StockNewsAnalysisStatus {
-  if (analysisMode(env) === "model_only") throw new Error("News analysis is disabled in model-only mode.");
-  const ticker = normalizedTicker(tickerValue);
-  if (!stockNewsRuns.has(ticker)) {
-    const startedAt = Date.now();
-    stockNewsStates.set(ticker, { status: "running", ticker, startedAt });
-    const run = executeStockNewsAnalysis(ticker, env);
-    stockNewsRuns.set(ticker, run);
-    run
-      .then((result) => {
-        stockNewsStates.set(ticker, { status: "completed", ticker, startedAt, finishedAt: Date.now(), result });
-      })
-      .catch((error: unknown) => {
-        stockNewsStates.set(ticker, {
-          status: "failed",
-          ticker,
-          startedAt,
-          finishedAt: Date.now(),
-          error: error instanceof Error ? error.message : String(error),
-        });
-      })
-      .finally(() => {
-        stockNewsRuns.delete(ticker);
-      });
-  }
-  return getStockNewsAnalysisStatus(ticker);
 }

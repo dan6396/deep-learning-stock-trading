@@ -10,7 +10,7 @@ import { candidateSignals } from "../../entities/signals";
 import { mergeCandidateDetail } from "./DetailPanel";
 import { marketAssessment, MarketOverview } from "./MarketOverview";
 import { BRAND_NAME } from "../../shared/lib/brand";
-import { chartBundle } from "../stock/reportFixtures";
+import { chartBundle } from "../../test/fixtures/reportFixtures";
 
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });

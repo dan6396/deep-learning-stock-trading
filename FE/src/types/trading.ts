@@ -13,19 +13,16 @@ export type PipelineAnalysisResult = {
   key_data_points: string[];
   used_news_indices: number[];
   caution: string;
-  /** Gemini news step: actionable position/risk note for the stock. */
+  /** Optional explanatory note carried by a stored analysis. */
   trading_insight?: string;
 };
 
 export type PipelineInputRow = {
   ticker?: string;
   company_name?: string;
-  lstm_status?: string;
-  lstm_pred_return?: number;
   ensemble_pred_return?: number;
   rank_score?: number;
   score_kind?: string;
-  lstm_base_date?: string;
   p_up?: number; // Legacy classification output only.
   prediction_base_date?: string;
   prediction_target?: string;
@@ -64,45 +61,6 @@ export type PipelineOutputRow = {
     rawModelRank?: number | null;
     rawFinalRank?: number | null;
   };
-};
-
-export type RiskState = "Low" | "Normal" | "Elevated" | "High";
-
-export type MarketSummary = {
-  generatedAt: string;
-  marketState: string;
-  candidateCount: number;
-  riskState: RiskState;
-  strategySlots: number;
-  averageConfidence: number;
-  averagePredictedReturn: number;
-  positiveCount: number;
-  neutralCount: number;
-  negativeCount: number;
-};
-
-export type Candidate = {
-  ticker: string;
-  companyName: string;
-  sentimentLabel: PipelineSentimentLabel;
-  sentimentLabelKo: string;
-  sentimentScore: number;
-  confidence: number;
-  predictedReturn: number | null;
-  upProbability?: number | null;
-  lstmStatus: string;
-  summary: string;
-  positiveFactors: string[];
-  negativeFactors: string[];
-  newsCount: number;
-  latestNewsTitle?: string;
-};
-
-export type LandingData = {
-  marketSummary: MarketSummary;
-  candidates: Candidate[];
-  /** True when the pipeline API was unavailable and bundled sample output is shown. */
-  isSample?: boolean;
 };
 
 export type MarketDirection = "up" | "down" | "flat";

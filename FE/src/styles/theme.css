@@ -1,5 +1,5 @@
 /*
- * Design tokens for the rebuilt screens (Toss-style; see docs/REBUILD_PLAN.md §7).
+ * Design tokens for the current application.
  * Dark is the default; [data-theme="light"] on <html> switches the palette.
  * Text pairs are checked for WCAG AA (4.5:1) against their surfaces.
  *
@@ -48,8 +48,7 @@
   --ds-focus: #1b64da;
 }
 
-/* Scoped to the rebuilt shell: setting color-scheme on :root would also darken
-   scrollbars and native controls on the legacy (light) screens. */
+/* Match native controls and scrollbars to the application theme. */
 .ds-root {
   color-scheme: dark;
 }

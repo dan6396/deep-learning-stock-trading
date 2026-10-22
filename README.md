@@ -13,7 +13,7 @@
 5. 각 seed의 출력을 **당일 종목 간 평균 동순위 → 평균 0·표준편차 1**로 변환합니다. 기간별 3개 seed를 평균한 뒤, 20일과 120일 점수를 50:50으로 평균합니다.
 6. 점수 내림차순, 동점이면 종목 코드 순으로 정렬합니다. 기본 Top5에 수급 정보를 첨부하고 관련 RSS 기사를 별도로 표시합니다. 수급·기사는 모델 순위를 변경하지 않습니다.
 
-모델 파일·스케일러와 원본 체크포인트의 SHA-256은 [manifest](models/final_rank_ensemble/manifest.json)에 있습니다. 배포용 `.pt`는 원본 텐서 가중치만 내보냈으며 `weights_only=True`로 로드합니다. 이전 모델도 해당 manifest를 명시하면 사용할 수 있습니다.
+모델 파일·스케일러와 원본 체크포인트의 SHA-256은 [manifest](models/final_rank_ensemble/manifest.json)에 있습니다. 배포용 `.pt`는 원본 텐서 가중치만 내보냈으며 `weights_only=True`로 로드합니다. 현재 저장소에는 최종 모델 가중치만 포함합니다.
 
 ## 학습·검증 범위
 
@@ -27,7 +27,7 @@
 
 2025·2026은 이미 여러 연구 의사결정에서 관찰한 **개발 자료**로 독립 최종 test가 아닙니다. 과거 구성종목 proxy·수정주가 snapshot 한계가 있습니다. 공급자의 주가 수정과 구성종목 변화 때문에 같은 기준일을 재조회해도 옛 결과와 달라질 수 있습니다. 미래 봉 차단은 원자료가 완전한 시점별 자료임을 보장하지 않습니다. 최종 단순평균 선택은 복잡도와 검증 근거를 함께 고려한 결정이지 모든 기간에서 최고 성능이라는 주장이 아닙니다.
 
-과거 Huber 모델 성능·화면·뉴스 실험은 [과거 기록](README.huber-history.md)에 보존했습니다. 그 수익률을 새 모델 성과로 사용하지 않습니다.
+과거 이미지·로그·연구 보고서는 [자료 폴더](materials/README.md)에 모았습니다. 과거 실험의 수치를 현재 최종 모델 성과로 사용하지 않습니다.
 
 ## 실행
 
@@ -41,7 +41,7 @@ python -m unittest discover -s tests -p test_final_rank.py -v
 서비스 진입점은 그대로입니다. 의존성을 설치하고 로컬 환경에 필요한 설정을 제공한 뒤 실행합니다.
 
 ```powershell
-python -m pip install -r requirements.txt -r requirements-news.txt
+python -m pip install -r requirements.txt
 python integrated_pipeline.py
 cd FE
 npm ci
@@ -50,7 +50,7 @@ npm run dev -- --host 127.0.0.1
 
 웹 기본 `model_only` 모드는 새 모델을 사용합니다. 기본 Top5와 전체 순위, 관련 RSS 기사 흐름을 유지합니다. `PIPELINE_MODEL_MANIFEST`가 설정돼 있으면 기본 경로보다 우선하므로, 옛 경로를 제거하거나 `models/final_rank_ensemble/manifest.json`으로 바꿉니다. GitHub 반영 자체가 실행 중인 호스팅·서버를 재배포하지는 않습니다.
 
-옛 수익률용 뉴스 보정은 단위가 달라 새 모델의 `--run-news` 실행을 거부합니다. 기존 뉴스 연구 코드는 옛 Huber manifest를 명시한 경우에만 사용합니다. 자동 주문은 추가하지 않았습니다.
+현재 실행 경로는 최종 순위 모델과 관련 RSS 기사 수집입니다. 학습·옛 모델 실행·뉴스 학습형 보정 코드는 포함하지 않습니다.
 
 오프라인 추론은 전체 종목 OHLCV와 두 지수의 동일 달력 자료를 지정합니다. 종목 자료는 Date 인덱스와 Ticker/Open/High/Low/Close/Volume 열, 지수 자료는 Date 인덱스와 Close/Volume 열입니다. 날짜는 시간대 없는 일봉이어야 합니다.
 
@@ -74,7 +74,7 @@ python predict.py --data stocks.parquet --kpi200 kpi200.parquet --kospi kospi.pa
 | `prediction_base_date` | 입력이 끝나는 공통 완료 거래일 |
 | `pred_rank`, `pred_pool_size` | 동일 모집단 내 순위와 유효 종목 수 |
 
-신규 성과 원장에는 점수 유형·모델 ID를 저장합니다. 실제 시가→종가 수익률 집계는 유지하지만 순위 점수를 예상수익률로 표시하거나 부호 적중률로 계산하지 않습니다. 과거 수익률 모델 기록은 기존 단위로 읽습니다.
+신규 성과 원장에는 점수 유형·모델 ID를 저장합니다. 실제 시가→종가 수익률 집계는 유지하지만 순위 점수를 예상수익률로 표시하거나 부호 적중률로 계산하지 않습니다. 기존 저장 성과 기록을 읽을 때에도 당시 모델 단위를 보존합니다.
 
 ## 검증
 
@@ -84,3 +84,23 @@ python predict.py --data stocks.parquet --kpi200 kpi200.parquet --kospi kospi.pa
 - FE: `npm test`, `npm run typecheck`, `npm run build`.
 
 `tests/fixtures/final_rank`는 위 세 날짜의 고정 입력 특징과 이미 저장된 기대 예측입니다. 추론 이식 검사용이며 신규 성능 평가가 아닙니다. 실제 외부 시세·계정·주문 API는 오프라인 테스트에서 호출하지 않습니다.
+
+## 저장소 구조
+
+```text
+models/final_rank_ensemble/  최종 6개 가중치·스케일러·명세
+rank_model.py               최종 Transformer 구조
+rank_ensemble.py            입력 정렬·고정 스케일러·50:50 순위 결합
+features.py                 최종 모델의 11개 종목 특징 계산
+predict.py                  오프라인 순위 추론
+integrated_pipeline.py      시세 수집 → 순위 → 결과 CSV
+main.py / config.py         현재 구성종목 조회·API 연결
+FE/src/                     현재 브리핑·순위·관심종목·이력·리포트 화면
+FE/server/ / FE/api/         현재 API·실행 상태·성과 기록
+FE/src/test/ / tests/        현재 기능과 최종 모델 검증
+materials/images/           화면 캡처·연구 그림
+materials/logs/             실행·검증 로그
+materials/reports/          과거 연구·점검 보고서와 결과표
+```
+
+과거 학습 코드·옛 가중치·이전 화면 구현은 현재 트리에서 제거했습니다. 현재 기능의 테스트와 과거 실행 이력을 읽는 자료 형식은 유지합니다. 모델 파일과 스케일러는 정리 전후 동일합니다.

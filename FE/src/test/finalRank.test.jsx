@@ -28,7 +28,7 @@ it("validates rank CSVs and rejects return contamination, missing scores and mix
     await write(all, all.slice(0, 5));
     expect(await validateModelOnlyOutputs(dir, Date.now() - 1000)).toEqual({ rows: 30, modelSelectionRows: 5 });
     await write(all, all.slice(0, 5).map(r => r.replace("plain_20_120_rank_mean_v1", "another_model")));
-    await expect(validateModelOnlyOutputs(dir, 0)).rejects.toThrow("Inconsistent");
+    await expect(validateModelOnlyOutputs(dir, 0)).rejects.toThrow(/Invalid|Inconsistent/);
     await write(all.map(r => r.replace("open_to_close,,", "open_to_close,0.5,")), all.slice(0, 5));
     await expect(validateModelOnlyOutputs(dir, 0)).rejects.toThrow("Invalid");
     await write(all.map(r => r.replace(/,ok,[^,]+,rank_zscore/, ",ok,,rank_zscore")), all.slice(0, 5));

@@ -1,6 +1,6 @@
 import { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, fetchKisTargetSession, refreshDashboardSnapshot } from "./kisDashboard";
 import { getCandidatesPayload, getRankPayload, getStockAnalysisPayload } from "./pipelineResults";
-import { getCandidateAnalysisStatus, getStockNewsAnalysisStatus, startCandidateAnalysis, startStockNewsAnalysis } from "./pipelineRunner";
+import { getCandidateAnalysisStatus, startCandidateAnalysis } from "./pipelineRunner";
 import { getBackendStatus } from "./backendStatus";
 import { nextKrxSession } from "./krxCalendar";
 import { getPerformancePayload, startPerformanceCollection, runPerformanceCollection } from "./performance";
@@ -14,7 +14,7 @@ export type ApiRequest = {
 export type ApiResponse = { end: (body: string) => void; setHeader: (name: string, value: string) => void; statusCode: number };
 const providers = { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, fetchKisTargetSession,
   refreshDashboardSnapshot, getCandidatesPayload, getRankPayload, getStockAnalysisPayload,
-  getCandidateAnalysisStatus, getStockNewsAnalysisStatus, startCandidateAnalysis, startStockNewsAnalysis, getBackendStatus, getPerformancePayload, startPerformanceCollection, runPerformanceCollection };
+  getCandidateAnalysisStatus, startCandidateAnalysis, getBackendStatus, getPerformancePayload, startPerformanceCollection, runPerformanceCollection };
 export type RouteProviders = typeof providers;
 export type RouteHandler = (request: ApiRequest, response: ApiResponse) => Promise<void>;
 
@@ -108,7 +108,6 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
       if (request.method === "GET" && (!env.CRON_SECRET || first(request.headers?.authorization) !== `Bearer ${env.CRON_SECRET}`)) throw new UnauthorizedRequest("예약 수집 인증이 필요합니다.");
       return request.method === "GET" ? deps.runPerformanceCollection(env) : deps.startPerformanceCollection(env);
     }),
-    "/api/stock-analysis/run": route(["GET", "POST"], request => request.method === "POST" ? deps.startStockNewsAnalysis(ticker(request)) : deps.getStockNewsAnalysisStatus(ticker(request))),
   };
   const backendStatus = routes["/api/backend/status"];
   routes["/api/backend/status"] = async (request, response) => { response.setHeader("Cache-Control", "no-store"); await backendStatus(request, response); };

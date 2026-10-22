@@ -56,7 +56,7 @@ export function BriefingPage() {
         {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
         {rank.isPending ? <p className="briefing-empty" role="status">모델 예측 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} /> : !rank.isError && <p className="briefing-empty">표시할 모델 예측이 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
         <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
-        <p className="briefing-table-help">모델 예측은 방향만 표시하며 실제 성과가 아닙니다. 예측 수치는 전체 리포트에서 확인하세요. 기사 시각은 한국시간입니다.</p>
+        <p className="briefing-table-help">순위 점수는 비교 종목 안에서의 상대 위치이며 실제 수익률이 아닙니다. 모델 상세는 전체 리포트에서 확인하세요. 기사 시각은 한국시간입니다.</p>
       </section>
       <BriefingSummary indices={indices.data?.data ?? []} pending={indices.isPending} error={indices.isError} count={pool} rows={rows} rankPending={rank.isPending} rankError={rank.isError} rankSource={rank.data?.source} />
       {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>예측과 근거를 읽는 기준은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}

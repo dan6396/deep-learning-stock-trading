@@ -1,4 +1,4 @@
-﻿import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
 import { BRAND_NAME, BrandMark } from "../shared/lib/brand";
 import { useTheme } from "./providers";

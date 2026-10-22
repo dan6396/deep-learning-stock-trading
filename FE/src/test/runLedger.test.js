@@ -7,8 +7,8 @@ import { beginRun, completeRun, listRuns, loadRun, updateRun, freezePredictions,
 import { collectPerformance, getPerformancePayload, sessionEligibility, summarizePerformance } from "../../server/performance";
 
 let directory, env;
-const header = "ticker,company_name,ensemble_pred_return,pred_rank,prediction_base_date,prediction_target,prediction_status,final_pred_return";
-const rankCsv = `${header}\n005930,삼성전자,0.02,1,2026-10-08,next_session_open_to_close,ok,0.03\n000660,SK하이닉스,0.01,2,2026-10-08,next_session_open_to_close,ok,0.015\n`;
+const header = "ticker,company_name,ensemble_pred_return,pred_rank,prediction_base_date,prediction_target,prediction_status,final_pred_return,rank_score,score_kind,model_id";
+const rankCsv = `${header}\n005930,삼성전자,,1,2026-10-08,next_session_open_to_close,ok,,0.02,rank_zscore,plain_20_120_rank_mean_v1\n000660,SK하이닉스,,2,2026-10-08,next_session_open_to_close,ok,,0.01,rank_zscore,plain_20_120_rank_mean_v1\n`;
 beforeEach(async () => { directory = await mkdtemp(join(tmpdir(), "run-ledger-test-")); env = { PIPELINE_OUTPUT_DIR: directory }; });
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 async function completed(kind = "official", mode = "model_only") {
@@ -32,14 +32,14 @@ describe("persistent execution identity and frozen prediction evidence", () => {
     await writeFile(join(runDirectory(env), `${id}.json`), JSON.stringify(raw));
     expect(await listRuns(env)).toMatchObject({ runs: [], invalid: 1 });
   });
-  it("excludes duplicate official runs but keeps model/news modes separate", async () => {
-    const first = await completed(), second = await completed(), news = await completed("official", "full");
+  it("excludes duplicate official runs and rejects retired execution modes", async () => {
+    const first = await completed(), second = await completed();
     expect((await loadRun(first, env)).officialEligible).toBeNull();
     expect((await loadRun(second, env)).officialEligible).toBe(false);
-    expect((await loadRun(news, env)).officialEligible).toBeNull();
+    await expect(completed("official", "full")).rejects.toThrow("final model-only");
   });
   it("rejects mixed dates, duplicate tickers and unknown targets", () => {
-    expect(() => freezePredictions(rankCsv.replace('000660,SK하이닉스,0.01,2,2026-10-08', '000660,SK하이닉스,0.01,2,2026-10-07'), rankCsv, "model_only")).toThrow();
+    expect(() => freezePredictions(rankCsv.replace('000660,SK하이닉스,,2,2026-10-08', '000660,SK하이닉스,,2,2026-10-07'), rankCsv, "model_only")).toThrow();
     expect(() => freezePredictions(rankCsv.replace('000660', '005930'), rankCsv, "model_only")).toThrow();
     expect(() => freezePredictions(rankCsv.replaceAll('next_session_open_to_close', 'unknown'), rankCsv, "model_only")).toThrow();
   });

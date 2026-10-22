@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from data import FEATURE_COLS, _compute_indicators
+from features import FEATURE_COLS, _compute_indicators
 from rank_model import TemporalRankTransformer
 
 DEFAULT_MANIFEST = Path(__file__).parent / "models/final_rank_ensemble/manifest.json"
@@ -19,11 +19,6 @@ FORMAT = "plain-transformer-rank-ensemble-v1"
 HISTORY_START = pd.Timestamp("2019-06-03")
 MARKET_COLS = [f"{s}_{f}" for s in ("KPI200", "KOSPI")
                for f in ("r1", "r5", "r20", "vol20", "vrel20")]
-
-
-def is_rank_manifest(path):
-    return Path(path).suffix.lower() == ".json" and json.loads(
-        Path(path).read_text(encoding="utf-8"))["format"] == FORMAT
 
 
 def rank_zscore(values):

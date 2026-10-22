@@ -3,7 +3,7 @@
 Default assets: models/final_rank_ensemble/manifest.json.
 The six networks output cross-sectional rank scores, never percentages.
 Live histories start at the research indicator anchor (2019-06-03).
-Legacy return inference is supported by explicitly choosing the old manifest.
+Only the final rank bundle is supported.
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ def step1_load_kospi200_pool(main_module_path: Path, pool_n: int) -> pd.DataFram
 
 
 def _load_predict_module(predict_module_path: Path):
-    """predict.py 를 동적 임포트. (predict.py 가 같은 폴더의 data.py/model.py 자동 참조)"""
+    """predict.py 를 동적 임포트. (predict.py 가 같은 폴더의 features.py/rank_model.py 자동 참조)"""
     if not predict_module_path.exists():
         raise FileNotFoundError(f"predict.py 없음: {predict_module_path}")
     return _import_from_path("_transformer_predict", predict_module_path)
@@ -167,9 +167,7 @@ def _fetch_raw_ohlcv(ticker: str, lookback_days: int, as_of=None) -> pd.DataFram
 
 
 def _score_label(row):
-    if row.get("score_kind") == "rank_zscore":
-        return f"순위점수={float(row['rank_score']):.6f}"
-    return f"예측수익률={float(row['ensemble_pred_return'])*100:.2f}%"
+    return f"순위점수={float(row['rank_score']):.6f}"
 
 
 def _fetch_market_history():
@@ -387,7 +385,7 @@ def _base_step2_record(row: pd.Series) -> dict[str, Any]:
     record["pred_rank"] = float("nan")
     record["pred_pool_size"] = 0
     record["prediction_base_date"] = ""
-    record["model_id"] = "base_huber_h1_seeds_42_43_44"
+    record["model_id"] = "plain_20_120_rank_mean_v1"
     record["prediction_target"] = "next_session_open_to_close"
     record["prediction_status"] = "pending"
     record["prediction_error"] = ""
@@ -398,7 +396,7 @@ def _sort_rank_df(rank_df: pd.DataFrame) -> pd.DataFrame:
     status_order = {"ok": 0}
     df = rank_df.copy()
     df["_status_order"] = df["prediction_status"].map(status_order).fillna(1)
-    df["_ensemble_pred_return_sort"] = pd.to_numeric(df["rank_score"] if "rank_score" in df else df["ensemble_pred_return"], errors="coerce").fillna(float("-inf"))
+    df["_ensemble_pred_return_sort"] = pd.to_numeric(df["rank_score"], errors="coerce").fillna(float("-inf"))
     df = df.sort_values(
         ["_status_order", "_ensemble_pred_return_sort", "ticker"],
         ascending=[True, False, True],
@@ -428,13 +426,10 @@ def step2_attach_ensemble(
 
     from predict import _load_inference_bundle
     bundle = _load_inference_bundle(str(ckpt_path))
-    rank_model = "rank_ensemble" in bundle
-    score_column = "rank_score" if rank_model else "ensemble_pred_return"
-    market_frames = _fetch_market_history() if rank_model else None
-    signal_date = min(df.index[-1] for df in market_frames.values()) if rank_model else None
-    if rank_model:
-        # Anchor exponential indicator history to the frozen research start.
-        ohlcv_lookback_days = (signal_date - pd.Timestamp("2019-06-03")).days
+    score_column = "rank_score"
+    market_frames = _fetch_market_history()
+    signal_date = min(df.index[-1] for df in market_frames.values())
+    ohlcv_lookback_days = (signal_date - pd.Timestamp("2019-06-03")).days
     predict_mod = _load_predict_module(predict_module_path)
 
     top_df = top_df.copy()
@@ -449,17 +444,15 @@ def step2_attach_ensemble(
     for position, (_, row) in enumerate(top_df.iterrows(), start=1):
         ticker = str(row["ticker"]).zfill(6)
         record = _base_step2_record(row)
-        if rank_model:
-            record.update(rank_score=float("nan"), score_kind="rank_zscore",
-                          model_id=bundle["rank_ensemble"].manifest["model_id"])
+        record.update(rank_score=float("nan"), score_kind="rank_zscore",
+                      model_id=bundle["rank_ensemble"].manifest["model_id"])
         records[ticker] = record
 
         if position == 1 or position % 10 == 0 or position == total_candidates:
             print(f"  [OHLCV 조회] {position}/{total_candidates} {ticker}", flush=True)
 
         try:
-            ohlcv = (_fetch_raw_ohlcv(ticker, ohlcv_lookback_days, as_of=signal_date) if rank_model
-                     else _fetch_raw_ohlcv(ticker, ohlcv_lookback_days))
+            ohlcv = _fetch_raw_ohlcv(ticker, ohlcv_lookback_days, as_of=signal_date)
         except Exception as exc:
             record["prediction_status"] = "ohlcv_error"
             record["prediction_error"] = f"{type(exc).__name__}: {exc}"
@@ -486,7 +479,7 @@ def step2_attach_ensemble(
 
     # Rank only a common completed session; stale bars must not mix into today's ranking.
     if ticker_dfs:
-        latest = signal_date if rank_model else max(df.index[-1] for df in ticker_dfs.values())
+        latest = signal_date
         for ticker in list(ticker_dfs):
             df = ticker_dfs[ticker]
             if df.index[-1] != latest or df.iloc[-1]["Volume"] <= 0 or df.iloc[-1]["Open"] <= 0:
@@ -503,14 +496,9 @@ def step2_attach_ensemble(
                 str(ckpt_path),
                 ticker_dfs,
                 return_errors=True,
-                **({"market_frames": market_frames, "as_of": signal_date} if rank_model else {}),
+                market_frames=market_frames, as_of=signal_date, bundle=bundle,
             )
             scores, errors = predicted
-        except TypeError:
-            if rank_model:
-                raise  # Never fall back to legacy inference for a rank bundle.
-            scores = predict_mod.predict_multiple(str(ckpt_path), ticker_dfs)
-            errors = {ticker: "" for ticker in ticker_dfs}
         except Exception as exc:
             message = f"{type(exc).__name__}: {exc}"
             print(f"  [WARN] Transformer 앙상블 배치 예측 실패: {message}")
@@ -665,115 +653,11 @@ def _build_top10_supply_csv(final_df: pd.DataFrame) -> pd.DataFrame:
 # 전체 파이프라인 실행
 # ──────────────────────────────────────────────
 
-def run_news_crawling_and_llm(
-    step2_final_csv: Path,
-    output_dir: Path,
-    days: int = 1,
-    max_news: int = 5,
-) -> None:
-    """
-    step2_final_top10.csv를 읽어서 뉴스 크롤링 + Gemini LLM 분석을 수행합니다.
-    """
-    print(f"\n{'='*60}")
-    print("[STEP 3] 뉴스 크롤링 + Gemini LLM 분석")
-    print(f"  입력 CSV: {step2_final_csv}")
-    
-    try:
-        # crolling.py 동적 임포트
-        crolling_path = Path(__file__).resolve().parent / "crolling.py"
-        if not crolling_path.exists():
-            print(f"  [WARN] crolling.py를 찾을 수 없습니다: {crolling_path}")
-            return
-        
-        crolling_mod = _import_from_path("_crolling_module", crolling_path)
-        
-        if not hasattr(crolling_mod, "load_input"):
-            print(f"  [WARN] crolling.py에 load_input() 함수가 없습니다.")
-            return
-        
-        if not hasattr(crolling_mod, "run_stock_analysis_pipeline"):
-            print(f"  [WARN] crolling.py에 run_stock_analysis_pipeline() 함수가 없습니다.")
-            return
-        
-        # CSV 읽기
-        stocks = crolling_mod.load_input(str(step2_final_csv))
-        print(f"  로드된 종목: {len(stocks)}개")
-        
-        for stock in stocks[:5]:
-            print(f"    - {stock['ticker']} {stock['company_name']}")
-        if len(stocks) > 5:
-            print(f"    ... 외 {len(stocks) - 5}개")
-        
-        # 뉴스 크롤링 + LLM 분석 실행
-        print(f"\n  📰 뉴스 크롤링 + Gemini LLM 분석 시작...")
-        # 파라미터로 max_news 값을 명시적으로 전달
-        analyzed_results = crolling_mod.run_stock_analysis_pipeline(stocks, max_news=max_news)
-        
-        # 결과 저장
-        output_json = output_dir / "step3_final_news_llm_analysis.json"
-        with open(output_json, "w", encoding="utf-8") as f:
-            import json
-            json.dump(analyzed_results, f, ensure_ascii=False, indent=2)
-        print(f"  저장: {output_json}")
-        
-        # CSV 형태로도 저장
-        results_list = []
-        for ticker, data in analyzed_results.items():
-            evaluation = data.get("evaluation", {})
-            final_sentiment = evaluation.get("final_sentiment") or evaluation.get("sentiment", "")
-            final_score = evaluation.get("final_combined_score", evaluation.get("impact_score", 0))
-            record = {
-                "ticker": ticker,
-                "company_name": data.get("company_name", ""),
-                "news_count": data.get("news_count", 0),
-                "sentiment": final_sentiment,
-                "impact_score": final_score,
-                "summary": evaluation.get("summary", ""),
-                "trading_insight": evaluation.get("trading_insight", ""),
-            }
-            results_list.append(record)
-        
-        if results_list:
-            results_df = pd.DataFrame(results_list)
-            output_csv = output_dir / "step3_final_news_llm_analysis.csv"
-            results_df.to_csv(output_csv, index=False, encoding="utf-8-sig")
-            print(f"  저장: {output_csv}")
-            
-            print(f"\n  📊 분석 결과 요약:")
-            for _, row in results_df.iterrows():
-                print(f"    [{row['sentiment']}] {row['ticker']} {row['company_name']}: "
-                      f"종합점수={row['impact_score']}, "
-                      f"뉴스={row['news_count']}건")
-    
-    except Exception as e:
-        print(f"  [ERROR] STEP 3 실패: {e}")
-        import traceback
-        traceback.print_exc()
-
-
-def run_news_event_fusion(rank_df: pd.DataFrame, output_dir: Path,
-                          days: int = 3, max_news: int = 1) -> None:
-    """Publish bounded article evidence and the validated final Top-5 ranking."""
-    import json
-
-    from news_fusion.live import rank_with_news
-
-    final_top5, evidence = rank_with_news(rank_df, output_dir, days=days, max_news=max_news)
-    top_path = output_dir / "step3_final_top5.csv"
-    evidence_path = output_dir / "step3_final_news_event_analysis.json"
-    final_top5.to_csv(top_path, index=False, encoding="utf-8-sig")
-    evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"  사건 근거: {evidence_path}")
-    print(f"  검증 게이트 적용 최종 Top-5: {top_path}")
-
-
 def run(args: argparse.Namespace) -> int:
     output_dir = Path(args.output_dir)
 
     from predict import _load_inference_bundle
     bundle = _load_inference_bundle(args.model_manifest)
-    if "rank_ensemble" in bundle and args.run_news:
-        raise ValueError("The return-trained news correction cannot modify rank scores; use model-only mode")
 
     # ── STEP 1 : KOSPI200 후보 풀 로드 ──
     try:
@@ -817,16 +701,11 @@ def run(args: argparse.Namespace) -> int:
     print(f"  저장: {step2_final_csv}")
     print(f"  저장: {step2_top10_supply_csv}")
 
-    # ── STEP 3 : 본문 사건 추출 + 검증 게이트를 거친 최종 순위 ──
-    if args.run_news:
-        run_news_event_fusion(all_rank_df, output_dir, days=args.news_days, max_news=args.max_news)
-
     print(f"\n{'='*60}")
     print("[ALL DONE] 전체 파이프라인 완료")
     print(f"  STEP 1 (후보 풀)      : {step1_csv}")
     print(f"  STEP 2 (Transformer 앙상블) : {step2_final_csv}")
     print(f"  STEP 2 (수급 정보)   : {step2_top10_supply_csv}")
-    print(f"  STEP 3 (사건 근거)    : {output_dir / 'step3_final_news_event_analysis.json'}")
     return 0
 
 
@@ -843,7 +722,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--model-manifest", "--transformer-ckpt", dest="model_manifest", default=str(DEFAULT_MODEL_MANIFEST),
                    help="확정된 20일·120일 순위 앙상블 manifest.json 경로")
     p.add_argument("--predict-module",         default=str(DEFAULT_PREDICT_MODULE),
-                   help="predict.py 경로 (data.py/model.py 와 같은 폴더)")
+                   help="predict.py 경로 (features.py/rank_model.py 와 같은 폴더)")
     p.add_argument("--output-dir",             default=str(DEFAULT_OUTPUT_DIR),
                    help="결과 저장 폴더")
     p.add_argument("--candidate-pool",         type=int, default=200,
@@ -856,11 +735,6 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="수급 경향 조회 거래일 수 (기본 최근 5거래일)")
     p.add_argument("--supply-min-positive-days", type=int, default=3,
                    help="외국인/기관 각각 순매수 양수여야 하는 최소 일수 (기본 3)")
-    p.add_argument("--run-news", action="store_true", help="제한된 뉴스 본문 수집·Gemini 사건 추출 후 검증 게이트 적용")
-    p.add_argument("--news-days",              type=int, default=3,
-                   help="뉴스 조회 기간(일, 상한 3; 기본 3)")
-    p.add_argument("--max-news",               type=int, default=1,
-                   help="종목당 본문 분석 기사 수(상한 1; 기본 1)")
     return p
 
 

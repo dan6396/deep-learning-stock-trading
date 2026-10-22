@@ -6,9 +6,6 @@ import { focusMountedMain, scrollMountedHash } from "./app/routeFocus";
 
 // Split each route into its own chunk so the initial landing load doesn't pull
 // in the heavy dashboard (table, candle chart, KIS client) until it's visited.
-const LandingPage = lazy(() => import("./pages/LandingPage").then((module) => ({ default: module.LandingPage })));
-const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
-const StockDetailPage = lazy(() => import("./pages/StockDetailPage").then((module) => ({ default: module.StockDetailPage })));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
 // Rebuilt screens are the main site; /next remains a compatible preview alias.
 const AppShell = lazy(() => import("./app/AppShell").then((module) => ({ default: module.AppShell })));
@@ -98,9 +95,6 @@ export default function App() {
       >
         <Routes>
           <Route path="/dashboard" element={<DashboardRedirect />} />
-          <Route path="/legacy" element={<LandingPage />} />
-          <Route path="/legacy/dashboard" element={<DashboardPage />} />
-          <Route path="/legacy/stock/:code" element={<StockDetailPage />} />
           <Route path="/next" element={<AppShell />}>{appRoutes()}</Route>
           <Route path="/" element={<AppShell />}>{appRoutes()}</Route>
         </Routes>
