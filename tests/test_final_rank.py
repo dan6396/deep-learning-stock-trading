@@ -12,7 +12,7 @@ import pandas as pd
 import torch
 
 from rank_ensemble import DEFAULT_MANIFEST, RankEnsemble, prepare_inputs, rank_zscore
-from predict import predict_multiple, predict_next_return
+from predict import predict_multiple
 
 FIXTURES = Path(__file__).parent / "fixtures/final_rank"
 
@@ -80,8 +80,6 @@ class FinalRankTests(unittest.TestCase):
             prepare_inputs(frames, None, cutoff)
         with self.assertRaises(ValueError):
             self.model.predict(dict(list(frames.items())[:1]), market, cutoff)
-        with self.assertRaisesRegex(ValueError, "complete universe"):
-            predict_next_return(str(DEFAULT_MANIFEST), next(iter(frames.values())))
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory) / "model"
             shutil.copytree(DEFAULT_MANIFEST.parent, folder)

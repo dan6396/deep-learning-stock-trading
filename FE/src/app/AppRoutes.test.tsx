@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation, useParams } from "react-router-dom";
 import { AppProviders } from "./providers";
@@ -7,9 +7,6 @@ import { jsonResponse, pipelineRow } from "../test/dataFixtures";
 
 vi.mock("../features/briefing/BriefingPage", () => ({ BriefingPage: () => <h1 id="candidate-heading">테스트 브리핑</h1> }));
 vi.mock("../features/stock/StockReportPage", () => ({ StockReportPage: () => <h1>테스트 리포트 {useParams().code}</h1> }));
-vi.mock("../pages/LandingPage", () => ({ LandingPage: () => <main><h1>기존 랜딩</h1></main> }));
-vi.mock("../pages/DashboardPage", () => ({ DashboardPage: () => <main><h1>기존 대시보드</h1></main> }));
-vi.mock("../pages/StockDetailPage", () => ({ StockDetailPage: () => <main><h1>기존 종목 {useParams().code}</h1></main> }));
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async url => String(url) === "/api/candidates/run" ? jsonResponse({ status: "idle" }) : jsonResponse([pipelineRow()])));
@@ -29,8 +26,8 @@ it("keeps dashboard query and adapts its table deep link", async () => {
   mount("/dashboard?code=005930&sort=model#market-table"); await screen.findByRole("heading", { name: "테스트 브리핑" });
   expect(screen.getByTestId("route-location")).toHaveTextContent("/?code=005930&sort=model#candidate-heading");
 });
-it.each([["/legacy", "기존 랜딩"], ["/legacy/dashboard", "기존 대시보드"], ["/legacy/stock/005930", "기존 종목 005930"]])("preserves %s", async (path, title) => {
-  mount(path); expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+it.each(["/legacy", "/legacy/dashboard", "/legacy/stock/005930"])("does not expose retired screens at %s", async path => {
+  mount(path); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" });
 });
 it.each(["/missing", "/next/missing"])("keeps the shell and correct home link for %s", async path => {
   mount(path); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" });

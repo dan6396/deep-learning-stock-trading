@@ -13,7 +13,7 @@ vi.mock("node:fs/promises", () => { const mocks = { access: vi.fn(async () => {}
 vi.mock("../../server/pipelineFreshness", () => ({ pipelineProjectRoot: () => "fixture-root", pipelineOutputDir: () => "fixture-output", writePipelineRunMarker: vi.fn(async () => {}) }));
 vi.mock("../../server/pipelineResults", () => ({ inspectPipelineResultAvailability: vi.fn(async () => ({})), getRankPayload: vi.fn(async () => []), getStockAnalysisPayload: vi.fn(async () => null), parseCsv: vi.fn(() => []), getCandidatesPayload: vi.fn(async () => [{}]), refreshDashboardAiFieldsFromPipelineOutput: vi.fn(async () => true),
   validateModelOnlyOutputs: vi.fn(async () => { if (mock.validationError) throw new Error("Invalid model output schema."); return { rows: 199, modelSelectionRows: 10 }; }) }));
-import { runCandidateAnalysis, startCandidateAnalysis, startStockNewsAnalysis, getCandidateAnalysisSnapshot, getCandidateAnalysisStatus } from "../../server/pipelineRunner";
+import { runCandidateAnalysis, startCandidateAnalysis, getCandidateAnalysisSnapshot, getCandidateAnalysisStatus } from "../../server/pipelineRunner";
 import { createRoutes } from "../../server/routes";
 import { collectTopFiveArticles } from "../../server/relatedNews";
 import { writePipelineRunMarker } from "../../server/pipelineFreshness";
@@ -38,7 +38,7 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(mock.spawned[0].args).not.toContain("--run-news");
     expect(collectTopFiveArticles).toHaveBeenCalledOnce();
   });
-  it.each(["model_only", "full"])("passes the custom output environment to every %s marker write", async mode => {
+  it.each(["model_only"])("passes the custom output environment to every %s marker write", async mode => {
     const env = { PIPELINE_ANALYSIS_MODE: mode, PIPELINE_OUTPUT_DIR: "fixture-custom-output" };
     await runCandidateAnalysis(env);
     expect(writePipelineRunMarker.mock.calls[0][0]).toMatchObject({ status: "running", runId: expect.any(String), kind: "adhoc" });
@@ -55,12 +55,6 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "failed"]);
     for (const [, markerEnv] of writePipelineRunMarker.mock.calls) expect(markerEnv).toBe(env);
   });
-  it("keeps full mode flag, credentials, step3 validation and dashboard behavior", async () => {
-    const result = await runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "full", GEMINI_API_KEY: "fixture-full" });
-    expect(mock.spawned[0].args).toContain("--run-news"); expect(mock.spawned[0].options.env.GEMINI_API_KEY).toBe("fixture-full");
-    expect(result).toMatchObject({ status: "completed", rows: 1, newsRows: 1, dashboardUpdated: true });
-    expect(validateModelOnlyOutputs).not.toHaveBeenCalled();
-  });
   it("does not complete a failed model validation", async () => {
     mock.validationError = true; await expect(runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "model_only" })).rejects.toThrow("Invalid model");
     expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "failed"]);
@@ -72,14 +66,10 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(result).toMatchObject({ status: "completed", rows: 199, articleCollectionStatus: "unavailable", newsRows: 0 });
     expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "completed"]);
   });
-  it("full mode still requires fresh STEP3 output", async () => {
-    mock.oldFile = true; await expect(runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "full" })).rejects.toThrow("not updated");
-    expect(writePipelineRunMarker.mock.calls.at(-1)[0].status).toBe("failed");
-  });
   it("rejects unknown modes and individual news launches before spawning", async () => {
     await expect(runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "model-only-typo" })).rejects.toThrow("Unsupported");
     expect(() => startCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "typo" })).toThrow("Unsupported");
-    expect(() => startStockNewsAnalysis("005930", { PIPELINE_ANALYSIS_MODE: "model_only" })).toThrow("disabled");
+    await expect(runCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "full" })).rejects.toThrow("Unsupported");
     expect(mock.spawned).toHaveLength(0); expect(writePipelineRunMarker).not.toHaveBeenCalled();
   });
   it("read-only memory snapshot does not invoke marker writes", () => {

@@ -613,7 +613,7 @@ function modelScoreFromRow(aiRow: PipelineOutputRow | undefined): number | null 
     return null;
   }
 
-  return toFiniteOrNull(aiRow?.input_row?.ensemble_pred_return) ?? toFiniteOrNull(aiRow?.input_row?.lstm_pred_return);
+  return toFiniteOrNull(aiRow?.input_row?.ensemble_pred_return);
 }
 
 /**

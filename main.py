@@ -1,42 +1,13 @@
-"""Scan KOSPI 200 stocks with KIS mock trading quote API."""
-
+"""KOSPI200 universe provider for the final rank pipeline."""
 from __future__ import annotations
-
 import os
-import sys
-import time
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
-
-import pandas as pd
-import requests
-
-from config import BASE_URL, KISAuthError, KISTokenManager, create_token_manager
-
+from datetime import datetime
 
 KOSPI200_INDEX_CODE = "1028"
-CURRENT_PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-price"
-CURRENT_PRICE_TR_ID = "FHKST01010100"
-REQUEST_TIMEOUT_SECONDS = 10
 
-TOP_N = 10
-
-REQUEST_SLEEP_SECONDS = float(os.getenv("KIS_REQUEST_SLEEP_SECONDS", "0.08"))
-MAX_RETRIES = int(os.getenv("KIS_MAX_RETRIES", "3"))
 KOSPI200_POOL_SOURCE = os.getenv("KOSPI200_POOL_SOURCE", "pykrx").strip().lower()
-TOP_SORT_COLUMN = os.getenv("TOP_SORT_COLUMN", "당일거래대금(원)").strip()
-
-OUTPUT_COLUMNS = [
-    "종목코드",
-    "종목명",
-    "현재가",
-    "등락률(%)",
-    "누적거래량",
-    "전일거래량",
-    "당일거래대금(원)",
-    "전일대비거래량비율(%)",
-]
 
 STATIC_KOSPI200_POOL = (
     ("005930", "삼성전자"),
@@ -241,16 +212,10 @@ STATIC_KOSPI200_POOL = (
     ("003030", "세아제강지주"),
 )
 
-
-class KISAPIError(RuntimeError):
-    """Raised when a KIS quote API call fails."""
-
-
 @dataclass(frozen=True)
 class StockInfo:
     code: str
     name: str
-
 
 def load_kospi200_pool() -> list[StockInfo]:
     if KOSPI200_POOL_SOURCE == "static":
@@ -284,138 +249,8 @@ def load_kospi200_pool() -> list[StockInfo]:
 
     return pool
 
-
 def _load_static_kospi200_pool() -> list[StockInfo]:
     return [StockInfo(code=code, name=name) for code, name in STATIC_KOSPI200_POOL]
-
-
-def fetch_current_price(
-    token_manager: KISTokenManager,
-    stock_info: StockInfo,
-) -> dict[str, Any]:
-    url = f"{BASE_URL}{CURRENT_PRICE_PATH}"
-    headers = token_manager.auth_headers(CURRENT_PRICE_TR_ID)
-    params = {
-        "FID_COND_MRKT_DIV_CODE": "J",
-        "FID_INPUT_ISCD": stock_info.code,
-    }
-
-    last_error: Exception | None = None
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            response = token_manager.session.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=REQUEST_TIMEOUT_SECONDS,
-            )
-            if response.status_code == 429:
-                raise KISAPIError("rate limit exceeded (HTTP 429)")
-            response.raise_for_status()
-            payload = response.json()
-            break
-        except (requests.RequestException, ValueError, KISAPIError) as exc:
-            last_error = exc
-            if attempt >= MAX_RETRIES:
-                raise KISAPIError(f"{stock_info.code} quote request failed: {exc}") from exc
-            time.sleep(0.5 * attempt)
-    else:
-        raise KISAPIError(f"{stock_info.code} quote request failed: {last_error}")
-
-    if payload.get("rt_cd") != "0":
-        message = payload.get("msg1") or payload.get("msg_cd") or payload
-        raise KISAPIError(f"{stock_info.code} quote API error: {message}")
-
-    output = payload.get("output") or {}
-    if not isinstance(output, dict):
-        raise KISAPIError(f"{stock_info.code} quote output was not an object: {output}")
-
-    return output
-
-
-def build_candidate(stock_info: StockInfo, quote: dict[str, Any]) -> dict[str, Any]:
-    current_price = _to_int(quote.get("stck_prpr"))
-    change_rate = _to_float(quote.get("prdy_ctrt"))
-    current_volume = _to_int(quote.get("acml_vol"))
-    previous_volume = _to_int(quote.get("prdy_vol"))
-    trading_value = _to_int(quote.get("acml_tr_pbmn"))
-    volume_rate_pct = _get_volume_rate_pct(quote)
-
-    return {
-        "종목코드": stock_info.code,
-        "종목명": quote.get("hts_kor_isnm") or stock_info.name,
-        "현재가": current_price,
-        "등락률(%)": change_rate,
-        "누적거래량": current_volume,
-        "전일거래량": previous_volume,
-        "당일거래대금(원)": trading_value,
-        "전일대비거래량비율(%)": volume_rate_pct,
-    }
-
-
-def scan_kospi200(top_n: int = TOP_N, sort_column: str = TOP_SORT_COLUMN) -> pd.DataFrame:
-    """
-    KOSPI200 전체 후보를 KIS 현재가 API로 조회한 뒤, 현물 수급 기준 상위 종목을 반환합니다.
-
-    기본 정렬은 당일거래대금(원)입니다. 거래량 자체 기준이 필요하면
-    sort_column="누적거래량" 또는 환경변수 TOP_SORT_COLUMN=누적거래량 을 사용하세요.
-    """
-    token_manager = create_token_manager()
-    pool = load_kospi200_pool()
-    pool = _filter_valid_stock_codes(pool)
-    print(f"[INFO] KOSPI 200 대상 {len(pool)}개 종목 조회 시작 ({datetime.now():%Y-%m-%d %H:%M:%S})")
-
-    rows: list[dict[str, Any]] = []
-    failures: list[str] = []
-
-    for index, stock_info in enumerate(pool, start=1):
-        try:
-            quote = fetch_current_price(token_manager, stock_info)
-            rows.append(build_candidate(stock_info, quote))
-        except KISAPIError as exc:
-            failures.append(str(exc))
-
-        if index % 25 == 0 or index == len(pool):
-            print(f"[INFO] 진행률 {index}/{len(pool)} | 수집 {len(rows)}개 | 실패 {len(failures)}개")
-
-        time.sleep(REQUEST_SLEEP_SECONDS)
-
-    if failures:
-        print(f"[WARN] API 실패 {len(failures)}건 발생. 첫 5건:")
-        for failure in failures[:5]:
-            print(f"       - {failure}")
-
-    if not rows:
-        return pd.DataFrame(columns=OUTPUT_COLUMNS)
-
-    df = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
-    if sort_column not in df.columns:
-        raise ValueError(f"sort_column={sort_column!r} 컬럼이 없습니다. 사용 가능: {list(df.columns)}")
-
-    # 상한가/거래정지성 이상치를 뒤로 보내되, 후보 자체는 버리지 않습니다.
-    primary_mask = (df["등락률(%)"] > 0.0) & (df["등락률(%)"] < 25.0)
-    primary = df.loc[primary_mask].sort_values(sort_column, ascending=False)
-    secondary = df.loc[~primary_mask].sort_values(sort_column, ascending=False)
-
-    return pd.concat([primary, secondary], ignore_index=True).head(top_n).reset_index(drop=True)
-
-
-def print_result(df: pd.DataFrame) -> None:
-    display_df = df.copy()
-    if not display_df.empty:
-        display_df["현재가"] = display_df["현재가"].map(lambda value: f"{int(value):,}")
-        display_df["등락률(%)"] = display_df["등락률(%)"].map(lambda value: f"{float(value):.2f}")
-        display_df["누적거래량"] = display_df["누적거래량"].map(lambda value: f"{int(value):,}")
-        display_df["전일거래량"] = display_df["전일거래량"].map(lambda value: f"{int(value):,}")
-        display_df["당일거래대금(원)"] = display_df["당일거래대금(원)"].map(lambda value: f"{int(value):,}")
-        display_df["전일대비거래량비율(%)"] = display_df["전일대비거래량비율(%)"].map(
-            lambda value: f"{float(value):.2f}"
-        )
-
-    print("\n[RESULT] KOSPI 200 수급/모멘텀 상위 10")
-    with pd.option_context("display.max_columns", None, "display.width", 160):
-        print(display_df.to_string(index=False))
-
 
 def _get_index_members(stock_module: Any) -> list[str]:
     try:
@@ -425,61 +260,3 @@ def _get_index_members(stock_module: Any) -> list[str]:
         codes = stock_module.get_index_portfolio_deposit_file(today, KOSPI200_INDEX_CODE)
 
     return [str(code).zfill(6) for code in codes]
-
-
-def _filter_valid_stock_codes(pool: list[StockInfo]) -> list[StockInfo]:
-    valid_pool: list[StockInfo] = []
-    for stock_info in pool:
-        code = str(stock_info.code).strip()
-        if not (code.isdigit() and len(code) == 6):
-            print(f"[WARN] 잘못된 종목코드 skip: {stock_info.code!r} ({stock_info.name})")
-            continue
-        valid_pool.append(StockInfo(code=code, name=stock_info.name))
-    return valid_pool
-
-
-def _get_volume_rate_pct(quote: dict[str, Any]) -> float:
-    api_value = _to_float(quote.get("prdy_vrss_vol_rate"), default=-1.0)
-    if api_value >= 0:
-        return api_value
-
-    current_volume = _to_int(quote.get("acml_vol"))
-    previous_volume = _to_int(quote.get("prdy_vol"))
-    if previous_volume <= 0:
-        return 0.0
-
-    return current_volume / previous_volume * 100.0
-
-
-def _to_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(float(str(value).replace(",", "").strip()))
-    except (TypeError, ValueError):
-        return default
-
-
-def _to_float(value: Any, default: float = 0.0) -> float:
-    try:
-        return float(str(value).replace(",", "").strip())
-    except (TypeError, ValueError):
-        return default
-
-
-def main() -> int:
-    try:
-        result = scan_kospi200()
-        print_result(result)
-        return 0
-    except KISAuthError as exc:
-        print(f"[ERROR] 인증/토큰 오류: {exc}", file=sys.stderr)
-        return 1
-    except RuntimeError as exc:
-        print(f"[ERROR] 실행 오류: {exc}", file=sys.stderr)
-        return 1
-    except KeyboardInterrupt:
-        print("\n[WARN] 사용자에 의해 중단되었습니다.", file=sys.stderr)
-        return 130
-
-
-if __name__ == "__main__":
-    sys.exit(main())

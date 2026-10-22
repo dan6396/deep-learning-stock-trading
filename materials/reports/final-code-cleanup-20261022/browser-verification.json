@@ -1,0 +1,32 @@
+{
+  "fixtureOnly": true,
+  "passed": true,
+  "checks": [
+    "briefing-desktop displays rank score without direction claims",
+    "briefing-desktop has one main heading",
+    "briefing-desktop has no horizontal page overflow",
+    "briefing-mobile displays rank score without direction claims",
+    "briefing-mobile has one main heading",
+    "briefing-mobile has no horizontal page overflow",
+    "rank-desktop has one main heading",
+    "rank-desktop has no horizontal page overflow",
+    "stock rank score is not a percent",
+    "stock-desktop has one main heading",
+    "stock-desktop has no horizontal page overflow",
+    "history-desktop has one main heading",
+    "history-desktop has no horizontal page overflow",
+    "about-mobile has one main heading",
+    "about-mobile has no horizontal page overflow",
+    "no browser script exceptions",
+    "no POST/API execution was triggered"
+  ],
+  "screenshots": [
+    "briefing-desktop.png",
+    "briefing-mobile.png",
+    "rank-desktop.png",
+    "stock-desktop.png",
+    "history-desktop.png",
+    "about-mobile.png"
+  ],
+  "exceptions": []
+}

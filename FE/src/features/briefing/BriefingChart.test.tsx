@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BriefingChart } from "./BriefingChart";
-import { chartBundle } from "../stock/reportFixtures";
+import { chartBundle } from "../../test/fixtures/reportFixtures";
 import { jsonResponse } from "../../test/dataFixtures";
 
 const clients: QueryClient[] = [];

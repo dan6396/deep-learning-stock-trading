@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { RankPage } from "./RankPage";
-import { wholeRank } from "./rankFixtures";
+import { wholeRank } from "../../test/fixtures/rankFixtures";
 import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });

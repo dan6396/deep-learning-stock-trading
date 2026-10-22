@@ -84,7 +84,7 @@ export function adaptCandidate(value: unknown, isFinalCandidate = false): DataRe
       finalPredictedReturn: input.score_kind === "rank_zscore" ? null : finiteNumber(Object.prototype.hasOwnProperty.call(meta, "rawFinalPrediction") ? meta.rawFinalPrediction : input.final_pred_return),
       rank: nonnegativeInteger(Object.prototype.hasOwnProperty.call(meta, "rawModelRank") ? meta.rawModelRank : input.pred_rank), poolSize: nonnegativeInteger(input.pred_pool_size),
       finalRank: rawFinalRank !== null && rawFinalRank >= 1 ? rawFinalRank : null,
-      baseDate: textValue(input.prediction_base_date ?? input.transformer_base_date ?? input.lstm_base_date),
+      baseDate: textValue(input.prediction_base_date),
       predictionTarget: textValue(input.prediction_target), nextTradingDay: null,
       summary: textValue(result.summary), tradingInsight: textValue(result.trading_insight),
       news, newsCollected, newsMethod, newsTally: explicitTally,

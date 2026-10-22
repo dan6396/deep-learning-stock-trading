@@ -1,4 +1,4 @@
-﻿import { useAppPaths } from "../../app/paths";
+import { useAppPaths } from "../../app/paths";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { AboutContent } from "./AboutContent";
 import "./about.css";

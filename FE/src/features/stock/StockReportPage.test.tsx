@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { StockReportPage } from "./StockReportPage";
 import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
-import { reportRow, chartBundle } from "./reportFixtures";
+import { reportRow, chartBundle } from "../../test/fixtures/reportFixtures";
 
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });

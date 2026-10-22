@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock3, RefreshCw, ShieldCheck } from "lucide-react";
 import { useAnalysisRun } from "../../shared/api/analysis";
