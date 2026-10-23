@@ -93,6 +93,12 @@
 
 /* Shared site shell; feature layouts retain their own styles. */
 .ds-root { min-width: 0; }
+.ds-root:has(> .ds-header) { min-height: 100dvh; display: flow-root; }
+html:has(.ds-root),body:has(.ds-root),#root:has(.ds-root) { background: var(--ds-bg); min-height: 100%; }
+.ds-main:not(.ds-main-briefing) { width: 100%; max-width: 1512px; margin-inline: auto; box-sizing: border-box; }
+.run-reference { color: var(--ds-fg-2); font-size: 12px; min-width: 0; }
+.run-reference summary { cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; }
+.run-reference code { display: block; overflow-wrap: anywhere; padding-block: 8px; }
 .ds-header { display: flex; align-items: center; gap: 28px; min-height: 64px; padding: 0 28px; box-shadow: 0 1px 0 var(--ds-line); }
 .ds-brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; color: var(--ds-fg); font-size: 15px; font-weight: 750; text-decoration: none; min-height: 44px; }
 .ds-nav { display: flex; align-self: stretch; gap: 6px; }

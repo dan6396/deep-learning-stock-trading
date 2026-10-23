@@ -5,6 +5,12 @@ import { pipelineRow } from "../test/dataFixtures";
 
 const candidate = () => adaptCandidate(pipelineRow()).data;
 describe("versioned pure signal rules", () => {
+  it("labels model ranks neutrally at the exact top-five-percent boundary", () => {
+    const row = { ...candidate(), scoreKind: "rank_zscore" as const, rankScore: -1, predictionTarget: "next_session_open_to_close" };
+    expect(modelSignal({ ...row, rank: 10, poolSize: 200 }).modelLabel).toBe("모델 상위권");
+    expect(modelSignal({ ...row, rank: 11, poolSize: 200 }).modelLabel).toBe("모델 순위 11위");
+    expect(modelSignal({ ...row, rank: null, poolSize: 200 }).modelLabel).toBe("순위 미확인");
+  });
   it("checks final membership after validating raw prediction", () => {
     const c = candidate();
     expect(modelSignal({ ...c, isFinalCandidate: true, predictedReturn: -0.1 }).state).toBe("positive");

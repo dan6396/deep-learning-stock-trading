@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { elapsedLabel, HistoryPage, progressUpdatedLabel } from "./HistoryPage";
 import { backendStatusBody, jsonResponse, pipelineRow } from "../../test/dataFixtures";
+import { expectReadableUserText } from "../../test/assertUserText";
 
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
@@ -42,7 +43,7 @@ it("does not turn an unproduced model-only candidate list into zero final candid
   await screen.findByText("모델 실행 완료");
   expect(screen.queryByText("최신 실행 완료")).not.toBeInTheDocument();
   expect(screen.getByTestId("history-model-only")).toHaveTextContent("실행 완료만으로 공식 성과가 확정되지 않습니다");
-  await waitFor(() => expect(screen.getByTestId("history-candidate-count")).toHaveTextContent(/^미생성$/));
+  await waitFor(() => expect(screen.getByTestId("history-candidate-count")).toHaveTextContent(/^199종목$/));
   expect(screen.getByText(/뉴스 보정은 실행하지 않았습니다/)).toBeInTheDocument();
   expect(screen.queryByText("현재 조회된 최종 후보가 없습니다.")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "전체 모델 순위 보기" })).toHaveAttribute("href", "/next/rank");
@@ -59,6 +60,19 @@ it("keeps an empty list unconfirmed when the status read fails", async () => {
   expect(screen.queryByText("현재 조회된 최종 후보가 없습니다.")).not.toBeInTheDocument();
 });
 const stored = { startedAt: "2026-10-09T09:00:00.000Z", finishedAt: "2026-10-09T09:01:05.000Z" };
+it("maps a saved model-only universe while the restarted server is idle and folds the full run reference", async () => {
+  const runId = "12345678-1234-1234-1234-123456789abc";
+  backend(() => ({ status: "idle" }), [], { state: "not_produced" }, { marker: { state: "completed", mode: "model_only", ...stored, runId } });
+  mount();
+  await screen.findByText("모델 순위 종목 수");
+  expect(screen.getByTestId("history-candidate-count")).toHaveTextContent("199종목");
+  expect(screen.getByText(/상위 목록 5종목/)).toBeInTheDocument();
+  expect(screen.queryByText("해당 없음 · 최종 후보 미생성")).not.toBeInTheDocument();
+  expect(screen.getByTestId("history-status")).toHaveTextContent("실행 중인 분석 없음");
+  expect(screen.getAllByText("실행 기록 12345678").length).toBeGreaterThan(0);
+  expect(screen.getAllByText(runId)[0]).not.toBeVisible();
+  expectReadableUserText(document.querySelector('.history-page')!);
+});
 it("shows the stored last run from the disk marker while the current runtime is idle", async () => {
   backend(() => ({ status: "idle" }), [], { state: "not_produced" }, { marker: { state: "completed", mode: "model_only", ...stored } }); mount();
   const card = await screen.findByTestId("history-saved-run");
@@ -67,7 +81,7 @@ it("shows the stored last run from the disk marker while the current runtime is 
   expect(screen.getByTestId("history-saved-elapsed")).toHaveTextContent("1분 5초");
   expect(screen.getByTestId("history-saved-rank")).toHaveTextContent("전체 순위: 저장된 분석 결과 제공 · 199종목");
   expect(card).toHaveTextContent("뉴스 보정 최종 후보는 생성되지 않았습니다");
-  expect(card).toHaveTextContent("구현 이전 기록에는 식별자가 없습니다");
+  expect(card).toHaveTextContent("기록 번호 없음");
   expect(screen.getByTestId("history-status")).toHaveTextContent("실행 중인 분석 없음");
 });
 it("shows a stored failed run as failed, not as the current run", async () => {

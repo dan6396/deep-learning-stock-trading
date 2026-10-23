@@ -14,8 +14,8 @@ function sync(codes: string[]) {
 }
 beforeEach(() => sync([]));
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-function mount(rank: unknown = wholeRank()) {
-  vi.stubGlobal("fetch", vi.fn(async url => String(url) === "/api/rank" && typeof rank === "function" ? rank() : jsonResponse(String(url) === "/api/rank" ? rank : wholeRank().slice(0, 5))));
+function mount(rank: unknown = wholeRank(), candidates: unknown = wholeRank().slice(0, 5)) {
+  vi.stubGlobal("fetch", vi.fn(async url => String(url) === "/api/rank" && typeof rank === "function" ? rank() : jsonResponse(String(url) === "/api/rank" ? rank : candidates)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); clients.push(client);
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/next/watchlist"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><WatchlistPage /></MemoryRouter></QueryClientProvider>);
 }
@@ -64,5 +64,22 @@ describe("watchlist joins and persistence UI", () => {
     sync(["999999"]); mount(() => Promise.resolve(new Response("{}", { status: 502 })));
     await screen.findByText("전체 순위 조회 실패 · 저장한 종목 코드는 유지합니다.");
     expect(document.querySelector('[data-rank-code="999999"]')).toHaveTextContent("분석 조회 실패 · 미확인"); expect(screen.queryByText("분석 미제공")).not.toBeInTheDocument();
+  });
+  it("retains previous-state notes in the score table for measured and outside-universe saved codes", async () => {
+    sync(["100001", "999999"]);
+    const rows = wholeRank().slice(0, 1);
+    Object.assign(rows[0].input_row, { score_kind: "rank_zscore", rank_score: 1.6015 });
+    let fail = false;
+    mount(() => Promise.resolve(fail ? new Response("{}", { status: 502 }) : jsonResponse(rows)), rows);
+    await screen.findByRole("columnheader", { name: "순위 점수" });
+    expect(document.querySelector('[data-rank-code="100001"]')).toHaveTextContent("1.6015");
+    expect(document.querySelector('[data-rank-code="999999"]')).toHaveTextContent("분석 미제공");
+    fail = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+    await screen.findByText("이전 조회 결과 · 관심 종목 분석 갱신 실패");
+    expect(document.querySelector('.rank-score-table')).toBeInTheDocument();
+    expect(document.querySelector('[data-rank-code="100001"] .rank-row-note')).toHaveTextContent(/^이전 조회 결과$/);
+    expect(document.querySelector('[data-rank-code="100001"]')).toHaveTextContent("1.6015");
+    expect(document.querySelector('[data-rank-code="999999"] .rank-row-note')).toHaveTextContent("이전 조회 결과 · 현재 분석 여부 미확인");
+    expect(screen.queryByText("분석 미제공")).not.toBeInTheDocument();
   });
 });

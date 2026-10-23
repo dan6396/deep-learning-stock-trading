@@ -5,6 +5,7 @@ import { MemoryRouter, useNavigate } from "react-router-dom";
 import { SearchDialog } from "./SearchDialog";
 import { wholeRank } from "../../test/fixtures/rankFixtures";
 import { jsonResponse } from "../../test/dataFixtures";
+import { expectReadableUserText } from "../../test/assertUserText";
 const clients: QueryClient[] = [];
 beforeEach(() => {
   if (!HTMLDialogElement.prototype.showModal) HTMLDialogElement.prototype.showModal = function() { this.setAttribute("open", ""); };
@@ -20,6 +21,18 @@ function mount(handler?: () => Promise<Response>) {
 }
 function HistoryProbe() { const navigate = useNavigate(); return <button onClick={() => navigate(-1)}>테스트 뒤로</button>; }
 describe("global whole-rank search", () => {
+  it("shows rank and four-decimal score instead of a missing return direction", async () => {
+    const rows = wholeRank().slice(0, 2);
+    Object.assign(rows[0].input_row, { score_kind: "rank_zscore", rank_score: 1.601514 });
+    Object.assign(rows[1].input_row, { score_kind: "rank_zscore", rank_score: null, pred_rank: null });
+    mount(() => Promise.resolve(jsonResponse(rows)));
+    fireEvent.click(screen.getByRole("button", { name: "종목 검색" }));
+    await screen.findByText("전체 2종목 중 2종목 일치");
+    expect(screen.getByText(/1위 · 순위 점수 1.6015/)).toBeInTheDocument();
+    expect(screen.getByText(/순위 없음/)).toBeInTheDocument();
+    expect(screen.queryByText(/모델 예측 —/)).not.toBeInTheDocument();
+    expectReadableUserText(screen.getByRole("dialog"));
+  });
   it("opens a labelled modal with focused input, searches all 199 instead of candidates", async () => {
     const fetcher = mount(); const trigger = screen.getByRole("button", { name: "종목 검색" }); trigger.focus(); fireEvent.click(trigger);
     const dialog = screen.getByRole("dialog", { name: "종목 검색" }), input = within(dialog).getByRole("searchbox"); expect(input).toHaveFocus();

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { BriefingNarrative, BriefingStock } from "../../entities/briefing";
 import { citationDomId, formatNewsDate, parseCitation, withoutRankScoreDisclaimer } from "../../entities/briefing";
-import { formatNumber } from "../../shared/lib/format";
+import { formatNumber, formatRankScore } from "../../shared/lib/format";
 import { safeArticleUrl } from "../../shared/lib/articleUrl";
 import { useAppPaths } from "../../app/paths";
 import { Link } from "react-router-dom";
@@ -110,7 +110,7 @@ export function BriefingStockSection({
                   </button>
                   <span className="briefing-stock-pool-meta">
                     {stock.poolSize !== null && `${formatNumber(stock.poolSize)}종목 중 `}상위 {stock.topPercent === null ? "—" : `${stock.topPercent.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%`} · 순위 점수:{" "}
-                    {stock.rankScore === null ? "—" : stock.rankScore > 0 ? `+${stock.rankScore.toFixed(2)}` : stock.rankScore.toFixed(2)}
+                    {stock.rankScore === null ? "—" : formatRankScore(stock.rankScore)}
                   </span>
                 </div>
 

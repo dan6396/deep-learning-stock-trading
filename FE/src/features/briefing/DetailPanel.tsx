@@ -45,7 +45,7 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
       {key === "model" ? <p>{formatNumber(detail.poolSize)}종목 중 {formatNumber(detail.rank)}위</p> : <p>{signals.news.reason}</p>}
       {signals[key].state === "unavailable" && key !== "news" && <p>{signals[key].reason}</p>}
     </div>)}</div> : <p className="briefing-muted">분석 근거 조회 중</p>}
-    <dl className="briefing-detail-stats"><div><dt>모델 예측</dt><dd><PredictionDirection value={detail?.predictedReturn} rankScore={detail?.rankScore} scoreKind={detail?.scoreKind} /></dd></div></dl>
+    <dl className="briefing-detail-stats"><div><dt>{detail?.scoreKind === "rank_zscore" ? "순위 점수" : "이전 모델 값"}</dt><dd><PredictionDirection value={detail?.predictedReturn} rankScore={detail?.rankScore} scoreKind={detail?.scoreKind} /></dd></div></dl>
     {detail?.predictedReturn === null && detail?.rankScore == null && <p className="briefing-footnote">원본 모델 예측값이 없습니다.</p>}
     {modelOnly && detail && <><p className="briefing-footnote">{predictionPeriod(detail, nextSession)} · 분석 기준일 {formatDate(detail.baseDate)}</p><RelatedArticles candidate={detail} /></>}
     {!modelOnly && <><h3>대표 기사</h3>{detail?.news.length ? <ul className="briefing-news">{detail.news.slice(0, 3).map((news, index) => { const url = safeArticleUrl(news.url); return <li key={`${news.title}-${index}`}><strong>{url ? <a href={url} target="_blank" rel="noopener noreferrer">{news.title ?? "제목 미확인"}</a> : news.title ?? "제목 미확인"}</strong><small>{news.source ?? "출처 미확인"} · {formatDate(news.publishedAt)}</small></li>; })}</ul> : <p className="briefing-muted briefing-footnote">{detail?.newsCollected ? "수집된 기사 0건" : "뉴스 수집 여부 미확인"}</p>}</>}

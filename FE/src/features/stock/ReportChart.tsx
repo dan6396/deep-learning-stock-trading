@@ -57,7 +57,7 @@ export function ReportChart({ code }: { code: string }) {
   const allowed = chart.data?.source === "live" || chart.data?.source === "cache";
   async function refresh() { await client.cancelQueries({ queryKey: queryKeys.chart(code, range), exact: true }); await client.refetchQueries({ queryKey: queryKeys.chart(code, range), exact: true }); }
   return <section className="report-card report-chart" aria-labelledby="report-chart-title">
-    <div className="report-section-heading"><div><p className="report-eyebrow">PRICE OBSERVATIONS</p><h2 id="report-chart-title">가격 이력</h2></div><button className="report-icon-button" onClick={() => void refresh()} aria-label="가격 이력 다시 조회"><RefreshCw aria-hidden="true" size={16} /></button></div>
+    <div className="report-section-heading"><div><p className="report-eyebrow">가격 관측</p><h2 id="report-chart-title">가격 이력</h2></div><button className="report-icon-button" onClick={() => void refresh()} aria-label="가격 이력 다시 조회"><RefreshCw aria-hidden="true" size={16} /></button></div>
     <div className="report-chart-controls"><div role="group" aria-label="가격 이력 기간">{TIME_RANGES.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => setRange(value)}>{labels[value]}</button>)}</div><div role="group" aria-label="차트 표시 방식"><button aria-pressed={mode === "area"} onClick={() => setMode("area")}>{range === "1D" ? "가격선" : "종가 선"}</button><button aria-pressed={mode === "candle"} onClick={() => setMode("candle")}>캔들</button></div></div>
     {chart.data && <SourceMeta source={chart.data.source} asOf={chart.data.asOf} label="조회/저장 시각" />}
     {chart.data && allowed && <CoverageNote data={chart.data.data} />}

@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { RankPage } from "./RankPage";
 import { wholeRank } from "../../test/fixtures/rankFixtures";
 import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
+import { expectReadableUserText } from "../../test/assertUserText";
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
 function mount() {
@@ -16,6 +17,26 @@ function mockFetch(handler?: (path: string) => Promise<Response> | undefined) {
   vi.stubGlobal("fetch", fetcher); return fetcher;
 }
 describe("whole-rank page fetch interactions", () => {
+  it("shows compact neutral score columns and preserves model ranking controls", async () => {
+    const rows = wholeRank();
+    rows.forEach((row, index) => Object.assign(row.input_row, { score_kind: "rank_zscore", rank_score: index === 0 ? 1.601514 : 1.5 - index / 100 }));
+    mockFetch(path => path === "/api/rank" ? Promise.resolve(jsonResponse(rows)) : path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path === "/api/backend/status" ? Promise.resolve(jsonResponse(backendStatusBody({ state: "not_produced" }))) : undefined);
+    mount(); await screen.findByRole("columnheader", { name: "순위 점수" });
+    expect(screen.getAllByRole("columnheader").map(el => el.textContent)).toEqual(["순위", "종목", "순위 점수", "상위 %", "관련 기사", "관심"]);
+    expect(document.querySelector('[data-rank-code="100001"]')).toHaveTextContent("1.6015");
+    expect(document.querySelectorAll('[data-top-rank="true"]')).toHaveLength(9);
+    expect(document.querySelector('[data-rank-code="100001"] [data-signal]')).toHaveAttribute("data-signal", "neutral");
+    expect(screen.getByRole("option", { name: "순위 점수 미제공" })).toBeInTheDocument();
+    expect(document.querySelector('.rank-page')).not.toHaveTextContent(/원본 예측|모델 예측 결과|모델 신호/);
+    fireEvent.click(screen.getByRole("button", { name: "순위 점수" }));
+    expect(screen.getByRole("columnheader", { name: "순위 점수" })).toHaveAttribute("aria-sort", "descending");
+    fireEvent.click(screen.getByRole("button", { name: "다음 순위 페이지" }));
+    expect(screen.getByText("2 / 10페이지 · 199종목")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "100199" } });
+    expect(document.querySelectorAll('[data-rank-code]')).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /관심/ })).toBeInTheDocument();
+    expectReadableUserText(document.querySelector('.rank-page')!);
+  });
   it("paginates 199 rows, exposes native sort state and searches beyond five candidates", async () => {
     mockFetch(); mount(); await screen.findByText("199종목");
     expect(document.querySelectorAll("[data-rank-code]")).toHaveLength(20);
@@ -23,9 +44,9 @@ describe("whole-rank page fetch interactions", () => {
     expect(screen.getByRole("columnheader", { name: "최종 보정 예측" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "뉴스" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "최종 후보만" })).toBeInTheDocument();
-    const header = screen.getByRole("columnheader", { name: "모델 예측" });
-    fireEvent.click(screen.getByRole("button", { name: "모델 예측" })); expect(header).toHaveAttribute("aria-sort", "descending");
-    fireEvent.click(screen.getByRole("button", { name: "모델 예측" })); expect(header).toHaveAttribute("aria-sort", "ascending");
+    const header = screen.getByRole("columnheader", { name: "이전 모델 값" });
+    fireEvent.click(screen.getByRole("button", { name: "이전 모델 값" })); expect(header).toHaveAttribute("aria-sort", "descending");
+    fireEvent.click(screen.getByRole("button", { name: "이전 모델 값" })); expect(header).toHaveAttribute("aria-sort", "ascending");
     for (let page = 1; page < 10; page++) fireEvent.click(screen.getByRole("button", { name: "다음 순위 페이지" }));
     expect(document.querySelectorAll("[data-rank-code]")).toHaveLength(19);
     expect(document.querySelector("[data-rank-code]:last-child [data-value=predictedReturn]")).toHaveTextContent("—");
@@ -50,7 +71,7 @@ describe("whole-rank page fetch interactions", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "candidate" } });
     fireEvent.click(screen.getByRole("button", { name: "최종 보정 예측" }));
     modelOnly = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("뉴스 보정 미사용 · 모델 예측 순위 기준");
+    await screen.findByText("뉴스 보정 미사용 · 모델 순위 기준");
     expect(screen.getByRole("combobox")).toHaveValue("all");
     expect(screen.getByRole("columnheader", { name: "원본 모델 순위" })).toHaveAttribute("aria-sort", "ascending");
     expect(screen.queryByRole("option", { name: "최종 후보만" })).not.toBeInTheDocument();
@@ -68,7 +89,7 @@ describe("whole-rank page fetch interactions", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "candidate" } });
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "검색결과없음" } });
     modelOnly = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("뉴스 보정 미사용 · 모델 예측 순위 기준");
+    await screen.findByText("뉴스 보정 미사용 · 모델 순위 기준");
     expect(screen.getByRole("combobox")).toHaveValue("all");
     expect(screen.getByText("검색 조건에 맞는 종목이 없습니다.")).toBeInTheDocument();
     expect(screen.queryByText("최종 후보 목록을 확인할 수 없어 필터 결과를 제공하지 않습니다.")).not.toBeInTheDocument();
@@ -95,7 +116,7 @@ describe("whole-rank page fetch interactions", () => {
       expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument();
       expect(screen.queryByRole("columnheader", { name: "근거 일치도" })).not.toBeInTheDocument();
       status.resolve(jsonResponse(backendStatusBody({ state: "not_produced" })));
-      await screen.findByText("뉴스 보정 미사용 · 모델 예측 순위 기준");
+      await screen.findByText("뉴스 보정 미사용 · 모델 순위 기준");
       expect(screen.queryByRole("columnheader", { name: "최종 보정 순위" })).not.toBeInTheDocument();
       expect(screen.queryByRole("columnheader", { name: "뉴스" })).not.toBeInTheDocument();
       expect(screen.queryByRole("columnheader", { name: "근거 일치도" })).not.toBeInTheDocument();

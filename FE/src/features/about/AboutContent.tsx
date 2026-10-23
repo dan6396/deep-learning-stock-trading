@@ -15,7 +15,7 @@ export const ABOUT_SECTIONS = [
 ];
 export function AboutContent({ briefing = "/", rank = "/rank", history = "/history" }: { briefing?: string; rank?: string; history?: string }) {
   return <article className="about-page">
-    <header className="about-hero"><p className="about-eyebrow">ABOUT {BRAND_NAME}</p><h1>예측을 읽는 기준,<br />판단을 위한 근거</h1><p className="about-lead">숫자 하나보다 그 숫자가 만들어진 조건을 먼저 봅니다.</p><div className="about-actions"><a href={briefing}>브리핑 보기</a><a href={rank}>전체 순위 확인</a></div></header>
+    <header className="about-hero"><p className="about-eyebrow">서비스 안내 · {BRAND_NAME}</p><h1>예측을 읽는 기준,<br />판단을 위한 근거</h1><p className="about-lead">숫자 하나보다 그 숫자가 만들어진 조건을 먼저 봅니다.</p><div className="about-actions"><a href={briefing}>브리핑 보기</a><a href={rank}>전체 순위 확인</a></div></header>
     <div className="about-grid">{ABOUT_SECTIONS.map((section, index) => <section className="about-card" key={section.title}><span className="about-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h2>{section.title}</h2><p>{section.text}</p></section>)}</div>
     <section className="about-note"><h2>이용 전 확인해 주세요</h2><p>분석과 예측에는 오류·지연·누락이 있을 수 있으며, 미래 수익을 보장하지 않습니다. 예측과 실제 성과를 구분하고 원자료를 함께 확인하세요. 투자 판단과 책임은 투자자에게 있습니다.</p><a href={history}>현재 확인 가능한 기록 보기</a></section>
   </article>;

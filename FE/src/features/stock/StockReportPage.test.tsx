@@ -5,6 +5,7 @@ import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { StockReportPage } from "./StockReportPage";
 import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
 import { reportRow, chartBundle } from "../../test/fixtures/reportFixtures";
+import { expectReadableUserText } from "../../test/assertUserText";
 
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
@@ -26,6 +27,20 @@ function mount(path = "/next/stock/005930") {
   return client;
 }
 describe("stock report using actual fetch fixtures", () => {
+  it("presents rank scores and unexecuted news as neutral factual data", async () => {
+    const row = reportRow("005930", "순위 종목");
+    Object.assign(row.input_row, { score_kind: "rank_zscore", rank_score: 1.601514, pred_rank: 1, pred_pool_size: 199 });
+    backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path === "/api/backend/status" ? Promise.resolve(jsonResponse(backendStatusBody({ state: "not_produced" }))) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(row)) : undefined);
+    mount(); await screen.findByRole("heading", { name: "순위 종목" });
+    await screen.findByText("뉴스 보정 미실행");
+    expect(screen.getByTestId("report-prediction")).toHaveTextContent("1.6015");
+    expect(screen.getByRole("heading", { name: "모델 순위" })).toBeInTheDocument();
+    expect(document.querySelector('[data-report-signal=model]')).toHaveTextContent("모델 상위권");
+    expect(document.querySelector('[data-report-signal=model] [data-signal]')).toHaveAttribute("data-signal", "neutral");
+    expect(document.querySelector('[data-candidate-production=unproduced]')).toHaveClass("report-info");
+    expect(document.querySelector('.stock-report')).not.toHaveTextContent(/모델 긍정|원본 예측/);
+    expectReadableUserText(document.querySelector('.stock-report')!);
+  });
   it("merges authoritative candidate model fields and preserves raw news without unsafe links", async () => {
     const fetcher = backend(); mount(); await screen.findByRole("heading", { name: "종목 A" });
     expect(screen.getByRole("button", { name: "다시 조회" })).toHaveClass("stock-report-button");
@@ -63,10 +78,15 @@ describe("stock report using actual fetch fixtures", () => {
     fail = false; empty = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
     await waitFor(() => expect(document.querySelector('[data-membership]')).toHaveAttribute("data-membership", "nonCandidate"));
   });
-  it("keeps a negative final candidate positive by the unchanged membership rule and colors its negative value blue", async () => {
-    backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([reportRow("005930", "종목 A", -.02)])) : undefined); mount();
-    await screen.findByRole("heading", { name: "종목 A" }); expect(screen.getByTestId("report-prediction")).toHaveTextContent("-2.00%"); expect(screen.getByTestId("report-prediction")).toHaveClass("report-fall");
-    expect(document.querySelector('[data-report-signal="model"] [data-signal]')).toHaveAttribute("data-signal", "positive");
+  it("preserves final-candidate precedence for a negative legacy value outside the top five percent while displaying a neutral rank badge", async () => {
+    const row = reportRow("005930", "종목 A", -.02);
+    backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([row])) : undefined); mount();
+    await screen.findByRole("heading", { name: "종목 A" }); expect(screen.getByTestId("report-prediction")).toHaveTextContent("-2.00%"); expect(screen.getByTestId("report-prediction")).not.toHaveClass("report-fall");
+    const model = document.querySelector('[data-report-signal="model"]')!;
+    await waitFor(() => expect(model).toHaveTextContent("원본 예측값이 있는 최종 후보입니다."));
+    expect(model.querySelector('[data-signal]')).toHaveAttribute("data-signal", "neutral");
+    expect(model.querySelector('[data-signal]')).toHaveTextContent("모델 순위 50위");
+    expect(model).not.toHaveTextContent("원본 예측수익률이 0 이하입니다.");
   });
   it("never renders a missing model prose zero or invents final rank", async () => {
     const row = reportRow("005930", "원본 누락", null); row.result.summary = "Huber 예상수익률 0.00%."; Object.assign(row.input_row, { final_pred_return: null, final_rank: null });

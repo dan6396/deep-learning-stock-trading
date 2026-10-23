@@ -46,7 +46,7 @@ export function AnalysisControl({ onShowTopFive }: { onShowTopFive?: () => void 
   return <section className="briefing-card analysis-control" aria-labelledby="analysis-control-heading">
     <div className="analysis-control-main">
       <div className="analysis-control-copy">
-        <p className="briefing-eyebrow">NEW ANALYSIS</p>
+        <p className="briefing-eyebrow">분석 실행</p>
         <h2 id="analysis-control-heading">새 분석 실행</h2>
         <p id="analysis-mode-description" className="analysis-control-description">모델 예측 순위를 계산한 뒤 TOP5의 관련 기사를 수집합니다.</p>
         <label className="analysis-official-choice"><input type="checkbox" checked={(running ? run?.kind : kind) === "official"} disabled={busy || !backend.data} onChange={event => setKind(event.target.checked ? "official" : "adhoc")} />공식 성과 기록 요청</label>

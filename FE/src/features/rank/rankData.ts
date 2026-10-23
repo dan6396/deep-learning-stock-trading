@@ -6,6 +6,17 @@ import type { CandidateMembership, CandidateProduction } from "../briefing/membe
 
 export type RankSort = "rank" | "finalRank" | "predictedReturn" | "finalPredictedReturn" | "name";
 export type RankFilter = "all" | "candidate" | "positive" | "negative" | "missing";
+export type RankAnalysisState = "pending" | "unknown" | "previous" | "confirmed";
+/** Both table layouts distinguish retained data from a confirmed missing record. */
+export function rankRowNote(state: RankAnalysisState, missing: boolean, membership: CandidateMembership, modelOnly: boolean): string | null {
+  if (modelOnly && state === "confirmed" && !missing) return null;
+  if (state === "pending") return "분석 조회 중";
+  if (state === "unknown") return "분석 조회 실패 · 미확인";
+  if (state === "previous") return missing ? "이전 조회 결과 · 현재 분석 여부 미확인" : "이전 조회 결과";
+  if (missing) return "분석 미제공";
+  return membership === "candidate" ? "최종 후보" : membership === "nonCandidate" ? "최종 후보 외 종목"
+    : membership === "pending" ? "최종 후보 확인 중" : "최종 후보 미확인";
+}
 export function compareNullable(left: number | string | null | undefined, right: number | string | null | undefined, descending: boolean): number {
   if (left == null && right == null) return 0;
   if (left == null) return 1;

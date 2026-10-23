@@ -72,11 +72,11 @@ describe("rank and report pages with model-only results", () => {
   it("keeps raw model values while hiding unused final columns, membership notes and candidate filter", async () => {
     const rows = wholeRank(); backend([], { state: "not_produced" }); mount(<RankPage />, "/next/rank");
     await screen.findByText("199종목");
-    await screen.findByText("뉴스 보정 미사용 · 모델 예측 순위 기준");
+    await screen.findByText("뉴스 보정 미사용 · 모델 순위 기준");
     const first = document.querySelector(`[data-rank-code="${rows[0].input_row.ticker}"]`)!;
     expect(first).toHaveAttribute("data-membership", "unknown");
     expect(document.querySelectorAll('[data-membership="nonCandidate"]')).toHaveLength(0);
-    expect(first.querySelector('[data-rank-signal="model"] [data-signal]')).toHaveAttribute("data-signal", "negative");
+    expect(first.querySelector('[data-rank-signal="model"] [data-signal]')).toHaveAttribute("data-signal", "neutral");
     expect(first.querySelector('[data-value="rank"]')).not.toHaveTextContent("—");
     expect(screen.queryByRole("columnheader", { name: "최종 보정 순위" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "최종 보정 예측" })).not.toBeInTheDocument();
@@ -93,8 +93,8 @@ describe("rank and report pages with model-only results", () => {
     expect(document.querySelector("[data-membership]")).not.toHaveTextContent("최종 후보");
     expect(screen.getByTestId("report-prediction")).not.toHaveTextContent("—");
     expect(screen.queryByTestId("report-final-prediction")).not.toBeInTheDocument(); expect(screen.queryByTestId("report-final-rank")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "모델 예측" })).toBeInTheDocument();
-    expect(document.querySelector('[data-report-signal="model"] [data-signal]')).toHaveAttribute("data-signal", "negative");
+    expect(screen.getByRole("heading", { name: "모델 순위" })).toBeInTheDocument();
+    expect(document.querySelector('[data-report-signal="model"] [data-signal]')).toHaveAttribute("data-signal", "neutral");
   });
   it("keeps the true-empty produced case as a confirmed non-candidate", async () => {
     backend([], { state: "empty", count: 0 }); mount(<StockReportPage />, "/next/stock/005930");

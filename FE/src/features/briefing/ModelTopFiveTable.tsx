@@ -44,7 +44,7 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect }: { rows: Candi
           event.currentTarget.closest("ol")?.querySelector<HTMLButtonElement>('[data-model-code="' + next.code + '"] .briefing-stock-button')?.focus();
         }}><strong>{row.name ?? "종목명 미확인"}</strong>{" "}<small>{row.code}</small></button><WatchToggle code={row.code} name={row.name} />
       </div>
-      <div className="briefing-top-prediction"><span>{row.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측"}</span><strong><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></strong><small>{predictionPeriod(row, row.baseDate === sessionBase ? nextSession : null)} · 기준일 {formatDate(row.baseDate)}</small>{row.predictedReturn === null && row.rankScore == null && <small>원본 예측값 없음</small>}</div>
+      <div className="briefing-top-prediction"><span>{row.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측"}</span><strong><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></strong><small>{predictionPeriod(row, row.baseDate === sessionBase ? nextSession : null)} · 기준일 {formatDate(row.baseDate)}</small>{row.predictedReturn === null && row.rankScore == null && <small>{row.scoreKind === "rank_zscore" ? "순위 점수 없음" : "원본 예측값 없음"}</small>}</div>
       <div className="briefing-top-price"><span>현재가</span><strong>{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small></div>
       <RelatedArticles candidate={row} />
     </li>;

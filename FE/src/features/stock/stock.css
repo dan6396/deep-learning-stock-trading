@@ -65,3 +65,7 @@
   @media(max-width:1050px) { .report-columns { grid-template-columns:1fr; } .report-secondary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media(max-width:650px) { .stock-report h1 { font-size:28px; } .report-title-row { align-items:start; } .report-top-grid,.report-secondary { grid-template-columns:1fr; } .report-top-grid { gap:16px; } .report-card { padding:16px; } .report-predictions { gap:8px; } .report-predictions dd { font-size:24px; } .report-news-heading { flex-wrap:wrap; } .report-rules summary span { display:block;margin:5px 0 0; } .report-chart-explore p { font-size: 12px; } }
 }
+
+.stock-report .report-info { display: flex; align-items: flex-start; gap: 8px; background: var(--ds-surface); color: var(--ds-fg-2); padding: 14px 18px; border-radius: 14px; }
+.stock-report .report-info svg { flex-shrink: 0; margin-top: 2px; }
+.report-model-value { color: var(--ds-fg); }

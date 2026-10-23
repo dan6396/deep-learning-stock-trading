@@ -81,7 +81,7 @@ export function BriefingPage() {
   }
   const topFiveTable = (
     <section className="briefing-card briefing-comparison-card" aria-labelledby="candidate-heading">
-      <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>모델 예측 TOP5</h2><span className="briefing-muted">원본 예측 순위</span></div>
+      <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>모델 예측 TOP5</h2><span className="briefing-muted">{rows.some(row => row.scoreKind === "rank_zscore") ? "원본 모델 순위" : "원본 예측 순위"}</span></div>
       <div className="briefing-result-meta"><span>분석 기준일 <strong>{baseDate}</strong> · 모집단 {formatNumber(pool)}종목</span>{rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="저장 시각" />}</div>
       {rank.data?.source === "sample" && <p className="briefing-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
       {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}

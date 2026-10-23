@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { RunReference } from "./RunReference";
 import { RefreshCw } from "lucide-react";
 import { queries } from "../../shared/api/queries";
 import { apiClient } from "../../shared/api/client";
-import { formatDate, formatPercent } from "../../shared/lib/format";
+import { formatDate, formatRankScore, formatPercent } from "../../shared/lib/format";
 import { useAppPaths } from "../../app/paths";
 import type { PerformanceRun } from "../../types/performance";
 import { predictionDirectionLabel } from "../briefing/PredictionDirection";
@@ -16,16 +17,16 @@ const VISIBLE_RUNS = 3;
 function runItem(run: PerformanceRun, showMagnitude: boolean) {
   const prediction = (value: number | null | undefined) => showMagnitude ? formatPercent(value) : predictionDirectionLabel(value);
   return <li key={run.runId}>
-    <div className="performance-run-heading"><strong>{run.mode === "model_only" ? "모델 예측만" : "뉴스 포함"}</strong><span>{classificationLabel(run)}</span></div>
-    <p className="performance-run-id">실행 식별자 {run.runId}</p>
+    <div className="performance-run-heading"><strong>{run.mode === "model_only" ? "모델 순위" : "뉴스 포함"}</strong><span>{classificationLabel(run)}</span></div>
+    <RunReference value={run.runId} />
     <dl><div><dt>예측 기준일 → 목표 거래일</dt><dd>{run.baseDate ?? "분석 완료 후 생성"} → {run.targetDate ?? "KIS 거래일 확인 대기"}</dd></div>
       <div><dt>선별 / 가격 확보</dt><dd>{run.selectedCount} / {run.measuredCount}종목</dd></div>
-      <div><dt>고정 예측 / 실제 가격 수익률</dt><dd>{run.rankScore != null ? `순위 점수 ${run.rankScore.toFixed(6)}` : prediction(run.predictedReturn)} / {formatPercent(run.actualReturn)}</dd></div>
+      <div><dt>저장한 모델 값 / 실제 가격 수익률</dt><dd>{run.rankScore != null ? `순위 점수 ${formatRankScore(run.rankScore)}` : prediction(run.predictedReturn)} / {formatPercent(run.actualReturn)}</dd></div>
       <div><dt>완료 / 수집 시각</dt><dd>{formatDate(run.finishedAt, true)} / {formatDate(run.lastCollectedAt, true)}</dd></div></dl>
     <p className="performance-reason">{run.reason}</p>{run.error && <p className="performance-reason">{run.error}</p>}
     {!!run.measurements?.length && <details className="performance-measurements"><summary>종목별 예측·실제 가격 {run.measurements.length}종목</summary>
       <ul>{run.measurements.map(item => <li key={item.code}><strong>{item.name} · {item.code}</strong>
-        <p>{item.date ?? "목표 거래일 확인 대기"} · 고정 예측 {item.rankScore != null ? `순위 점수 ${item.rankScore.toFixed(6)}` : prediction(item.predictedReturn)}</p>
+        <p>{item.date ?? "목표 거래일 확인 대기"} · 저장한 모델 값 {item.rankScore != null ? `순위 점수 ${formatRankScore(item.rankScore)}` : prediction(item.predictedReturn)}</p>
         <p>KIS 시가 {item.open === null ? "가격 수집 대기" : `${item.open.toLocaleString("ko-KR")}원`} → 종가 {item.close === null ? "가격 수집 대기" : `${item.close.toLocaleString("ko-KR")}원`} · 수익률 {formatPercent(item.actualReturn)}</p>
       </li>)}</ul>
     </details>}
@@ -37,7 +38,7 @@ export function PerformancePanel({ detailed = false, code }: { detailed?: boolea
     onSuccess: () => client.invalidateQueries({ queryKey: ["performance"] }) });
   const data = query.data, busy = collect.isPending || data?.collector.status === "running";
   return <section className={`performance-card${detailed ? " history-card" : " briefing-card"}`} aria-label={code ? "종목 성과 기록" : "성과 기록"}>
-    <div className="performance-heading"><div><p className="performance-eyebrow">PREDICTION TRACKING</p><h2>{code ? "종목 성과 기록" : "성과 기록"}</h2></div>
+    <div className="performance-heading"><div><p className="performance-eyebrow">가격 기반 성과</p><h2>{code ? "종목 성과 기록" : "성과 기록"}</h2></div>
       {detailed && <button className="performance-collect" type="button" onClick={() => collect.mutate()} disabled={busy}><RefreshCw size={16} aria-hidden="true" />{busy ? "실제 가격 수집 중" : "실제 가격 수집"}</button>}
     </div>
     <p className="performance-description">고정 저장한 선별 종목의 다음 거래일 시가→종가 가격 수익률입니다. 동일 비중·비용 차감 전이며 실제 주문 손익이 아닙니다.</p>

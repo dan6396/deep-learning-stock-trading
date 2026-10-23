@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { AboutPage } from "./AboutPage";
 import { ABOUT_SECTIONS } from "./AboutContent";
 import { MODEL_SUMMARY } from "../../entities/model";
+import { expectReadableUserText } from "../../test/assertUserText";
 
 it.each(["/about", "/next/about"])("keeps introduction links and evidence honest at %s", path => {
   render(<MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AboutPage /></MemoryRouter>);
@@ -15,4 +16,5 @@ it.each(["/about", "/next/about"])("keeps introduction links and evidence honest
   expect(screen.getByRole("heading", { name: "Transformer Ensemble → 순위 → Top-5" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "브리핑 보기" })).toHaveAttribute("href", path.startsWith("/next/") ? "/next" : "/");
   expect(screen.getByRole("link", { name: "전체 순위 확인" })).toHaveAttribute("href", path.startsWith("/next/") ? "/next/rank" : "/rank");
+  expectReadableUserText(document.querySelector('.about-page')!);
 });

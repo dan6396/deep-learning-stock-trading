@@ -400,7 +400,7 @@ describe("BriefingStockSection", () => {
 
     // 삼성전자 rank, score, topPercent
     expect(screen.getByText("삼성전자")).toBeInTheDocument();
-    expect(screen.getByText(/순위 점수: \+2.34/)).toBeInTheDocument();
+    expect(screen.getByText(/순위 점수: 2.3400/)).toBeInTheDocument();
     expect(screen.getByText(/200종목 중 상위 0.5%/)).toBeInTheDocument();
 
     // Summary

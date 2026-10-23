@@ -45,3 +45,50 @@
     .rank-stock a { min-width: 0; overflow-wrap: anywhere; }
   }
 }
+
+@layer components {
+ .rank-score-table { min-width: 800px; }
+ .rank-score-table th,.rank-score-table td { padding: 7px 12px; height: 54px; box-sizing: border-box; }
+ .rank-score-table th { height: 38px; padding-block: 0; }
+ .rank-score-table th:first-child,.rank-score-table td:first-child { position: static; background: transparent; box-shadow: none; width: 64px; }
+ .rank-score-table tbody tr[data-top-rank=true] { background: var(--ds-surface-2); }
+ .rank-score-stock { display: flex; align-items: center; gap: 14px; }
+ .rank-score-stock a { display: inline-flex; align-items: baseline; gap: 10px; color: var(--ds-fg); min-height: 36px; }
+ .rank-score-stock small { color: var(--ds-fg-2); font-size: 12px; }
+ .rank-score-stock .briefing-signal { font-size: 11px; }
+ .rank-score-scroll { scroll-padding-inline-start: 0; }
+ .is-narrow-only { display: none; }
+ .rank-info { color: var(--ds-fg-2); background: var(--ds-surface); padding: 12px; border-radius: 12px; }
+ .is-compact-rank { gap: 8px; }
+ .is-compact-rank .rank-title-row h1 { font-size: 28px; margin: 4px 0; }
+ .is-compact-rank .rank-card { padding: 16px 20px; }
+ .is-compact-rank .rank-card h2 { font-size: 17px; }
+ .is-compact-rank .rank-controls { margin: 10px 0 8px; }
+ .is-compact-rank .rank-section-heading > p { font-size: 12px; }
+ @media(max-width: 800px) {
+  .is-narrow-only { display: flex; }
+  .rank-score-table th:first-child,.rank-score-table td:first-child { min-width: 64px; max-width: none; width: 64px; }
+  .rank-score-stock { flex-wrap: wrap; gap: 4px; }
+ }
+}
+
+@layer components {
+ .is-compact-rank .rank-eyebrow { display: none; }
+ .is-compact-rank .rank-meta-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+ .is-compact-rank .rank-card { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 16px; }
+ .is-compact-rank .rank-section-heading { display: block; grid-column: 1; }
+ .is-compact-rank .rank-controls { grid-column: 2; grid-row: 1; margin: 0; }
+ .is-compact-rank .rank-table-scroll,.is-compact-rank .rank-pagination,.is-compact-rank .rank-help,.is-compact-rank .rank-scroll-hint { grid-column: 1 / -1; }
+ @media(max-width: 800px) {
+  .is-compact-rank .rank-card { grid-template-columns: minmax(0,1fr); }
+  .is-compact-rank .rank-controls { grid-column: 1; grid-row: auto; }
+ }
+}
+@layer components {
+ .is-compact-rank .rank-controls { flex-wrap: nowrap; }
+ @media(max-width: 800px) { .is-compact-rank .rank-controls { flex-wrap: wrap; } }
+}
+@layer components {
+ /* Keep the absolute screen-reader caption inside the scrolling table region. */
+ .rank-score-scroll { position: relative; min-width: 0; }
+}
