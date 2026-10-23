@@ -1,0 +1,29 @@
+[
+  {
+    "domain": "https://openapi.koreainvestment.com:9443",
+    "tr_id": "CTPF1002R",
+    "custtype": "P",
+    "params": {
+      "PRDT_TYPE_CD": "300",
+      "PDNO": "042660"
+    },
+    "msg1": "실전투자 도메인은 모의투자 앱키로 호출하실 수 없습니다.",
+    "http": 500,
+    "rt_cd": "1",
+    "msg_cd": "EGW02004",
+    "bodyFields": [
+      "rt_cd",
+      "msg1",
+      "msg_cd"
+    ],
+    "outputFields": [],
+    "checks": {
+      "outputPresent": false,
+      "outputArray": false,
+      "pdnoMatches": false,
+      "pdnoType": "undefined",
+      "middleNamePresent": false,
+      "standardNamePresent": false
+    }
+  }
+]

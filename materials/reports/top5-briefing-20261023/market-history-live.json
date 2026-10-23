@@ -1,0 +1,62 @@
+[
+  {
+    "run": 1,
+    "exit": 0,
+    "elapsedMs": 123462,
+    "market_index_source": "kis",
+    "requestedEnd": "2026-10-22",
+    "collectedAt": "2026-10-22T16:49:49.776470+00:00",
+    "calls": {
+      "KPI200": 53,
+      "KOSPI": 56
+    },
+    "indices": {
+      "KPI200": {
+        "rows": 1813,
+        "first": "2019-06-03",
+        "last": "2026-10-22",
+        "missingClose": 0,
+        "missingVolume": 0,
+        "zeroVolume": 0
+      },
+      "KOSPI": {
+        "rows": 1813,
+        "first": "2019-06-03",
+        "last": "2026-10-22",
+        "missingClose": 0,
+        "missingVolume": 0,
+        "zeroVolume": 0
+      }
+    }
+  },
+  {
+    "run": 2,
+    "exit": 0,
+    "elapsedMs": 2794,
+    "market_index_source": "kis",
+    "requestedEnd": "2026-10-22",
+    "collectedAt": "2026-10-22T16:49:52.672994+00:00",
+    "calls": {
+      "KPI200": 1,
+      "KOSPI": 1
+    },
+    "indices": {
+      "KPI200": {
+        "rows": 1813,
+        "first": "2019-06-03",
+        "last": "2026-10-22",
+        "missingClose": 0,
+        "missingVolume": 0,
+        "zeroVolume": 0
+      },
+      "KOSPI": {
+        "rows": 1813,
+        "first": "2019-06-03",
+        "last": "2026-10-22",
+        "missingClose": 0,
+        "missingVolume": 0,
+        "zeroVolume": 0
+      }
+    }
+  }
+]

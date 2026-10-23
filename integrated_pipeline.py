@@ -13,12 +13,17 @@ import importlib.util
 import os
 import sys
 import time
+from types import MappingProxyType
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+# Local dotenv/config may override FE's environment; preserve it only for index requests.
+_EXTERNAL_MARKET_ENV = MappingProxyType({key: value for key, value in os.environ.items()
+    if key.startswith("KIS_") or key in {"APP_KEY", "APP_SECRET", "MARKET_INDEX_SOURCE"}})
 
 try:
     from dotenv import load_dotenv
@@ -171,10 +176,20 @@ def _score_label(row):
 
 
 def _fetch_market_history():
-    """Completed daily index context only; no credential/account calls."""
-    from pykrx import stock
+    """Completed index context; provider selection never changes model features."""
     now = datetime.now(KST)
     end = now.date() - (timedelta(days=1) if now.hour < 16 else timedelta())
+    source = _EXTERNAL_MARKET_ENV.get("MARKET_INDEX_SOURCE", os.getenv("MARKET_INDEX_SOURCE", "kis")).strip().lower()
+    print(f"  [시장 이력] market_index_source={source}", flush=True)
+    from market_index_history import fetch_kis_history, record_metadata, KIS_CONFIGURATION_HINT
+    if source == "kis":
+        try:
+            return fetch_kis_history(end, env={**os.environ, **_EXTERNAL_MARKET_ENV})
+        except Exception as error:
+            raise RuntimeError(f"KIS 지수 이력 수집 실패 ({type(error).__name__}). {KIS_CONFIGURATION_HINT}") from None
+    if source != "pykrx":
+        raise ValueError("MARKET_INDEX_SOURCE must be kis or pykrx")
+    from pykrx import stock
     frames = {}
     for symbol, code in (("KPI200", "1028"), ("KOSPI", "1001")):
         df = stock.get_index_ohlcv_by_date("20190603", end.strftime("%Y%m%d"), code)
@@ -184,6 +199,7 @@ def _fetch_market_history():
         frames[symbol] = df.loc[df.index.date <= end, ["Close", "Volume"]]
     if not frames["KPI200"].index.equals(frames["KOSPI"].index):
         raise ValueError("Index calendars disagree; refusing a mixed-date ranking")
+    record_metadata(frames, source, end)
     return frames
 
 def _date_yyyymmdd(value) -> str:

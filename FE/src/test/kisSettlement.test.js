@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("../../server/kisRateLimit", async original => ({ ...await original(), kisRequestLimiter: { take: vi.fn(async () => {}) } }));
 vi.mock("node:fs/promises", () => { const mocks = { readFile: vi.fn(async () => { throw new Error("fixture has no disk cache"); }), writeFile: vi.fn(), mkdir: vi.fn() }; return { ...mocks, default: mocks }; });
 vi.mock("../../server/pipelineResults", () => ({ loadPipelineRows: vi.fn(async () => null), indexPipelineByTicker: vi.fn() }));
 const env = { KIS_ENV: "real", KIS_APP_KEY: "fixture-key", KIS_APP_SECRET: "fixture-secret", KIS_BASE_URL: "https://settlement-fixture.invalid", KIS_REQUEST_DELAY_MS: "1", PIPELINE_OUTPUT_DIR: "fixture-ledger" };

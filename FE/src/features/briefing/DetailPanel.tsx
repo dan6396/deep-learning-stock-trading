@@ -41,7 +41,7 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
     <div className="briefing-detail-actions"><WatchToggle code={code} name={detail?.name} showLabel /><Link to={paths.stock(code)}>전체 리포트 열기<ArrowUpRight aria-hidden="true" size={14} /></Link></div>
     <BriefingChart code={code} />
     <h3>근거</h3>
-    {signals && detail ? <div className="briefing-detail-signals">{(modelOnly ? ["model"] as const : ["model", "news"] as const).map(key => <div key={key} data-detail-evidence={key}><strong>{key === "model" ? "모델" : "뉴스"}</strong><SignalView signal={signals[key]} />
+    {signals && detail ? <div className="briefing-detail-signals">{(modelOnly ? ["model"] as const : ["model", "news"] as const).map(key => <div key={key} data-detail-evidence={key}><strong>{key === "model" ? "모델" : "뉴스"}</strong><SignalView signal={signals[key]} model={key === "model"} />
       {key === "model" ? <p>{formatNumber(detail.poolSize)}종목 중 {formatNumber(detail.rank)}위</p> : <p>{signals.news.reason}</p>}
       {signals[key].state === "unavailable" && key !== "news" && <p>{signals[key].reason}</p>}
     </div>)}</div> : <p className="briefing-muted">분석 근거 조회 중</p>}

@@ -1,0 +1,12 @@
+{
+  "observedAtKst": "2026-10-23T01:16:14.130+09:00",
+  "nightWindow": "open",
+  "lastCandle": {
+    "date": "20261021",
+    "time": "300000"
+  },
+  "candleCount": 102,
+  "status": "unavailable",
+  "reason": "not_a_verified_night_observation",
+  "interpretation": "The current parser rejects hours above 23; 24-30 hour semantics are not changed during this verification."
+}

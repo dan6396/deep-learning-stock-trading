@@ -6,6 +6,7 @@ vi.mock("../../server/kisDashboard", () => ({
   buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn(), refreshDashboardSnapshot: vi.fn(),
 }));
 vi.mock("../../server/pipelineResults", () => ({ getCandidatesPayload: vi.fn(), getRankPayload: vi.fn(), getStockAnalysisPayload: vi.fn() }));
+vi.mock("../../server/briefing", () => ({ getBriefing: vi.fn(), generateBriefingNarrative: vi.fn() }));
 vi.mock("../../server/pipelineRunner", () => ({ getCandidateAnalysisStatus: vi.fn(), getStockNewsAnalysisStatus: vi.fn(), startCandidateAnalysis: vi.fn(), startStockNewsAnalysis: vi.fn() }));
 
 import { apiMiddleware, apiRoutes, createRoutes } from "../../server/routes";
@@ -25,12 +26,26 @@ function dependencies() {
   return { buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
     buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn().mockResolvedValue("2026-10-12"), refreshDashboardSnapshot: vi.fn().mockResolvedValue({ generatedAt: "2026-10-07T09:00:00Z", stocks: [{}, {}] }),
     getCandidatesPayload: vi.fn().mockResolvedValue([]), getRankPayload: vi.fn().mockResolvedValue([]), getStockAnalysisPayload: vi.fn().mockResolvedValue(null),
+    getBriefing: vi.fn().mockResolvedValue({ version: 1, status: "no_run", stocks: [], data_meta: { source: "cache", asOf: "2026-10-22T20:00:00Z" } }),
+    generateBriefingNarrative: vi.fn().mockResolvedValue({ version: 1, status: "ready", stocks: [], narrative: { status: "template", fallbackReason: "missing_api_key" }, data_meta: { source: "cache", asOf: "2026-10-22T20:00:00Z" } }),
     getCandidateAnalysisStatus: vi.fn().mockReturnValue({ status: "idle" }), getStockNewsAnalysisStatus: vi.fn(),
     startCandidateAnalysis: vi.fn().mockReturnValue({ status: "running" }), startStockNewsAnalysis: vi.fn() };
 }
 beforeEach(() => vi.clearAllMocks());
 
 describe("shared legacy route contracts", () => {
+  it("exposes read-only briefing GET and generation POST with provenance and no-store", async () => {
+    const deps = dependencies(), env = { GEMINI_API_KEY: "fixture-private-key" }, routes = createRoutes(deps, env);
+    const get = response(); await routes["/api/briefing"]({ method: "GET" }, get.res);
+    expect(get.res.statusCode).toBe(200); expect(deps.getBriefing).toHaveBeenCalledWith(env);
+    expect(deps.generateBriefingNarrative).not.toHaveBeenCalled();
+    expect(get.headers).toMatchObject({ "Cache-Control": "no-store", "X-Data-Source": "cache", "X-Data-As-Of": "2026-10-22T20:00:00Z" });
+    const post = response(); await routes["/api/briefing/narrative"]({ method: "POST" }, post.res);
+    expect(post.res.statusCode).toBe(200); expect(post.body().narrative.fallbackReason).toBe("missing_api_key");
+    for (const [path, method] of [["/api/briefing", "POST"], ["/api/briefing/narrative", "GET"], ["/api/briefing/narrative", "PUT"]]) {
+      const denied = response(); await routes[path]({ method }, denied.res); expect(denied.res.statusCode).toBe(405);
+    }
+  });
   it("validates and forwards explicit official classification without changing defaults", async () => {
     const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "model_only" }, handler = createRoutes(deps, env)["/api/candidates/run"];
     const ok = response(); await handler({ method: "POST", url: "/api/candidates/run?mode=model_only&kind=official" }, ok.res);

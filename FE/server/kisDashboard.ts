@@ -14,6 +14,9 @@ import { indexPipelineByTicker, loadPipelineRows } from "./pipelineResults";
 import { cachedDashboard } from "./snapshotMetadata";
 import { pipelineOutputDir } from "./pipelineFreshness";
 import { mkdir } from "node:fs/promises";
+import { readBoundedJson } from "./boundedJson";
+import { kisMaxRps, kisRequestLimiter } from "./kisRateLimit";
+import { inFlightKey, shareInFlight } from "./inFlight";
 
 declare const process: {
   cwd: () => string;
@@ -28,6 +31,7 @@ type KisConfig = {
   baseUrl: string;
   env: KisEnv;
   requestDelayMs: number;
+  maxRps: number;
 };
 
 type TokenCache = {
@@ -37,6 +41,12 @@ type TokenCache = {
 };
 
 type KisOutput = Record<string, unknown>;
+const quotePending = new Map<string, Promise<StockQuote>>();
+const pricePending = new Map<string, Promise<KisOutput>>();
+const indicesPending = new Map<string, Promise<MarketIndexSnapshot[]>>();
+const indexSnapshots = new Map<string, { builtAt: number; value: MarketIndexSnapshot[] }>();
+const chartPending = new Map<string, Promise<StockChartBundle>>();
+const kisScope = (config: KisConfig) => inFlightKey([config.env, config.baseUrl, config.appKey, config.appSecret]);
 
 const KIS_BASE_URLS: Record<KisEnv, string> = {
   mock: "https://openapivts.koreainvestment.com:29443",
@@ -178,6 +188,7 @@ function getKisConfig(env = process.env): KisConfig {
     baseUrl: (env.KIS_BASE_URL ?? KIS_BASE_URLS[kisEnv]).replace(/\/$/, ""),
     env: kisEnv,
     requestDelayMs: toNumber(env.KIS_REQUEST_DELAY_MS) || (kisEnv === "mock" ? 1000 : 200),
+    maxRps: kisMaxRps(env, (env.KIS_BASE_URL ?? "").includes("openapivts.koreainvestment.com") ? "mock" : kisEnv),
   };
 }
 
@@ -288,7 +299,7 @@ async function fetchYahooIndexSeries(
     throw new Error(`Yahoo index chart failed: ${response.status} ${response.statusText}`);
   }
 
-  const parsed = (await response.json()) as YahooChartResponse;
+  const parsed = (await readBoundedJson(response)) as YahooChartResponse;
   const closes = parsed.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
   const values = closes
     .map((value) => (typeof value === "number" && Number.isFinite(value) ? roundIndexValue(value) : null))
@@ -351,33 +362,34 @@ function sentimentFromDirection(direction: MarketDirection): StockQuote["sentime
   return "NEUTRAL";
 }
 
-async function parseKisBody(response: Response, apiName: string): Promise<Record<string, unknown>> {
-  const text = await response.text();
+class KisRateLimitError extends Error {}
+
+async function parseKisBody(response: Response, apiName: string, diagnosticSecrets?: string[]): Promise<Record<string, unknown>> {
   let body: Record<string, unknown>;
 
   try {
-    body = JSON.parse(text) as Record<string, unknown>;
+    body = await readBoundedJson(response) as Record<string, unknown>;
   } catch {
     throw new Error(`${apiName} returned a non-JSON response.`);
   }
 
   if (!response.ok || (body.rt_cd !== undefined && body.rt_cd !== "0")) {
+    if (diagnosticSecrets) {
+      const safe = (value: unknown) => {
+        let text = typeof value === "string" ? value : "";
+        for (const secret of diagnosticSecrets) if (secret) text = text.split(secret).join("[REDACTED]");
+        return text.replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]").replace(/[A-Za-z0-9_-]{32,}/g, "[REDACTED]").replace(/[\r\n]/g, " ").slice(0, 500);
+      };
+      console.warn("[KIS briefing] request failed", { api: apiName, http: response.status,
+        rt_cd: safe(body.rt_cd), msg_cd: safe(body.msg_cd), msg1: safe(body.msg1) });
+    }
+    // This code has one common retry; callers must not multiply it in legacy loops.
+    if (body.msg_cd === "EGW00201") throw new KisRateLimitError(`${apiName} failed: EGW00201`);
     const message = typeof body.msg1 === "string" ? body.msg1 : response.statusText;
     throw new Error(`${apiName} failed: ${message}`);
   }
 
   return body;
-}
-
-async function parseKisResponse(response: Response, apiName: string): Promise<KisOutput> {
-  const body = await parseKisBody(response, apiName);
-
-  const output = body.output;
-  if (!output || typeof output !== "object") {
-    throw new Error(`${apiName} returned no output.`);
-  }
-
-  return output as KisOutput;
 }
 
 async function getAccessToken(config: KisConfig): Promise<string> {
@@ -402,11 +414,10 @@ async function getAccessToken(config: KisConfig): Promise<string> {
     signal: AbortSignal.timeout(20000),
   });
 
-  const text = await response.text();
   let body: Record<string, unknown>;
 
   try {
-    body = JSON.parse(text) as Record<string, unknown>;
+    body = await readBoundedJson(response) as Record<string, unknown>;
   } catch {
     throw new Error("KIS token request returned a non-JSON response.");
   }
@@ -434,26 +445,10 @@ async function requestKisOutput(
   trId: string,
   params: Record<string, string>,
 ): Promise<KisOutput> {
-  const url = new URL(apiPath, config.baseUrl);
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.set(key, value);
-  });
-
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      appkey: config.appKey,
-      appsecret: config.appSecret,
-      custtype: "P",
-      tr_id: trId,
-    },
-    method: "GET",
-    signal: AbortSignal.timeout(20000),
-  });
-
-  return parseKisResponse(response, trId);
+  const body = await requestKisBody(config, accessToken, apiPath, trId, params);
+  const output = body.output;
+  if (!output || typeof output !== "object") throw new Error(`${trId} returned no output.`);
+  return output as KisOutput;
 }
 
 async function requestKisBody(
@@ -468,21 +463,38 @@ async function requestKisBody(
     url.searchParams.set(key, value);
   });
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      appkey: config.appKey,
-      appsecret: config.appSecret,
-      custtype: "P",
-      tr_id: trId,
-    },
-    method: "GET",
-    signal: AbortSignal.timeout(20000),
-  });
+  for (let attempt = 0; ; attempt++) {
+    await kisRequestLimiter.take(config.maxRps);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          appkey: config.appKey,
+          appsecret: config.appSecret,
+          custtype: "P",
+          tr_id: trId,
+        },
+        method: "GET",
+        signal: AbortSignal.timeout(20000),
+      });
 
-  return parseKisBody(response, trId);
+      return await parseKisBody(response, trId, [accessToken, config.appKey, config.appSecret]);
+    } catch (error) {
+      if (!(error instanceof KisRateLimitError) || attempt >= 1) throw error;
+      await sleep(750);
+    }
+  }
+}
+
+/** Briefing read-only requests share the established token and header implementation. */
+export async function requestBriefingKis(apiPath: string, trId: string, params: Record<string, string>, env = process.env): Promise<Record<string, unknown>> {
+  try {
+    const config = getKisConfig(env);
+    if (config.env !== "real") throw new Error("Real market data required.");
+    return await requestKisBody(config, await getAccessToken(config), apiPath, trId, params);
+  } catch { throw new Error("KIS briefing data unavailable."); }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -504,6 +516,7 @@ async function requestWithRetry(
     try {
       return await requestKisOutput(config, accessToken, apiPath, trId, params);
     } catch (error) {
+      if (error instanceof KisRateLimitError) throw error;
       const message = error instanceof Error ? error.message : "";
       if (!message.includes("초당 거래건수")) {
         throw error;
@@ -530,6 +543,7 @@ async function requestBodyWithRetry(
     try {
       return await requestKisBody(config, accessToken, apiPath, trId, params);
     } catch (error) {
+      if (error instanceof KisRateLimitError) throw error;
       const message = error instanceof Error ? error.message : "";
       if (!message.includes("초당 거래건수")) {
         throw error;
@@ -691,16 +705,7 @@ async function fetchStockQuote(
   stock: StockSeed,
   options: FetchStockOptions = {},
 ): Promise<StockQuote> {
-  const output = await requestWithRetry(
-    config,
-    accessToken,
-    "/uapi/domestic-stock/v1/quotations/inquire-price",
-    "FHKST01010100",
-    {
-      FID_COND_MRKT_DIV_CODE: "J",
-      FID_INPUT_ISCD: stock.code,
-    },
-  );
+  const output = await fetchStockPriceOutput(config, accessToken, stock.code);
 
   const currentPrice = pickNumber(output, ["stck_prpr"]);
   const changeRate = pickNumber(output, ["prdy_ctrt"]);
@@ -742,6 +747,20 @@ async function fetchStockQuote(
     upProbability: ai.upProbability,
     miniSeries: miniSeriesFromChange(currentPrice, change),
   } satisfies StockQuote;
+}
+
+/** Quote and chart need different projections of the identical raw KIS output. */
+function fetchStockPriceOutput(config: KisConfig, accessToken: string, code: string): Promise<KisOutput> {
+  return shareInFlight(pricePending, `${kisScope(config)}:${code}`, () => requestWithRetry(
+    config,
+    accessToken,
+    "/uapi/domestic-stock/v1/quotations/inquire-price",
+    "FHKST01010100",
+    {
+      FID_COND_MRKT_DIV_CODE: "J",
+      FID_INPUT_ISCD: code,
+    },
+  ));
 }
 
 async function fetchIndexSnapshot(
@@ -815,8 +834,14 @@ async function fetchIndexSnapshots(
  */
 export async function buildKisIndices(env = process.env): Promise<MarketIndexSnapshot[]> {
   const config = getKisConfig(env);
-  const accessToken = await getAccessToken(config);
-  return fetchIndexSnapshots(config, accessToken, env);
+  const key = inFlightKey([kisScope(config), env.KIS_INDEX_SERIES_SOURCE, env.KIS_INDEX_SERIES_CACHE_TTL_MS]);
+  const configured = Number(env.KIS_INDEX_SNAPSHOT_CACHE_TTL_MS), ttl = Number.isFinite(configured) && configured > 0 ? configured : 20_000;
+  const cached = indexSnapshots.get(key);
+  if (cached && Date.now() - cached.builtAt < ttl) return structuredClone(cached.value).map(row => ({ ...row, source: "cache" }));
+  return shareInFlight(indicesPending, key, async () => {
+    const value = await fetchIndexSnapshots(config, await getAccessToken(config), env);
+    indexSnapshots.set(key, { builtAt: Date.now(), value }); return value;
+  });
 }
 
 /** Fast single-stock quote endpoint for detail headers. */
@@ -824,15 +849,18 @@ export async function buildKisStockQuote(symbol: string, env = process.env): Pro
   const code = normalizeStockCode(symbol);
   const seed = findStockSeed(code);
   const config = getKisConfig(env);
-  const accessToken = await getAccessToken(config);
-  const pipelineRows = await loadPipelineRows();
-  const aiByTicker = pipelineRows ? indexPipelineByTicker(pipelineRows) : null;
+  const key = inFlightKey([kisScope(config), code, env.KIS_QUOTE_WITH_INVESTOR_FLOW]);
+  return shareInFlight(quotePending, key, async () => {
+    const accessToken = await getAccessToken(config);
+    const pipelineRows = await loadPipelineRows();
+    const aiByTicker = pipelineRows ? indexPipelineByTicker(pipelineRows) : null;
 
-  const quote = await fetchStockQuote(config, accessToken, seed, {
-    aiRow: aiByTicker?.get(code),
-    withInvestorFlow: env.KIS_QUOTE_WITH_INVESTOR_FLOW === "true",
+    const quote = await fetchStockQuote(config, accessToken, seed, {
+      aiRow: aiByTicker?.get(code),
+      withInvestorFlow: env.KIS_QUOTE_WITH_INVESTOR_FLOW === "true",
+    });
+    return { ...quote, source: "live", asOf: new Date().toISOString() };
   });
-  return { ...quote, source: "live", asOf: new Date().toISOString() };
 }
 
 const RANGE_LOOKBACK_DAYS: Record<TimeRange, number> = {
@@ -1404,10 +1432,16 @@ function fillMissingRanges(ranges: StockChartData["ranges"]): void {
  * the call only throws if every range came back empty.
  */
 export async function buildKisStockChart(symbol: string, env = process.env): Promise<StockChartBundle> {
+  const code = normalizeStockCode(symbol), config = getKisConfig(env);
+  // The endpoint returns every range in one bundle; ALL is its existing range key.
+  return shareInFlight(chartPending, `${kisScope(config)}:${code}:ALL`, () => loadKisStockChart(code, env));
+}
+
+async function loadKisStockChart(symbol: string, env: Record<string, string | undefined>): Promise<StockChartBundle> {
   const code = normalizeStockCode(symbol);
   const seed = findStockSeed(code);
   const config = getKisConfig(env);
-  const cacheKey = `${config.env}:${code}:ALL`;
+  const cacheKey = `${kisScope(config)}:${code}:ALL`;
   const cached = stockChartCache.get(cacheKey);
   if (cached && Date.now() - cached.builtAt < stockChartCacheTtlMs(env)) {
     return { ...cached.data, source: "cache", sourceStock: { ...cached.data.sourceStock, source: "cache" } };
@@ -1415,16 +1449,7 @@ export async function buildKisStockChart(symbol: string, env = process.env): Pro
 
   const accessToken = await getAccessToken(config);
 
-  const quoteOutput = await requestWithRetry(
-    config,
-    accessToken,
-    "/uapi/domestic-stock/v1/quotations/inquire-price",
-    "FHKST01010100",
-    {
-      FID_COND_MRKT_DIV_CODE: "J",
-      FID_INPUT_ISCD: code,
-    },
-  );
+  const quoteOutput = await fetchStockPriceOutput(config, accessToken, code);
 
   const sourceStock = quoteOutputToSourceStock(quoteOutput, seed);
   const ranges = TIME_RANGES.reduce<StockChartData["ranges"]>((accumulator, range) => {

@@ -1,0 +1,14 @@
+{
+  "elapsedMs": 40115,
+  "status": "completed",
+  "runId": "4f61e1ee-f6e3-4030-99dc-0d1a1040e807",
+  "error": null,
+  "progress": {
+    "message": "분석이 완료되었습니다.",
+    "progressPercent": 100,
+    "stage": "결과 파일 검증",
+    "stageCount": 7,
+    "stageIndex": 6,
+    "updatedAt": 1792687864961
+  }
+}

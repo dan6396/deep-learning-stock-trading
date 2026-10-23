@@ -10,9 +10,9 @@ const FULL_RANK_CSV_RESULT_FILES = ["step2_all_transformer_rank.csv"];
 const MODEL_ID = "plain_20_120_rank_mean_v1";
 type LoadedRows = { mtimeMs: number; rows: PipelineOutputRow[] };
 
-function candidatePaths(fileNames: string[], includeOverride = true): string[] {
-  const override = process.env.PIPELINE_RESULT_PATH;
-  const outputDir = process.env.PIPELINE_OUTPUT_DIR;
+function candidatePaths(fileNames: string[], includeOverride = true, env = process.env): string[] {
+  const override = env.PIPELINE_RESULT_PATH;
+  const outputDir = env.PIPELINE_OUTPUT_DIR;
   const cwd = process.cwd();
   const paths = [
     ...(includeOverride && override ? [override] : []),
@@ -178,10 +178,11 @@ function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutpu
 async function loadCsvRows(
   fileNames: string[] = FULL_RANK_CSV_RESULT_FILES,
   includeOverride = true,
+  env = process.env,
 ): Promise<LoadedRows | null> {
   let latest: LoadedRows | null = null;
 
-  for (const path of candidatePaths(fileNames, includeOverride)) {
+  for (const path of candidatePaths(fileNames, includeOverride, env)) {
     try {
       await access(path);
     } catch {
@@ -216,9 +217,9 @@ function tickerFromRow(row: PipelineOutputRow): string {
   return String(row.result?.ticker ?? row.input_row?.ticker ?? "").padStart(6, "0");
 }
 
-function markerAllowsLoadedFile(marker: PipelineRunMarker | null, mtimeMs: number): boolean {
+function markerAllowsLoadedFile(marker: PipelineRunMarker | null, mtimeMs: number, env = process.env): boolean {
   if (!marker) {
-    return process.env.PIPELINE_ALLOW_UNMARKED_RESULTS === "true";
+    return env.PIPELINE_ALLOW_UNMARKED_RESULTS === "true";
   }
 
   return isFreshForRun(mtimeMs, marker);
@@ -240,11 +241,11 @@ function nonNegativeInteger(value: string | undefined): number | null {
  * parser and freshness rule as the other outputs, and only if the run marker is unchanged across the read.
  * Duplicate tickers are ambiguous and dropped.
  */
-async function loadModelOnlySupply(marker: PipelineRunMarker): Promise<Map<string, Record<string, string>>> {
+async function loadModelOnlySupply(marker: PipelineRunMarker, env = process.env): Promise<Map<string, Record<string, string>>> {
   const found = new Map<string, Record<string, string>>();
   if (marker.status !== "completed") return found;
   let latest: { mtimeMs: number; records: Record<string, string>[] } | null = null;
-  for (const path of candidatePaths([SUPPLY_CHECKED_FILE], false)) {
+  for (const path of candidatePaths([SUPPLY_CHECKED_FILE], false, env)) {
     try {
       const text = await readFile(path, "utf8"), mtimeMs = (await stat(path)).mtimeMs;
       if (!latest || mtimeMs > latest.mtimeMs) latest = { mtimeMs, records: parseCsv(text) };
@@ -253,7 +254,7 @@ async function loadModelOnlySupply(marker: PipelineRunMarker): Promise<Map<strin
     }
   }
   if (!latest || !isFreshForRun(latest.mtimeMs, marker)) return found;
-  const after = await readPipelineRunMarker();
+  const after = await readPipelineRunMarker(env);
   if (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode) return found;
   const duplicates = new Set<string>();
   for (const record of latest.records) {
@@ -308,21 +309,21 @@ export async function getStockAnalysisPayload(ticker: string): Promise<PipelineO
   return (await getRankPayload()).find(row => tickerFromRow(row) === normalized) ?? null;
 }
 
-export async function getRankPayload(): Promise<PipelineOutputRow[]> {
-  const marker = await readPipelineRunMarker();
-  if ((!marker && process.env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && (marker.status !== "completed" || marker.mode !== "model_only"))) return [];
-  const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false);
-  if (!rank || !markerAllowsLoadedFile(marker, rank.mtimeMs)) return [];
+export async function getRankPayload(env = process.env): Promise<PipelineOutputRow[]> {
+  const marker = await readPipelineRunMarker(env);
+  if ((!marker && env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && (marker.status !== "completed" || marker.mode !== "model_only"))) return [];
+  const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false, env);
+  if (!rank || !markerAllowsLoadedFile(marker, rank.mtimeMs, env)) return [];
   let related: RelatedNewsSnapshot | null = null;
-  for (const path of candidatePaths([RELATED_NEWS_FILE], false)) {
+  for (const path of candidatePaths([RELATED_NEWS_FILE], false, env)) {
     try {
       const snapshot = JSON.parse(await readFile(path, "utf8")) as RelatedNewsSnapshot;
       if (snapshot?.version === 1 && snapshot.startedAt === marker?.startedAt) { related = snapshot; break; }
     } catch { /* no current article cache */ }
   }
   // Model rank remains exactly as written by the verified STEP2 run.
-  const supply = marker?.mode === "model_only" ? await loadModelOnlySupply(marker) : new Map<string, Record<string, string>>();
-  const after = await readPipelineRunMarker();
+  const supply = marker?.mode === "model_only" ? await loadModelOnlySupply(marker, env) : new Map<string, Record<string, string>>();
+  const after = await readPipelineRunMarker(env);
   if (marker && (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode)) return [];
   const rows = rank.rows.map(row => applyModelSupply(marker?.mode === "model_only" ? { ...row,
     data_meta: { ...row.data_meta, rawFinalPrediction: null, rawFinalRank: null },
@@ -381,7 +382,7 @@ function positiveInteger(value: string | undefined): number | null {
 
 type ValidatedModelRow = { ticker: string; prediction: number; rank: number; kind: string; model: string };
 /** One STEP2 CSV: fresh, schema-complete, and every ok row carries a finite prediction with the agreed target and date. */
-function validateModelRows(records: Record<string, string>[]): { ok: ValidatedModelRow[]; baseDate: string; poolSize: number; all: number } {
+export function validateModelRows(records: Record<string, string>[]): { ok: ValidatedModelRow[]; baseDate: string; poolSize: number; all: number } {
   const fail = (): never => { throw new Error("Invalid model output rows."); };
   if (records.length === 0) fail();
   if (records.some(row => !/^\d{6}$/.test(row.ticker ?? "") || row.ticker === "000000")) fail();

@@ -7,6 +7,12 @@
 .claude/skills/
 .agents/skills/
 kis_token_cache.json
+.kis-token-cache.json
+.kis-token-cache.json.*.tmp
+kis_token_cache.json.*.tmp
+
+# 임시 기준선 검증 복사본 / 런타임
+/.validation-baseline-*/
 
 # 파이썬 캐시
 __pycache__/
@@ -14,6 +20,7 @@ __pycache__/
 
 # 실행 산출물
 outputs/
+/.vite/
 
 # 신선 OHLCV 캐시 (매 실행 재생성, 커밋 불필요)
 fresh_ohlcv.parquet

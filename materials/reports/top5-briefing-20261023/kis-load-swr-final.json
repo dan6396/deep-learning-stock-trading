@@ -1,0 +1,1247 @@
+{
+  "runs": [
+    {
+      "state": "cold",
+      "elapsedMs": 38053,
+      "kisCalls": 31,
+      "rateLimitResponses": 1,
+      "counts": {
+        "FHPUP02100000": 4,
+        "FHMIF10000000": 1,
+        "FHKUP03500100": 2,
+        "FHKST01010100": 5,
+        "FHKIF03020200": 1,
+        "CTPF1002R": 1,
+        "FHKST03010200": 14,
+        "FHKST03010100": 3
+      },
+      "api": [
+        {
+          "url": "/api/candidates/run",
+          "http": 200,
+          "elapsedMs": 0
+        },
+        {
+          "url": "/api/backend/status",
+          "http": 200,
+          "elapsedMs": 137
+        },
+        {
+          "url": "/api/rank",
+          "http": 200,
+          "elapsedMs": 178
+        },
+        {
+          "url": "/api/korean-market/indices",
+          "http": 200,
+          "elapsedMs": 15393
+        },
+        {
+          "url": "/api/briefing",
+          "http": 200,
+          "elapsedMs": 1710
+        },
+        {
+          "url": "/api/candidates/run",
+          "http": 200,
+          "elapsedMs": 0
+        },
+        {
+          "url": "/api/backend/status",
+          "http": 200,
+          "elapsedMs": 128
+        },
+        {
+          "url": "/api/rank",
+          "http": 200,
+          "elapsedMs": 189
+        },
+        {
+          "url": "/api/korean-market/indices",
+          "http": 200,
+          "elapsedMs": 15266
+        },
+        {
+          "url": "/api/briefing",
+          "http": 200,
+          "elapsedMs": 1620
+        },
+        {
+          "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+          "http": 200,
+          "elapsedMs": 1940
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=042660",
+          "http": 200,
+          "elapsedMs": 2720
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004000",
+          "http": 200,
+          "elapsedMs": 4732
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004170",
+          "http": 200,
+          "elapsedMs": 3715
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=088350",
+          "http": 200,
+          "elapsedMs": 6674
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=071970",
+          "http": 200,
+          "elapsedMs": 7687
+        },
+        {
+          "url": "/api/korean-market/stock-chart?symbol=042660",
+          "http": 200,
+          "elapsedMs": 29889
+        },
+        {
+          "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+          "http": 200,
+          "elapsedMs": 5856
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=042660",
+          "http": 200,
+          "elapsedMs": 2612
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004000",
+          "http": 200,
+          "elapsedMs": 4624
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004170",
+          "http": 200,
+          "elapsedMs": 3614
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=088350",
+          "http": 200,
+          "elapsedMs": 5233
+        },
+        {
+          "url": "/api/korean-market/stock-chart?symbol=042660",
+          "http": 200,
+          "elapsedMs": 28342
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004000",
+          "http": 200,
+          "elapsedMs": 3082
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004170",
+          "http": 200,
+          "elapsedMs": 2069
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=088350",
+          "http": 200,
+          "elapsedMs": 4038
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=071970",
+          "http": 200,
+          "elapsedMs": 4048
+        },
+        {
+          "url": "/api/korean-market/indices",
+          "http": 200,
+          "elapsedMs": 1
+        }
+      ]
+    },
+    {
+      "state": "warm",
+      "elapsedMs": 8379,
+      "kisCalls": 7,
+      "rateLimitResponses": 0,
+      "counts": {
+        "FHKUP03500100": 2,
+        "FHKST01010100": 5
+      },
+      "api": [
+        {
+          "url": "/api/candidates/run",
+          "http": 200,
+          "elapsedMs": 0
+        },
+        {
+          "url": "/api/backend/status",
+          "http": 200,
+          "elapsedMs": 24
+        },
+        {
+          "url": "/api/rank",
+          "http": 200,
+          "elapsedMs": 65
+        },
+        {
+          "url": "/api/backend/status",
+          "http": 200,
+          "elapsedMs": 45
+        },
+        {
+          "url": "/api/rank",
+          "http": 200,
+          "elapsedMs": 74
+        },
+        {
+          "url": "/api/korean-market/indices",
+          "http": 200,
+          "elapsedMs": 1
+        },
+        {
+          "url": "/api/briefing",
+          "http": 200,
+          "elapsedMs": 134
+        },
+        {
+          "url": "/api/candidates/run",
+          "http": 200,
+          "elapsedMs": 0
+        },
+        {
+          "url": "/api/korean-market/indices",
+          "http": 200,
+          "elapsedMs": 1
+        },
+        {
+          "url": "/api/briefing",
+          "http": 200,
+          "elapsedMs": 127
+        },
+        {
+          "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+          "http": 200,
+          "elapsedMs": 227
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=042660",
+          "http": 200,
+          "elapsedMs": 1021
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004000",
+          "http": 200,
+          "elapsedMs": 2020
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004170",
+          "http": 200,
+          "elapsedMs": 3020
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=088350",
+          "http": 200,
+          "elapsedMs": 4039
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=071970",
+          "http": 200,
+          "elapsedMs": 6029
+        },
+        {
+          "url": "/api/korean-market/stock-chart?symbol=042660",
+          "http": 200,
+          "elapsedMs": 7
+        },
+        {
+          "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+          "http": 200,
+          "elapsedMs": 5187
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=042660",
+          "http": 200,
+          "elapsedMs": 949
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004000",
+          "http": 200,
+          "elapsedMs": 1948
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004170",
+          "http": 200,
+          "elapsedMs": 2948
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=088350",
+          "http": 200,
+          "elapsedMs": 3967
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=071970",
+          "http": 200,
+          "elapsedMs": 5959
+        },
+        {
+          "url": "/api/korean-market/stock-chart?symbol=042660",
+          "http": 200,
+          "elapsedMs": 5
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004000",
+          "http": 200,
+          "elapsedMs": 1806
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=004170",
+          "http": 200,
+          "elapsedMs": 2806
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=088350",
+          "http": 200,
+          "elapsedMs": 3825
+        },
+        {
+          "url": "/api/korean-market/quote?symbol=071970",
+          "http": 200,
+          "elapsedMs": 5822
+        }
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "phase": "initial",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
+      "trId": "FHKUP03500100",
+      "domain": "real",
+      "startedAt": 1792693487008,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693487130
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693493771,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693493882
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-futureoption/v1/quotations/inquire-price",
+      "trId": "FHMIF10000000",
+      "domain": "real",
+      "startedAt": 1792693494783,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693494800
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
+      "trId": "FHKUP03500100",
+      "domain": "real",
+      "startedAt": 1792693495798,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693495817
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693496801,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693496815
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693497802,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693497818
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693498812,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693498828
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
+      "trId": "FHKUP03500100",
+      "domain": "real",
+      "startedAt": 1792693499826,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693499844
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693500840,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693500855
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693501854,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693501871
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693502870,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693502887
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-futureoption/v1/quotations/inquire-time-fuopchartprice",
+      "trId": "FHKIF03020200",
+      "domain": "real",
+      "startedAt": 1792693503882,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693503927
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/search-stock-info",
+      "trId": "CTPF1002R",
+      "domain": "real",
+      "startedAt": 1792693504891,
+      "active": 1,
+      "http": 500,
+      "msgCode": "EGW02004",
+      "completedAt": 1792693504907
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693505904,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693505961
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693506919,
+      "active": 1,
+      "http": 500,
+      "msgCode": "EGW00201",
+      "completedAt": 1792693506931
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693507931,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693507993
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693508942,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693508956
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693509955,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693509976
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693510962,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693510989
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693511965,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693511983
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693512979,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693512997
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693513989,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693514006
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693514992,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693515011
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693516001,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693516017
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693517006,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693517022
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693518009,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693518026
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693519022,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693519041
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693520025,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693520040
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+      "trId": "FHKST03010200",
+      "domain": "real",
+      "startedAt": 1792693521027,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693521044
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+      "trId": "FHKST03010100",
+      "domain": "real",
+      "startedAt": 1792693522031,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693522062
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+      "trId": "FHKST03010100",
+      "domain": "real",
+      "startedAt": 1792693523039,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693523069
+    },
+    {
+      "phase": "cold",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+      "trId": "FHKST03010100",
+      "domain": "real",
+      "startedAt": 1792693524046,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693524077
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
+      "trId": "FHKUP03500100",
+      "domain": "real",
+      "startedAt": 1792693526372,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693526392
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693527376,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693527393
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693528377,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693528392
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693529378,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693529393
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693530392,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693530413
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
+      "trId": "FHKUP03500100",
+      "domain": "real",
+      "startedAt": 1792693531392,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693531413
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-price",
+      "trId": "FHKST01010100",
+      "domain": "real",
+      "startedAt": 1792693532395,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693532411
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693534103,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693534117
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693535113,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693535127
+    },
+    {
+      "phase": "warm",
+      "path": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+      "trId": "FHPUP02100000",
+      "domain": "real",
+      "startedAt": 1792693536118,
+      "active": 1,
+      "http": 200,
+      "msgCode": "MCA00000",
+      "completedAt": 1792693536137
+    }
+  ],
+  "requests": [
+    {
+      "phase": "cold",
+      "url": "/api/candidates/run",
+      "startedAt": 1792693493768,
+      "completedAt": 1792693493768,
+      "elapsedMs": 0,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/backend/status",
+      "startedAt": 1792693493769,
+      "completedAt": 1792693493906,
+      "elapsedMs": 137,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/rank",
+      "startedAt": 1792693493769,
+      "completedAt": 1792693493947,
+      "elapsedMs": 178,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/indices",
+      "startedAt": 1792693493770,
+      "completedAt": 1792693509163,
+      "elapsedMs": 15393,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/briefing",
+      "startedAt": 1792693493774,
+      "completedAt": 1792693495484,
+      "elapsedMs": 1710,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/candidates/run",
+      "startedAt": 1792693493776,
+      "completedAt": 1792693493776,
+      "elapsedMs": 0,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/backend/status",
+      "startedAt": 1792693493776,
+      "completedAt": 1792693493904,
+      "elapsedMs": 128,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/rank",
+      "startedAt": 1792693493779,
+      "completedAt": 1792693493968,
+      "elapsedMs": 189,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/indices",
+      "startedAt": 1792693493897,
+      "completedAt": 1792693509163,
+      "elapsedMs": 15266,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/briefing",
+      "startedAt": 1792693493897,
+      "completedAt": 1792693495517,
+      "elapsedMs": 1620,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+      "startedAt": 1792693494092,
+      "completedAt": 1792693496032,
+      "elapsedMs": 1940,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=042660",
+      "startedAt": 1792693494096,
+      "completedAt": 1792693496816,
+      "elapsedMs": 2720,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=004000",
+      "startedAt": 1792693494096,
+      "completedAt": 1792693498828,
+      "elapsedMs": 4732,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=004170",
+      "startedAt": 1792693494104,
+      "completedAt": 1792693497819,
+      "elapsedMs": 3715,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=088350",
+      "startedAt": 1792693494182,
+      "completedAt": 1792693500856,
+      "elapsedMs": 6674,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=071970",
+      "startedAt": 1792693494184,
+      "completedAt": 1792693501871,
+      "elapsedMs": 7687,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/stock-chart?symbol=042660",
+      "startedAt": 1792693494198,
+      "completedAt": 1792693524087,
+      "elapsedMs": 29889,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+      "startedAt": 1792693494204,
+      "completedAt": 1792693500060,
+      "elapsedMs": 5856,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=042660",
+      "startedAt": 1792693494204,
+      "completedAt": 1792693496816,
+      "elapsedMs": 2612,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=004000",
+      "startedAt": 1792693494204,
+      "completedAt": 1792693498828,
+      "elapsedMs": 4624,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=004170",
+      "startedAt": 1792693494205,
+      "completedAt": 1792693497819,
+      "elapsedMs": 3614,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=088350",
+      "startedAt": 1792693495623,
+      "completedAt": 1792693500856,
+      "elapsedMs": 5233,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/stock-chart?symbol=042660",
+      "startedAt": 1792693495746,
+      "completedAt": 1792693524088,
+      "elapsedMs": 28342,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=004000",
+      "startedAt": 1792693495746,
+      "completedAt": 1792693498828,
+      "elapsedMs": 3082,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=004170",
+      "startedAt": 1792693495750,
+      "completedAt": 1792693497819,
+      "elapsedMs": 2069,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=088350",
+      "startedAt": 1792693496818,
+      "completedAt": 1792693500856,
+      "elapsedMs": 4038,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/quote?symbol=071970",
+      "startedAt": 1792693497823,
+      "completedAt": 1792693501871,
+      "elapsedMs": 4048,
+      "http": 200
+    },
+    {
+      "phase": "cold",
+      "url": "/api/korean-market/indices",
+      "startedAt": 1792693509781,
+      "completedAt": 1792693509782,
+      "elapsedMs": 1,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/candidates/run",
+      "startedAt": 1792693526240,
+      "completedAt": 1792693526240,
+      "elapsedMs": 0,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/backend/status",
+      "startedAt": 1792693526240,
+      "completedAt": 1792693526264,
+      "elapsedMs": 24,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/rank",
+      "startedAt": 1792693526242,
+      "completedAt": 1792693526307,
+      "elapsedMs": 65,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/backend/status",
+      "startedAt": 1792693526245,
+      "completedAt": 1792693526290,
+      "elapsedMs": 45,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/rank",
+      "startedAt": 1792693526245,
+      "completedAt": 1792693526319,
+      "elapsedMs": 74,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/indices",
+      "startedAt": 1792693526245,
+      "completedAt": 1792693526246,
+      "elapsedMs": 1,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/briefing",
+      "startedAt": 1792693526246,
+      "completedAt": 1792693526380,
+      "elapsedMs": 134,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/candidates/run",
+      "startedAt": 1792693526247,
+      "completedAt": 1792693526247,
+      "elapsedMs": 0,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/indices",
+      "startedAt": 1792693526248,
+      "completedAt": 1792693526249,
+      "elapsedMs": 1,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/briefing",
+      "startedAt": 1792693526253,
+      "completedAt": 1792693526380,
+      "elapsedMs": 127,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+      "startedAt": 1792693526369,
+      "completedAt": 1792693526596,
+      "elapsedMs": 227,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=042660",
+      "startedAt": 1792693526372,
+      "completedAt": 1792693527393,
+      "elapsedMs": 1021,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=004000",
+      "startedAt": 1792693526373,
+      "completedAt": 1792693528393,
+      "elapsedMs": 2020,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=004170",
+      "startedAt": 1792693526373,
+      "completedAt": 1792693529393,
+      "elapsedMs": 3020,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=088350",
+      "startedAt": 1792693526374,
+      "completedAt": 1792693530413,
+      "elapsedMs": 4039,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=071970",
+      "startedAt": 1792693526382,
+      "completedAt": 1792693532411,
+      "elapsedMs": 6029,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/stock-chart?symbol=042660",
+      "startedAt": 1792693526430,
+      "completedAt": 1792693526437,
+      "elapsedMs": 7,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/next-session?baseDate=2026-10-22",
+      "startedAt": 1792693526438,
+      "completedAt": 1792693531625,
+      "elapsedMs": 5187,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=042660",
+      "startedAt": 1792693526444,
+      "completedAt": 1792693527393,
+      "elapsedMs": 949,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=004000",
+      "startedAt": 1792693526445,
+      "completedAt": 1792693528393,
+      "elapsedMs": 1948,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=004170",
+      "startedAt": 1792693526445,
+      "completedAt": 1792693529393,
+      "elapsedMs": 2948,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=088350",
+      "startedAt": 1792693526446,
+      "completedAt": 1792693530413,
+      "elapsedMs": 3967,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=071970",
+      "startedAt": 1792693526452,
+      "completedAt": 1792693532411,
+      "elapsedMs": 5959,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/stock-chart?symbol=042660",
+      "startedAt": 1792693526579,
+      "completedAt": 1792693526584,
+      "elapsedMs": 5,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=004000",
+      "startedAt": 1792693526587,
+      "completedAt": 1792693528393,
+      "elapsedMs": 1806,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=004170",
+      "startedAt": 1792693526587,
+      "completedAt": 1792693529393,
+      "elapsedMs": 2806,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=088350",
+      "startedAt": 1792693526589,
+      "completedAt": 1792693530414,
+      "elapsedMs": 3825,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/quote?symbol=071970",
+      "startedAt": 1792693526589,
+      "completedAt": 1792693532411,
+      "elapsedMs": 5822,
+      "http": 200
+    },
+    {
+      "phase": "warm",
+      "url": "/api/korean-market/indices",
+      "startedAt": 1792693534103,
+      "completedAt": 1792693536387,
+      "elapsedMs": 2284,
+      "http": 200
+    }
+  ],
+  "indexCacheProbe": {
+    "elapsedMs": 2287,
+    "kisCalls": 3
+  },
+  "browserResult": {
+    "headings": [
+      "오늘의 브리핑"
+    ],
+    "exceptions": [],
+    "consoleErrors": []
+  }
+}

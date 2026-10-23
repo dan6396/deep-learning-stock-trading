@@ -1,0 +1,38 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "height": 4271,
+      "scrollWidth": 1440,
+      "legendVisible": true,
+      "statusNoticeCount": 1,
+      "referenceExpanded": "true",
+      "mobileReferenceVisible": false,
+      "minReferenceFont": null,
+      "mainGaps": [
+        "16px"
+      ],
+      "clippedCards": 0,
+      "internalIdentifiers": [],
+      "violations": []
+    },
+    {
+      "width": 375,
+      "height": 7335,
+      "scrollWidth": 375,
+      "legendVisible": false,
+      "statusNoticeCount": 1,
+      "referenceExpanded": "true",
+      "mobileReferenceVisible": true,
+      "minReferenceFont": 12,
+      "mainGaps": [
+        "16px"
+      ],
+      "clippedCards": 0,
+      "internalIdentifiers": [],
+      "violations": []
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

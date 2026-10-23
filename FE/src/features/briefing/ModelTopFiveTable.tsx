@@ -24,7 +24,7 @@ export function useNextSession(baseDate: string | null | undefined) {
 export function RelatedArticles({ candidate }: { candidate: CandidateData }) {
   const articles = candidate.news.filter(article => isRelatedArticle(article.title, candidate.name) && safeArticleUrl(article.url)).slice(0, 3);
   return <div className="briefing-related-news"><h3>관련 기사</h3>{articles.length ? <ul>{articles.map((article, index) => <li key={index}>
-    <a href={safeArticleUrl(article.url)!} target="_blank" rel="noopener noreferrer">{article.title}</a>
+    <a href={safeArticleUrl(article.url)!} target="_blank" rel="noopener noreferrer" title={article.title ?? undefined}>{article.title}</a>
     <small>{article.source || "매체 미확인"} · {article.publishedAt ? formatDate(article.publishedAt, true) : "발행 시각 미확인"}{new URL(safeArticleUrl(article.url)!).hostname === "news.google.com" && " · Google News 경유"}</small>
   </li>)}</ul> : <p className="briefing-muted" role="status">{candidate.newsStatus === "collection_failed" ? "기사 수집 실패 · 다시 분석하면 재수집합니다." : candidate.newsStatus === "collected" && candidate.newsCollected ? "최근 7일 검색에서 관련 기사 0건" : "현재 분석의 기사 수집 기록 없음"}</p>}</div>;
 }

@@ -1,0 +1,34 @@
+{
+  "installedPykrx": "1.0.45",
+  "end": "2026-10-22",
+  "queries": [
+    {
+      "label": "index_1028_name_display_false",
+      "rows": 0,
+      "firstDate": null,
+      "lastDate": null,
+      "columns": []
+    },
+    {
+      "label": "index_1001_name_display_false",
+      "rows": 0,
+      "firstDate": null,
+      "lastDate": null,
+      "columns": []
+    },
+    {
+      "label": "stock_005930_recent200",
+      "rows": 134,
+      "firstDate": "2026-04-06 00:00:00",
+      "lastDate": "2026-10-22 00:00:00",
+      "columns": [
+        "시가",
+        "고가",
+        "저가",
+        "종가",
+        "거래량",
+        "등락률"
+      ]
+    }
+  ]
+}

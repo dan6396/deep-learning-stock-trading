@@ -1,0 +1,101 @@
+{
+  "http": 200,
+  "status": "ready",
+  "model": {
+    "modelId": "plain_20_120_rank_mean_v1",
+    "scoreKind": "rank_zscore",
+    "baseDate": "2026-10-22",
+    "predictionTarget": "next_session_open_to_close",
+    "poolSize": 199,
+    "runStartedAt": "2026-10-22T16:50:26.543Z"
+  },
+  "macro": [
+    {
+      "id": "KOSPI",
+      "status": "ok",
+      "value": 5533.77,
+      "asOf": "2026-10-22T11:05:40.000Z"
+    },
+    {
+      "id": "KOSDAQ",
+      "status": "ok",
+      "value": 764.1,
+      "asOf": "2026-10-22T11:05:40.000Z"
+    },
+    {
+      "id": "NASDAQ",
+      "status": "ok",
+      "value": 26013.834,
+      "asOf": "2026-10-22T16:51:38.000Z",
+      "session": "open"
+    },
+    {
+      "id": "SP500",
+      "status": "ok",
+      "value": 7648.46,
+      "asOf": "2026-10-22T16:51:40.000Z",
+      "session": "open"
+    },
+    {
+      "id": "USDKRW",
+      "status": "ok",
+      "value": 1326.36,
+      "asOf": "2026-10-22T16:51:34.000Z"
+    },
+    {
+      "id": "UST10Y",
+      "status": "ok",
+      "value": 4.986,
+      "asOf": "2026-10-22T16:36:33.000Z"
+    },
+    {
+      "id": "KOSPI200_NIGHT",
+      "status": "ok",
+      "value": 841.1,
+      "asOf": "2026-10-22T16:51:00.000Z",
+      "session": "open"
+    }
+  ],
+  "reference": true,
+  "sectors": null,
+  "performance": {
+    "asOf": "2026-10-22T16:51:04.952Z",
+    "measuredDays": 0,
+    "averageReturnPct": null,
+    "positiveDays": 0,
+    "recent": []
+  },
+  "narrativeStatus": "template",
+  "stocks": [
+    {
+      "rank": 1,
+      "code": "042660",
+      "name": "한화오션",
+      "rankScore": 1.6015144347924204
+    },
+    {
+      "rank": 2,
+      "code": "004000",
+      "name": "롯데정밀화학",
+      "rankScore": 1.5434885494738542
+    },
+    {
+      "rank": 3,
+      "code": "004170",
+      "name": "신세계",
+      "rankScore": 1.523179489612356
+    },
+    {
+      "rank": 4,
+      "code": "088350",
+      "name": "한화생명",
+      "rankScore": 1.520278195346428
+    },
+    {
+      "rank": 5,
+      "code": "071970",
+      "name": "HD현대마린엔진",
+      "rankScore": 1.5057717240167863
+    }
+  ]
+}

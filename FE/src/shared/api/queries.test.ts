@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { createApiClient } from "./client";
-import { createQueries, queryKeys } from "./queries";
+import { createQueries, queryKeys, requestBriefingNarrative } from "./queries";
 import { analysisMutationOptions, invalidateAnalysisResults } from "./analysis";
 import { deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
 import { adaptDashboard, adaptIndex, adaptQuote } from "../../entities/market";
@@ -120,5 +120,41 @@ describe("query contracts and race boundaries", () => {
     await read;
     expect(cache.getQueryData(queryKeys.candidates("run-b"))).toBeUndefined();
     for (const key of [queryKeys.candidates("run-a"), queryKeys.rank("run-a"), queryKeys.stock("005930")]) expect(cache.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+  it("requests briefing narrative with 60-second timeout and POST method", async () => {
+    const mockClient = {
+      request: vi.fn().mockResolvedValue({
+        data: {
+          version: 1,
+          status: "ready",
+          model: { modelId: "test", scoreKind: "rank_zscore", baseDate: "2026-10-23", predictionTarget: null, poolSize: 50, runStartedAt: null },
+          macro: null,
+          stocks: [],
+          narrative: null,
+          composition: null,
+          disclaimer: "",
+          data_meta: { source: "live", asOf: null },
+        },
+      }),
+    };
+    const result = await requestBriefingNarrative(mockClient as never);
+    expect(mockClient.request).toHaveBeenCalledWith("/api/briefing/narrative", {
+      method: "POST",
+      timeoutMs: 60000,
+    });
+    expect(result.status).toBe("ready");
+  });
+  it("propagates timeout error when requesting briefing narrative times out", async () => {
+    const timeoutErr = new Error("timeout of 60000ms exceeded");
+    const mockClient = {
+      request: vi.fn().mockRejectedValue(timeoutErr),
+    };
+    await expect(requestBriefingNarrative(mockClient as never)).rejects.toThrow(
+      "timeout of 60000ms exceeded"
+    );
+    expect(mockClient.request).toHaveBeenCalledWith("/api/briefing/narrative", {
+      method: "POST",
+      timeoutMs: 60000,
+    });
   });
 });

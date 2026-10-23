@@ -4,6 +4,8 @@ import { createElement } from "react";
 import { render, fireEvent, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReportChart } from "../features/stock/ReportChart";
+// Provenance fixtures do not exercise elapsed time; the bucket has dedicated clock tests.
+vi.mock("../../server/kisRateLimit", async original => ({ ...await original(), kisRequestLimiter: { take: vi.fn(async () => {}) } }));
 const snapshots = vi.hoisted(() => ({ fresh: null, stale: null }));
 vi.mock("../../server/dashboardCache", () => ({
   readDashboardSnapshot: vi.fn(async () => snapshots.fresh), readLastSnapshot: vi.fn(async () => snapshots.stale), writeDashboardSnapshot: vi.fn(),
@@ -13,9 +15,10 @@ vi.mock("node:fs/promises", () => {
   const mocks = { readFile: vi.fn(async () => { throw new Error("no fixture file"); }), writeFile: vi.fn() };
   return { ...mocks, default: mocks };
 });
-import { buildKisDashboard, buildKisIndices, buildKisStockQuote, buildKisStockChart } from "../../server/kisDashboard";
+import { buildKisDashboard, buildKisIndices, buildKisStockQuote, buildKisStockChart, requestBriefingKis } from "../../server/kisDashboard";
 import { adaptIndex, adaptQuote, adaptChart } from "../entities/market";
 import { validatedChart } from "../features/stock/reportData";
+import { kisRequestLimiter } from "../../server/kisRateLimit";
 
 function dashboard(source = "live") {
   return { source, generatedAt: "2026-10-07T09:00:00Z", indices: [
@@ -25,8 +28,84 @@ function dashboard(source = "live") {
 }
 
 beforeEach(() => { snapshots.fresh = null; snapshots.stale = null; });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("server market provenance", () => {
+  it("bounds OAuth token responses before parsing or issuing any quotation request", async () => {
+    const fetcher = vi.fn(async () => new Response("{}", { headers: { "content-length": "1048577" } }));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(requestBriefingKis("/uapi/fixture", "FIXTURE", {}, {
+      KIS_ENV: "real", KIS_BASE_URL: "https://fixture-token-size.invalid", KIS_APP_KEY: "fixture-bounded-key", KIS_APP_SECRET: "fixture-bounded-secret",
+    })).rejects.toThrow("KIS briefing data unavailable.");
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(String(fetcher.mock.calls[0][0])).toContain("oauth2/tokenP");
+  });
+  it("bounds Yahoo history responses and preserves the safe interpolated-index fallback", async () => {
+    const rejected = [];
+    vi.stubGlobal("fetch", vi.fn(async url => {
+      if (String(url).includes("oauth2")) return jsonResponse({ access_token: "fixture-bounded-token", expires_in: 3600 });
+      if (String(url).includes("finance.yahoo.com")) {
+        const response = new Response("{}", { headers: { "content-length": "1048577" } });
+        const parse = vi.spyOn(response, "json"); rejected.push(parse);
+        return response;
+      }
+      return jsonResponse({ rt_cd: "0", output: { bstp_nmix_prpr: "300", bstp_nmix_prdy_vrss: "-1", bstp_nmix_prdy_ctrt: "-0.33" } });
+    }));
+    const result = await buildKisIndices({ KIS_BASE_URL: "https://fixture-yahoo-size.invalid",
+      KIS_APP_KEY: "fixture-bounded-key", KIS_APP_SECRET: "fixture-bounded-secret", KIS_INDEX_SERIES_SOURCE: "yahoo" });
+    expect(rejected).toHaveLength(3);
+    expect(result).toHaveLength(3);
+    expect(result.every(index => index.miniSeriesSource === "interpolated")).toBe(true);
+    for (const parse of rejected) expect(parse).not.toHaveBeenCalled();
+  });
+  it.each([true, false])("retries EGW00201 once in the common path without nesting legacy retries (recovery=%s)", async recovery => {
+    vi.useFakeTimers(); const timestamps = [], warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(kisRequestLimiter.take).mockClear();
+    vi.stubGlobal("fetch", vi.fn(async url => {
+      if (String(url).includes("oauth2")) return jsonResponse({ access_token: "fixture-rate-token", expires_in: 3600 });
+      timestamps.push(Date.now());
+      return timestamps.length === 1 || !recovery
+        ? jsonResponse({ rt_cd: "1", msg_cd: "EGW00201", msg1: "초당 거래건수를 초과하였습니다." })
+        : jsonResponse({ rt_cd: "0", output: { stck_prpr: "100" } });
+    }));
+    const pending = buildKisStockQuote("005930", { KIS_ENV: "real", KIS_BASE_URL: "https://fixture-rate.invalid", KIS_APP_KEY: "fixture-rate-key", KIS_APP_SECRET: "fixture-rate-secret", KIS_MAX_RPS: "3" });
+    const assertion = recovery ? expect(pending).resolves.toMatchObject({ currentPrice: 100 }) : expect(pending).rejects.toThrow("EGW00201");
+    await vi.runAllTimersAsync(); await assertion;
+    expect(timestamps).toHaveLength(2); expect(timestamps[1] - timestamps[0]).toBe(750);
+    expect(kisRequestLimiter.take).toHaveBeenCalledTimes(2); expect(kisRequestLimiter.take).toHaveBeenCalledWith(3);
+    warn.mockRestore();
+  });
+  it("keeps the original five-attempt retry for legacy rate messages without EGW00201", async () => {
+    vi.useFakeTimers(); const timestamps = [], warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn(async url => {
+      if (String(url).includes("oauth2")) return jsonResponse({ access_token: "fixture-legacy-token", expires_in: 3600 });
+      timestamps.push(Date.now()); return jsonResponse({ rt_cd: "1", msg1: "초당 거래건수를 초과하였습니다." });
+    }));
+    const pending = buildKisStockQuote("005930", { KIS_BASE_URL: "https://fixture-legacy-rate.invalid", KIS_APP_KEY: "fixture-rate-key", KIS_APP_SECRET: "fixture-rate-secret", KIS_REQUEST_DELAY_MS: "1" });
+    const assertion = expect(pending).rejects.toThrow("초당 거래건수"); await vi.runAllTimersAsync(); await assertion;
+    expect(timestamps).toHaveLength(5); warn.mockRestore();
+  });
+  it("applies the common limiter to briefing APIs and does not retry other KIS errors", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {}); let count = 0;
+    vi.mocked(kisRequestLimiter.take).mockClear();
+    vi.stubGlobal("fetch", vi.fn(async url => String(url).includes("oauth2") ? jsonResponse({ access_token: "fixture-other-token", expires_in: 3600 })
+      : (count++, jsonResponse({ rt_cd: "1", msg_cd: "EGW02004", msg1: "실전/모의 구성 불일치" }))));
+    await expect(requestBriefingKis("/uapi/domestic-stock/v1/quotations/search-stock-info", "CTPF1002R", {},
+      { KIS_ENV: "real", KIS_BASE_URL: "https://fixture-other-rate.invalid", KIS_APP_KEY: "fixture-rate-key", KIS_APP_SECRET: "fixture-rate-secret" })).rejects.toThrow("KIS briefing data unavailable.");
+    expect(count).toBe(1); expect(kisRequestLimiter.take).toHaveBeenCalledWith(1); warn.mockRestore();
+  });
+  it("logs only sanitized KIS diagnostic fields while keeping the public briefing error generic", async () => {
+    const secrets = ["fixture-diagnostic-app-key", "fixture-diagnostic-secret", "fixture-diagnostic-token"];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn(async url => String(url).includes("oauth2")
+      ? jsonResponse({ access_token: secrets[2], expires_in: 3600 })
+      : new Response(JSON.stringify({ rt_cd: "1", msg_cd: "EGW02004", msg1: `실전투자 도메인 ${secrets.join(" ")}` }), { status: 500, headers: { "Content-Type": "application/json" } })));
+    await expect(requestBriefingKis("/uapi/domestic-stock/v1/quotations/search-stock-info", "CTPF1002R", { PRDT_TYPE_CD: "300", PDNO: "042660" },
+      { KIS_ENV: "real", KIS_BASE_URL: "https://fixture-diagnostic.invalid", KIS_APP_KEY: secrets[0], KIS_APP_SECRET: secrets[1] })).rejects.toThrow("KIS briefing data unavailable.");
+    const logs = JSON.stringify(warn.mock.calls);
+    expect(logs).toContain("EGW02004"); expect(logs).toContain("실전투자 도메인");
+    for (const secret of secrets) expect(logs).not.toContain(secret);
+    warn.mockRestore();
+  });
   it("labels a shorter 1Y fallback for requested 5Y through server, adapter and report UI", async () => {
     const day = offset => new Date(Date.now() - offset * 86400000).toISOString().slice(0, 10), rows = [0, 180, 360].map(offset => ({ stck_bsop_date: day(offset).replace(/-/g, ""), stck_clpr: "105", stck_oprc: "100", stck_hgpr: "110", stck_lwpr: "90", acml_vol: "0" }));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -95,7 +174,7 @@ describe("server market provenance", () => {
     vi.stubGlobal("fetch", vi.fn(async url => String(url).includes("oauth2")
       ? jsonResponse({ access_token: "fixture-access-only", expires_in: 3600 })
       : jsonResponse({ rt_cd: "0", output: { stck_prpr: "", prdy_vrss: "", prdy_ctrt: "" } })));
-    const env = { KIS_BASE_URL: "https://fixture-kis.invalid", KIS_APP_KEY: "fixture-key-only", KIS_APP_SECRET: "fixture-secret-only",
+    const env = { KIS_BASE_URL: "https://fixture-kis-missing.invalid", KIS_APP_KEY: "fixture-key-only", KIS_APP_SECRET: "fixture-secret-only",
       KIS_REQUEST_DELAY_MS: "1", KIS_INDEX_SERIES_SOURCE: "off", KIS_QUOTE_WITH_INVESTOR_FLOW: "false" };
     const indices = await buildKisIndices(env);
     for (const index of indices) expect(adaptIndex(index).data).toMatchObject({ value: null, change: null, changeRate: null, miniSeries: [] });

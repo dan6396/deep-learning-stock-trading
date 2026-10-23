@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 
@@ -78,6 +78,23 @@ export async function launchBrowser(base) {
         if (params.request.method !== "GET" && url.pathname.startsWith("/api/")) {
           blocked.push({ reason: "non-GET API", path: url.pathname });
           await send("Fetch.failRequest", { requestId: params.requestId, errorReason: "BlockedByClient" });
+        } else if (url.pathname.startsWith("/node_modules/.vite/deps/")) {
+          const filename = url.pathname.replace(/^\/node_modules\/\.vite\/deps\//, "");
+          const localPath = join("FE/node_modules/.vite/deps", filename);
+          if (existsSync(localPath)) {
+            const body = readFileSync(localPath);
+            await send("Fetch.fulfillRequest", {
+              requestId: params.requestId,
+              responseCode: 200,
+              responseHeaders: [
+                { name: "Content-Type", value: filename.endsWith(".css") ? "text/css" : "application/javascript; charset=utf-8" },
+                { name: "Access-Control-Allow-Origin", value: "*" },
+              ],
+              body: Buffer.from(body).toString("base64"),
+            });
+            return;
+          }
+          await send("Fetch.continueRequest", { requestId: params.requestId });
         } else if (url.origin === base) await send("Fetch.continueRequest", { requestId: params.requestId });
         else if (url.pathname.startsWith("/api/")) {
           // Even a build configured with an external API can only reach local fixtures.

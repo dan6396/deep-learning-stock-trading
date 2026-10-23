@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "status": "no_run",
+  "model": null,
+  "macro": {
+    "asOf": "2026-10-22T11:05:40.000Z",
+    "indicators": [
+      {
+        "id": "KOSPI",
+        "name": "코스피",
+        "unit": "pt",
+        "value": 5533.77,
+        "change": -201.88999999999942,
+        "changePct": -3.5199087812038967,
+        "asOf": "2026-10-22T11:05:40.000Z",
+        "source": "yahoo",
+        "status": "ok"
+      },
+      {
+        "id": "KOSDAQ",
+        "name": "코스닥",
+        "unit": "pt",
+        "value": 764.1,
+        "change": -17.870000000000005,
+        "changePct": -2.285253909996548,
+        "asOf": "2026-10-22T11:05:40.000Z",
+        "source": "yahoo",
+        "status": "ok"
+      },
+      {
+        "id": "NASDAQ",
+        "name": "나스닥",
+        "unit": "pt",
+        "value": 26164.064,
+        "change": -538.7930000000015,
+        "changePct": -2.0177354056159666,
+        "asOf": "2026-10-22T16:10:12.000Z",
+        "source": "yahoo",
+        "status": "ok",
+        "session": "open"
+      },
+      {
+        "id": "SP500",
+        "name": "S&P 500",
+        "unit": "pt",
+        "value": 7676.53,
+        "change": -80.64000000000033,
+        "changePct": -1.039554373566653,
+        "asOf": "2026-10-22T16:10:15.000Z",
+        "source": "yahoo",
+        "status": "ok",
+        "session": "open"
+      },
+      {
+        "id": "USDKRW",
+        "name": "원·달러 환율",
+        "unit": "KRW",
+        "value": 1325.97,
+        "change": -0.6499999999998636,
+        "changePct": -0.04899669837631451,
+        "asOf": "2026-10-22T16:10:11.000Z",
+        "source": "yahoo",
+        "status": "ok"
+      },
+      {
+        "id": "UST10Y",
+        "name": "미국 국채 10년 금리",
+        "unit": "%",
+        "value": 4.992,
+        "change": -0.15399999999999991,
+        "changePct": -2.9926156237854626,
+        "asOf": "2026-10-22T15:55:13.000Z",
+        "source": "yahoo",
+        "status": "ok"
+      },
+      {
+        "id": "KOSPI200_NIGHT",
+        "name": "코스피200 야간선물",
+        "unit": "pt",
+        "source": "kis",
+        "value": null,
+        "change": null,
+        "changePct": null,
+        "asOf": null,
+        "status": "unavailable",
+        "session": null
+      }
+    ],
+    "reference": {
+      "title": "직전 미국장(나스닥) 방향과 코스피",
+      "periodStart": "2025-10-22",
+      "periodEnd": "2026-10-22",
+      "lastObservedDate": "2026-10-20",
+      "rows": [
+        {
+          "definition": "close_to_close",
+          "label": "전일 종가→종가 · 나스닥 상승 뒤 코스피 상승",
+          "condition": "nasdaq_up",
+          "ratioPct": 73.2824427480916,
+          "count": 96,
+          "total": 131,
+          "baselinePct": 60.90534979423868,
+          "ciLowPct": 66.66666666666666,
+          "ciHighPct": 79.62962962962963
+        },
+        {
+          "definition": "close_to_close",
+          "label": "전일 종가→종가 · 나스닥 하락 뒤 코스피 하락",
+          "condition": "nasdaq_down",
+          "ratioPct": 53.57142857142857,
+          "count": 60,
+          "total": 112,
+          "baselinePct": 39.09465020576132,
+          "ciLowPct": 44.44444444444444,
+          "ciHighPct": 62.502385496183194
+        },
+        {
+          "definition": "open_to_close",
+          "label": "시가→종가 · 나스닥 상승 뒤 코스피 상승",
+          "condition": "nasdaq_up",
+          "ratioPct": 46.56488549618321,
+          "count": 61,
+          "total": 131,
+          "baselinePct": 50.617283950617285,
+          "ciLowPct": 39.86001317523057,
+          "ciHighPct": 52.98507462686567
+        },
+        {
+          "definition": "open_to_close",
+          "label": "시가→종가 · 나스닥 하락 뒤 코스피 하락",
+          "condition": "nasdaq_down",
+          "ratioPct": 43.75,
+          "count": 49,
+          "total": 112,
+          "baselinePct": 48.971193415637856,
+          "ciLowPct": 34.453548085901026,
+          "ciHighPct": 53.15610002525889
+        }
+      ],
+      "note": "전날 나스닥 방향과 코스피의 관계는 시가 갭을 포함한 구간에서 더 크게 관찰됐으며, 시가 이후(모델 예측 구간) 방향과는 뚜렷한 관계가 관찰되지 않았습니다. 과거 통계이며 예측을 보장하지 않습니다.",
+      "source": "Yahoo Finance 일봉, 팀 재검증(2026-10-23)"
+    },
+    "context": {
+      "usSessionDate": "2026-10-22",
+      "targetSessionNote": "미국 장 관측일과 모델 대상 한국 거래일을 확인할 수 없습니다."
+    }
+  },
+  "stocks": [],
+  "narrative": {
+    "status": "template",
+    "generatedAt": "2026-10-22T16:10:15.320Z",
+    "llmModel": null,
+    "inputHash": "d105934d9559ec0282de6b9a723d076f355115f34f1bac24fc5bebf647ccdf5f",
+    "fallbackReason": "no_run",
+    "macroAsOf": "2026-10-22T11:05:40.000Z",
+    "macroStale": false,
+    "overview": "완료된 유효 모델 실행이 없습니다. 시장 관측값은 코스피 5533.77pt, 코스닥 764.1pt, 나스닥 26164.06pt, S&P 500 7676.53pt, 원·달러 환율 1325.97KRW, 미국 국채 10년 금리 4.99%입니다.",
+    "marketNote": "미국 장 관측일과 모델 대상 한국 거래일을 확인할 수 없습니다. 시장 자료와 기사는 모델 순위를 변경하지 않습니다.",
+    "stocks": [],
+    "citations": [
+      "M:KOSPI",
+      "M:KOSDAQ",
+      "M:NASDAQ",
+      "M:SP500",
+      "M:USDKRW",
+      "M:UST10Y"
+    ]
+  },
+  "composition": {
+    "basis": "equal_weight_reference",
+    "note": "최적화하지 않은 동일 비중(각 20%) 참고 구성입니다. 투자 권유가 아닙니다.",
+    "sectors": null,
+    "sectorSource": null,
+    "performance": {
+      "asOf": "2026-10-22T16:09:50.380Z",
+      "measuredDays": 0,
+      "averageReturnPct": null,
+      "positiveDays": 0,
+      "recent": []
+    },
+    "commonCautions": [
+      "순위 점수는 수익률이나 확률이 아닙니다.",
+      "일부 시장 지표를 확보하지 못했습니다.",
+      "유효한 TOP5 후보 구성이 완성되지 않았습니다.",
+      "업종 분류를 확인하지 못했습니다.",
+      "검증된 동일 비중 TOP5 공식 성과 기록이 없습니다."
+    ]
+  },
+  "disclaimer": "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
+  "data_meta": {
+    "source": "cache",
+    "asOf": "2026-10-22T11:05:40.000Z"
+  }
+}

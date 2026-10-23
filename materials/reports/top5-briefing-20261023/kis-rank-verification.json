@@ -1,0 +1,48 @@
+{
+  "rows": 199,
+  "validRows": 199,
+  "hasRankScore": true,
+  "hasScoreKind": true,
+  "modelIds": [
+    "plain_20_120_rank_mean_v1"
+  ],
+  "scoreKinds": [
+    "rank_zscore"
+  ],
+  "baseDates": [
+    "2026-10-22"
+  ],
+  "continuousRanks": true,
+  "top5": [
+    {
+      "pred_rank": 1,
+      "ticker": "042660",
+      "company_name": "한화오션",
+      "rank_score": 1.6015144347924204
+    },
+    {
+      "pred_rank": 2,
+      "ticker": "004000",
+      "company_name": "롯데정밀화학",
+      "rank_score": 1.5434885494738542
+    },
+    {
+      "pred_rank": 3,
+      "ticker": "004170",
+      "company_name": "신세계",
+      "rank_score": 1.523179489612356
+    },
+    {
+      "pred_rank": 4,
+      "ticker": "088350",
+      "company_name": "한화생명",
+      "rank_score": 1.520278195346428
+    },
+    {
+      "pred_rank": 5,
+      "ticker": "071970",
+      "company_name": "HD현대마린엔진",
+      "rank_score": 1.5057717240167865
+    }
+  ]
+}

@@ -46,20 +46,45 @@ await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true
 
 let seq = 0;
 const pending = new Map();
-ws.addEventListener("message", (event) => {
-  const message = JSON.parse(event.data);
-  if (message.id && pending.has(message.id)) {
-    const { resolve, reject } = pending.get(message.id);
-    pending.delete(message.id);
-    message.error ? reject(new Error(message.error.message)) : resolve(message.result);
-  }
-});
 const send = (method, params = {}) =>
   new Promise((resolve, reject) => {
     seq += 1;
     pending.set(seq, { resolve, reject });
     ws.send(JSON.stringify({ id: seq, method, params }));
   });
+
+ws.addEventListener("message", async (event) => {
+  const message = JSON.parse(event.data);
+  if (message.method === "Fetch.requestPaused") {
+    const { requestId, request } = message.params;
+    const m = request.url.match(/\/node_modules\/\.vite\/deps\/([^?#]+)/);
+    if (m) {
+      const filename = m[1];
+      const localPath = join("FE/node_modules/.vite/deps", filename);
+      if (existsSync(localPath)) {
+        const body = readFileSync(localPath);
+        await send("Fetch.fulfillRequest", {
+          requestId,
+          responseCode: 200,
+          responseHeaders: [
+            { name: "Content-Type", value: filename.endsWith(".css") ? "text/css" : "application/javascript; charset=utf-8" },
+            { name: "Access-Control-Allow-Origin", value: "*" },
+          ],
+          body: Buffer.from(body).toString("base64"),
+        });
+        return;
+      }
+    }
+    await send("Fetch.continueRequest", { requestId });
+    return;
+  }
+  if (message.id && pending.has(message.id)) {
+    const { resolve, reject } = pending.get(message.id);
+    pending.delete(message.id);
+    message.error ? reject(new Error(message.error.message)) : resolve(message.result);
+  }
+});
+
 const evaluate = async (expression) => {
   const { result, exceptionDetails } = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
   if (exceptionDetails) throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text);
@@ -74,6 +99,7 @@ const report = (name, ok, detail = "") => {
 
 await send("Page.enable");
 await send("Runtime.enable");
+await send("Fetch.enable", { patterns: [{ urlPattern: "*node_modules/.vite/deps/*" }] });
 // Settle entrance animations so contrast is measured on final colours.
 await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
 
@@ -83,7 +109,13 @@ try {
     for (const theme of ["dark", "light"]) {
       for (const path of PATHS) {
         await send("Page.navigate", { url: `${BASE}${path}` });
-        await sleep(1500);
+        await sleep(500);
+        for (let w = 0; w < 40; w += 1) {
+          const hasH1 = await evaluate("Boolean(document.querySelector('h1'))").catch(() => false);
+          if (hasH1) break;
+          await sleep(200);
+        }
+        await sleep(300);
         await evaluate(`localStorage.setItem("kospi-theme.v1", ${JSON.stringify(theme)}); document.documentElement.dataset.theme = ${JSON.stringify(theme)};`);
         await sleep(300);
         const label = `[${width} ${theme}] ${path}`;
@@ -102,7 +134,17 @@ try {
           .map((el) => (String(el.className) || el.tagName).slice(0, 40) + " " + Math.round(el.getBoundingClientRect().width) + "x" + Math.round(el.getBoundingClientRect().height))`);
         report(`${label} pointer targets >= 24px`, small.length === 0, small.slice(0, 5).join(", "));
 
-        const headings = await evaluate(`[...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].filter((h) => h.getClientRects().length).map((h) => Number(h.tagName[1]))`);
+        let headings = [];
+        for (let w = 0; w < 30; w += 1) {
+          try {
+            const h = await evaluate(`[...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].filter((h) => h.getClientRects().length).map((h) => Number(h.tagName[1]))`);
+            if (Array.isArray(h) && h.length > 0) {
+              headings = h;
+              break;
+            }
+          } catch {}
+          await sleep(200);
+        }
         const skipped = headings.some((level, i) => i > 0 && level > headings[i - 1] + 1);
         report(`${label} single h1 first, no skipped levels`, headings[0] === 1 && headings.filter((l) => l === 1).length === 1 && !skipped, JSON.stringify(headings));
       }
@@ -114,7 +156,9 @@ try {
   ws.close();
   browser.kill();
   await sleep(500);
-  rmSync(profile, { recursive: true, force: true });
+  try {
+    rmSync(profile, { recursive: true, force: true });
+  } catch {}
   console.log(`\n${failures === 0 ? "ALL PASSED" : `${failures} failing check(s)`}`);
   process.exit(failures ? 1 : 0);
 }

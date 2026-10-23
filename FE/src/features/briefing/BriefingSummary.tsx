@@ -10,6 +10,33 @@ import { marketAssessment } from "./MarketOverview";
 import { formatDuration, savedRunDuration } from "./briefingData";
 import { topFiveSummary } from "./topFiveSummary";
 
+export function BriefingExecutionBar({ pool }: { pool: number | null }) {
+  const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
+  const completed = status?.marker.state === "completed", finishedAt = completed ? status.marker.finishedAt ?? status.marker.asOf : null;
+  return (
+    <div className="briefing-execution-bar" role="status" aria-label="분석 실행 상태">
+      <span className="briefing-execution-item">
+        분석 완료 <strong>{backend.isPending ? "실행 기록 조회 중" : finishedAt ? formatDate(finishedAt, true) : "완료 시각 미확인"}</strong>
+      </span>
+      <span className="briefing-execution-divider">·</span>
+      <span className="briefing-execution-item">
+        모집단 <strong>{formatNumber(pool ?? status?.results.rank.count)}종목</strong> ({formatDuration(savedRunDuration(status, analysis.data?.data))})
+      </span>
+      <span className="briefing-execution-divider">·</span>
+      <span className="briefing-execution-item">
+        <span className="briefing-source-tag">{SOURCE_LABELS[status?.results.rank.source ?? "unknown"]}</span>
+        {status?.runtime.state === "running" ? " · 새 분석 진행 중" : completed ? " · 최근 완료 기록" : " · 완료 기록 미확인"}
+      </span>
+      {(backend.isError || analysis.isError) && (
+        <>
+          <span className="briefing-execution-divider">·</span>
+          <span className="briefing-execution-error" role="status">실행 상태 갱신 실패</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function BriefingSummary({ indices, pending, error, count, rows, rankPending, rankError, rankSource }: { indices: DataResult<IndexData>[]; pending: boolean; error: boolean; count: number | null; rows: CandidateData[]; rankPending: boolean; rankError: boolean; rankSource?: DataResult<unknown>["source"] }) {
   const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
   const index = indices.find(item => item.data.symbol === "KOSPI200"), assessment = marketAssessment(indices);

@@ -6,7 +6,7 @@ import type { RunKind } from "../../types/performance";
 
 const launchVersions = new WeakMap<QueryClient, number>();
 export type AnalysisMode = "model_only" | "full";
-const resultPrefixes = [["candidates"], ["rank"], ["stock"], ["dashboard"], ["backend-status"], ["performance"]] as const;
+const resultPrefixes = [["candidates"], ["rank"], ["stock"], ["dashboard"], ["backend-status"], ["performance"], ["briefing"]] as const;
 
 export async function invalidateAnalysisResults(client: QueryClient): Promise<void> {
   // Cancel pre-completion reads before invalidation so a slow prior snapshot cannot win.

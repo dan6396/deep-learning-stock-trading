@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
-import { BriefingPage, INTRO_STORAGE_KEY } from "./BriefingPage";
+import { BriefingPage, INTRO_STORAGE_KEY, useBriefingGenerationPolling } from "./BriefingPage";
 import { queryKeys } from "../../shared/api/queries";
+import { invalidateAnalysisResults } from "../../shared/api/analysis";
 import { backendStatusBody, deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
 import { adaptCandidate } from "../../entities/candidate";
 import { candidateSignals } from "../../entities/signals";
@@ -26,6 +27,16 @@ function mockBackend(overrides?: (path: string, options?: RequestInit) => Promis
     const path = String(url), custom = overrides?.(path, options);
     if (custom) return custom;
     if (path === "/api/candidates" || path === "/api/rank") return jsonResponse(rows());
+    if (path === "/api/briefing") return jsonResponse({
+      version: 1,
+      status: "ready",
+      model: { modelId: "test_model", scoreKind: "rank_zscore", baseDate: "2026-10-07", predictionTarget: "next_session_open_to_close", poolSize: 200, runStartedAt: null },
+      macro: { asOf: "2026-10-07T09:00:00Z", indicators: [] },
+      stocks: [],
+      narrative: { status: "template", generatedAt: "2026-10-07T09:00:00Z", llmModel: null, inputHash: "hash", fallbackReason: null, overview: "", marketNote: "", stocks: [], citations: [] },
+      disclaimer: "테스트 면책 조항",
+      data_meta: { source: "cache", asOf: "2026-10-07T09:00:00Z" }
+    });
     if (path === "/api/korean-market/indices") return jsonResponse([
       { symbol: "KOSPI", value: 2700, changeRate: 0.4, source: "cache", asOf: "2026-10-07T09:00:00Z", miniSeriesSource: "history" },
       { symbol: "KOSDAQ", value: 800, changeRate: -0.2, source: "sample", asOf: "2026-10-07T09:00:00Z", miniSeriesSource: "interpolated" },
@@ -53,6 +64,25 @@ function mount(entries = ["/next"], index = entries.length - 1) {
 }
 
 describe("briefing with raw model rank fixtures", () => {
+  it("uses a neutral model-position badge in the detail panel", async () => {
+    mockBackend(); mount();
+    await screen.findByRole("heading", { name: "종목 A" });
+    const evidence = document.querySelector('[data-detail-evidence="model"]');
+    expect(evidence).not.toBeNull();
+    expect(evidence).toHaveTextContent(/모델 (상위권|중위권|하위권)|순위 미확인/);
+    expect(evidence).not.toHaveTextContent("긍정");
+    expect(evidence?.querySelector(".lucide-triangle")).toBeNull();
+  });
+  it("retains previous comprehensive briefing data and announces a failed refresh", async () => {
+    let failed = false;
+    mockBackend(path => path === "/api/briefing" && failed ? Promise.resolve(new Response("{}", { status: 503 })) : undefined);
+    const client = mount();
+    await screen.findByRole("heading", { name: "종합 브리핑" });
+    failed = true;
+    await client.refetchQueries({ queryKey: queryKeys.briefing(), exact: true });
+    expect(await screen.findByText("이전 조회 결과 · 종합 브리핑 갱신 실패")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "종합 브리핑" })).toBeInTheDocument();
+  });
   it("selects through buttons, keyboard and URL history", async () => {
     mockBackend(); mount();
     const a = await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
@@ -160,5 +190,206 @@ describe("panel model membership and market heuristic", () => {
     render(<MarketOverview indices={[{ source: "cache", asOf: null, data: { symbol: "KOSPI", name: null, value: 2700, change: null, changeRate: null, miniSeries: [], miniSeriesSource: "unknown" } }]} pending={false} error={false} previous={true} />);
     expect(document.querySelector('.briefing-index-title span')).toHaveTextContent("—");
     expect(document.querySelector('.briefing-index-title span')).not.toHaveClass("briefing-rise", "briefing-fall");
+  });
+});
+
+describe("BriefingPage comprehensive briefing integration", () => {
+  it("renders ready briefing with macro grid and narrative", async () => {
+    mockBackend(path => {
+      if (path === "/api/briefing") {
+        return Promise.resolve(jsonResponse({
+          version: 1,
+          status: "ready",
+          model: { modelId: "test_model", scoreKind: "rank_zscore", baseDate: "2026-10-07", predictionTarget: "next_session_open_to_close", poolSize: 200, runStartedAt: null },
+          macro: {
+            asOf: "2026-10-07T09:00:00Z",
+            context: { usSessionDate: "2026-10-06", targetSessionNote: "통합 테스트 매크로 노트" },
+            indicators: [
+              { id: "KOSPI", name: "코스피", value: 2750.0, change: 10.5, changePct: 0.38, unit: "pt", asOf: "2026-10-07T09:00:00Z", source: "kis", status: "ok" }
+            ]
+          },
+          stocks: [
+            {
+              rank: 1, code: "005930", name: "삼성전자", rankScore: 2.1, poolSize: 200, topPercent: 0.5,
+              evidence: [{ id: "E:005930:1", kind: "model", text: "상위 모멘텀 지속" }],
+              cautions: [],
+              news: { status: "not_collected", articles: [] }
+            }
+          ],
+          narrative: {
+            status: "llm", generatedAt: "2026-10-07T09:05:00Z", llmModel: "gemini-flash", inputHash: "hash-ready",
+            fallbackReason: null, overview: "시장 개황 통합 테스트 내용", marketNote: "지표 관찰 내용",
+            stocks: [{ code: "005930", summary: "삼성전자 종합 요약", citations: ["M:KOSPI"] }],
+            citations: ["M:KOSPI"]
+          },
+          disclaimer: "통합 면책 조항",
+          data_meta: { source: "live", asOf: "2026-10-07T09:00:00Z" }
+        }));
+      }
+      return undefined;
+    });
+
+    mount();
+    await screen.findByText("미국장 관측일 2026-10-06 · 지표별 기준 시각 참고");
+    expect(screen.getByText("시장 개황 통합 테스트 내용")).toBeInTheDocument();
+    expect(screen.getByText("통합 면책 조항")).toBeInTheDocument();
+  });
+
+  it("renders empty state guide when briefing status is no_run", async () => {
+    mockBackend(path => {
+      if (path === "/api/briefing") {
+        return Promise.resolve(jsonResponse({
+          version: 1,
+          status: "no_run",
+          model: null,
+          macro: { asOf: null, indicators: [] },
+          stocks: [],
+          narrative: { status: "template", generatedAt: "2026-10-07T09:00:00Z", llmModel: null, inputHash: "", fallbackReason: null, overview: "", marketNote: "", stocks: [], citations: [] },
+          disclaimer: "",
+          data_meta: { source: "cache", asOf: null }
+        }));
+      }
+      return undefined;
+    });
+
+    mount();
+    await screen.findByText("진행된 종합 브리핑 결과가 없습니다");
+    expect(screen.getByText("새 분석 실행")).toBeInTheDocument();
+  });
+
+  it("handles briefing fetch error without crashing the page", async () => {
+    mockBackend(path => {
+      if (path === "/api/briefing") {
+        return Promise.resolve(new Response("Internal Server Error", { status: 500 }));
+      }
+      return undefined;
+    });
+
+    mount();
+    await screen.findByText("종합 브리핑 조회 실패 · 분석 결과를 가져오지 못했습니다.");
+    expect(screen.getByRole("heading", { name: "모델 예측 TOP5" })).toBeInTheDocument();
+  });
+
+  it("calls narrative generation mutation and updates briefing on user click", async () => {
+    let generated = false;
+    mockBackend((path, options) => {
+      if (path === "/api/briefing/narrative" && options?.method === "POST") {
+        generated = true;
+        return Promise.resolve(jsonResponse({
+          version: 1,
+          status: "ready",
+          model: null,
+          macro: { asOf: null, indicators: [] },
+          stocks: [],
+          narrative: {
+            status: "llm", generatedAt: "2026-10-07T09:10:00Z", llmModel: "gemini-pro", inputHash: "hash-new",
+            fallbackReason: null, overview: "새로 생성된 AI 브리핑 요약", marketNote: "",
+            stocks: [], citations: []
+          },
+          disclaimer: "",
+          data_meta: { source: "live", asOf: null }
+        }));
+      }
+      if (path === "/api/briefing") {
+        return Promise.resolve(jsonResponse({
+          version: 1,
+          status: "ready",
+          model: null,
+          macro: { asOf: null, indicators: [] },
+          stocks: [],
+          narrative: {
+            status: "template", generatedAt: "2026-10-07T09:00:00Z", llmModel: null, inputHash: "hash-old",
+            fallbackReason: "규칙 생성", overview: "규칙 요약 내용", marketNote: "",
+            stocks: [], citations: []
+          },
+          disclaimer: "",
+          data_meta: { source: "cache", asOf: null }
+        }));
+      }
+      return undefined;
+    });
+
+    mount();
+    await screen.findByText("규칙 요약 내용");
+    const generateBtn = screen.getByTestId("narrative-generate-btn");
+    expect(generateBtn).toHaveTextContent("AI 요약 생성");
+
+    fireEvent.click(generateBtn);
+    await screen.findByText("새로 생성된 AI 브리핑 요약");
+    expect(generated).toBe(true);
+  });
+
+  // 차단 3: 분석 완료 후 briefing 쿼리 무효화 검증
+  it("invalidates briefing query when analysis completes", async () => {
+    let briefingCount = 0;
+    mockBackend(path => {
+      if (path === "/api/briefing") {
+        briefingCount += 1;
+        return Promise.resolve(jsonResponse({
+          version: 1,
+          status: "ready",
+          model: null,
+          macro: { asOf: null, indicators: [] },
+          stocks: [],
+          narrative: { status: "template", generatedAt: "2026-10-07T09:00:00Z", llmModel: null, inputHash: "", fallbackReason: null, overview: `무효화 호출 ${briefingCount}`, marketNote: "", stocks: [], citations: [] },
+          disclaimer: "",
+          data_meta: { source: "cache", asOf: null }
+        }));
+      }
+      return undefined;
+    });
+
+    const client = mount();
+    await screen.findByText("무효화 호출 1");
+
+    await invalidateAnalysisResults(client);
+    await screen.findByText("무효화 호출 2");
+    expect(briefingCount).toBeGreaterThanOrEqual(2);
+  });
+
+  // 권장 11: 언마운트 중 뮤테이션 완료 시 오류 없음
+  it("handles unmount during narrative mutation without throwing", async () => {
+    let resolveNarrative!: (val: Response) => void;
+    mockBackend((path, options) => {
+      if (path === "/api/briefing/narrative" && options?.method === "POST") {
+        return new Promise<Response>(res => { resolveNarrative = res; });
+      }
+      return undefined;
+    });
+
+    const client = new QueryClient();
+    const { unmount } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter><BriefingPage /></MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    unmount();
+    expect(() => {
+      if (resolveNarrative) {
+        resolveNarrative(jsonResponse({
+          version: 1, status: "ready", model: null, macro: { asOf: null, indicators: [] }, stocks: [],
+          narrative: { status: "llm", generatedAt: "2026-10-07T09:00:00Z", llmModel: "gemini", inputHash: "", fallbackReason: null, overview: "", marketNote: "", stocks: [], citations: [] },
+          disclaimer: "", data_meta: { source: "live", asOf: null }
+        }));
+      }
+    }).not.toThrow();
+  });
+});
+
+describe("briefing generation polling budget", () => {
+  it("polls every five seconds for at most one minute and resets for a new generation", () => {
+    vi.useFakeTimers();
+    try {
+      const refetch = vi.fn(async () => undefined);
+      const { result, rerender, unmount } = renderHook(({ active }) => useBriefingGenerationPolling(active, refetch), { initialProps: { active: true } });
+      act(() => { vi.advanceTimersByTime(4999); }); expect(refetch).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(1); }); expect(refetch).toHaveBeenCalledTimes(1);
+      act(() => { vi.advanceTimersByTime(55_000); }); expect(refetch).toHaveBeenCalledTimes(12); expect(result.current).toBe(true);
+      act(() => { vi.advanceTimersByTime(60_000); }); expect(refetch).toHaveBeenCalledTimes(12);
+      rerender({ active: false }); expect(result.current).toBe(false);
+      rerender({ active: true }); act(() => { vi.advanceTimersByTime(5000); }); expect(refetch).toHaveBeenCalledTimes(13);
+      unmount(); act(() => { vi.advanceTimersByTime(60_000); }); expect(refetch).toHaveBeenCalledTimes(13);
+    } finally { vi.useRealTimers(); }
   });
 });

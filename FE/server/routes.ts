@@ -4,6 +4,7 @@ import { getCandidateAnalysisStatus, startCandidateAnalysis } from "./pipelineRu
 import { getBackendStatus } from "./backendStatus";
 import { nextKrxSession } from "./krxCalendar";
 import { getPerformancePayload, startPerformanceCollection, runPerformanceCollection } from "./performance";
+import { getBriefing, generateBriefingNarrative } from "./briefing";
 
 declare const process: { env: Record<string, string | undefined> };
 export type ApiRequest = {
@@ -13,7 +14,7 @@ export type ApiRequest = {
 };
 export type ApiResponse = { end: (body: string) => void; setHeader: (name: string, value: string) => void; statusCode: number };
 const providers = { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, fetchKisTargetSession,
-  refreshDashboardSnapshot, getCandidatesPayload, getRankPayload, getStockAnalysisPayload,
+  refreshDashboardSnapshot, getCandidatesPayload, getRankPayload, getStockAnalysisPayload, getBriefing, generateBriefingNarrative,
   getCandidateAnalysisStatus, startCandidateAnalysis, getBackendStatus, getPerformancePayload, startPerformanceCollection, runPerformanceCollection };
 export type RouteProviders = typeof providers;
 export type RouteHandler = (request: ApiRequest, response: ApiResponse) => Promise<void>;
@@ -88,6 +89,8 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
     }),
     "/api/candidates": route(["GET"], () => deps.getCandidatesPayload(), "cache"),
     "/api/rank": route(["GET"], () => deps.getRankPayload(), "cache"),
+    "/api/briefing": route(["GET"], () => deps.getBriefing(env), "cache"),
+    "/api/briefing/narrative": route(["POST"], () => deps.generateBriefingNarrative(env), "cache"),
     "/api/stock-analysis": route(["GET"], request => deps.getStockAnalysisPayload(ticker(request)), "cache"),
     "/api/candidates/run": route(["GET", "POST"], request => {
       if (request.method !== "POST") return analysisStatus(deps.getCandidateAnalysisStatus());
@@ -111,7 +114,7 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
   };
   const backendStatus = routes["/api/backend/status"];
   routes["/api/backend/status"] = async (request, response) => { response.setHeader("Cache-Control", "no-store"); await backendStatus(request, response); };
-  for (const path of ["/api/performance", "/api/performance/collect"]) {
+  for (const path of ["/api/performance", "/api/performance/collect", "/api/briefing", "/api/briefing/narrative"]) {
     const handler = routes[path];
     routes[path] = async (request, response) => { response.setHeader("Cache-Control", "no-store"); await handler(request, response); };
   }

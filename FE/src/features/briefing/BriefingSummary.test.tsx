@@ -29,4 +29,37 @@ describe("briefing summary status", () => {
     mount(false); await screen.findByText("완료 시각 미확인"); expect(screen.getByText(/완료 기록 미확인/)).toBeInTheDocument();
     expect(screen.queryByText(/최근 완료 기록/)).not.toBeInTheDocument(); expect(screen.getByText(/소요 미확인/)).toBeInTheDocument();
   });
+  it("renders KOSPI200 value and change rate when index data is provided", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    clients.push(client);
+    render(
+      <QueryClientProvider client={client}>
+        <BriefingSummary
+          indices={[
+            {
+              source: "live",
+              asOf: null,
+              data: {
+                symbol: "KOSPI200",
+                name: "코스피200",
+                value: 360.5,
+                change: 3.05,
+                changeRate: 0.85,
+                miniSeries: [],
+                miniSeriesSource: "history",
+              },
+            },
+          ]}
+          pending={false}
+          error={false}
+          count={200}
+          rows={[]}
+          rankPending={false}
+          rankError={false}
+        />
+      </QueryClientProvider>
+    );
+    expect(screen.getByText(/코스피200 360\.50/)).toBeInTheDocument();
+    expect(screen.getByText("+0.85%")).toBeInTheDocument();
+  });
 });

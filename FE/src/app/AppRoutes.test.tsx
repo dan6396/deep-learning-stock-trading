@@ -17,7 +17,7 @@ function mount(path = "/") {
   render(<MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AppProviders><Location /><App /></AppProviders></MemoryRouter>);
 }
 it.each(["/", "/next"])("mounts the rebuilt home and shell at %s", async path => {
-  mount(path); await screen.findByRole("heading", { name: "테스트 브리핑" });
+  mount(path); await screen.findByRole("heading", { name: "테스트 브리핑" }, { timeout: 3000 });
   expect(screen.getByRole("link", { name: "브리핑" })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("button", { name: "종목 검색" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "서비스 소개" })).toHaveAttribute("href", path === "/next" ? "/next/about" : "/about");

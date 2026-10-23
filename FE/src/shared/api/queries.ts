@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { adaptCandidate } from "../../entities/candidate";
 import { adaptChart, adaptDashboard, adaptIndex, adaptQuote } from "../../entities/market";
+import { adaptBriefing, type BriefingPayload } from "../../entities/briefing";
 import { aggregateSource } from "../../entities/source";
 import { record, stockCode } from "../../entities/value";
 import type { TimeRange } from "../../types/stockChart";
@@ -19,6 +20,7 @@ export const queryKeys = {
   chart: (code: string, range: TimeRange) => ["chart", requireCode(code), range] as const,
   analysisRun: () => ["analysis-run"] as const,
   nextSession: (baseDate: string) => ["next-session", baseDate] as const,
+  briefing: () => ["briefing"] as const,
 };
 export function requireCode(code: string): string {
   const normalized = stockCode(code);
@@ -97,6 +99,14 @@ export function createQueries(client: ApiClient = apiClient) {
       const response = await client.request("/api/candidates/run", { signal });
       return { ...response, data: adaptAnalysisStatus(response.data) };
     }, refetchInterval: query => query.state.data?.data.status === "running" ? 5000 : false }),
+    briefing: () => queryOptions({
+      queryKey: queryKeys.briefing(),
+      staleTime: 30000,
+      queryFn: async ({ signal }) => {
+        const response = await client.request("/api/briefing", { signal, fallbackSource: "cache" });
+        return adaptBriefing(response.data);
+      },
+    }),
   };
 }
 
@@ -110,6 +120,14 @@ export function adaptAnalysisStatus(value: unknown): AnalysisStatus {
     result: object.result && typeof object.result === "object" ? record(object.result) : null };
 }
 export const queries = createQueries();
+
+export async function requestBriefingNarrative(client: ApiClient = apiClient): Promise<BriefingPayload> {
+  const response = await client.request("/api/briefing/narrative", {
+    method: "POST",
+    timeoutMs: 60000,
+  });
+  return adaptBriefing(response.data);
+}
 
 /** Pick the public contract only; configuration is never a verified market quote. */
 export function adaptBackendStatus(value: unknown): BackendStatus {

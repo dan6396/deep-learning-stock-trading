@@ -1,0 +1,40 @@
+{
+  "exitCode": 1,
+  "command": {
+    "python": ".venv/Scripts/python.exe",
+    "args": [
+      "integrated_pipeline.py",
+      "--output-dir",
+      "outputs",
+      "--main-module",
+      "main.py",
+      "--model-manifest",
+      "models\\final_rank_ensemble\\manifest.json",
+      "--predict-module",
+      "predict.py"
+    ],
+    "cwd": "."
+  },
+  "required": [
+    {
+      "path": "integrated_pipeline.py",
+      "exists": true
+    },
+    {
+      "path": "main.py",
+      "exists": true
+    },
+    {
+      "path": "models\\final_rank_ensemble\\manifest.json",
+      "exists": true
+    },
+    {
+      "path": "predict.py",
+      "exists": true
+    }
+  ],
+  "before": "2026-10-10T03:38:07.111Z",
+  "after": "2026-10-10T03:38:07.111Z",
+  "stderrLast40": ".venv\\Lib\\site-packages\\pykrx\\__init__.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n\n[FATAL] STEP 2 실패: '지수명'",
+  "stdoutLast40": "============================================================\n[STEP 1] KOSPI200 후보 풀 로드 (목표 200개, 정렬/현재가 조회 없음)\n  모듈 경로: main.py\n[WARN] pykrx KOSPI 200 구성종목 조회 실패: index -1 is out of bounds for axis 0 with size 0\n[WARN] 내장 KOSPI 200 풀을 사용합니다. 최신 정기변경 반영이 필요하면 pykrx/KRX 로그인을 확인하세요.\n  로드 완료: 199개 종목\n    005930 삼성전자\n    000660 SK하이닉스\n    005380 현대차\n    373220 LG에너지솔루션\n    207940 삼성바이오로직스\n    329180 HD현대중공업\n    012450 한화에어로스페이스\n    000270 기아\n    034020 두산에너빌리티\n    402340 SK스퀘어\n    ... 외 189개\n  저장: outputs\\step1_candidate_pool.csv\n\n============================================================\n[STEP 2] Transformer 앙상블 모델 점수 전체 랭킹 + Top10 수급 데이터 첨부\n  체크포인트 : models\\final_rank_ensemble\\manifest.json\n  후보 199개 전체 예측 → Transformer 앙상블 Top5 수급 조회\n  수급 참고 기준: 최근 5거래일, 외국인/기관 양수일 각각 3일 이상이면 supply_pass=True"
+}

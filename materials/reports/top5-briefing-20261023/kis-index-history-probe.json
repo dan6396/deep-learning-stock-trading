@@ -1,0 +1,46 @@
+[
+  {
+    "code": "2001",
+    "start": "20190603",
+    "end": "20261022",
+    "status": "ok",
+    "rows": 50,
+    "first": {
+      "date": "20260807",
+      "close": 974.73,
+      "volume": 145454
+    },
+    "last": {
+      "date": "20261022",
+      "close": 858.02,
+      "volume": 97278
+    }
+  },
+  {
+    "code": "2001",
+    "start": "20190603",
+    "end": "20190630",
+    "status": "ok",
+    "rows": 19,
+    "first": {
+      "date": "20190603",
+      "close": 268.16,
+      "volume": 83610
+    },
+    "last": {
+      "date": "20190628",
+      "close": 277.5,
+      "volume": 67598
+    }
+  },
+  {
+    "code": "0001",
+    "end": "20261022",
+    "status": "request_failed"
+  },
+  {
+    "code": "0001",
+    "end": "20190630",
+    "status": "request_failed"
+  }
+]
