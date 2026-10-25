@@ -1,6 +1,6 @@
 # 포스터 문안 초안
 
-이 문서는 제출용 편집 초안이다. 본문은 전개별로 짧게 사용하고 근거·주의는 그림 캡션과 하단 각주로 남긴다. 현재 실행은 기준일 2026-10-23, 대상 10/26(월) 정규장이다. TOP5는 신한지주·한국항공우주·한화오션·대한항공·롯데정밀화학이다([현재 검증](../verification-20261025.json)). 수치는 저장 실행 당시 값이며 실시간 시세가 아니다. PNG는 이전 실행 캡처이므로 화면 구조 수정 완료 후 교체할 때까지 새 결과의 그림으로 쓰지 않는다.
+이 문서는 제출용 편집 초안이다. 본문은 전개별로 짧게 사용하고 근거·주의는 그림 캡션과 하단 각주로 남긴다. 현재 실행은 기준일 2026-10-23, 대상 10/26(월) 정규장이다. TOP5는 신한지주·한국항공우주·한화오션·대한항공·롯데정밀화학이다([현재 검증](../verification-20261025.json)). PNG는 10/25 18:13 KST의 새 정보 구조·비관리자 다크 화면이다([촬영 기록](../screenshots/fe-check/poster-capture-metrics.json)). 수치는 각 자료의 기준 시각을 따르며 실시간 시세로 소개하지 않는다.
 
 ## 전체 제목
 
@@ -69,10 +69,14 @@ TOP5 구성에서는 공통 표본의 최근 60거래일 상관행렬과 공통 
 
 | 컷 | 파일 | 캡션·제출 조건 |
 |---|---|---|
-| 브리핑·시장·인용 근거 | [브리핑 뷰포트](../screenshots/fe-check/home-1440-dark-viewport.png) | 이전 실행 캡처. ‘입력 사실을 설명하고 기준 시각·기사 출처를 함께 제공한다’는 새 촬영의 캡션 후보 |
-| 전체 작업 흐름 | [최종 전체 화면](../screenshots/fe-check/home-1440-dark-full.png) | 이전 실행 캡처. 새 TOP5·상관행렬은 새 촬영 후 그림으로 사용 |
-| 레이아웃 이전 기록 | [fe-check/home-1440-dark-viewport.png](../screenshots/fe-check/home-1440-dark-viewport.png) | 현재 10/25 AI 원문 재검증의 화면 증거로 사용하지 않음 |
-| 상세 패널 | [홈 상세 패널](../screenshots/fe-check/home-1440-dark-viewport.png) | 이전 패널 캡처. 새 리포트의 기간별 순위·피처 위치·차트 값 읽기는 별도 촬영 대기 |
+| 브리핑·인용 근거 | [AI 요약·TOP5 상단](../screenshots/fe-check/poster-briefing-1440-dark.png) | ‘입력 사실을 설명하고 생성 시각·인용 근거를 제공한다.’ 7필드 모두 AI, 1440×1000 |
+| 시장 문맥 | [시장 지표](../screenshots/fe-check/poster-market-1440-dark.png) | ‘국내·미국 지수와 환율·금리를 각 시장 관측 시각으로 읽는다.’ 현재 배치를 유지해 브리핑과 별도 촬영 |
+| 순위와 행 안 근거 | [TOP1 펼친 표 상단](../screenshots/fe-check/poster-top5-1440-dark.png) | ‘모델 순위·기간별 일치·특징 위치·기사 출처를 한 행에서 확인한다.’ 5개 행 전체는 전체 컷에 보존 |
+| 종목 입력 관측 | [신한지주 리포트](../screenshots/fe-check/poster-stock-1440-dark.png) | ‘20일 1위·120일 4위와 입력 피처의 상대적 위치를 비교한다.’ 피처 위치는 인과 설명이 아님 |
+| 가격 값 읽기 | [가격 차트·툴팁](../screenshots/fe-check/poster-chart-1440-dark.png) | ‘가격·날짜 축, 기간 기준선, 최고/최저와 특정 관측 가격을 확인한다.’ 신한지주 1개월 가격선 |
+| 정의별 과거 통계 | [나스닥 참고 통계](../screenshots/fe-check/reference-1440-dark.png) | ‘조건부 비율을 같은 기간 기준선·표본·신뢰구간과 비교한다.’ 모델 예측 구간과 종가 기준을 분리 |
+| 구성 공통 움직임 | [TOP5 구성·상관행렬](../screenshots/fe-check/poster-composition-1440-dark.png) | ‘최근 공통 60일의 종목 간 상관을 동일 비중 참고 구성과 함께 읽는다.’ 평균 0.35, 최고 한국항공우주·한화오션 0.65 |
+| 전체 작업 흐름 | [데스크톱 전체](../screenshots/fe-check/home-1440-dark-full.png), [모바일 전체](../screenshots/fe-check/home-375-dark-full.png) | 1440×4295 / 375×7720. 발표에는 읽을 수 있는 확대 컷을 사용하며 모바일 상관표는 내부 가로 스크롤 |
 
 직접 열어 본 후보들이다. 기사·숫자·미수집 표시를 편집으로 바꾸지 않는다. 전일 코드 정리 캡처는 가상 입력이므로 실제 데이터 동작 컷에 섞지 않는다.[S8] 최종 시연 순서는 [usage-flow.md](usage-flow.md)를 따른다.
 
@@ -89,5 +93,5 @@ TOP5 구성에서는 공통 표본의 최근 60거래일 상관행렬과 공통 
 - [S5] [현재 실행 검증 요약](../verification-20261025.json). 기준일 `2026-10-23`, 대상 `2026-10-26`, 관측 열 추가 후 원본 점수 오차 0. [원본 순위 이전 검증](../kis-rank-verification.json)과 [이전 브리핑 스냅샷](../kis-briefing-ready.json)은 기준일 `2026-10-22` 기록으로 남긴다.
 - [S6] [현재 저장 원문 재검증·복원 출처](../verification-20261025.json). Gemini 추가 호출 없이 7개 필드 llm·fallbackReason null. [이전 Gemini 실호출 기록](../narrative-live-partial.json)의 9,199ms는 다른 실행의 동작 시간이며 현재 재검증 지연으로 쓰지 않는다.
 - [S7] [업종 오류 진단](../sector-diagnostic.json), [수급 설정 경계](../../../../README.md), [이번 검증 기록](../README.md). 비밀 설정 내용은 확인하지 않음.
-- [S8] [전일 코드 정리 보고서](../../final-code-cleanup-20261022/README.md), [최종 화면 측정](../screenshots/fe-check/ui-review-metrics.json), [접근성 검사](../screenshots/fe-check/a11y-review.txt).
+- [S8] [전일 코드 정리 보고서](../../final-code-cleanup-20261022/README.md), [현재 촬영 측정](../screenshots/fe-check/poster-capture-metrics.json), [이전 접근성 검사](../screenshots/fe-check/a11y-review.txt). 이번은 GET·캡처만 수행했으며 접근성·빌드를 재실행하지 않음.
 - 별도 팀 출처: 뉴스 상관 `0.053`은 **팀 내부 분석(출처: 팀 공유 자료)**. 저장소 재현 근거와 구분.

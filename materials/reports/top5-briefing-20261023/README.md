@@ -1,6 +1,6 @@
 ﻿# TOP5 종합 브리핑 검증 기록 · 2026-10-23
 
-저장된 검증 산출물과 현재 API 계약을 대조한 기록이다. **현재 실행은 기준일 2026-10-23·대상 10/26(월)이며 TOP1은 신한지주**다. [새 실행 검증 요약](verification-20261025.json)에 원본 순위·관측 열·저장 설명 재검증 결과를 기록했다. 기존 10/22 기준 실행과 10/23 캡처·실호출은 아래에 이전 기록으로 남겼다. 새 포스터 촬영은 브리핑 정보 구조 수정 완료 후 진행하므로, 아직 아래 PNG를 새 실행의 증거로 사용하지 않는다. 아래 성공·실패는 **각 파일을 생성한 실행의 관측**이며, 전체 데이터의 실전 출처·투자 성과·운영 안정성을 보증하지 않는다. 포스터 문안은 [poster/poster-content.md](poster/poster-content.md), 시연은 [poster/usage-flow.md](poster/usage-flow.md), 구성도는 [poster/diagram-system.md](poster/diagram-system.md)에 있다.
+저장된 검증 산출물과 현재 API 계약을 대조한 기록이다. **현재 실행은 기준일 2026-10-23·대상 10/26(월)이며 TOP1은 신한지주**다. [새 실행 검증 요약](verification-20261025.json)에 원본 순위·관측 열·저장 설명 재검증 결과를 기록했다. 10/25 18:13 KST에 새 정보 구조의 비관리자 화면을 촬영했으며 [촬영 측정](screenshots/fe-check/poster-capture-metrics.json)에 7개 AI 필드·시세/차트 HTTP 200·오류 부재를 기록했다. 기존 10/22 기준 실행과 10/23 실호출은 아래에 이전 기록으로 남겼다. 아래 성공·실패는 **각 파일을 생성한 실행의 관측**이며, 전체 데이터의 실전 출처·투자 성과·운영 안정성을 보증하지 않는다. 포스터 문안은 [poster/poster-content.md](poster/poster-content.md), 시연은 [poster/usage-flow.md](poster/usage-flow.md), 구성도는 [poster/diagram-system.md](poster/diagram-system.md)에 있다.
 
 ## 무엇을 만들었나
 
@@ -65,7 +65,7 @@
 | 미국 국채 10년 | 4.986 | % · Yahoo | 2026-10-22T16:36:33Z | ok |
 | 코스피200 야간선물 | 841.1 | pt · KIS | 2026-10-22T16:51:00Z | ok · open |
 
-이 스냅샷의 지표는 모두 수집됐지만 이후 cold GET은 야간 자료를 기다리다 미수집을 반환할 수 있다. 미국 장중 수치를 마감 수치 또는 다음 한국장의 결과로 표시하지 않는다. 근거: [스냅샷](kis-briefing-ready.json), [cold 응답 계약](../../../FE/docs/api-contract.md), [최신 캡처 후보](screenshots/fe-check/home-1440-dark-viewport.png).
+이 스냅샷의 지표는 모두 수집됐지만 이후 cold GET은 야간 자료를 기다리다 미수집을 반환할 수 있다. 미국 장중 수치를 마감 수치 또는 다음 한국장의 결과로 표시하지 않는다. 근거: [이전 스냅샷](kis-briefing-ready.json), [cold 응답 계약](../../../FE/docs/api-contract.md), [현재 시장 지표 컷](screenshots/fe-check/poster-market-1440-dark.png).
 
 ## 이전 Gemini 실호출과 실패 경로 · 10/23
 
@@ -79,19 +79,23 @@
 
 입력에 있는 금액·날짜·순매수/순매도 설명까지 거부할 수 있던 검증을 보완했다. 현재 구현은 수급 사실과 거래 권유를 구분하고, 한국어 금액 단위·방향·허용 날짜를 확인한다. 초기 실패 파일만으로 개별 차단 문장의 정확한 원인을 모두 확정할 수는 없다. 근거: 위 실패 JSON, [검증기](../../../FE/server/briefingValidation.ts), [필드 복구 코드](../../../FE/server/briefingNarrative.ts), [API 계약](../../../FE/docs/api-contract.md).
 
-## 이전 포스터 캡처 · 10/23 13:23 KST Gemini 결과 반영
+## 현재 포스터 캡처 · 10/25 18:13 KST
 
-GET으로 ready·기준일 2026-10-22·같은 완료 실행을 확인한 뒤 POST를 정확히 1회 호출했다. 최종 결과는 [narrative-final.json](narrative-final.json)에 원문·필드 출처와 함께 저장했다. 전역 인용 8개, 종목별 인용 합계 30개다. 서버 로그에서 개요의 forbidden_content 대체를 확인했다. 거부된 문장에는 ‘기대수익률이나 상승 확률을 의미하지 않으며 매수나 매도를 권유하지 않습니다’라는 부정 면책이 있어 과잉 차단 가능성이 남지만, 이번에는 코드 수정·재호출하지 않았다.
+GET으로 ready·기준일 2026-10-23과 같은 입력 해시를 확인했다. 10/25 12:25 KST에 생성된 저장 설명의 7개 필드가 현재 규칙을 통과해 모두 llm이며 fallbackReason=null이다. 이번 촬영에서 분석·Gemini POST는 하지 않았다. 이전 10/23의 생성 호출·부분 대체는 [narrative-final.json](narrative-final.json)에 별도 기록돼 있다.
 
-TOP1 한화오션(042660)과 TOP5 전체 시세 응답 HTTP 200 및 현재가 렌더 완료, 가격 이력 로딩 종료를 확인한 뒤 촬영했다. 최종 전체 높이는 데스크톱 4,271px·모바일 7,510px이며 가로 넘침은 없었다. 기존 metrics와 승인 기록은 그때의 측정이며 이 최종 촬영과 구분한다. 콘솔 오류·예외·HTTP 4xx/5xx는 0건이었다. 개발 모드의 요청 취소 AbortError는 있었으나 최종 시세 5개는 모두 성공했다. 캡처를 직접 열어 제목·통계·펼친 근거와 시세 ‘조회 중’ 부재를 확인했다.
+warmup의 16개 GET이 모두 HTTP 200이었다. TOP5 현재가와 신한지주 차트의 실제 브라우저 응답·렌더 완료, 최근 1년 나스닥 243일 관측과 60일 공통 상관행렬을 확인했다. 다크·비관리자 상태의 실제 뷰포트를 촬영했으며 DOM·레이아웃을 재배열하지 않았다. 종합 브리핑과 시장 지표 사이에 TOP5가 있으므로 승인된 별도 컷으로 나눴다. TOP5 컷은 TOP1 펼침과 표 상단이며 5개 행 전체는 전체 페이지 컷에서 확인한다. 캡처 9장을 직접 열어 핵심 제목·표·차트 라벨이 가려지지 않고 로딩·관리자 UI가 없음을 확인했다. 콘솔 오류·예외·HTTP 오류·비GET API 요청은 0건이다. 모바일 상관표는 내부 가로 스크롤이므로 한 PNG에 5개 열 전체를 담지는 않는다. 코드·빌드·접근성 테스트는 이번 캡처 작업에서 실행하지 않았다.
 
-| 캡처 | 내용 |
-|---|---|
-| [poster-briefing-1440-dark.png](screenshots/fe-check/poster-briefing-1440-dark.png) | 1440×1000 실제 뷰포트, 종합 브리핑과 시장 지표가 함께 보이는 포스터 컷 |
-| [poster-stock-1440-dark.png](screenshots/fe-check/poster-stock-1440-dark.png) | 1440×1000 실제 뷰포트, 한화오션 종목 카드의 근거·주의점·기사 펼침 |
-| [home-1440-dark-viewport.png](screenshots/fe-check/home-1440-dark-viewport.png), [전체](screenshots/fe-check/home-1440-dark-full.png) | 1440×900 홈, 전체 컷은 참고 통계 펼침 포함 |
-| [home-375-dark-full.png](screenshots/fe-check/home-375-dark-full.png), [첫 화면](screenshots/fe-check/home-375-dark-viewport.png) | 모바일 375×812 홈, 전체 컷은 참고 통계 카드 포함 |
-| [reference-1440-dark.png](screenshots/fe-check/reference-1440-dark.png), [reference-375-dark.png](screenshots/fe-check/reference-375-dark.png) | 최종 참고 통계 확대, 데스크톱 차트·모바일 행 카드 |
+| 캡처 | 크기 | 내용 |
+|---|---|---|
+| [poster-briefing-1440-dark.png](screenshots/fe-check/poster-briefing-1440-dark.png) | 1440×1000 | AI 요약·생성/시장 기준 시각·인용과 TOP5 상단 |
+| [poster-market-1440-dark.png](screenshots/fe-check/poster-market-1440-dark.png) | 1440×1000 | 시장 지표 7종·미국장 기준 시각 |
+| [poster-top5-1440-dark.png](screenshots/fe-check/poster-top5-1440-dark.png) | 1440×1000 | TOP1 펼침, 행 안 근거·기간별 일치·특징·기사 |
+| [poster-stock-1440-dark.png](screenshots/fe-check/poster-stock-1440-dark.png) | 1440×1000 | 신한지주 모델 순위와 입력 관측·20/120일 비교·나스닥 과거 통계 |
+| [poster-chart-1440-dark.png](screenshots/fe-check/poster-chart-1440-dark.png) | 1440×1000 | 신한지주 1개월 가격선·축·마지막 관측·최고/최저·호버 툴팁 |
+| [reference-1440-dark.png](screenshots/fe-check/reference-1440-dark.png) | 1440×1000 | 나스닥 참고 통계 펼침·기준선·신뢰구간·방법 |
+| [poster-composition-1440-dark.png](screenshots/fe-check/poster-composition-1440-dark.png) | 1440×1000 | TOP5 동일 비중 참고·공통 60일 상관행렬·한계 |
+| [home-1440-dark-full.png](screenshots/fe-check/home-1440-dark-full.png) | 1440×4295 | 홈 전체·TOP1 근거/참고 통계 펼침 |
+| [home-375-dark-full.png](screenshots/fe-check/home-375-dark-full.png) | 375×7720 | 모바일 홈 전체·참고 통계 행 카드·상세 패널 |
 
 ## KIS 요청·한도 측정
 
@@ -126,7 +130,7 @@ KIS 지수 이력 최초 수집은 지수별 1,813행, 각 범위 `2019-06-03~20
 - **토큰·계좌 동시성:** 토큰 캐시 재사용은 중복 발급을 줄이지만 여러 프로세스의 동시 발급 방지까지 검증하지 않았다. Node 스로틀도 프로세스 밖 요청을 합산하지 않는다. [루트 README](../../../README.md), [API 계약](../../../FE/docs/api-contract.md).
 - **성과 부재:** 공식 동일 비중 성과 `measuredDays=0`, 평균 null이다. 0% 수익이나 실매매 검증 완료로 해석하지 않는다. [kis-briefing-ready.json](kis-briefing-ready.json).
 - **미래 성능 미검증:** 과거 개발 구간의 재사용·구성종목 proxy·수정주가 snapshot·거래비용/시장충격 미반영 한계가 있다. 이전 화면 정리는 가상 입력 검증이었다. [manifest](../../../models/final_rank_ensemble/manifest.json), [전일 정리 보고서](../final-code-cleanup-20261022/README.md).
-- **캡처 범위:** 최종 브리핑은 [fe-check 전체 화면](screenshots/fe-check/home-1440-dark-full.png)과 [모바일 화면](screenshots/fe-check/home-375-dark-full.png)에 보존했습니다. 참고 통계 펼침·상태 안내·누락값은 실제 상태대로 표시하며, [측정 자료](screenshots/fe-check/ui-review-metrics.json)와 [접근성 결과](screenshots/fe-check/a11y-review.txt)를 함께 확인하세요. 분석 진행률과 전용 종목 리포트의 최신 캡처는 보존하지 않았으므로 해당 화면의 검증 근거로 쓰지 않습니다. [컷 선정표](poster/usage-flow.md).
+- **캡처 범위:** 홈 전체·TOP5 행 내부 근거·신한지주 리포트·툴팁·참고 통계·구성 상관행렬은 위 9개 컷에 보존했습니다. [현재 촬영 측정](screenshots/fe-check/poster-capture-metrics.json)과 [이전 접근성 검사](screenshots/fe-check/a11y-review.txt)의 시점을 구분하세요. 분석 진행률·관리자 실행 UI는 촬영하지 않았습니다. [컷 선정표](poster/usage-flow.md).
 - **감사 범위:** [secret-pattern-audit.txt](secret-pattern-audit.txt)는 열거한 보고서 파일의 패턴 미일치 기록이다. 저장소 전체의 비밀 정보 부재를 보증하는 감사가 아니다. 비밀 파일은 이 문서 작업에서 열지 않았다.
 
 ## 매크로·뉴스를 브리핑으로 분리한 근거
@@ -139,7 +143,7 @@ KIS 지수 이력 최초 수집은 지수별 1,813행, 각 범위 `2019-06-03~20
 
 ## 재현 명령과 수행 범위
 
-아래는 재현에 사용할 명령이다. 이번 최종 촬영에서는 기존 완료 분석을 유지하고 GET 조회와 승인된 Gemini POST 1회만 실행했다. 전체 테스트·빌드는 직전 [최종 승인 반영 기록](screenshots/fe-check/ui-review-final-approval.md)을 따르며 이번에는 재실행하지 않았다. 로컬 개발 서버와 이미 안전하게 구성된 서버 환경이 필요하다. 비밀 파일 내용을 출력하는 명령은 포함하지 않는다. 실행 안내 근거: [루트 README](../../../README.md), [FE 안내](../../../FE/README.md), [통계 실행 안내](../macro-nasdaq-kospi/README.md).
+아래는 재현에 사용할 명령이다. 이번 10/25 촬영은 기존 완료 분석·저장 AI 설명을 유지하고 GET만 실행했다. POST는 새 분석·새 설명이 필요할 때 인증된 관리자가 별도로 실행하는 예이며 이번에 수행한 명령이 아니다. 전체 테스트·빌드·접근성 검사는 이번에 재실행하지 않았다. 로컬 개발 서버와 이미 안전하게 구성된 서버 환경이 필요하다. 비밀 파일 내용을 출력하는 명령은 포함하지 않는다. 실행 안내 근거: [루트 README](../../../README.md), [FE 안내](../../../FE/README.md), [통계 실행 안내](../macro-nasdaq-kospi/README.md).
 
 ```powershell
 # 저장소 루트: 오프라인 통계를 별도 출력으로 재계산
@@ -172,6 +176,6 @@ npm run typecheck
 npm run build
 ```
 
-이전 문서 작성·촬영 시 JSON 대조와 저장 일봉 통계 재계산, 승인된 Gemini POST 1회, 시세 응답 확인과 PNG 직접 열람을 수행했다. 이번 갱신은 새 실행 검증 요약과 저장 원문 재검증 결과를 추가하며 유료 호출·새 분석·포스터 재촬영은 하지 않았다. 설명 검증 통과가 원자료의 실전 출처나 모델 성과까지 입증하지는 않는다.
+이전 문서 작성·촬영 시 JSON 대조와 저장 일봉 통계 재계산, 승인된 Gemini POST 1회, 시세 응답 확인을 수행했다. 이번에는 새 정보 구조에서 GET 응답·렌더 완료를 확인하고 9개 PNG를 직접 열람했다. 새 분석·Gemini 호출은 0회다. 설명 검증 통과가 원자료의 실전 출처나 모델 성과까지 입증하지는 않는다.
 
 

@@ -1,0 +1,339 @@
+{
+  "capturedAt": "2026-10-25T09:13:42.345Z",
+  "model": {
+    "modelId": "plain_20_120_rank_mean_v1",
+    "scoreKind": "rank_zscore",
+    "baseDate": "2026-10-23",
+    "predictionTarget": "next_session_open_to_close",
+    "poolSize": 199,
+    "runStartedAt": "2026-10-23T11:52:01.141Z"
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "code": "055550",
+      "name": "신한지주",
+      "rankScore": 1.6479351430472728
+    },
+    {
+      "rank": 2,
+      "code": "047810",
+      "name": "한국항공우주",
+      "rankScore": 1.5579950208034956
+    },
+    {
+      "rank": 3,
+      "code": "042660",
+      "name": "한화오션",
+      "rankScore": 1.523179489612356
+    },
+    {
+      "rank": 4,
+      "code": "003490",
+      "name": "대한항공",
+      "rankScore": 1.502870429750858
+    },
+    {
+      "rank": 5,
+      "code": "004000",
+      "name": "롯데정밀화학",
+      "rankScore": 1.453548427230077
+    }
+  ],
+  "narrative": {
+    "status": "llm",
+    "generatedAt": "2026-10-25T03:25:44.036Z",
+    "llmModel": "gemini-3.8-flash",
+    "fallbackReason": null,
+    "fieldSources": {
+      "overview": "llm",
+      "marketNote": "llm"
+    },
+    "stocks": [
+      {
+        "code": "055550",
+        "source": "llm"
+      },
+      {
+        "code": "047810",
+        "source": "llm"
+      },
+      {
+        "code": "042660",
+        "source": "llm"
+      },
+      {
+        "code": "003490",
+        "source": "llm"
+      },
+      {
+        "code": "004000",
+        "source": "llm"
+      }
+    ]
+  },
+  "composition": {
+    "status": "ready",
+    "samples": 60,
+    "periodStart": "2026-07-27",
+    "periodEnd": "2026-10-23",
+    "averageCorrelation": 0.34749035153853913,
+    "highestPair": {
+      "codes": [
+        "047810",
+        "042660"
+      ],
+      "correlation": 0.650019991611826
+    }
+  },
+  "captures": [
+    {
+      "name": "poster-briefing-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 3465,
+      "scrollY": 124,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 85.59375,
+      "pixelHeight": 1000
+    },
+    {
+      "name": "poster-market-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 3465,
+      "scrollY": 1969,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 85.96875,
+      "pixelHeight": 1000
+    },
+    {
+      "name": "poster-top5-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 3803,
+      "scrollY": 527,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 85.5625,
+      "pixelHeight": 1000
+    },
+    {
+      "name": "reference-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 4295,
+      "scrollY": 2666,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 85.5625,
+      "pixelHeight": 1000
+    },
+    {
+      "name": "poster-composition-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 4295,
+      "scrollY": 3286,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 86.328125,
+      "pixelHeight": 1000
+    },
+    {
+      "name": "home-1440-dark-full.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 4295,
+      "scrollY": 0,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": null,
+      "pixelHeight": 4295
+    },
+    {
+      "name": "home-375-dark-full.png",
+      "width": 375,
+      "height": 812,
+      "fullHeight": 7720,
+      "scrollY": 0,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": null,
+      "pixelHeight": 7720
+    },
+    {
+      "name": "poster-stock-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 3496,
+      "scrollY": 200,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 85.953125,
+      "pixelHeight": 1000
+    },
+    {
+      "name": "poster-chart-1440-dark.png",
+      "width": 1440,
+      "height": 1000,
+      "fullHeight": 3496,
+      "scrollY": 1682,
+      "overflow": false,
+      "loading": false,
+      "adminControls": [],
+      "requiredTop": 85.640625,
+      "pixelHeight": 1000
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/candidates/run",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/rank",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/backend/status",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/briefing",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=047810",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=042660",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=003490",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=004000",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/next-session",
+      "query": "?baseDate=2026-10-23",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/candidates",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/backend/status",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/stock-analysis",
+      "query": "?ticker=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/performance",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/stock-insight",
+      "query": "?code=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/next-session",
+      "query": "?baseDate=2026-10-23",
+      "status": 200
+    }
+  ],
+  "httpErrors": [],
+  "consoleErrors": [],
+  "exceptions": [],
+  "nonGetApiBlocked": [],
+  "stockSensitivity": {
+    "code": "055550",
+    "status": "ready",
+    "samples": 243,
+    "periodStart": "2025-10-27",
+    "periodEnd": "2026-10-23",
+    "metrics": [
+      {
+        "definition": "close_to_close",
+        "correlation": 0.2588794930615453,
+        "beta": 0.5387587586847901,
+        "samples": 243
+      },
+      {
+        "definition": "open_to_close",
+        "correlation": 0.08272292083399244,
+        "beta": 0.14646325906736002,
+        "samples": 243
+      }
+    ],
+    "conditional": {
+      "count": 56,
+      "total": 131,
+      "ratioPct": 42.74809160305343,
+      "baselinePct": 41.1522633744856,
+      "baselineCount": 100,
+      "baselineTotal": 243
+    }
+  },
+  "warmup": {
+    "method": "GET",
+    "requests": 16,
+    "successes": 16
+  }
+}

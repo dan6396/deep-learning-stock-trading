@@ -1,16 +1,16 @@
 # 시연 사용 흐름과 심사 Q&A
 
-기본 화면은 `/`, 상세는 `/stock/:code`다([FE 안내](../../../../FE/README.md)). 현재 기준일은 10/23, 예측 대상은 10/26(월), TOP5는 신한지주·한국항공우주·한화오션·대한항공·롯데정밀화학이다([새 실행 검증](../verification-20261025.json)). 현재 보존 PNG는 이전 10/22 기준 실행을 포함하므로 새 실행 증거와 구분한다. 새 포스터 촬영과 캡처 파일명 갱신은 브리핑 정보 구조 수정 완료 후 진행한다.
+기본 화면은 `/`, 상세는 `/stock/:code`다([FE 안내](../../../../FE/README.md)). 현재 기준일은 10/23, 예측 대상은 10/26(월), TOP5는 신한지주·한국항공우주·한화오션·대한항공·롯데정밀화학이다([새 실행 검증](../verification-20261025.json)). 10/25 18:13 KST에 새 정보 구조·비관리자·다크 화면을 촬영했다. 아래 7개 포스터 컷은 모두 실제 1440×1000 뷰포트이며, 홈 전체는 별도 데스크톱·모바일 컷이다([촬영 기록](../screenshots/fe-check/poster-capture-metrics.json)). 종합 브리핑과 시장 지표는 TOP5를 사이에 둔 현재 배치를 유지해 별도 컷으로 나눴다.
 
 ## 시연 5단계
 
 | 단계 | 조작 | 캡처 파일명·상태 | 1문장 설명 |
 |---|---|---|---|
-| 1. 저장 실행 확인 | 완료 시각·모델 기준일·대상 세션을 확인 | [fe-check/home-1440-dark-viewport.png](../screenshots/fe-check/home-1440-dark-viewport.png): 이전 실행; 새 촬영 대기 | 공개 시연에서는 저장 결과를 읽으며 새 분석은 인증된 관리자만 실행한다. |
-| 2. 종합 브리핑 | 요약 출처·생성 시각·시장 기준 시각·인용 확인 | [포스터용 브리핑](../screenshots/fe-check/poster-briefing-1440-dark.png): 이전 실행; 현재 7개 설명 필드는 재검증 후 모두 AI | 모델 결과는 고정하고 시장 관측과 기사를 출처가 있는 설명으로 읽는다. |
-| 3. 참고 통계 | ‘직전 미국장(나스닥) 방향과 코스피’의 상세 통계 펼치기 | [참고 통계 확대](../screenshots/fe-check/reference-1440-dark.png), [모바일 행 카드](../screenshots/fe-check/reference-375-dark.png) | 종가→종가와 시가→종가의 과거 비율을 각 기준선·표본과 비교한다. |
-| 4. TOP5 | 고정 순위와 기사, 후보 구성, 종목별 근거·주의점 확인 | [최종 전체 화면](../screenshots/fe-check/home-1440-dark-full.png) | 순위 점수를 예상수익률로 바꾸지 않고 근거와 불확실성을 함께 확인한다. |
-| 5. 종목 근거 | 신한지주 리포트의 ‘모델 순위와 입력 관측’ 확인 후 가격 차트로 이동 | [포스터용 종목 근거](../screenshots/fe-check/poster-stock-1440-dark.png): 이전 카드 캡처; 새 리포트 촬영 대기 | 20일·120일 순위, 피처의 상대적 위치, 나스닥 과거 관측과 기사 출처를 구분해 확인한다. |
+| 1. 저장 실행 확인 | 완료 시각·모델 기준일·대상 세션을 확인 | [홈 전체](../screenshots/fe-check/home-1440-dark-full.png), [모바일 전체](../screenshots/fe-check/home-375-dark-full.png) | 공개 시연에서는 저장 결과를 읽으며 새 분석은 인증된 관리자만 실행한다. |
+| 2. 종합 브리핑 | 요약 출처·생성 시각·시장 기준 시각·인용 확인 | [AI 요약·TOP5 상단](../screenshots/fe-check/poster-briefing-1440-dark.png), [시장 7종](../screenshots/fe-check/poster-market-1440-dark.png) | 모델 결과는 고정하고 시장 관측과 기사를 출처가 있는 설명으로 읽는다. |
+| 3. 참고 통계 | ‘직전 미국장(나스닥) 방향과 코스피’의 상세 통계 펼치기 | [참고 통계 확대](../screenshots/fe-check/reference-1440-dark.png), 모바일 행 카드는 [모바일 전체](../screenshots/fe-check/home-375-dark-full.png)에 포함 | 종가→종가와 시가→종가의 과거 비율을 각 기준선·표본과 비교한다. |
+| 4. TOP5 | TOP1 ‘자세히’를 열어 행 안 근거·기사 확인, 구성 카드로 이동 | [TOP1 펼친 표 상단](../screenshots/fe-check/poster-top5-1440-dark.png), [구성·상관행렬](../screenshots/fe-check/poster-composition-1440-dark.png) | 기간별 모델 일치·특징 위치·기사와 공통 움직임을 근거로 확인한다. |
+| 5. 종목 근거 | 신한지주 ‘모델 순위와 입력 관측’ 확인 후 가격 차트에서 호버 | [종목 입력 관측](../screenshots/fe-check/poster-stock-1440-dark.png), [가격·툴팁](../screenshots/fe-check/poster-chart-1440-dark.png) | 20일·120일 순위, 피처 백분위, 과거 나스닥 통계와 가격 값을 구분해 읽는다. |
 
 화면 조작과 응답 의미의 근거는 [API 계약](../../../../FE/docs/api-contract.md), 현재 실행·원문 재검증은 [verification-20261025.json](../verification-20261025.json)이다. 10/25 12:25 KST Gemini 응답에서 탈락했던 개요·신한·롯데 원문을 비밀 제거 로그로부터 승인된 절차로 복원하고 같은 사실·인용으로 다시 검증했다. 현재 개요·시장 설명·종목 5개 모두 llm, fallbackReason=null이며 생성 시각·해시·모델은 그대로다. 이번 유료 호출은 0회다. [narrative-final.json](../narrative-final.json)은 10/23의 이전 부분 대체 기록이다.
 
@@ -20,7 +20,7 @@
 - 분석 진행률 화면이 필요하면 추가한다. 저장 결과 화면만으로 새 분석 실행을 입증하지 않는다. 통계 상세 펼침은 최종 보존 컷에 포함한다.
 - 조회 중 상태가 끝난 뒤 촬영하되 실패·null·미수집도 실제 상태 그대로 남긴다. 가격 이력과 단순 조회 가격의 성공 여부는 따로 확인한다.
 - Gemini 표시가 필요한 컷은 촬영 시점의 필드 출처를 확인한다. 현재 [재검증 결과](../verification-20261025.json)는 7개 모두 llm이며, 이전 PNG의 부분 대체 배지를 현재 상태로 설명하지 않는다. 규칙이 강화되면 문장별 자동 생성으로 돌아갈 수 있다.
-- [최종 측정](../screenshots/fe-check/ui-review-metrics.json)과 [접근성 검사](../screenshots/fe-check/a11y-review.txt)를 확인한다. 모바일 전체는 [fe-check/home-375-dark-full.png](../screenshots/fe-check/home-375-dark-full.png)이며 발표에서는 읽을 수 있는 부분 확대 컷을 사용한다. 전용 리포트의 가격 이력은 별도 검증이 필요하다.
+- [현재 촬영 측정](../screenshots/fe-check/poster-capture-metrics.json)과 [이전 접근성 검사](../screenshots/fe-check/a11y-review.txt)를 구분한다. 모바일 전체는 [fe-check/home-375-dark-full.png](../screenshots/fe-check/home-375-dark-full.png)이며 발표에서는 읽을 수 있는 확대 컷을 사용한다. 모바일 상관표는 내부 가로 스크롤이므로 PNG에는 일부 열만 보인다. 차트 컷은 신한지주 1개월·2026-10-07 호버 관측 103,300원으로 실제 표시한 상태다.
 
 ## 심사 예상 Q&A · 8개
 
@@ -54,4 +54,4 @@ KIS는 기본 1 RPS·진행 중 요청 병합·캐시와 SWR로 부하를 줄인
 
 ### 8. 현재 한계와 다음 검증은 무엇인가?
 
-수급 실전 출처·업종 인증 구성·최신 구성종목·여러 프로세스의 유량·초기 조회 대기가 남아 있다. 저장 원문의 부정 면책·분기 표기 오탐은 회귀 테스트와 현재 재검증으로 보완했다. 새 포스터 촬영은 화면 수정 완료 후 진행한다. 모델 구조를 고정한 뒤 새 기간으로 관찰하고, 뉴스·매크로 추가 효과는 별도 비교로 검증해야 한다. 근거: [현재 재검증](../verification-20261025.json), [이전 부하 기록](../kis-load-swr-final.json), [검증 기록·한계](../README.md), [모델 한계](../../../../models/final_rank_ensemble/manifest.json).
+수급 실전 출처·업종 인증 구성·최신 구성종목·여러 프로세스의 유량·초기 조회 대기가 남아 있다. 저장 원문의 부정 면책·분기 표기 오탐은 회귀 테스트와 현재 재검증으로 보완했다. 새 정보 구조의 포스터 촬영은 완료했다. 모델 구조를 고정한 뒤 새 기간으로 관찰하고, 뉴스·매크로 추가 효과는 별도 비교로 검증해야 한다. 근거: [현재 재검증](../verification-20261025.json), [촬영 기록](../screenshots/fe-check/poster-capture-metrics.json), [이전 부하 기록](../kis-load-swr-final.json), [모델 한계](../../../../models/final_rank_ensemble/manifest.json).

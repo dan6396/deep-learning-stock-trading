@@ -2,6 +2,8 @@
 
 ## 결과
 
+> 아래는 이전 승인 시점의 기록입니다. 당시의 viewport 2장과 모바일 참고 통계 PNG는 10/25 포스터 정리에서 삭제했습니다. 현재 캡처 목록은 [보고서 README](../../README.md)의 ‘현재 포스터 캡처’를 따르며, 아래 당시 파일명 목록은 역사적 기록입니다.
+
 C1·C2와 R1~R7을 반영했습니다. 커밋·스테이징·푸시하지 않았습니다. 5173 개발 서버를 한 번 종료한 뒤 빌드 통과 후 --force로 복구해 유지했습니다. 이 마무리 과정에서는 Gemini를 추가 호출하지 않았습니다.
 
 ## 조건·권장 처리와 근거
@@ -83,11 +85,11 @@ README.md, poster/diagram-system.md, poster/poster-content.md, poster/usage-flow
 | 파일 | 유지 근거 |
 |---|---|
 | [home-1440-dark-full.png](home-1440-dark-full.png) | 데스크톱 전체 화면·참고 통계 펼침 |
-| [home-1440-dark-viewport.png](home-1440-dark-viewport.png) | 데스크톱 첫 화면 |
+| `home-1440-dark-viewport.png` (이전 파일 삭제) | 당시 데스크톱 첫 화면 |
 | [home-375-dark-full.png](home-375-dark-full.png) | 모바일 전체 화면·참고 통계 펼침 |
-| [home-375-dark-viewport.png](home-375-dark-viewport.png) | 모바일 첫 화면 |
+| `home-375-dark-viewport.png` (이전 파일 삭제) | 당시 모바일 첫 화면 |
 | [reference-1440-dark.png](reference-1440-dark.png) | 데스크톱 통계 확대 |
-| [reference-375-dark.png](reference-375-dark.png) | 모바일 카드 통계 확대 |
+| `reference-375-dark.png` (이전 파일 삭제) | 당시 모바일 카드 통계 확대 |
 | [ui-review-metrics.json](ui-review-metrics.json) | 최신 높이·오버플로·콘솔·axe 실측 |
 | [keyboard-scroll-768.json](keyboard-scroll-768.json) | 이전 키보드 가로 스크롤 실측 |
 | [a11y-review.txt](a11y-review.txt) | 최종 접근성 로그 |
