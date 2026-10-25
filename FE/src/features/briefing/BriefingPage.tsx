@@ -72,7 +72,7 @@ export function BriefingPage() {
   }
   useEffect(() => { if (revealDetail.current) { revealDetail.current = false; scrollToDetail(); } }, [selectedCode]);
   function select(nextCode: string, reason: "pointer" | "keyboard" = "pointer") {
-    if (reason === "pointer" && window.matchMedia?.("(max-width: 900px)").matches) { if (nextCode === selectedCode) scrollToDetail(); else revealDetail.current = true; }
+    if (reason === "pointer" && window.matchMedia?.("(max-width: 1024px)").matches) { if (nextCode === selectedCode) scrollToDetail(); else revealDetail.current = true; }
     const next = new URLSearchParams(params); next.set("code", nextCode); setParams(next, { replace: reason === "keyboard" }); }
   function dismissIntro() { setIntro(false); try { localStorage.setItem(INTRO_STORAGE_KEY, "dismissed"); } catch { /* session-only dismissal */ } }
   async function refresh() {
@@ -88,7 +88,7 @@ export function BriefingPage() {
       {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
       {rank.isPending ? <p className="briefing-empty" role="status">모델 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} /> : !rank.isError && <p className="briefing-empty">표시할 모델 순위가 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
       <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
-      <p className="briefing-table-help">순위는 다음 거래일 시가→종가 상대 순위입니다. 하루 등락만으로 모델을 평가하지 않습니다. 순위 점수는 실제 수익률이 아닙니다. 기사 시각은 한국시간입니다.</p>
+      <p className="briefing-table-help">다음 거래일 시가→종가 기준 상대 순위입니다. 기사 시각은 한국시간입니다.</p>
     </section>
   );
 

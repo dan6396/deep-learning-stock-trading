@@ -1055,7 +1055,7 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 });
 
 describe("Layout Hierarchy Order (화면 위계 순서 검증)", () => {
-  it("renders in order: narrative card -> macro grid -> children (TOP5 table) -> composition card -> stocks section -> disclaimer", () => {
+  it("renders in order: narrative card -> children (TOP5 table) -> stocks section -> macro grid -> composition card -> disclaimer", () => {
     const { container } = render(
       <MemoryRouter>
         <BriefingTopContainer
@@ -1089,11 +1089,11 @@ describe("Layout Hierarchy Order (화면 위계 순서 검증)", () => {
     const isFollowing = (a: Node, b: Node) =>
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-    expect(isFollowing(narrative, macro)).toBe(true);
-    expect(isFollowing(macro, top5Table)).toBe(true);
-    expect(isFollowing(top5Table, composition)).toBe(true);
-    expect(isFollowing(composition, stocks)).toBe(true);
-    expect(isFollowing(stocks, disclaimer)).toBe(true);
+    expect(isFollowing(narrative, top5Table)).toBe(true);
+    expect(isFollowing(top5Table, stocks)).toBe(true);
+    expect(isFollowing(stocks, macro)).toBe(true);
+    expect(isFollowing(macro, composition)).toBe(true);
+    expect(isFollowing(composition, disclaimer)).toBe(true);
   });
 });
 

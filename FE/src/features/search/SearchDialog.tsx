@@ -44,7 +44,7 @@ function SearchContent({ close, dialog }: { close: (restore?: boolean) => void; 
     <div className="stock-search-results">{visible.length ? <ul>{visible.map(row => <li key={row.code} data-search-code={row.code}><Link to={paths.stock(row.code)} onClick={() => close(false)}><span><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code} · {row.rank !== null && Number.isInteger(row.rank) && row.rank > 0 ? `${row.rank}위 · 순위 점수 ${formatRankScore(row.rankScore)}` : "순위 없음"}</small></span><ArrowUpRight aria-hidden="true" size={17} /></Link><WatchToggle code={row.code} name={row.name} /></li>)}</ul>
       : !rank.isPending && !rank.isError && <p className="stock-search-empty">{rank.data?.data.length ? "검색 조건에 맞는 종목이 없습니다." : "최신 전체 분석 결과가 비어 있습니다."}</p>}
       {rows.length > visible.length && <p className="search-count">처음 30종목을 표시합니다. 이름이나 코드를 더 입력해 좁혀 주세요.</p>}</div>
-    <p className="search-footer">최종 후보 목록으로 검색 범위를 줄이지 않습니다. 예측은 실제 성과가 아닙니다. Esc로 닫기</p>
+    <p className="search-footer">최종 후보 목록으로 검색 범위를 줄이지 않습니다. Esc로 닫기</p>
   </dialog>, document.body);
 }
 

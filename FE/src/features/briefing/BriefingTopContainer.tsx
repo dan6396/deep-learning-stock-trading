@@ -93,22 +93,10 @@ export function BriefingTopContainer({
         onCitationClick={handleCitationClick}
       />
 
-      {/* 2. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
-      <BriefingMacroGrid macro={briefing.macro} />
-
-      {/* 3. TOP5 표 (children 슬롯) */}
+      {/* 2. TOP5 표 (children 슬롯) */}
       {children}
 
-      {/* 4. TOP5 후보 구성 카드 */}
-      {briefing.composition && (
-        <BriefingCompositionCard
-          composition={briefing.composition}
-          stocks={briefing.stocks}
-          onSelectStock={onSelectStock}
-        />
-      )}
-
-      {/* 5. 종목별 근거·주의점 */}
+      {/* 3. 종목별 근거·주의점 */}
       {briefing.stocks.length > 0 && (
         <BriefingStockSection
           stocks={briefing.stocks}
@@ -118,6 +106,18 @@ export function BriefingTopContainer({
           onCitationClick={handleCitationClick}
           expandedCodes={expandedCodes}
           onToggleExpand={toggleExpand}
+        />
+      )}
+
+      {/* 4. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
+      <BriefingMacroGrid macro={briefing.macro} />
+
+      {/* 5. TOP5 후보 구성 카드 */}
+      {briefing.composition && (
+        <BriefingCompositionCard
+          composition={briefing.composition}
+          stocks={briefing.stocks}
+          onSelectStock={onSelectStock}
         />
       )}
 

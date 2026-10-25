@@ -69,6 +69,12 @@ function DashboardRedirect() {
   return <Navigate replace to={{ pathname: "/", search, hash: hash === "#market-table" ? "#candidate-heading" : hash }} />;
 }
 
+function NextRedirect() {
+  const { pathname, search, hash } = useLocation();
+  const targetPath = pathname.replace(/^\/next(?:\/|$)/i, "/") || "/";
+  return <Navigate replace to={{ pathname: targetPath, search, hash }} />;
+}
+
 function appRoutes() {
   return <>
     <Route index element={<BriefingPage />} />
@@ -95,7 +101,8 @@ export default function App() {
       >
         <Routes>
           <Route path="/dashboard" element={<DashboardRedirect />} />
-          <Route path="/next" element={<AppShell />}>{appRoutes()}</Route>
+          <Route path="/next" element={<NextRedirect />} />
+          <Route path="/next/*" element={<NextRedirect />} />
           <Route path="/" element={<AppShell />}>{appRoutes()}</Route>
         </Routes>
       </Suspense>

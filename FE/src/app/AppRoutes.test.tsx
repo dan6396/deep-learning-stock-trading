@@ -22,30 +22,40 @@ it("hides only the header run control in demo mode", async () => {
   expect(screen.queryByRole("button", { name: "AI 분석 실행" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "종목 검색" })).toBeInTheDocument();
 });
-it.each(["/", "/next"])("mounts the rebuilt home and shell at %s", async path => {
-  mount(path); await screen.findByRole("heading", { name: "테스트 브리핑" }, { timeout: 3000 });
+it("mounts the rebuilt home and shell at /", async () => {
+  mount("/"); await screen.findByRole("heading", { name: "테스트 브리핑" }, { timeout: 3000 });
   expect(screen.getByRole("link", { name: "브리핑" })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("button", { name: "종목 검색" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "서비스 소개" })).toHaveAttribute("href", path === "/next" ? "/next/about" : "/about");
+  expect(screen.getByRole("link", { name: "서비스 소개" })).toHaveAttribute("href", "/about");
+});
+it.each([
+  ["/next", "/"],
+  ["/next/", "/"],
+  ["/next/rank", "/rank"],
+  ["/NEXT/rank", "/rank"],
+  ["/next/stock/005930?sort=score#overview", "/stock/005930?sort=score#overview"],
+])("redirects %s to %s retaining search and hash", async (from, to) => {
+  mount(from);
+  expect(screen.getByTestId("route-location")).toHaveTextContent(to);
 });
 it("keeps dashboard query and adapts its table deep link", async () => {
   mount("/dashboard?code=005930&sort=model#market-table"); await screen.findByRole("heading", { name: "테스트 브리핑" });
   expect(screen.getByTestId("route-location")).toHaveTextContent("/?code=005930&sort=model#candidate-heading");
 });
 it.each(["/legacy", "/legacy/dashboard", "/legacy/stock/005930"])("does not expose retired screens at %s", async path => {
-  mount(path); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" });
+  mount(path); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" }, { timeout: 3000 });
 });
 it.each(["/missing", "/next/missing"])("keeps the shell and correct home link for %s", async path => {
-  mount(path); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" });
+  mount(path); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" }, { timeout: 3000 });
   expect(screen.getByRole("navigation", { name: "주요 메뉴" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "브리핑으로 돌아가기" })).toHaveAttribute("href", path.startsWith("/next/") ? "/next" : "/");
+  expect(screen.getByRole("link", { name: "브리핑으로 돌아가기" })).toHaveAttribute("href", "/");
   expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute("content", "noindex");
   fireEvent.click(screen.getByRole("link", { name: "브리핑으로 돌아가기" })); await screen.findByRole("heading", { name: "테스트 브리핑" });
   expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
 });
 it("restores a preexisting robots policy after leaving the unknown route", async () => {
   const meta = document.createElement("meta"); meta.name = "robots"; meta.content = "index,follow"; document.head.append(meta);
-  mount("/unknown"); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" });
+  mount("/unknown"); await screen.findByRole("heading", { name: "페이지를 찾을 수 없습니다" }, { timeout: 3000 });
   expect(meta.content).toBe("noindex");
   fireEvent.click(screen.getByRole("link", { name: "브리핑으로 돌아가기" })); await screen.findByRole("heading", { name: "테스트 브리핑" });
   expect(meta.content).toBe("index,follow");
@@ -60,7 +70,7 @@ it("integrates search close focus, report navigation, and theme changes", async 
   fireEvent.click(trigger); await screen.findByRole("dialog");
   fireEvent.click(await screen.findByRole("link", { name: /테스트 종목/ }));
   await screen.findByRole("heading", { name: "테스트 리포트 005930" });
-  expect(screen.getByTestId("route-location")).toHaveTextContent("/next/stock/005930");
+  expect(screen.getByTestId("route-location")).toHaveTextContent("/stock/005930");
   fireEvent.click(screen.getByRole("button", { name: "밝은 테마로 전환" }));
   expect(document.documentElement.dataset.theme).toBe("light");
 });
