@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Cable, ChevronDown, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { queries } from "../../shared/api/queries";
 import { formatDate } from "../../shared/lib/format";
 import type { BackendStatus, PipelineAvailability } from "../../types/backendStatus";
@@ -10,7 +10,7 @@ export function availabilityMessage(label: string, result: PipelineAvailability)
   switch (result.state) {
     case "available": return `${label}: 저장된 분석 결과 제공`;
     case "empty": return `${label}: 정상 완료된 분석 결과 0건`;
-    case "not_produced": return `${label}: 뉴스 보정 최종 후보 미생성`;
+    case "not_produced": return `${label}: 뉴스 보정 사용 안 함`;
     case "sample": return `${label}: 예시 자료 · 실제 분석 미확인`;
     case "stale": return `${label}: 이전 분석 파일 · 현재 결과로 사용 불가`;
     case "invalid": return `${label}: 저장 결과 확인 필요`;
@@ -39,9 +39,14 @@ export function ConnectionNotice() {
   useEffect(() => { setExpanded(needsAttention); }, [needsAttention]);
   return <aside className="connection-notice" aria-label="데이터 연결 상태" data-connection-state={query.isError ? "error" : query.isPending ? "pending" : "ready"}>
     <details className="connection-disclosure" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary className="connection-notice-heading"><Cable size={17} aria-hidden="true" /><strong>데이터 연결 상태</strong>
-        <span className={needsAttention ? "connection-attention" : ""}>{needsAttention ? "확인 필요" : !status ? "확인 중" : status.runtime.state === "running" ? "분석 진행 중" : `모델 결과 저장됨 · 저장 시각 ${formatDate(status.results.rank.asOf, true)}`}</span><ChevronDown className="connection-chevron" size={16} aria-hidden="true" /></summary>
+      <summary className="connection-notice-heading" aria-label={`데이터 연결 상태: ${needsAttention ? "주의" : !status ? "확인 중" : "정상"}`}>
+        <span className={`connection-dot${needsAttention ? " connection-attention" : ""}`} aria-hidden="true" />
+        <span>{needsAttention ? "주의" : !status ? "확인 중" : "정상"}</span>
+      </summary>
       <div className="connection-notice-body">
+      <strong>데이터 출처·연결 상태</strong>
+      <p>시세·가격 이력은 한국투자증권, 시장 지표는 Yahoo Finance·한국투자증권을 사용합니다. 모델 순위·요약은 저장된 실행 자료입니다.</p>
+      {storedResults && <p>모델 결과 저장됨 · 저장 시각 {formatDate(status?.results.rank.asOf, true)}</p>}
       <button type="button" onClick={() => void query.refetch()} disabled={query.isFetching}><RotateCw size={15} aria-hidden="true" />연결 상태 다시 확인</button>
     {query.isError && <p role="status">{status ? "이전 확인 결과 · 연결 상태 갱신 실패" : "연결 상태 미확인 · 다른 화면은 계속 이용할 수 있습니다."}</p>}
     {!status ? !query.isError && <p>연결 상태 확인 중</p> : <>

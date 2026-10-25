@@ -17,11 +17,12 @@ describe("briefing month chart provenance", () => {
     const bundle = chartBundle(); Object.assign(bundle.chartData.ranges["1M"].prices[1], { price: null });
     const fetcher = mount(bundle), chart = await screen.findByRole("img", { name: /2개 가격 관측/ });
     expect(chart).toHaveAttribute("data-chart-range", "1M"); expect(chart.querySelectorAll("[data-chart-segment]")).toHaveLength(2);
-    expect(fetcher.mock.calls[0][0]).toBe("/api/korean-market/stock-chart?symbol=005930"); expect(screen.getByText("저장된 결과")).toBeInTheDocument();
+    expect(fetcher.mock.calls[0][0]).toBe("/api/korean-market/stock-chart?symbol=005930"); expect(document.querySelector('[data-source="cache"]')).toBeInTheDocument();
+    expect(screen.getByText(/가격이 없는 구간은 선으로 잇지 않습니다/).closest("details")).not.toHaveAttribute("open");
   });
   it("labels explicit interpolation instead of describing it as observed history", async () => {
     const bundle = chartBundle(); Object.assign(bundle.chartData.ranges["1M"], { interpolated: true }); mount(bundle);
-    expect(await screen.findByRole("img", { name: /보간 가격점/ })).toBeInTheDocument(); expect(screen.getByText("보간값 · 결측 미연결")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /보간 가격점/ })).toBeInTheDocument();
     expect(screen.getByText(/보간값이며 실제 관측 이력이 아닙니다/).closest("details")).not.toHaveAttribute("open");
   });
   it("shows the actual observed dates rather than claiming a month for a longer 1M API response", async () => {
@@ -30,7 +31,7 @@ describe("briefing month chart provenance", () => {
     Object.assign(range, { coverage: { requestedRange: "1M", sourceRange: "3M", method: "subset", status: "unverified" } }); mount(bundle);
     await screen.findByRole("img"); expect(screen.getByRole("heading", { name: "가격 이력" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "최근 1개월" })).not.toBeInTheDocument(); expect(screen.getByText("2026. 08. 25. – 2026. 10. 07.")).toBeInTheDocument();
-    expect(screen.getByText(/3M 원본에서 제공 · 전체 기간 제공 여부 미확인/).closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText(/원본 조회 범위 3개월/).closest("details")).not.toHaveAttribute("open");
   });
   it.each(["sample", "unknown"])("does not draw unverified %s provenance as real history", async source => {
     mount(chartBundle("005930", source)); await screen.findByText(source === "sample" ? "예시 가격 이력 · 실제 관측 차트 미제공" : "가격 이력 출처 미확인");

@@ -4,6 +4,8 @@ import type { PipelineInputRow, PipelineOutputRow } from "../src/types/trading";
 import { isFreshForRun, readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshness";
 import type { PipelineAvailability } from "../src/types/backendStatus";
 import { attachRelatedNews, RELATED_NEWS_FILE, type RelatedNewsSnapshot } from "./relatedNews";
+import { showBriefingSupply, withoutSupplyFields } from "./supplyVisibility";
+import { FEATURE_LABELS } from "../src/types/modelEvidence";
 
 declare const process: { cwd: () => string; env: Record<string, string | undefined> };
 const FULL_RANK_CSV_RESULT_FILES = ["step2_all_transformer_rank.csv"];
@@ -110,7 +112,8 @@ function stringValue(value: unknown, fallback = ""): string {
   return text || fallback;
 }
 
-function ensembleCsvToPipelineRow(record: Record<string, string>): PipelineOutputRow | null {
+function ensembleCsvToPipelineRow(rawRecord: Record<string, string>, showSupply = false): PipelineOutputRow | null {
+  const record = showSupply ? rawRecord : withoutSupplyFields(rawRecord);
   if (record.score_kind !== "rank_zscore" || record.model_id !== MODEL_ID) return null;
   const ticker = stringValue(record.ticker ?? record["종목코드"]).padStart(6, "0");
   if (!ticker || ticker === "000000") {
@@ -192,7 +195,7 @@ async function loadCsvRows(
     try {
       const text = await readFile(path, "utf8");
       const rows = parseCsv(text)
-        .map(ensembleCsvToPipelineRow)
+        .map(record => ensembleCsvToPipelineRow(record, showBriefingSupply(env)))
         .filter((row): row is PipelineOutputRow => row !== null);
       if (rows.length > 0 || /^\s*(?:\uFEFF)?[^\r\n]*ticker[^\r\n]*/.test(text)) {
         const mtimeMs = (await stat(path)).mtimeMs;
@@ -303,10 +306,10 @@ export async function loadPipelineRows(): Promise<PipelineOutputRow[] | null> {
 /** No separately learned news-final candidate list exists for this model. */
 export async function getCandidatesPayload(): Promise<PipelineOutputRow[]> { return []; }
 
-export async function getStockAnalysisPayload(ticker: string): Promise<PipelineOutputRow | null> {
+export async function getStockAnalysisPayload(ticker: string, env = process.env): Promise<PipelineOutputRow | null> {
   const normalized = String(ticker ?? "").replace(/\D/g, "").padStart(6, "0").slice(-6);
   if (!/^\d{6}$/.test(normalized) || normalized === "000000") throw new Error("A valid 6-digit ticker is required.");
-  return (await getRankPayload()).find(row => tickerFromRow(row) === normalized) ?? null;
+  return (await getRankPayload(env)).find(row => tickerFromRow(row) === normalized) ?? null;
 }
 
 export async function getRankPayload(env = process.env): Promise<PipelineOutputRow[]> {
@@ -322,7 +325,7 @@ export async function getRankPayload(env = process.env): Promise<PipelineOutputR
     } catch { /* no current article cache */ }
   }
   // Model rank remains exactly as written by the verified STEP2 run.
-  const supply = marker?.mode === "model_only" ? await loadModelOnlySupply(marker, env) : new Map<string, Record<string, string>>();
+  const supply = showBriefingSupply(env) && marker?.mode === "model_only" ? await loadModelOnlySupply(marker, env) : new Map<string, Record<string, string>>();
   const after = await readPipelineRunMarker(env);
   if (marker && (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode)) return [];
   const rows = rank.rows.map(row => applyModelSupply(marker?.mode === "model_only" ? { ...row,
@@ -404,6 +407,22 @@ export function validateModelRows(records: Record<string, string>[]): { ok: Vali
   });
   if (new Set(rows.map(row => `${row.kind}:${row.model}`)).size !== 1) fail();
   const poolSizes = new Set(ok.map(row => positiveInteger(row.pred_pool_size)));
+  for (const row of ok) {
+    const pool = positiveInteger(row.pred_pool_size);
+    const fields = ["rank_lb20", "rank_lb120", "score_lb20", "score_lb120", "model_agreement"];
+    if (fields.some(key => row[key]?.trim())) {
+      if (fields.some(key => !row[key]?.trim()) || !pool || ["20", "120"].some(lb => {
+        const rank = positiveInteger(row[`rank_lb${lb}`]);
+        return rank === null || rank > (pool ?? 0) || toFiniteOrNull(row[`score_lb${lb}`]) === null;
+      })) fail();
+      const gap = Math.abs(Number(row.rank_lb20) - Number(row.rank_lb120)) / (pool ?? 1);
+      if (row.model_agreement !== (gap <= .10 ? "일치" : gap <= .25 ? "부분 일치" : "불일치")) fail();
+    }
+    for (const [key, value] of Object.entries(row)) if (key.startsWith("feat_pct_") && value.trim()) {
+      if (!(key.slice("feat_pct_".length) in FEATURE_LABELS)) fail();
+      const pct = toFiniteOrNull(value); if (pct === null || pct <= 0 || pct > 100) fail();
+    }
+  }
   return { ok: rows, baseDate: baseDate as string, poolSize: poolSizes.size === 1 ? [...poolSizes][0] ?? 0 : 0, all: records.length };
 }
 

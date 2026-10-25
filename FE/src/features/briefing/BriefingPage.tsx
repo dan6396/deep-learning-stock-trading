@@ -13,6 +13,7 @@ import { SourceMeta } from "./SourceMeta";
 import { WatchlistNotice } from "../watchlist/WatchToggle";
 import { BriefingTopContainer } from "./BriefingTopContainer";
 import { AnalysisControl } from "./AnalysisControl";
+import { ExpiredSessionNotice } from "./ExpiredSessionNotice";
 import "./briefing.css";
 import "./briefingDashboard.css";
 import "./briefingTop.css";
@@ -81,19 +82,20 @@ export function BriefingPage() {
   }
   const topFiveTable = (
     <section className="briefing-card briefing-comparison-card" aria-labelledby="candidate-heading">
-      <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>모델 예측 TOP5</h2><span className="briefing-muted">{rows.some(row => row.scoreKind === "rank_zscore") ? "원본 모델 순위" : "원본 예측 순위"}</span></div>
+      <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>모델 순위 TOP5</h2><span className="briefing-muted">{rows.some(row => row.scoreKind === "rank_zscore") ? "원본 모델 순위" : "원본 예측 순위"}</span></div>
       <div className="briefing-result-meta"><span>분석 기준일 <strong>{baseDate}</strong> · 모집단 {formatNumber(pool)}종목</span>{rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="저장 시각" />}</div>
       {rank.data?.source === "sample" && <p className="briefing-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
       {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
-      {rank.isPending ? <p className="briefing-empty" role="status">모델 예측 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} /> : !rank.isError && <p className="briefing-empty">표시할 모델 예측이 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
+      {rank.isPending ? <p className="briefing-empty" role="status">모델 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} /> : !rank.isError && <p className="briefing-empty">표시할 모델 순위가 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
       <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
-      <p className="briefing-table-help">순위 점수는 비교 종목 안에서의 상대 위치이며 실제 수익률이 아닙니다. 모델 상세는 전체 리포트에서 확인하세요. 기사 시각은 한국시간입니다.</p>
+      <p className="briefing-table-help">순위는 다음 거래일 시가→종가 상대 순위입니다. 하루 등락만으로 모델을 평가하지 않습니다. 순위 점수는 실제 수익률이 아닙니다. 기사 시각은 한국시간입니다.</p>
     </section>
   );
 
   return <div className="briefing-page briefing-dashboard">
     <div className="briefing-title-row"><h1>오늘의 브리핑</h1><button type="button" className="briefing-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={14} />다시 조회</button></div>
     <WatchlistNotice />
+    {briefing.data?.status === "ready" && <ExpiredSessionNotice baseDate={briefing.data.model?.baseDate} />}
     <div className="briefing-columns"><div className="briefing-primary">
       {briefing.isPending && <div className="briefing-skeleton-card" role="status" aria-label="브리핑 로딩 중"><div className="briefing-skeleton-line" style={{ width: "40%" }} /><div className="briefing-skeleton-line" style={{ width: "100%", height: 60 }} /><div className="briefing-skeleton-line" style={{ width: "80%" }} /></div>}
       {briefing.isError && !briefing.data && <p className="briefing-notice" role="status">종합 브리핑 조회 실패 · 분석 결과를 가져오지 못했습니다.</p>}
@@ -121,10 +123,10 @@ export function BriefingPage() {
         </>
       )}
       {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>예측과 근거를 읽는 기준은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
-      {briefing.data?.status !== "ready" && <p className="briefing-disclaimer">모델 예측은 투자 추천·수익 보장·실제 성과가 아닙니다.</p>}
+      {briefing.data?.status !== "ready" && <p className="briefing-disclaimer">모델 순위는 투자 추천·수익 보장·실제 성과가 아닙니다.</p>}
     </div>
       {selectedCode ? <DetailPanel key={selectedCode} code={selectedCode} candidate={selected} candidateMeta={selected ? rank.data : undefined} membership={rank.isPending ? "pending" : "unknown"} production="unproduced" />
-        : <aside id="briefing-detail" className="briefing-card briefing-detail-empty" aria-labelledby="detail-empty-heading"><Info aria-hidden="true" size={24} /><h2 id="detail-empty-heading">종목 상세</h2><p>{rawCode ? "유효한 6자리 종목 코드가 필요합니다." : "모델 예측을 조회하면 첫 종목의 상세가 표시됩니다."}</p></aside>}
+        : <aside id="briefing-detail" className="briefing-card briefing-detail-empty" aria-labelledby="detail-empty-heading"><Info aria-hidden="true" size={24} /><h2 id="detail-empty-heading">종목 상세</h2><p>{rawCode ? "유효한 6자리 종목 코드가 필요합니다." : "모델 순위를 불러오면 첫 종목의 상세가 표시됩니다."}</p></aside>}
     </div>
   </div>;
 }

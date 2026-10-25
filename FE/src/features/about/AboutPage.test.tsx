@@ -11,7 +11,8 @@ it.each(["/about", "/next/about"])("keeps introduction links and evidence honest
   expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(ABOUT_SECTIONS.length + 1);
   expect(screen.getByText(/공식·수시 실행 구분/)).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "TOP5 예측 요약" })).toBeInTheDocument();
-  expect(document.body).not.toHaveTextContent(/수급|외국인|기관|일치도/);
+  expect(document.body).not.toHaveTextContent(/외국인|기관|일치도/);
+  expect(document.body).toHaveTextContent("수급 데이터는 검증 후 공개 예정입니다.");
   expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent?.startsWith(MODEL_SUMMARY) === true)).toHaveTextContent("OHLCV 파생 5개, RSI 1개, MACD 2개, 볼린저 밴드 3개");
   expect(screen.getByRole("heading", { name: "Transformer Ensemble → 순위 → Top-5" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "브리핑 보기" })).toHaveAttribute("href", path.startsWith("/next/") ? "/next" : "/");

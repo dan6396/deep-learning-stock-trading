@@ -15,7 +15,7 @@ describe("displayed TOP5 prediction summary", () => {
   });
   it.each([0, 1, 4])("does not present a partial list of %s as TOP5", count => {
     expect(topFiveSummary(rows().slice(0, count)).range).toBe("—");
-    expect(topFiveSummary(rows().slice(0, count)).count).toContain(count ? "TOP5 미완성" : "표시할 모델 예측 없음");
+    expect(topFiveSummary(rows().slice(0, count)).count).toContain(count ? "TOP5 미완성" : "표시할 모델 순위 없음");
   });
   it.each(["baseDate", "predictionTarget"] as const)("does not combine mismatched %s", key => {
     const mixed = rows(); mixed[4][key] = key === "baseDate" ? "2026-10-07" : "different_period";
@@ -26,8 +26,8 @@ describe("displayed TOP5 prediction summary", () => {
     for (const predictionTarget of [null, "", "unknown"]) expect(topFiveSummary(rows().map(row => ({ ...row, predictionTarget }))).range).toBe("—");
   });
   it("does not summarize stale results during a loading or failed request", () => {
-    expect(topFiveSummary(rows(), true).count).toBe("모델 예측 조회 중");
-    expect(topFiveSummary(rows(), false, true)).toMatchObject({ range: "—", count: "모델 예측 조회 실패 · 요약 미제공" });
+    expect(topFiveSummary(rows(), true).count).toBe("모델 순위 조회 중");
+    expect(topFiveSummary(rows(), false, true)).toMatchObject({ range: "—", count: "모델 순위 조회 실패 · 요약 미제공" });
   });
   it.each([[2, 3, 4, 5, 6], [1, 2, 3, 4, 4], [1, 2, 3, 4, 4.5], [1, 2, 3, 4, null]])("requires original integer ranks 1 through 5: %s", (...ranks) => {
     expect(topFiveSummary(rows().map((row, index) => ({ ...row, rank: ranks[index] })))).toMatchObject({ range: "—", count: "원본 순위 1~5위 미확인 · 범위 미제공" });

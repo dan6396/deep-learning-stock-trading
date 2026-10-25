@@ -11,11 +11,17 @@ beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async url => String(url) === "/api/candidates/run" ? jsonResponse({ status: "idle" }) : jsonResponse([pipelineRow()])));
 });
-afterEach(() => { vi.unstubAllGlobals(); document.head.querySelectorAll('meta[name="robots"]').forEach(meta => meta.remove()); });
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); document.head.querySelectorAll('meta[name="robots"]').forEach(meta => meta.remove()); });
 function Location() { const loc = useLocation(); return <output data-testid="route-location">{loc.pathname}{loc.search}{loc.hash}</output>; }
 function mount(path = "/") {
   render(<MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AppProviders><Location /><App /></AppProviders></MemoryRouter>);
 }
+it("hides only the header run control in demo mode", async () => {
+  vi.stubEnv("VITE_DEMO_HIDE_RUN", "1"); mount();
+  await screen.findByRole("heading", { name: "테스트 브리핑" }, { timeout: 3000 });
+  expect(screen.queryByRole("button", { name: "AI 분석 실행" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "종목 검색" })).toBeInTheDocument();
+});
 it.each(["/", "/next"])("mounts the rebuilt home and shell at %s", async path => {
   mount(path); await screen.findByRole("heading", { name: "테스트 브리핑" }, { timeout: 3000 });
   expect(screen.getByRole("link", { name: "브리핑" })).toHaveAttribute("aria-current", "page");

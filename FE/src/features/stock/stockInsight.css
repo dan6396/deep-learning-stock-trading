@@ -1,0 +1,31 @@
+@layer components {
+  .insight-section { margin-bottom: 24px; }
+  .insight-section > h2 { margin-bottom: 8px; }
+  .insight-section .insight-rank { margin-top: 16px; font-size: 15px; }
+  .insight-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--ds-line); }
+  .insight-block h3 { margin-bottom: 10px; }
+  .insight-block p + p { margin-top: 8px; }
+  .insight-comparison-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .insight-agreement { display: inline-flex; padding: 2px 8px; border: 1px solid var(--ds-fg-2); border-radius: 6px; background: var(--ds-surface-2); color: var(--ds-fg); font-size: 12px; font-weight: 500; }
+  .insight-lookbacks { max-width: 920px; display: grid; gap: 12px; margin: 12px 0; font-size: 14px; }
+  .insight-lookbacks > div { display: grid; grid-template-columns: 85px minmax(70px, 1fr) max-content; gap: 10px; align-items: center; }
+  .insight-lookbacks svg { width: 100%; height: 32px; overflow: visible; }
+  .insight-lookback-value { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .insight-lookback-value > span { color: var(--ds-fg-2); font-size: 12px; }
+  .insight-features { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .insight-features li { display: grid; gap: 6px; align-content: start; }
+  .insight-features meter { appearance: none; -webkit-appearance: none; width: 100%; height: 10px; border: 1px solid var(--ds-fg-2); border-radius: 4px; background: var(--ds-surface-2); color: var(--ds-fg-2); }
+  .insight-features meter::-webkit-meter-bar { background: var(--ds-surface-2); border: 0; border-radius: 3px; box-shadow: none; }
+  .insight-features meter::-webkit-meter-optimum-value,
+  .insight-features meter::-webkit-meter-suboptimum-value,
+  .insight-features meter::-webkit-meter-even-less-good-value { background: var(--ds-fg-2); border-radius: 3px; }
+  .insight-features meter::-moz-meter-bar { background: var(--ds-fg-2); border-radius: 3px; }
+  .insight-features small { color: var(--ds-fg-2); font-size: 12px; }
+  .insight-scroll { overflow-x: auto; }
+  .insight-scroll table { width: 100%; border-collapse: collapse; text-align: left; }
+  .insight-scroll caption { text-align: left; color: var(--ds-fg-2); font-size: 12px; padding-bottom: 8px; }
+  .insight-scroll th, .insight-scroll td { padding: 8px; border-bottom: 1px solid var(--ds-line); }
+  .insight-news-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .insight-news-chips a { color: var(--ds-fg); background: var(--ds-surface-2); padding: 4px 10px; border-radius: 8px; }
+  @media (max-width: 639px) { .insight-features { grid-template-columns: 1fr; } .insight-lookback-value { flex-direction: column; align-items: flex-end; gap: 0; } }
+}

@@ -9,7 +9,7 @@ export function formatBillions(value: number | null | undefined) {
   return `${value > 0 ? "+" : ""}${formatNumber(value / 100_000_000, 1)}억`;
 }
 export function evidenceSummary(row: CandidateData) {
-  const ranking = row.rank === null ? "모델 원본 순위 미제공" : `모델 예측 ${row.poolSize ?? "—"}종목 중 ${row.rank}위`;
+  const ranking = row.rank === null ? "모델 원본 순위 미제공" : `모델 순위 ${row.poolSize ?? "—"}종목 중 ${row.rank}위`;
   return ranking;
 }
 export function savedRunDuration(status?: BackendStatus, run?: AnalysisStatus): number | null {
@@ -19,5 +19,5 @@ export function savedRunDuration(status?: BackendStatus, run?: AnalysisStatus): 
   return typeof start === "number" && typeof end === "number" && Number.isFinite(start) && Number.isFinite(end) && end >= start ? end - start : null;
 }
 export function formatDuration(duration: number | null) {
-  return duration === null ? "소요 미확인" : `소요 ${Math.floor(duration / 60_000)}분 ${Math.floor(duration % 60_000 / 1000)}초`;
+  return duration === null ? "—" : `소요 ${Math.floor(duration / 60_000)}분 ${Math.floor(duration % 60_000 / 1000)}초`;
 }

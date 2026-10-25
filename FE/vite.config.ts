@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { apiMiddleware, type ApiRequest, type ApiResponse } from "./server/routes";
 import { startPerformanceScheduler } from "./server/performance";
+import { startRefreshAhead } from "./server/refreshAhead";
 
 declare const process: {
   cwd: () => string;
@@ -17,6 +18,8 @@ function kisApiPlugin(): Plugin {
       if (!process.env.VITEST) {
         const stop = startPerformanceScheduler();
         server.httpServer?.once("close", stop);
+        const stopRefresh = startRefreshAhead();
+        server.httpServer?.once("close", stopRefresh);
       }
       server.middlewares.use((request, response, next) => {
         apiMiddleware(request as unknown as ApiRequest, response as unknown as ApiResponse, next);

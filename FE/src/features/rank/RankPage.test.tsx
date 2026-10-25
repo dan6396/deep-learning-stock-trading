@@ -22,7 +22,7 @@ describe("whole-rank page fetch interactions", () => {
     rows.forEach((row, index) => Object.assign(row.input_row, { score_kind: "rank_zscore", rank_score: index === 0 ? 1.601514 : 1.5 - index / 100 }));
     mockFetch(path => path === "/api/rank" ? Promise.resolve(jsonResponse(rows)) : path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path === "/api/backend/status" ? Promise.resolve(jsonResponse(backendStatusBody({ state: "not_produced" }))) : undefined);
     mount(); await screen.findByRole("columnheader", { name: "순위 점수" });
-    expect(screen.getAllByRole("columnheader").map(el => el.textContent)).toEqual(["순위", "종목", "순위 점수", "상위 %", "관련 기사", "관심"]);
+    expect(screen.getAllByRole("columnheader").map(el => el.textContent)).toEqual(["순위", "종목", "순위 점수", "상위 %", "관련 기사(TOP5)", "관심"]);
     expect(document.querySelector('[data-rank-code="100001"]')).toHaveTextContent("1.6015");
     expect(document.querySelectorAll('[data-top-rank="true"]')).toHaveLength(9);
     expect(document.querySelector('[data-rank-code="100001"] [data-signal]')).toHaveAttribute("data-signal", "neutral");

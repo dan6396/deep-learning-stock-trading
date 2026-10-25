@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../server/backendStatus", () => ({ getBackendStatus: vi.fn() }));
 
 vi.mock("../../server/kisDashboard", () => ({
-  buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
+  getDailyHistory: vi.fn().mockResolvedValue(null), buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
   buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn(), refreshDashboardSnapshot: vi.fn(),
 }));
 vi.mock("../../server/pipelineResults", () => ({ getCandidatesPayload: vi.fn(), getRankPayload: vi.fn(), getStockAnalysisPayload: vi.fn() }));
@@ -23,9 +23,10 @@ function response() {
   return { res, headers, body: () => body };
 }
 function dependencies() {
-  return { buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
+  return { getDailyHistory: vi.fn().mockResolvedValue(null), buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(),
     buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn().mockResolvedValue("2026-10-12"), refreshDashboardSnapshot: vi.fn().mockResolvedValue({ generatedAt: "2026-10-07T09:00:00Z", stocks: [{}, {}] }),
     getCandidatesPayload: vi.fn().mockResolvedValue([]), getRankPayload: vi.fn().mockResolvedValue([]), getStockAnalysisPayload: vi.fn().mockResolvedValue(null),
+    getStockInsight: vi.fn().mockResolvedValue({ version: 1, code: "005930", status: "no_model", data_meta: { source: "cache", asOf: null } }),
     getBriefing: vi.fn().mockResolvedValue({ version: 1, status: "no_run", stocks: [], data_meta: { source: "cache", asOf: "2026-10-22T20:00:00Z" } }),
     generateBriefingNarrative: vi.fn().mockResolvedValue({ version: 1, status: "ready", stocks: [], narrative: { status: "template", fallbackReason: "missing_api_key" }, data_meta: { source: "cache", asOf: "2026-10-22T20:00:00Z" } }),
     getCandidateAnalysisStatus: vi.fn().mockReturnValue({ status: "idle" }), getStockNewsAnalysisStatus: vi.fn(),
@@ -34,6 +35,14 @@ function dependencies() {
 beforeEach(() => vi.clearAllMocks());
 
 describe("shared legacy route contracts", () => {
+  it("exposes read-only stock insights and validates codes without running analysis or Gemini", async () => {
+    const deps = dependencies(), routes = createRoutes(deps, {}), get = response();
+    await routes["/api/stock-insight"]({ method: "GET", url: "/api/stock-insight?code=005930" }, get.res);
+    expect(get.res.statusCode).toBe(200); expect(deps.getStockInsight).toHaveBeenCalledWith("005930", {});
+    const post = response(); await routes["/api/stock-insight"]({ method: "POST" }, post.res); expect(post.res.statusCode).toBe(405);
+    const bad = response(); await routes["/api/stock-insight"]({ method: "GET", url: "/api/stock-insight?code=000000" }, bad.res); expect(bad.res.statusCode).toBe(400);
+    expect(deps.generateBriefingNarrative).not.toHaveBeenCalled(); expect(deps.startCandidateAnalysis).not.toHaveBeenCalled();
+  });
   it("exposes read-only briefing GET and generation POST with provenance and no-store", async () => {
     const deps = dependencies(), env = { GEMINI_API_KEY: "fixture-private-key" }, routes = createRoutes(deps, env);
     const get = response(); await routes["/api/briefing"]({ method: "GET" }, get.res);

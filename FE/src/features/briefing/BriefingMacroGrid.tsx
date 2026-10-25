@@ -36,7 +36,7 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
         list.push(ind);
       }
     }
-    return list;
+    return list.filter(ind => ind.status === "ok" && ind.value !== null);
   }, [indicators]);
 
   const domesticIndicators = useMemo(
@@ -159,6 +159,7 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
         )}
       </div>
 
+      {!sortedIndicators.length && <p className="briefing-muted" role="status">시장 지표를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.</p>}
       <div className="briefing-macro-groups" aria-label="주요 시장 지표 그리드">
         {domesticIndicators.length > 0 && (
           <div className="briefing-macro-group is-domestic">

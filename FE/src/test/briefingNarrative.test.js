@@ -30,6 +30,54 @@ beforeEach(() => { disk.clear(); vi.clearAllMocks(); });
 afterEach(() => vi.useRealTimers());
 
 describe("briefing narrative guard", () => {
+  it.each(["원·달러 환율은 1,324.92 KRW입니다.", "환율은 1324.92USD입니다.", "USD2.35입니다.", "USDKRW 환율은 1,324.92원입니다.", "미국 국채 10년 금리는 4.953%로 집계됐습니다.", "나스닥은 12345.678pt입니다.", "삼성전자 순위 점수는 2.350입니다.", "관측 기간은 5.000일입니다."])("rejects currency codes and precision beyond published input: %s", sentence => {
+    const data = input(); data.macro.indicators.push({ id: "USDKRW", name: "원·달러 환율", value: 1324.92, change: 0, changePct: 0, unit: "KRW", status: "ok" },
+      { id: "UST10Y", name: "미국 국채 10년 금리", value: 4.953, change: 0, changePct: 0, unit: "%", status: "ok" });
+    data.stocks[0].evidence.push({ id: "E:005930:2", kind: "model", text: "관측 기간은 5거래일입니다." });
+    const value = content(); value.marketNote = sentence;
+    expect(validateNarrative(value, data)).toBe("ungrounded_number");
+  });
+  it("publishes formatted market inputs, instructs matching units, and repairs only an imprecise overview", async () => {
+    const data = input(); data.macro.indicators.push({ id: "USDKRW", name: "원·달러 환율", value: 1324.92, change: 0, changePct: 0, unit: "KRW", status: "ok" },
+      { id: "UST10Y", name: "미국 국채 10년 금리", value: 4.953, change: 0, changePct: 0, unit: "%", status: "ok" });
+    const value = content(); value.overview = "미국 국채 10년 금리는 4.953%입니다. 시장 관측 자료입니다.";
+    const transport = vi.fn(async () => response(value)), result = await createNarrativeStore({ transport }).resolve(data, true, env);
+    expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template", fieldSources: { overview: "template", marketNote: "llm" } });
+    expect(result.overview).toContain("4.95%"); expect(result.stocks[0].source).toBe("llm"); expect(result.marketNote).toBe(value.marketNote);
+    const body = JSON.parse(transport.mock.calls[0][1].body), passed = JSON.parse(body.contents[0].parts[0].text);
+    expect(body.systemInstruction.parts[0].text).toContain("환율은 원, 지수는 pt, 금리는 %(소수 2자리)");
+    expect(passed.macro.indicators.find(row => row.id === "UST10Y")).toMatchObject({ value: 4.95, display: { value: "4.95%" } });
+    expect(passed.macro.indicators.find(row => row.id === "USDKRW").display.value).toBe("1,324.92원");
+    expect(validateNarrative({ ...content(), marketNote: "미국 국채 10년 금리 4.95%, 원·달러 환율 1,324.92원입니다." }, data)).toBeNull();
+  });
+  it("repairs only newly invalid fields of an older persisted cache without calling Gemini", async () => {
+    const data = input(), transport = vi.fn(async () => response());
+    await createNarrativeStore({ transport }).resolve(data, true, env);
+    for (const [path, body] of disk) { const cached = JSON.parse(body); cached.narrative.overview = "환율은 1324.92 KRW입니다. 시장 관측 자료입니다."; disk.set(path, JSON.stringify(cached)); }
+    const result = await createNarrativeStore({ transport }).resolve(data, false, env);
+    expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template", fieldSources: { overview: "template", marketNote: "llm" } });
+    expect(result.overview).not.toContain("KRW"); expect(result.stocks[0].source).toBe("llm"); expect(transport).toHaveBeenCalledOnce();
+  });
+  it("keeps templates grounded at rounding ties and when small signed changes display as zero", () => {
+    const data = input(); Object.assign(data.macro.indicators[0], { value: 1.005, change: -0.0001, changePct: -0.001 });
+    const template = templateNarrative(data, null);
+    expect(template.overview).toContain("1.01pt"); expect(template.overview).toContain("0.00% 하락");
+    expect(groundedNumbers(template.overview, data)).toBe(true);
+  });
+  it("does not reuse a successful supply-bearing narrative after publication is disabled", async () => {
+    const exposed = input();
+    exposed.stocks[0].evidence.push({ id: "E:005930:2", kind: "supply", text: "외국인 100원 순매수입니다." });
+    const supplied = content(); supplied.stocks[0].summary = "외국인 100원 순매수입니다."; supplied.stocks[0].citations.push("E:005930:2");
+    const transport = vi.fn(async () => response(supplied)), store = createNarrativeStore({ transport });
+    expect((await store.resolve(exposed, true, env)).status).toBe("llm");
+    const hidden = await store.resolve(input(), false, env);
+    expect(hidden.status).toBe("template"); expect(hidden.inputHash).not.toBe(briefingInputHash(exposed));
+    expect(JSON.stringify(hidden)).not.toMatch(/100원|순매수/); expect(transport).toHaveBeenCalledOnce();
+  });
+  it("rejects supply claims without supply evidence even when the number matches market data", () => {
+    const value = content(); value.stocks[0].summary = "외국인은 100원 순매수했습니다.";
+    expect(validateNarrative(value, input())).toBe("ungrounded_number");
+  });
   it.each(["유망한 종목입니다.", "진입 적기입니다.", "주목할 만합니다.", "담아볼 종목입니다.", "매력적인 가격입니다.", "기회가 있습니다.", "모멘텀 지속입니다.", "저가 매수입니다.", "미국장에 힘입어 강세입니다.", "실적을 반영해 상승했습니다.", "이 종목은 정책 수혜입니다."])("rejects soft advice and indirect causal vocabulary: %s", sentence => {
     const value = content(); value.stocks[0].summary = sentence;
     expect(validateNarrative(value, input())).toBe("forbidden_content");
@@ -284,6 +332,21 @@ describe("briefing narrative guard", () => {
 });
 
 describe("Gemini narrative generation and cache", () => {
+  it("reuses a successful explanation when a night indicator recovers, ignoring macro caution IDs", async () => {
+    const data = input(); data.stocks[0].cautions.push({ id: "C:005930:2", kind: "macro", text: "일부 시장 지표를 확보하지 못했습니다." }, { id: "C:005930:3", kind: "data", text: "모델 기준일은 2026-10-22입니다." });
+    data.macro.indicators.push({ id: "KOSPI200_NIGHT", name: "코스피200 야간선물", value: null, change: null, changePct: null, asOf: null, status: "unavailable", source: "kis", unit: "pt" });
+    const transport = vi.fn(async () => response()), store = createNarrativeStore({ transport });
+    const first = await store.resolve(data, true, env);
+    const recovered = structuredClone(data); recovered.stocks[0].cautions = recovered.stocks[0].cautions.filter(row => row.kind !== "macro");
+    recovered.stocks[0].cautions[1].id = "C:005930:2";
+    Object.assign(recovered.macro.indicators[1], { value: 340, change: 1, changePct: .3, asOf: "2026-10-22T20:01:00Z", status: "ok" });
+    expect(briefingInputHash(recovered)).toBe(briefingInputHash(data));
+    const reused = await store.resolve(recovered, false, env);
+    expect(reused.status).toBe("llm"); expect(reused.generatedAt).toBe(first.generatedAt); expect(reused.macroStale).toBe(true); expect(transport).toHaveBeenCalledTimes(1);
+    for (const [path, body] of disk) { const saved = JSON.parse(body); saved.inputHash = briefingInputHash(saved.input, true); saved.narrative.inputHash = saved.inputHash; disk.set(path, JSON.stringify(saved)); }
+    const migrated = await createNarrativeStore({ transport }).resolve(recovered, false, env);
+    expect(migrated.status).toBe("llm"); expect(migrated.inputHash).toBe(briefingInputHash(data)); expect(transport).toHaveBeenCalledTimes(1);
+  });
   it("GET never calls Gemini; missing key POST returns template without leaking secrets", async () => {
     const transport = vi.fn(); const store = createNarrativeStore({ transport });
     expect((await store.resolve(input(), false, env)).fallbackReason).toBe("not_generated"); expect(transport).not.toHaveBeenCalled();
@@ -343,11 +406,14 @@ describe("Gemini narrative generation and cache", () => {
     disk.clear(); value.stocks[0].citations = ["N:FAKE:1"];
     expect(await createNarrativeStore({ transport }).resolve(input(), true, env)).toMatchObject({ status: "template", fallbackReason: "invalid_citation" });
   });
-  it("rejects a corrupted template replacement inside an otherwise successful persisted cache", async () => {
+  it("rebuilds a corrupted template field from canonical input while retaining valid cached LLM fields", async () => {
     const value = content(); value.stocks[0].summary = "999999원입니다.";
     const transport = vi.fn(async () => response(value)); await createNarrativeStore({ transport }).resolve(input(), true, env);
     for (const [path, body] of disk) { const cached = JSON.parse(body); cached.narrative.stocks[0].summary = "외부 문구"; disk.set(path, JSON.stringify(cached)); }
-    expect((await createNarrativeStore({ transport }).resolve(input(), false, env)).status).toBe("template");
+    const result = await createNarrativeStore({ transport }).resolve(input(), false, env);
+    expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template", fieldSources: { overview: "llm", marketNote: "llm" } });
+    expect(result.stocks[0]).toEqual(templateNarrative(input(), null).stocks[0]);
+    expect(JSON.stringify(result)).not.toMatch(/외부 문구|999999원/); expect(transport).toHaveBeenCalledOnce();
   });
   it("sanitizes provider exceptions and echoed credentials before returning or caching", async () => {
     const transport = vi.fn(async () => { throw new Error(`server said ${env.GEMINI_API_KEY}`); });
@@ -406,11 +472,14 @@ describe("Gemini narrative generation and cache", () => {
     expect(transport).toHaveBeenCalledOnce(); now += 60_000;
     await store.resolve(input(), true, env); expect(transport).toHaveBeenCalledTimes(2);
   });
-  it("rejects a corrupted persisted LLM cache", async () => {
+  it("replaces a corrupted persisted stock field while retaining independently validated fields", async () => {
     const transport = vi.fn(async () => response()); await createNarrativeStore({ transport }).resolve(input(), true, env);
     for (const [path, body] of disk) { const cache = JSON.parse(body); cache.narrative.stocks[0].summary = "매수하세요."; disk.set(path, JSON.stringify(cache)); }
     const result = await createNarrativeStore({ transport }).resolve(input(), false, env);
-    expect(result.status).toBe("template"); expect(transport).toHaveBeenCalledOnce(); expect(readFile).toHaveBeenCalled();
+    expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template" });
+    expect(result.stocks[0].source).toBe("template"); expect(JSON.stringify(result)).not.toContain("매수하세요");
+    expect(result.fieldSources).toEqual({ overview: "llm", marketNote: "llm" });
+    expect(transport).toHaveBeenCalledOnce(); expect(readFile).toHaveBeenCalled();
   });
   it("invalidates same-id articles on title or normalized URL changes and does not reuse old explanations", async () => {
     const transport = vi.fn(async () => response()), store = createNarrativeStore({ transport });

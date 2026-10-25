@@ -6,6 +6,8 @@ import { getMarketMacro, MACRO_UNIVERSE, usMarketDate, type MarketMacro } from "
 import { unavailableNight } from "./kisBriefing";
 import { nextKrxSession } from "./krxCalendar";
 import { formatSupplyWon } from "./briefingValidation";
+import { showBriefingSupply } from "./supplyVisibility";
+import { modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
 export { formatSupplyWon } from "./briefingValidation";
 import { createNarrativeStore, briefingInputHash, templateNarrative, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
@@ -14,6 +16,7 @@ declare const process: { env: Record<string, string | undefined> };
 export type BriefingFact = { id: string; kind: "model" | "supply" | "news" | "macro" | "data"; text: string };
 export type BriefingStock = {
   rank: number; code: string; name: string; rankScore: number; poolSize: number; topPercent: number;
+  modelEvidence?: ModelEvidence | null;
   evidence: (BriefingFact & { kind: "model" | "supply" | "news" })[]; cautions: BriefingFact[];
   news: { status: "collected" | "collection_failed" | "not_collected";
     articles: { id: string; title: string; url: string; source: string; pubDate: string | null }[] };
@@ -35,7 +38,7 @@ const validDate = (value: unknown): value is string => typeof value === "string"
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 const format = (value: number) => String(Number(value.toFixed(2)));
 
-function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string): BriefingStock {
+function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string, showSupply: boolean): BriefingStock {
   const input = row.input_row, code = String(input.ticker), rank = numeric(input.pred_rank)!, poolSize = numeric(input.pred_pool_size)!;
   const topPercent = rank / poolSize * 100;
   const evidence: BriefingStock["evidence"] = [], cautions: BriefingFact[] = [];
@@ -44,7 +47,7 @@ function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string): 
   addEvidence("model", `전체 ${poolSize}개 중 ${rank}위(상위 ${format(topPercent)}%)입니다.`);
   caution("model", "순위 점수는 수익률·확률이 아닙니다.");
   const supplyStatus = input.supply_status;
-  if (supplyStatus === "ok" || supplyStatus === "insufficient_data") {
+  if (showSupply && (supplyStatus === "ok" || supplyStatus === "insufficient_data")) {
     const window = numeric(input.supply_window), days = numeric(input.supply_data_days);
     const foreign = numeric(input.foreign_net_buy_sum), institution = numeric(input.inst_net_buy_sum);
     if (days !== null && foreign !== null && institution !== null) {
@@ -57,20 +60,21 @@ function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string): 
       addEvidence("supply", `최근 ${days}거래일 ${measured("외국인", foreign, input.foreign_positive_days)}, ${measured("기관", institution, input.inst_positive_days)}입니다.`);
     }
     if (supplyStatus === "insufficient_data" && days !== null && window !== null) caution("supply", `수급 확인 기간 ${window}거래일 중 ${days}거래일만 확보했습니다.`);
-  } else caution("supply", "확인 가능한 수급 자료가 없습니다.");
+  } else if (showSupply) caution("supply", "확인 가능한 수급 자료가 없습니다.");
   const status = row.data_meta?.newsStatus === "collected" ? "collected" : row.data_meta?.newsStatus === "collection_failed" ? "collection_failed" : "not_collected";
   const articles = status === "collected" ? (row.news ?? []).filter(article => article && typeof article.title === "string" && safeArticleUrl(article.url))
     .slice(0, 3).map((article, index) => ({ id: `N:${code}:${index + 1}`, title: article.title, url: safeArticleUrl(article.url)!,
       source: typeof article.source === "string" ? article.source : "", pubDate: typeof article.pub_date === "string" && Number.isFinite(Date.parse(article.pub_date)) ? new Date(article.pub_date).toISOString() : null })) : [];
   if (articles.length) addEvidence("news", `관련 기사 ${articles.length}건을 확인했습니다. 출처: ${[...new Set(articles.map(article => article.source || "출처 미상"))].join(", ")}입니다.`);
   else caution("news", status === "collection_failed" ? "관련 기사 수집에 실패했습니다." : status === "not_collected" ? "관련 기사를 수집하지 않았습니다." : "확인된 관련 기사가 없습니다.");
-  if (macro.indicators.some(indicator => indicator.status !== "ok")) caution("macro", "일부 시장 지표를 확보하지 못했습니다.");
   if (input.prediction_base_date !== today) caution("data", `모델 기준일은 ${String(input.prediction_base_date)}이며 오늘 날짜와 다릅니다.`);
-  return { rank, code, name: row.result.company_name, rankScore: numeric(input.rank_score)!, poolSize, topPercent, evidence, cautions, news: { status, articles } };
+  // Keep stock-specific citation IDs stable when macro collection recovers.
+  if (macro.indicators.some(indicator => indicator.status !== "ok")) caution("macro", "일부 시장 지표를 확보하지 못했습니다.");
+  return { rank, code, name: row.result.company_name, rankScore: numeric(input.rank_score)!, poolSize, topPercent, modelEvidence: modelEvidence(input), evidence, cautions, news: { status, articles } };
 }
 
 /** Reject ambiguous outputs; only model pred_rank determines order. */
-export function buildBriefingInput(rows: PipelineOutputRow[], marker: PipelineRunMarker | null, macro: MarketMacro, now = Date.now()): BriefingInput {
+export function buildBriefingInput(rows: PipelineOutputRow[], marker: PipelineRunMarker | null, macro: MarketMacro, now = Date.now(), env = process.env): BriefingInput {
   macro = { ...macro, context: { usSessionDate: null, targetSessionNote: "미국 장 관측일과 모델 대상 한국 거래일을 확인할 수 없습니다." } };
   const us = macro.indicators.filter(row => row.id === "NASDAQ" || row.id === "SP500");
   const dates = us.flatMap(row => row.status === "ok" && row.asOf ? [usMarketDate(row.asOf)] : []);
@@ -99,7 +103,7 @@ export function buildBriefingInput(rows: PipelineOutputRow[], marker: PipelineRu
   const target = targetSession ? `${targetSession} 한국 정규장` : `기준일 ${baseDate} 다음 한국 거래일`;
   macro.context!.targetSessionNote = `${usDate ? `${usDate} 미국 ${us.every(row => row.session === "closed") ? "정규장 마감" : us.some(row => row.session === "open") ? "장중 관측" : "장 상태 미확인 관측"} 자료이며, ` : "미국 정규장 관측일을 확인할 수 없으며, "}모델 예측 대상은 ${target}의 시가→종가입니다.`;
   return { model: { modelId: MODEL_ID, scoreKind: "rank_zscore", baseDate, predictionTarget: TARGET, poolSize: pool,
-    runStartedAt: new Date(marker.startedAt).toISOString() }, macro, stocks: sorted.slice(0, 5).map(row => stockFacts(row, macro, today)) };
+    runStartedAt: new Date(marker.startedAt).toISOString() }, macro, stocks: sorted.slice(0, 5).map(row => stockFacts(row, macro, today, showBriefingSupply(env))) };
 }
 
 type BriefingDependencies = {
@@ -128,7 +132,7 @@ export function createBriefingService({ rank = getRankPayload, marker = readPipe
     const [rows, market] = await Promise.all([within(rank(env), preparationDeadline, () => []), within(marketRequest, preparationDeadline, emptyMarket)]);
     const after = await within(marker(env), preparationDeadline, () => null);
     const unchanged = before && after && before.startedAt === after.startedAt && before.finishedAt === after.finishedAt && before.status === after.status && before.mode === after.mode;
-    const input = buildBriefingInput(rows, unchanged ? after : null, market, now());
+    const input = buildBriefingInput(rows, unchanged ? after : null, market, now(), env);
     const compositionKey = briefingInputHash(input);
     const compositionRequest = composition(input, env, kisOptions()).then(value => { compositions.set(environmentKey, { hash: compositionKey, value }); return value; });
     const [narrative, candidateComposition] = await Promise.all([

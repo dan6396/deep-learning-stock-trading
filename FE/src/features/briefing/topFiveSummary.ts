@@ -10,9 +10,9 @@ function directionCounts(values: number[]) {
 /** Summarize exactly the rows on screen, without inferring missing predictions or periods. */
 export function topFiveSummary(rows: readonly PredictionRow[], pending = false, error = false) {
   const unavailable = (reason: string) => ({ range: "—", count: reason, period: "예측 기간 · 분석 기준일 미확인" });
-  if (pending) return unavailable("모델 예측 조회 중");
-  if (error) return unavailable("모델 예측 조회 실패 · 요약 미제공");
-  if (rows.length === 0) return unavailable("표시할 모델 예측 없음");
+  if (pending) return unavailable("모델 순위 조회 중");
+  if (error) return unavailable("모델 순위 조회 실패 · 요약 미제공");
+  if (rows.length === 0) return unavailable("표시할 모델 순위 없음");
   if (rows.length !== 5) return unavailable(`TOP5 미완성 · ${rows.length}종목 확인`);
   if (new Set(rows.map(row => row.rank)).size !== 5 || rows.some(row => row.rank === null || !Number.isInteger(row.rank) || row.rank < 1 || row.rank > 5)) return unavailable("원본 순위 1~5위 미확인 · 범위 미제공");
   const rankModel = rows.every(row => row.scoreKind === "rank_zscore");

@@ -5,6 +5,7 @@ import { createApiClient } from "./client";
 import { createQueries, queryKeys, requestBriefingNarrative } from "./queries";
 import { analysisMutationOptions, invalidateAnalysisResults } from "./analysis";
 import { deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
+import { chartBundle } from "../../test/fixtures/reportFixtures";
 import { adaptDashboard, adaptIndex, adaptQuote } from "../../entities/market";
 
 const clients: QueryClient[] = [];
@@ -12,6 +13,44 @@ function client() { const c = new QueryClient({ defaultOptions: { queries: { ret
 afterEach(() => clients.splice(0).forEach(c => c.clear()));
 
 describe("query contracts and race boundaries", () => {
+  it("hydrates every supplied chart range from one bundle and uses thirty-minute retention", async () => {
+    const request = vi.fn().mockResolvedValue({ data: chartBundle(), source: "cache", asOf: "2026-10-22T07:00:00Z" });
+    const queries = createQueries({ request }), cache = client();
+    await cache.fetchQuery(queries.chart("005930", "1D"));
+    const daily = await cache.fetchQuery(queries.chart("005930", "1M"));
+    expect(daily.data.range).toBe("1M"); expect(request).toHaveBeenCalledOnce();
+    expect(queries.chart("005930", "1M").staleTime).toBe(600_000);
+    expect(queries.quote("005930").staleTime).toBe(20_000); expect(queries.quote("005930").gcTime).toBe(1_800_000);
+  });
+  it("keeps a same-code quote visible during refetch and after failure, but never carries it to another code", async () => {
+    const pending = deferred<Response>(), cache = client();
+    const request = vi.fn().mockResolvedValueOnce(jsonResponse({ code: "005930", currentPrice: 100, source: "live" })).mockImplementation(() => pending.promise);
+    const queries = createQueries(createApiClient("", request));
+    await cache.fetchQuery(queries.quote("005930"));
+    const observer = new QueryObserver(cache, queries.quote("005930")); const unsubscribe = observer.subscribe(() => {});
+    const refreshed = observer.refetch();
+    expect(observer.getCurrentResult()).toMatchObject({ isFetching: true, data: { data: { code: "005930", currentPrice: 100 } } });
+    pending.reject(new Error("fixture network failure")); await refreshed;
+    expect(observer.getCurrentResult()).toMatchObject({ isError: true, data: { data: { currentPrice: 100 } } });
+    observer.setOptions({ ...queries.quote("000660"), enabled: false }); expect(observer.getCurrentResult().data).toBeUndefined();
+    unsubscribe();
+  });
+  it("passes the explicit 75-second chart timeout instead of the general 15-second default", async () => {
+    const request = vi.fn().mockResolvedValue({ data: chartBundle(), source: "cache", asOf: null });
+    await client().fetchQuery(createQueries({ request }).chart("005930", "1M"));
+    expect(request).toHaveBeenCalledWith("/api/korean-market/stock-chart?symbol=005930", expect.objectContaining({ timeoutMs: 75_000 }));
+  });
+  it("allows a 26.2-second cold chart within the existing 75-second chart budget", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi.fn<typeof fetch>(async () => { await new Promise(resolve => setTimeout(resolve, 26_200)); return jsonResponse(chartBundle()); });
+      const options = createQueries(createApiClient("", fetcher)).chart("005930", "1M"), cache = client();
+      const pending = cache.fetchQuery(options);
+      await vi.advanceTimersByTimeAsync(15_001); expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(11_199); expect((await pending).data.code).toBe("005930");
+      expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
   it("replaces a previous candidate list with an authoritative empty API result", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse([pipelineRow()])).mockResolvedValueOnce(jsonResponse([]));
     const queries = createQueries(createApiClient("", fetcher)), cache = client();

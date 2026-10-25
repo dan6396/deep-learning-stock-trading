@@ -5,6 +5,7 @@ import { getBackendStatus } from "./backendStatus";
 import { nextKrxSession } from "./krxCalendar";
 import { getPerformancePayload, startPerformanceCollection, runPerformanceCollection } from "./performance";
 import { getBriefing, generateBriefingNarrative } from "./briefing";
+import { getStockInsight } from "./stockInsight";
 
 declare const process: { env: Record<string, string | undefined> };
 export type ApiRequest = {
@@ -14,7 +15,7 @@ export type ApiRequest = {
 };
 export type ApiResponse = { end: (body: string) => void; setHeader: (name: string, value: string) => void; statusCode: number };
 const providers = { buildFreshKisDashboard, buildKisDashboard, buildKisIndices, buildKisStockChart, buildKisStockQuote, fetchKisTargetSession,
-  refreshDashboardSnapshot, getCandidatesPayload, getRankPayload, getStockAnalysisPayload, getBriefing, generateBriefingNarrative,
+  refreshDashboardSnapshot, getCandidatesPayload, getRankPayload, getStockAnalysisPayload, getStockInsight, getBriefing, generateBriefingNarrative,
   getCandidateAnalysisStatus, startCandidateAnalysis, getBackendStatus, getPerformancePayload, startPerformanceCollection, runPerformanceCollection };
 export type RouteProviders = typeof providers;
 export type RouteHandler = (request: ApiRequest, response: ApiResponse) => Promise<void>;
@@ -88,10 +89,15 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
       return { baseDate, nextSession, calendar: kisSession ? "kis" : nextSession ? "krx-table" : null, source: kisSession ? "live" : nextSession ? "cache" : "unknown", asOf: new Date().toISOString() };
     }),
     "/api/candidates": route(["GET"], () => deps.getCandidatesPayload(), "cache"),
-    "/api/rank": route(["GET"], () => deps.getRankPayload(), "cache"),
+    "/api/rank": route(["GET"], () => deps.getRankPayload(env), "cache"),
     "/api/briefing": route(["GET"], () => deps.getBriefing(env), "cache"),
     "/api/briefing/narrative": route(["POST"], () => deps.generateBriefingNarrative(env), "cache"),
-    "/api/stock-analysis": route(["GET"], request => deps.getStockAnalysisPayload(ticker(request)), "cache"),
+    "/api/stock-analysis": route(["GET"], request => deps.getStockAnalysisPayload(ticker(request), env), "cache"),
+    "/api/stock-insight": route(["GET"], request => {
+      const code = ticker(request);
+      if (!/^\d{6}$/.test(code) || code === "000000") throw new MissingParameter("유효한 6자리 종목 코드가 필요합니다.");
+      return deps.getStockInsight(code, env);
+    }, "cache"),
     "/api/candidates/run": route(["GET", "POST"], request => {
       if (request.method !== "POST") return analysisStatus(deps.getCandidateAnalysisStatus());
       const mode = query(request, "mode");

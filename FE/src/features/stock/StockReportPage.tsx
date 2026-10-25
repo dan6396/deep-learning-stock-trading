@@ -13,6 +13,7 @@ import { useNextSession } from "../briefing/ModelTopFiveTable";
 import { SourceMeta } from "../briefing/SourceMeta";
 import { SignalView } from "../briefing/SignalView";
 import { ReportChart } from "./ReportChart";
+import { StockInsightSection } from "./StockInsightSection";
 import { safeArticleUrl } from "./reportData";
 import { useAppPaths } from "../../app/paths";
 import { WatchToggle, WatchlistNotice } from "../watchlist/WatchToggle";
@@ -32,7 +33,7 @@ function StockReport({ code }: { code: string }) {
   const signals = detail ? briefingSignals(detail, membership, production) : null, modelMeta = candidate ? candidates.data : stock.data;
   // News-adjusted (final) figures exist only when a news run produced the final list.
   const showFinal = production === "produced", nextSession = useNextSession(detail?.baseDate);
-  const nextSessionLabel = detail?.predictionTarget !== "next_session_open_to_close" ? "미확인" : nextSession.data ? formatSessionDate(nextSession.data) : nextSession.isFetching ? "확인 중" : "미확인";
+  const nextSessionLabel = detail?.predictionTarget === "next_session_open_to_close" && nextSession.data ? formatSessionDate(nextSession.data) : null;
   usePageTitle(`${detail?.name ?? quote.data?.data?.name ?? code} · 종목 리포트`);
   async function refresh() {
     const keys = [queryKeys.stock(code), queryKeys.quote(code), queryKeys.candidates(), ["chart", code]];
@@ -47,20 +48,20 @@ function StockReport({ code }: { code: string }) {
     {stock.isPending && <p className="report-muted" role="status">종목 분석을 조회하고 있습니다.</p>}
     {stock.isSuccess && stock.data.data === null && <p className="report-notice" role="status">상세 분석 결과가 없습니다.{candidate ? " 후보 목록 원본을 표시합니다." : ""}</p>}
     {(candidates.data?.source === "sample" || stock.data?.source === "sample") && <p className="report-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
+    <StockInsightSection code={code} />
     <div className="report-top-grid"><section className="report-card" aria-labelledby="report-price-title"><h2 id="report-price-title">조회 가격</h2><p className="report-price" data-testid="report-price">{formatWon(quote.data?.data?.currentPrice)}</p><p className={tone(quote.data?.data?.changeRate)}>{formatPercent(quote.data?.data?.changeRate, "percent")} · {formatWon(quote.data?.data?.change)}</p>
       {quote.data && <SourceMeta source={quote.data.source} asOf={quote.data.asOf} label="시세 기준 시각" />}
       {quote.isPending && <p role="status" className="report-muted">시세를 조회하고 있습니다.</p>}
       {quote.isError && <p className="report-notice" role="status">{quote.data ? "이전 조회 결과 · 시세 갱신 실패" : "시세 조회 실패"}</p>}
       {quote.isSuccess && quote.data.data === null && <p className="report-muted">시세 결과가 없습니다.</p>}
-      <dl className="report-stats"><div><dt>거래량</dt><dd>{formatNumber(quote.data?.data?.volume)}</dd></div><div><dt>거래대금</dt><dd>{formatWon(quote.data?.data?.tradingValue)}</dd></div></dl>
+      <dl className="report-stats">{quote.data?.data?.volume != null && <div><dt>거래량</dt><dd>{formatNumber(quote.data.data.volume)}</dd></div>}{quote.data?.data?.tradingValue != null && <div><dt>거래대금</dt><dd>{formatWon(quote.data.data.tradingValue)}</dd></div>}</dl>
     </section><section className="report-card" aria-labelledby="report-model-title"><h2 id="report-model-title">{showFinal ? "모델 순위와 최종 보정" : "모델 순위"}</h2><dl className="report-predictions"><div><dt>{detail?.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측수익률"}</dt><dd className="report-model-value" data-testid="report-prediction">{detail?.scoreKind === "rank_zscore" ? formatRankScore(detail.rankScore) : formatPercent(detail?.predictedReturn)}</dd></div>{showFinal && <div><dt>최종 보정 예측수익률</dt><dd className="report-model-value" data-testid="report-final-prediction">{formatPercent(detail?.finalPredictedReturn)}</dd></div>}</dl>
-      <dl className="report-stats"><div><dt>모델 순위 / 모집단</dt><dd>{formatNumber(detail?.rank)} / {formatNumber(detail?.poolSize)}</dd></div>{showFinal && <div><dt>최종 보정 순위</dt><dd data-testid="report-final-rank">{formatNumber(detail?.finalRank)}{detail?.finalRank == null ? " · 원본 미제공" : "위"}</dd></div>}<div><dt>분석 기준일</dt><dd>{formatDate(detail?.baseDate)}</dd></div><div><dt>예측 대상</dt><dd>{detail?.predictionTarget === "next_session_open_to_close" ? "다음 거래일 시가→종가" : "미확인"}</dd></div><div><dt>다음 거래일</dt><dd data-testid="report-next-session">{nextSessionLabel}</dd></div></dl>
+      <dl className="report-stats">{detail?.rank != null && detail.poolSize != null && <div><dt>모델 순위 / 모집단</dt><dd>{formatNumber(detail.rank)} / {formatNumber(detail.poolSize)}</dd></div>}{showFinal && detail?.finalRank != null && <div><dt>최종 보정 순위</dt><dd data-testid="report-final-rank">{formatNumber(detail.finalRank)}위</dd></div>}{detail?.baseDate && <div><dt>분석 기준일</dt><dd>{formatDate(detail.baseDate)}</dd></div>}{detail?.predictionTarget === "next_session_open_to_close" && <div><dt>예측 대상</dt><dd>다음 거래일 시가→종가</dd></div>}{nextSessionLabel && <div><dt>다음 거래일</dt><dd data-testid="report-next-session">{nextSessionLabel}</dd></div>}</dl>
       {modelMeta && <SourceMeta source={modelMeta.source} asOf={modelMeta.asOf} label="모델 결과 저장 시각" />}
-      {stock.data && <SourceMeta source={stock.data.source} asOf={stock.data.asOf} label="상세 분석 저장 시각" />}
     </section></div>
     <div className="report-columns"><div className="report-primary"><ReportChart key={code} code={code} />
       <section className="report-card" aria-labelledby="report-news-title"><div className="report-section-heading"><div><h2 id="report-news-title">관련 뉴스</h2></div>{detail?.newsMethod === "llm" ? <span className="report-muted">LLM 판정</span> : detail?.newsMethod === "keyword" ? <span className="report-muted">키워드 추정 · 신호에 사용하지 않음</span> : null}</div>
-        <p className="report-muted">수집 상태: {(detail?.newsStatus && newsStatusLabels[detail.newsStatus]) ?? "미확인"}</p>
+        {detail?.newsStatus && detail.newsStatus !== "collected" && <p className="report-muted">{newsStatusLabels[detail.newsStatus] ?? "관련 기사를 불러오지 못했습니다."}</p>}
         {detail?.news.length ? <ul className="report-news">{detail.news.map((article, index) => { const url = safeArticleUrl(article.url); return <li key={`${article.title}-${index}`}><div className="report-news-heading"><h3>{url ? <a href={url} target="_blank" rel="noopener noreferrer">{article.title ?? "제목 미확인"}<ExternalLink aria-hidden="true" size={14} /></a> : article.title ?? "제목 미확인"}</h3>{(article.sentiment === "positive" || article.sentiment === "negative" || article.sentiment === "neutral") && <span className="report-news-sentiment" data-article-sentiment={article.sentiment}>{article.sentiment === "positive" ? "긍정" : article.sentiment === "negative" ? "부정" : "중립"}</span>}</div><p className="report-muted">{article.source ?? "발행처 미확인"} · {formatDate(article.publishedAt, true)}</p>{article.reason && <p>{article.reason}</p>}{article.description && <p className="report-muted">{article.description}</p>}</li>; })}</ul>
           : <p className="report-empty">{detail?.newsCollected ? "실제 뉴스 수집 결과 0건입니다." : "뉴스 수집 여부를 확인할 수 없습니다."}</p>}
       </section>
@@ -71,7 +72,7 @@ function StockReport({ code }: { code: string }) {
       <p className="report-summary">{detail?.scoreKind === "rank_zscore" ? `동일 기준일 비교 종목 중 ${detail.rank ?? "—"}위입니다. 순위 점수는 수익률이나 상승확률이 아닙니다.` : !detail || detail.predictedReturn === null ? "원본 모델 예측값이 없어 수익률 요약을 제공하지 않습니다." : showFinal ? `원본 모델 예측은 ${formatPercent(detail.predictedReturn)}이며 최종 보정 예측은 ${formatPercent(detail.finalPredictedReturn)}입니다.` : `모델 예측은 ${formatPercent(detail.predictedReturn)}입니다.`}</p>
         </section></div></div>
     <details className="report-card report-rules"><summary>근거 판정 기준 <span title={SIGNAL_RULE_VERSION}>{formatDate(SIGNAL_RULE_VERSION.slice(3, 13))}</span></summary><dl>{Object.entries(SIGNAL_DESCRIPTIONS).filter(([key]) => key !== "supply" && key !== "agreement").map(([key, description]) => <div key={key}><dt>{key === "model" ? "모델" : key === "news" ? "뉴스" : "다음 거래일"}</dt><dd>{description}</dd></div>)}</dl></details>
-    <p className="report-muted report-disclaimer">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.</p>
+    <p className="report-muted report-disclaimer">모델 순위는 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.</p>
   </div>;
 }
 

@@ -67,7 +67,7 @@ describe("server market provenance", () => {
         ? jsonResponse({ rt_cd: "1", msg_cd: "EGW00201", msg1: "초당 거래건수를 초과하였습니다." })
         : jsonResponse({ rt_cd: "0", output: { stck_prpr: "100" } });
     }));
-    const pending = buildKisStockQuote("005930", { KIS_ENV: "real", KIS_BASE_URL: "https://fixture-rate.invalid", KIS_APP_KEY: "fixture-rate-key", KIS_APP_SECRET: "fixture-rate-secret", KIS_MAX_RPS: "3" });
+    const pending = buildKisStockQuote("005930", { KIS_ENV: "real", KIS_BASE_URL: `https://fixture-rate-${recovery}.invalid`, KIS_APP_KEY: "fixture-rate-key", KIS_APP_SECRET: "fixture-rate-secret", KIS_MAX_RPS: "3" });
     const assertion = recovery ? expect(pending).resolves.toMatchObject({ currentPrice: 100 }) : expect(pending).rejects.toThrow("EGW00201");
     await vi.runAllTimersAsync(); await assertion;
     expect(timestamps).toHaveLength(2); expect(timestamps[1] - timestamps[0]).toBe(750);
@@ -133,7 +133,7 @@ describe("server market provenance", () => {
     expect(await screen.findByText(/요청 기간의 일부만 제공되었습니다/)).toHaveTextContent("1년 조회 원본을 대신 사용");
     expect(document.querySelector('[data-chart-coverage="partial"]')).toHaveTextContent("전체 기간 이력이 아닙니다");
     expect(screen.queryByText(/없는 기간을 다른 기간으로 자동 전환하지 않습니다/)).not.toBeInTheDocument();
-    expect(screen.getByText(/실제 제공 관측 범위와 부분 제공 안내를 확인하세요/)).toBeInTheDocument();
+    expect(screen.getByText(/실제 제공 관측 범위/)).toBeInTheDocument();
     expect(await screen.findByRole("img")).toHaveAttribute("aria-label", expect.stringContaining("5년 요청"));
     view.unmount(); client.clear();
   });

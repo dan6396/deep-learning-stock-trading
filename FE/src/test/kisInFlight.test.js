@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("node:fs/promises", () => { const api = { readFile: vi.fn(async () => { throw new Error("fixture no cache"); }), writeFile: vi.fn(), mkdir: vi.fn() }; return { ...api, default: api }; });
 vi.mock("../../server/pipelineResults", async original => ({ ...await original(), loadPipelineRows: vi.fn(async () => null), indexPipelineByTicker: vi.fn() }));
-vi.mock("../../server/kisRateLimit", async original => ({ ...await original(), kisRequestLimiter: { take: vi.fn(async () => {}) } }));
+vi.mock("../../server/kisRateLimit", async original => ({ ...await original(), kisRequestLimiter: { take: vi.fn(async () => {}), promote: vi.fn(), release: vi.fn() } }));
 import { createRoutes } from "../../server/routes";
 let api, calls, release, shouldFail, upstreamSignals;
 const env = { KIS_ENV: "real", KIS_APP_KEY: "fixture-share-key", KIS_APP_SECRET: "fixture-share-secret", KIS_BASE_URL: "https://fixture-share.invalid", KIS_REQUEST_DELAY_MS: "1", KIS_INTRADAY_PAGE_COUNT: "1", KIS_INDEX_SERIES_SOURCE: "off" };
 const reply = body => new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
 beforeEach(async () => {
   vi.resetModules(); api = await import("../../server/kisDashboard"); calls = []; upstreamSignals = []; shouldFail = false;
+  vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-22T01:00:00Z"));
   const gate = new Promise(resolve => { release = resolve; });
   vi.stubGlobal("fetch", vi.fn(async (url, options) => {
     if (String(url).includes("oauth2")) return reply({ access_token: "fixture-share-token", expires_in: 3600 });
@@ -17,15 +18,49 @@ beforeEach(async () => {
     return reply({ rt_cd: "0", output: { stck_prpr: "100", prdy_vol: "10", bstp_nmix_prpr: "100", prdy_vrss: "1", bstp_nmix_prdy_vrss: "1", bstp_nmix_prdy_ctrt: "1" } });
   }));
 });
-afterEach(() => { release(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { release(); vi.unstubAllGlobals(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("KIS in-flight endpoint sharing", () => {
-  it("shares N quote requests, isolates waiter results and does not add a completed quote TTL", async () => {
+  it("promotes a pending background chart when a user joins without duplicating its upstream work", async () => {
+    const { kisRequestLimiter } = await import("../../server/kisRateLimit");
+    const background = api.buildKisStockChart("005930", { ...env, KIS_REQUEST_PRIORITY: "background" });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    const user = api.buildKisStockChart("005930", env);
+    await vi.waitFor(() => expect(kisRequestLimiter.promote).toHaveBeenCalledOnce());
+    expect(calls).toHaveLength(1); release();
+    const results = await Promise.all([background, user]);
+    expect(results[0].chartData).toEqual(results[1].chartData);
+    expect(calls.filter(url => url.pathname.endsWith("inquire-price"))).toHaveLength(1);
+    expect(kisRequestLimiter.release).toHaveBeenCalledWith(kisRequestLimiter.promote.mock.calls[0][0]);
+  });
+  it("returns stale quotes immediately, shares background refresh and preserves asOf on failure", async () => {
+    release(); const original = await api.buildKisStockQuote("005930", env);
+    let clock = Date.parse("2026-10-22T01:00:26Z"); vi.mocked(Date.now).mockImplementation(() => clock);
+    shouldFail = true;
+    const results = await Promise.all(Array.from({ length: 5 }, () => api.buildKisStockQuote("005930", env)));
+    expect(results.every(row => row.source === "cache" && row.asOf === original.asOf)).toBe(true);
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    expect((await api.buildKisStockQuote("005930", env)).asOf).toBe(original.asOf);
+    expect(calls).toHaveLength(2);
+    clock += 31_000; shouldFail = false;
+    await api.buildKisStockQuote("005930", env, true); expect(calls).toHaveLength(3);
+  });
+  it("holds quotes and indices after close until the next open", async () => {
+    vi.mocked(Date.now).mockReturnValue(Date.parse("2026-10-23T07:00:00Z")); release();
+    await api.buildKisStockQuote("005930", env); await api.buildKisIndices(env); const count = calls.length;
+    vi.mocked(Date.now).mockReturnValue(Date.parse("2026-10-26T00:00:00Z") - 1);
+    await api.buildKisStockQuote("005930", env, true); await api.buildKisIndices(env, true); expect(calls).toHaveLength(count);
+    vi.mocked(Date.now).mockReturnValue(Date.parse("2026-10-26T00:00:00Z"));
+    await api.buildKisStockQuote("005930", env, true); await api.buildKisIndices(env, true); expect(calls).toHaveLength(count + 4);
+  });
+  it("shares N quote requests, isolates waiter results and caches completed quotes for 25 seconds", async () => {
     const pending = Array.from({ length: 8 }, () => api.buildKisStockQuote("005930", env));
     await vi.waitFor(() => expect(calls).toHaveLength(1)); release();
     const values = await Promise.all(pending); values[0].currentPrice = 999;
     expect(values[1].currentPrice).toBe(100);
-    await api.buildKisStockQuote("005930", env); expect(calls).toHaveLength(2);
+    expect((await api.buildKisStockQuote("005930", env)).source).toBe("cache"); expect(calls).toHaveLength(1);
+    vi.mocked(Date.now).mockReturnValue(Date.parse("2026-10-22T01:00:25Z"));
+    await api.buildKisStockQuote("005930", env, true); expect(calls).toHaveLength(2);
   });
   it.each(["quote", "chart", "indices"])("clears a rejected %s promise so the next request can recover", async kind => {
     const load = () => kind === "quote" ? api.buildKisStockQuote("005930", env) : kind === "chart" ? api.buildKisStockChart("005930", env) : api.buildKisIndices(env);
@@ -48,9 +83,9 @@ describe("KIS in-flight endpoint sharing", () => {
     expect(cached[0].source).toBe("cache"); expect(cached[0].asOf).toBe(fresh[0].asOf);
     cached[0].value = 999; expect((await api.buildKisIndices(env))[0].value).toBe(100);
     clock += 20_001;
-    await api.buildKisIndices(env); expect(calls).toHaveLength(6);
+    await api.buildKisIndices(env, true); expect(calls).toHaveLength(6);
     clock += 101;
-    await api.buildKisIndices({ ...env, KIS_INDEX_SNAPSHOT_CACHE_TTL_MS: "100" }); expect(calls).toHaveLength(9);
+    await api.buildKisIndices({ ...env, KIS_INDEX_SNAPSHOT_CACHE_TTL_MS: "100" }, true); expect(calls).toHaveLength(9);
     time.mockRestore();
   });
   it("shares N all-range charts and their raw current-price request with a concurrent quote", async () => {
@@ -61,6 +96,17 @@ describe("KIS in-flight endpoint sharing", () => {
     expect(calls.filter(url => url.pathname.includes("daily-itemchartprice"))).toHaveLength(3);
     expect(values[1].summary.currentPrice ?? values[1].chartData.currentPrice).toBe(100);
     const count = calls.length; expect((await api.buildKisStockChart("005930", env)).source).toBe("cache"); expect(calls).toHaveLength(count);
+  });
+  it("refreshes intraday after sixty seconds, reuses daily ranges and honors a shorter operator TTL", async () => {
+    let clock = Date.now(); const time = vi.spyOn(Date, "now").mockImplementation(() => clock); release();
+    await api.buildKisStockChart("005930", env); const coldCalls = calls.length;
+    clock += 59_999;
+    expect((await api.buildKisStockChart("005930", env)).source).toBe("cache"); expect(calls).toHaveLength(coldCalls);
+    clock += 2; await api.buildKisStockChart("005930", env, true); expect(calls).toHaveLength(coldCalls + 2);
+    expect(calls.filter(url => url.pathname.includes("daily-itemchartprice"))).toHaveLength(3);
+    const renewedCalls = calls.length; clock += 101;
+    await api.buildKisStockChart("005930", { ...env, KIS_STOCK_CHART_CACHE_TTL_MS: "100" }, true); expect(calls).toHaveLength(renewedCalls + 2);
+    time.mockRestore();
   });
   it("keeps different symbols and request environments separate", async () => {
     const pending = [api.buildKisStockQuote("005930", env), api.buildKisStockQuote("000660", env), api.buildKisStockQuote("005930", { ...env, KIS_BASE_URL: "https://fixture-share-other.invalid" })];

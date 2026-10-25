@@ -120,7 +120,7 @@ type Briefing = {
 };
 ```
 
-유효한 `completed`·`model_only` 실행과 일관된 원본 순위가 없으면 `status="no_run"`, `model=null`, `stocks=[]`입니다. 진행 중 실행으로 마커가 바뀌어도 이전 결과를 브리핑에 섞지 않습니다. 기존 `validateModelRows`를 재사용하며 요청 환경을 순위 파일·마커·수급 조회에 전달합니다. `stocks`는 원본 `pred_rank` 순서의 최대 5개이며 `topPercent=rank/poolSize*100`입니다. 근거·주의는 서버의 결정적 규칙으로 생성합니다. 수급은 측정된 기간·원 단위 순매수 합계·양수 일수만 설명하고 조건 통과/미통과로 표현하지 않습니다. 원 단위는 `integrated_pipeline.py`의 `_kis_million_to_won` 변환을 따릅니다. 기사 실패·성공 0건·미수집을 구분하며 종목당 최대 3건을 제공합니다.
+유효한 `completed`·`model_only` 실행과 일관된 원본 순위가 없으면 `status="no_run"`, `model=null`, `stocks=[]`입니다. 진행 중 실행으로 마커가 바뀌어도 이전 결과를 브리핑에 섞지 않습니다. 기존 `validateModelRows`를 재사용하며 요청 환경을 순위 파일·마커·수급 조회에 전달합니다. `stocks`는 원본 `pred_rank` 순서의 최대 5개이며 `topPercent=rank/poolSize*100`입니다. 근거·주의는 서버의 결정적 규칙으로 생성합니다. 수급 공개를 활성화한 경우에만 측정된 기간·원 단위 순매수 합계·양수 일수만 설명하고 조건 통과/미통과로 표현하지 않습니다. 원 단위는 `integrated_pipeline.py`의 `_kis_million_to_won` 변환을 따릅니다. 기사 실패·성공 0건·미수집을 구분하며 종목당 최대 3건을 제공합니다.
 
 매크로는 Yahoo chart v8의 `^KS11`, `^KQ11`, `^IXIC`, `^GSPC`, `KRW=X`, `^TNX`를 사용합니다. `value=regularMarketPrice`, `change=value-(chartPreviousClose ?? previousClose)`, `changePct=change/previousClose*100`이며 `^TNX` 값은 추가 배율 없이 `%`입니다. 개별 `asOf`는 `regularMarketTime`의 UTC ISO 문자열이며 서버 수집 시각과 다릅니다. `macro.asOf`는 확보한 관측 시각 중 가장 이른 시각입니다. 지표별 8초 제한(본문 포함)과 실패 격리를 적용하고 실패한 값·등락·시각은 null입니다. 기본 캐시는 10분이며 `BRIEFING_MACRO_CACHE_TTL_MS`로 조정합니다.
 
@@ -134,6 +134,55 @@ NASDAQ·S&P500의 `session`은 `currentTradingPeriod.regular`의 시작·종료�
 
 `GEMINI_API_KEY`는 Node 서버 환경에서만 읽고 REST 헤더로 전송합니다. 브라우저 응답·로그·에러에 넣지 않으며 SDK를 추가하지 않습니다. 기본 모델은 [공식 안정 모델 문서](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash)에서 확인한 `gemini-3.8-flash`이며 `GEMINI_BRIEFING_MODEL`로 바꿀 수 있습니다. `responseMimeType=application/json`, `responseSchema`, `temperature=0.1`, `thinkingConfig.thinkingLevel="LOW"`, `includeThoughts=false`, `maxOutputTokens=3072`를 사용합니다. Gemini 호출은 최대 35초, POST 전체는 준비 조회·업종·설명 생성을 합쳐 45초 예산이며 준비 조회에는 최대 9초를 배정합니다. 예산이 부족하면 이미 확보한 값·이전 캐시·미수집 기본값으로 진행합니다. FE 클라이언트의 설명 POST 제한은 60초입니다.
 
-`inputHash`는 실행(`runStartedAt`/`baseDate` 포함 모델 메타), TOP5 구성·점수·측정 수급을 포함한 근거/주의 문장과 기사 수집 상태·id·제목·URL·출처로 계산하며 매크로는 제외합니다. 제목은 NFKC·공백, URL은 호스트·기본 포트·쿼리 순서를 정규화하고 fragment는 제외합니다. 같은 순번 id의 기사 내용이 바뀌면 설명 캐시는 무효화됩니다. 생성 입력 전체(매크로 값·시각·context 포함)를 `outputs/briefing-narrative.json`에 설명과 함께 임시 파일→rename 방식으로 저장합니다. 캐시 검증은 저장된 매크로 스냅샷을 기준으로 합니다. `macroAsOf`는 설명 생성에 쓴 기준 시각이며 현재 매크로 값·시각·context가 달라지면 `macroStale=true`입니다. GET은 이 표시와 함께 기존 LLM 설명을 유지합니다. POST도 동일 입력의 설명을 재사용하며, 매크로가 달라졌고 마지막 성공 후 10분 이상 지난 때만 갱신합니다. 매크로 갱신마다 설명이 사라지거나 생성 요청이 반복되는 현상을 줄이기 위한 정책입니다.
+`inputHash`는 실행(`runStartedAt`/`baseDate` 포함 모델 메타), TOP5 구성·점수·공개한 수급을 포함한 근거/주의 문장과 기사 수집 상태·id·제목·URL·출처로 계산하며 매크로는 제외합니다. 제목은 NFKC·공백, URL은 호스트·기본 포트·쿼리 순서를 정규화하고 fragment는 제외합니다. 같은 순번 id의 기사 내용이 바뀌면 설명 캐시는 무효화됩니다. 생성 입력 전체(매크로 값·시각·context 포함)를 `outputs/briefing-narrative.json`에 설명과 함께 임시 파일→rename 방식으로 저장합니다. 캐시 검증은 저장된 매크로 스냅샷을 기준으로 합니다. `macroAsOf`는 설명 생성에 쓴 기준 시각이며 현재 매크로 값·시각·context가 달라지면 `macroStale=true`입니다. GET은 이 표시와 함께 기존 LLM 설명을 유지합니다. POST도 동일 입력의 설명을 재사용하며, 매크로가 달라졌고 마지막 성공 후 10분 이상 지난 때만 갱신합니다. 매크로 갱신마다 설명이 사라지거나 생성 요청이 반복되는 현상을 줄이기 위한 정책입니다.
 
 동시 생성은 서버 프로세스당 1건입니다. 같은 실행의 동시 요청은 진행 중 결과를 공유하며 다른 실행은 `generation_in_progress` 템플릿을 받습니다. 실패 후 60초 쿨다운은 다른 hash에도 적용하고 최근 실패는 디스크에도 보관합니다. 이전 성공이 없다면 키 없음·통신 오류·전체 필드 검증 실패는 `status="template"`와 `fallbackReason`으로 HTTP 200을 반환합니다. 일부 필드 검증 실패는 위의 부분 대체 계약을 따릅니다. 갱신 전체 실패 전에 검증된 LLM 설명이 있으면 GET·POST 모두 이전 설명을 유지하고 `status="llm"`, `macroStale=true`, 실패 사유를 `fallbackReason`으로 제공합니다. 성공하거나 현재 매크로가 성공 스냅샷과 다시 일치하면 갱신 실패 사유는 지웁니다. 다만 부분 대체된 설명의 `partial_template`은 유지합니다. 디스크의 template 실패 사유도 고정 허용 목록으로 검증합니다. 읽기 전용 배포에서 파일 저장이 실패하면 해당 프로세스의 메모리 캐시로 동작합니다.
+
+### 수급 공개 정책·시연 표시
+
+서버 환경 `BRIEFING_SHOW_SUPPLY`는 기본 false이며 `true` 또는 `1`일 때만 수급 측정값을 공개합니다. false에서는 `/api/rank`, `/api/stock-analysis`의 `input_row`에서 `supply_*`, `foreign_*`, `inst_*`, `institution_*`, `combined_*` 필드를 생략합니다(null이나 0으로 대체하지 않음). 관련 CSV 수급 설명도 생성하지 않습니다. `/api/briefing`은 `kind="supply"` 근거·주의, 수급 금액·일수를 만들지 않습니다. Gemini 입력과 템플릿에도 포함하지 않고, 수급 근거 없이 작성한 외국인/기관 순매수·순매도 주장은 다른 지표의 같은 숫자로 정당화할 수 없습니다.
+
+`inputHash`에는 공개 정책 버전이 포함됩니다. 기본 비공개 상태에서는 원본 수급 값이 바뀌어도 해시에 영향을 주지 않으며, 공개/비공개 전환으로 실제 근거가 달라지면 해시도 바뀝니다. 정책 도입 이전 및 수급 문장을 포함한 기존 설명 캐시는 재사용하지 않습니다. 브라우저에 별도의 수급 공개 플래그를 전달하지 않으며, 서버가 제공한 근거만 표시합니다. 파이프라인 원본 CSV·모델 순위·성과 정의는 변경하지 않습니다.
+
+`macro.indicators[].status`, `composition.sectors=null`, `fieldSources`, `stocks[].source`, `fallbackReason`은 원래 계약을 유지합니다. 화면은 unavailable 지표 카드를 생략하고 모두 unavailable일 때만 안내하며, 업종 null 영역과 표시할 값이 없는 통계 행을 생략합니다. 부분 대체는 필드별 ‘자동 생성’으로 표시하며 정상 상태에서 경고로 표현하지 않습니다. 순위 표의 기사 열은 TOP5 수집 범위임을 밝히고 TOP5 밖 행은 비웁니다. `VITE_DEMO_HIDE_RUN=1`은 헤더 버튼만 숨기는 빌드/기동 옵션이며 서버 분석 POST 권한·동작을 바꾸지 않습니다.
+
+### 표시 단위·정밀도와 예측 대상 세션
+
+LLM에는 시장 수치를 소수 2자리까지 반올림한 숫자와 `display` 문자열로 제공합니다. 환율은 원, 지수는 pt, 금리는 %(소수 2자리)로 표시합니다. 응답의 영문 통화 코드 KRW/USD와 공개된 입력보다 정밀한 소수 자릿수는 `ungrounded_number`로 거부하며 해당 필드만 자동 생성 문장으로 대체합니다. 기존 저장 설명도 같은 규칙으로 필드별 재검증해 다른 검증 통과 문장을 유지합니다. 이 재검증은 Gemini를 호출하지 않습니다. API의 원본 매크로 숫자·관측 시각과 캐시 스냅샷은 보존합니다.
+
+시세 캐시와 갱신: 현재가 장중 25000ms, 지수 20000ms, 차트 분봉/전체 묶음은 60000ms입니다. `KIS_INDEX_SNAPSHOT_CACHE_TTL_MS`·`KIS_STOCK_CHART_CACHE_TTL_MS`는 각각 장중 지수·묶음 간격을 덮어씁니다. 장중 값은 마감 때 다시 갱신하며 장후·휴장일의 성공값은 다음 장 시작까지 유지합니다. 오래된 성공값은 즉시 반환하고 백그라운드 갱신하며 실패해도 지우지 않습니다. 캐시 응답은 `X-Data-Source: cache` 및 payload `source: cache`이고 `asOf`/`X-Data-As-Of`는 원래 성공 수집 시각을 유지합니다. 캐시 적중·실패·응답 시각으로 `asOf`를 새로 만들지 않습니다. 여러 기간을 재사용한 차트의 최상위 `asOf`는 포함된 수집 시각 중 가장 오래된 값이며, 실제 관측일·범위는 각 기간 원본 시각과 coverage를 읽습니다. 캐시라는 사실은 실시간 또는 데이터 완전성을 뜻하지 않습니다.
+
+차트 API는 종전처럼 모든 기간을 한 묶음으로 반환합니다. 3M·1Y는 일봉, 5Y는 월봉이며 이 기간 원본은 다음 거래일 마감까지 메모리/파일에서 재사용합니다. 파일은 `FE/server/cache/market-v1/`의 공개 시세 JSON(해시로 구분한 환경/종목/기간)이며 원자적으로 저장하고 형식이 손상되면 재수집합니다. 서버 재시작 후 전체 묶음 파일을 먼저 반환하므로 장중 만료 시에도 새 KIS 수집을 기다리지 않습니다. 후속 일봉 수집은 마지막 날짜 이후와 최근 14일(월봉 62일)을 다시 받습니다. 여러 페이지를 연결해 1Y의 KIS 100행 제한을 보완하며, 후속 분봉은 최근 한 페이지와 같은 거래일의 기존 원본을 합칩니다. 실패한 기간은 이전 원본·시각을 보존합니다.
+
+`REFRESH_AHEAD=0`을 제외한 Vite 개발 서버는 시작 시 최신 모델 TOP5 현재가·차트와 3개 지수를 예열합니다. 장중 현재가·지수 30초, 분봉 60초이며 마감 직후 한 번 갱신 후 다음 장까지 대기합니다. 빌드·테스트·preview에서는 스케줄러를 시작하지 않습니다. 공용 KIS 기본 1 RPS 안에서 사용자 대기열이 먼저 처리되고 백그라운드는 최대 30회/분입니다. 초기 수집·미보유 종목 조회는 네트워크 지연이 남습니다. 브리핑 매크로/야간선물/업종 계약은 변경하지 않습니다. 클라이언트는 30분 보관·현재가/지수 20초·분봉 60초·일봉 탭 10분의 staleTime을 사용하고 기존 값을 유지하면서 갱신합니다. 현재가·지수·차트 요청 제한은 75000ms입니다.
+
+서버 내부 `getDailyHistory(code, { start?, end?, allowNetwork? })`는 `{ code, rows: [{ date, open, high, low, close, volume }], source, asOf, complete, missingDates, calendarSource } | null`을 반환합니다. `date`는 KST 거래일 오름차순, 가격은 원, 거래량 결측은 null이며 raw OHLC가 검증되지 않으면 해당 행을 제외합니다. 대상은 1Y 실제 일봉(최대 390달력일)입니다. 기본은 캐시만 읽고 없으면 null이며 `allowNetwork:true`도 백그라운드 호출만 허용합니다. start 기본은 최근 365일, end 기본은 현재 미완성 일봉 제외입니다. `pipelineProjectRoot()` 아래 `outputs/market_index_history/KOSPI.csv`의 유효한 `source=kis` 날짜를 거래일 참조로 우선 사용하고, 파일 미보유·손상 또는 끝 이후는 지원되는 내장 KRX 달력으로 보완합니다. 달력을 확인한 범위의 모든 거래일이 종목 원본에 있을 때만 `complete:true`입니다. 상장 전·거래정지·누락을 임의 구분하지 않고 `missingDates`에 남깁니다. `calendarSource`는 `kis-index-cache` 또는 `krx-table`입니다.
+
+홈은 기존 `/api/korean-market/next-session`의 KIS/KRX 달력 결과로 대상 거래일을 확인합니다. 현재 KST가 그 거래일 15:30 이후이면 ‘예측 대상 정규장은 종료되었으며 다음 거래일 순위는 새 분석 후 표시된다’는 중립 안내와 실행 안내 링크를 제공합니다. 이전·장중에는 숨기고, 달력에서 날짜를 확인하지 못하면 추측하지 않습니다. 페이지를 열어 둔 상태에서도 종료 경계에 안내를 갱신합니다. 브리핑 JSON 필드는 추가하지 않습니다.
+
+## 근거 투명형 리포트 (추가 계약)
+
+`GET /api/stock-insight?code=042660`은 기존 종목 분석 계약을 바꾸지 않는 읽기 전용 엔드포인트입니다. 잘못된 6자리 코드는 400, GET 이외 메서드는 405입니다. 분석 실행·Gemini 호출·KIS 일봉 수집을 시작하지 않습니다. 기본 구조는 `version:1, code, name, status:ready|no_model, baseDate, model, sensitivity, news, cautions, data_meta`입니다. 구체 타입은 `src/types/stockInsight.ts`, `src/types/modelEvidence.ts`를 따릅니다. 과거 실행과 캐시가 없는 종목도 값·순위·통계를 지어내지 않습니다.
+
+STEP2 CSV에는 다음 열이 선택적으로 추가됩니다. 기존 `rank_score`와 `pred_rank` 계산·정렬은 그대로입니다. 동결된 6모델을 한 번 추론할 때 `return_raw=True`로 받은 출력만 후처리하며 재학습·모델 파일·입력 피처 변경은 없습니다.
+
+- `score_lb20`, `score_lb120`: 각 lookback의 3시드 원시 출력을 유니버스 전체에서 각각 rank-zscore로 바꾸고 평균한 값입니다. 최종 점수는 기존과 같이 6개 rank-zscore 전체의 평균이며 lookback 평균을 다시 평균해 부동소수 연산 순서를 바꾸지 않습니다.
+- `rank_lb20`, `rank_lb120`: 해당 점수 내림차순, 동점이면 종목코드 오름차순의 1..N 순위입니다.
+- `model_agreement`: 두 순위 차이/N이 0.10 이하면 `일치`, 0.25 이하면 `부분 일치`, 그 밖은 `불일치`입니다. 동일 순위나 모델 성능의 보장을 뜻하지 않습니다.
+- `feat_pct_f_open/high/low/close/volume/rsi/macd/macd_signal/pct_b/norm_bw/rel_bw`: 정확한 열 이름은 각 피처 앞에 `feat_pct_`를 붙입니다(예: `feat_pct_f_close`). 마지막 날짜의 **실제 float32 입력**을 유니버스 안에서 오름차순 평균 순위/N×100으로 표현한 백분위입니다. 원값은 응답에 싣지 않습니다. 필수값은 유한수, 백분위 범위는 (0,100]입니다. 기간별 근거 묶음이 있으면 두 순위·점수·일치도가 모두 유효해야 하며 기존 CSV의 열 부재는 허용합니다.
+
+실제 11개 입력은 전일 종가 대비 당일 OHLC의 로그 비율(4개), log1p 거래량의 과거 60일 평균·표준편차 대비 z값, RSI14/100, MACD/종가·신호선/종가, Bollinger 밴드 내 종가 위치·평균 대비 밴드 폭·종가 대비 밴드 폭입니다. 5일·20일 누적 수익률은 이 모델의 종목 입력이 아니므로 추가하지 않습니다. 백분위가 50 이상이면 상위 꼬리 `(N+1)/N×100−백분위`, 그 미만이면 하위 꼬리 `백분위`로 표기하며 꼬리가 작은 순서의 최대 3개를 제공합니다. 같은 값은 평균 순위입니다. 이는 **특징의 상대적 위치이며 모델 기여도·인과적 설명이 아닙니다**. OHLC·밴드 피처끼리 겹칠 수 있습니다.
+
+`model`은 전체 순위·모집단·상위 비율·순위 점수, `lookbacks[{sessions,rank,score}]`, `agreement`, `features[{key,label,percentile,side,tailPercent,text}]`, `note`를 제공합니다. 브리핑 `stocks[].modelEvidence`도 같은 선택 필드입니다. 과거 결과는 기간별 근거와 특징이 비어 있고 새 분석 후 추가됩니다.
+
+`sensitivity`는 `status:ready|preparing`, `samples`, `periodStart/periodEnd`, `metrics[{definition,correlation,beta,samples}]`, `conditional`, `complete`, `source`, `note`입니다. 종목 KIS 1년 일봉 캐시를 읽으며 Yahoo 나스닥 일봉은 처음에 백그라운드로 준비하고 하루 재사용합니다(실패 후 60초 대기). KIS를 기다리거나 추가 호출하지 않습니다. 자료가 도착하면 응답의 자료 지문이 바뀌므로 준비 중 상태를 하루 고정하지 않습니다. 결과는 자료 지문이 같은 경우 하루 캐시합니다.
+
+정렬은 `scripts/analysis/nasdaq_kospi_conditional.py`의 `latest_prior`, 즉 한국 거래일 D보다 **엄격히 이전**인 가장 최근 미국 거래일 U입니다. 같은 날짜 미국장이나 미래 가격을 연결하지 않습니다. 휴장 차이로 U가 재사용될 수 있습니다. 최근 365달력일의 유효 쌍이 200개 이상일 때 두 수익 구간(종가→종가·시가→종가)의 Pearson 상관계수와 `Cov(미국 수익률, 종목 수익률)/Var(미국 수익률)` 베타를 표시합니다. 상수·비정상 시계열에는 값을 만들지 않습니다. `conditional`은 나스닥 상승 표본이 30개 이상일 때 종목 시가→종가 상승 `count/total·ratioPct`와 **동일 유효 표본**의 `baselineCount/baselineTotal·baselinePct`를 제공합니다. 0 수익률은 상승에 포함하지 않습니다. 명시된 결측 거래일은 빈 가격으로 유지하고 그 다음 날 종가 수익률도 제외합니다. `complete:false`라도 유효 표본이 충분하면 표본 수·누락 한계를 함께 표시합니다.
+
+`news`는 기존 서버 검증을 통과한 종목 narrative를 재사용하거나 기사 수·출처를 결정적으로 기술합니다. `source:llm|template`, `summary`, `articles`, 기사 id인 `citations`, `bodyCollected:false`, `limitation`을 제공합니다. 본문 미수집·제목 기반 한계를 명시하며 호재·악재 판정을 새로 하지 않습니다. 새 통계·피처·상관행렬은 Gemini 입력과 숫자 허용 집합에 추가하지 않습니다.
+
+브리핑 `composition.diversification`은 선택 필드이며 `status`, `codes`, `samples`, `periodStart/periodEnd`, `matrix`, `averageCorrelation`, `highestPair:{codes,correlation}|null`, `nasdaqBetas[{code,closeToClose,openToClose,samples}]`, `commonRisks`, `note`를 제공합니다. 최근 60거래일 중 다섯 종목이 **같은 직전 거래일을 가진 공통 관측** 55개 이상일 때 종가 일수익률 상관행렬을 표시합니다. 평균은 대각선 제외 10쌍의 단순 평균입니다. 최고 상관 쌍이 0.8 이상이면 공통 위험으로 기술하며 업종 중복은 검증된 업종 분류가 있을 때만 기술합니다. 표본 부족 시 수치 대신 준비 중을 표시합니다. 기존 동일 비중 참고·공식 성과 정의는 변경하지 않습니다.
+
+설명 `inputHash`는 시장 확보 상태에 의존하는 `kind:macro` 주의를 제외하고 종목별 주의의 kind·문장만 포함합니다. 시장 상태는 생성 당시 매크로 스냅샷과 `macroStale`로 처리합니다. 기존 해시가 원래 입력으로 검증되는 디스크 캐시만 새 해시로 이관하며 주의 인용 id는 현재 같은 사실에 맞춰 연결합니다. 따라서 야간선물 unavailable→ok 전환만으로 AI 설명을 버리지 않습니다.
+
+두 가격 차트는 같은 인라인 SVG를 사용합니다. Y축 원 단위 nice tick, 기간별 X축 시각/날짜, 마지막 관측 가격, 기간 시작가 점선·등락률, 최고·최저 관측, 포인터 탐색·좌우 키·스텝 버튼·aria-live를 제공합니다. 형식에 전일 종가가 없으므로 기준선은 일관되게 **기간 시작 관측가**입니다. 마지막 관측을 실시간 현재가로 단정하지 않습니다. 캔들에서도 같은 축을 쓰며 캔들·선의 결측을 보간하지 않습니다.

@@ -48,7 +48,8 @@ export function AnalysisControl({ onShowTopFive }: { onShowTopFive?: () => void 
       <div className="analysis-control-copy">
         <p className="briefing-eyebrow">분석 실행</p>
         <h2 id="analysis-control-heading">새 분석 실행</h2>
-        <p id="analysis-mode-description" className="analysis-control-description">모델 예측 순위를 계산한 뒤 TOP5의 관련 기사를 수집합니다.</p>
+        <p id="analysis-mode-description" className="analysis-control-description">모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집합니다.</p>
+        <p className="analysis-control-caption">최근 실행은 약 40초가 걸렸으며 상황에 따라 더 걸릴 수 있습니다. 실행 중에도 현재 결과는 그대로 보입니다.</p>
         <label className="analysis-official-choice"><input type="checkbox" checked={(running ? run?.kind : kind) === "official"} disabled={busy || !backend.data} onChange={event => setKind(event.target.checked ? "official" : "adhoc")} />공식 성과 기록 요청</label>
         <p className="analysis-control-caption">기본은 수시 실행입니다. 공식 요청은 기준일별 첫 완료 예측을 고정하고, 목표일 09:00 한국시간 전 완료 여부를 검증합니다.</p>
       </div>

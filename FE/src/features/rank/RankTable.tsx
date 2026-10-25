@@ -54,7 +54,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
           <th scope="col" aria-sort={onSort ? sort === "rank" ? descending ? "descending" : "ascending" : "none" : undefined}>{sortHeading("rank", "순위")}</th>
           <th scope="col" aria-sort={onSort ? sort === "name" ? descending ? "descending" : "ascending" : "none" : undefined}>{sortHeading("name", "종목")}</th>
           <th scope="col" aria-sort={onSort ? sort === "predictedReturn" ? descending ? "descending" : "ascending" : "none" : undefined}>{sortHeading("predictedReturn", "순위 점수")}</th>
-          <th scope="col">상위 %</th><th scope="col">관련 기사</th><th scope="col">관심</th>
+          <th scope="col">상위 %</th><th scope="col">관련 기사(TOP5)</th><th scope="col">관심</th>
         </tr></thead>
         <tbody>{rows.map(row => {
           const validRank = row.rank !== null && row.rank > 0 && row.poolSize !== null && row.poolSize >= row.rank;
@@ -67,7 +67,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
             <td><div className="rank-score-stock"><Link to={paths.stock(row.code)}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link>{top && <SignalView signal={model} model />}</div>{note && <small className="rank-row-note">{note}</small>}</td>
             <td data-value="predictedReturn">{formatRankScore(row.rankScore)}</td>
             <td>{percent === null ? "—" : `${formatNumber(percent, 2)}%`}</td>
-            <td>{row.news.length || row.newsCollected ? `${row.news.length}건` : "—"}</td>
+            <td>{row.rank !== null && row.rank <= 5 && (row.news.length || row.newsCollected) ? `${row.news.length}건` : ""}</td>
             <td><WatchToggle code={row.code} name={row.name} /></td>
           </tr>;
         })}</tbody>

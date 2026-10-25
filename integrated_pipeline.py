@@ -505,16 +505,12 @@ def step2_attach_ensemble(
 
     scores: dict[str, float] = {}
     errors: dict[str, str] = {}
+    observations: dict[str, dict] = {}
     if ticker_dfs:
         try:
             print(f"  [Transformer 앙상블 예측] 준비 종목 {len(ticker_dfs)}개 배치 추론 시작", flush=True)
-            predicted = predict_mod.predict_multiple(
-                str(ckpt_path),
-                ticker_dfs,
-                return_errors=True,
-                market_frames=market_frames, as_of=signal_date, bundle=bundle,
-            )
-            scores, errors = predicted
+            scores, errors, observations = _predict_with_observations(
+                bundle["rank_ensemble"], ticker_dfs, market_frames, signal_date)
         except Exception as exc:
             message = f"{type(exc).__name__}: {exc}"
             print(f"  [WARN] Transformer 앙상블 배치 예측 실패: {message}")
@@ -530,6 +526,7 @@ def step2_attach_ensemble(
         error = errors.get(ticker, "")
         if pd.notna(score) and np.isfinite(float(score)):
             records[ticker][score_column] = float(score)
+            records[ticker].update(observations.get(ticker, {}))
             records[ticker]["prediction_status"] = "ok"
             records[ticker]["prediction_error"] = ""
         else:
@@ -631,6 +628,50 @@ def step2_attach_ensemble(
     return rank_df.reset_index(drop=True), supply_df.reset_index(drop=True), final_df
 
 
+def _rank_observations(tickers, windows, raw):
+    """Post-inference observations, never inputs to the final ensemble score.
+
+    Per-lookback scores average the same three cross-sectional seed rank-zscores.
+    Agreement is ordinal-rank distance / universe size: <=10%, <=25%, otherwise.
+    Feature percentiles are ascending average ranks / N * 100 on the exact last
+    float32 input row, not feature importance or an attribution of model output.
+    """
+    from features import FEATURE_COLS
+    from rank_ensemble import rank_zscore
+    raw = np.asarray(raw)
+    if raw.shape != (6, len(tickers)) or not np.isfinite(raw).all():
+        raise ValueError("Expected finite raw outputs from the six fixed models")
+    result = {ticker: {} for ticker in tickers}
+    ranks = []
+    for lookback, group in ((20, raw[:3]), (120, raw[3:])):
+        scores = np.stack([rank_zscore(row) for row in group]).mean(axis=0)
+        order = sorted(range(len(tickers)), key=lambda i: (-scores[i], tickers[i]))
+        ordinal = np.empty(len(tickers), dtype=int)
+        for rank, i in enumerate(order, 1):
+            ordinal[i] = rank
+            result[tickers[i]].update({f"score_lb{lookback}": float(scores[i]), f"rank_lb{lookback}": rank})
+        ranks.append(ordinal)
+    for i, ticker in enumerate(tickers):
+        distance = abs(int(ranks[0][i]) - int(ranks[1][i])) / len(tickers)
+        result[ticker]["model_agreement"] = "일치" if distance <= .10 else "부분 일치" if distance <= .25 else "불일치"
+    for index, name in enumerate(FEATURE_COLS):
+        percentiles = pd.Series(windows[:, -1, index]).rank(method="average", pct=True) * 100
+        for i, ticker in enumerate(tickers):
+            result[ticker][f"feat_pct_{name}"] = float(percentiles.iloc[i])
+    return result
+
+
+def _predict_with_observations(ensemble, ticker_dfs, market_frames, signal_date):
+    # Match RankEnsemble.predict exactly, requesting raw outputs in the same pass.
+    from rank_ensemble import prepare_inputs
+    tickers, windows, market, errors = prepare_inputs(ticker_dfs, market_frames, signal_date)
+    scores, raw = ensemble.predict_windows(windows, market, return_raw=True)
+    result = {ticker: float("nan") for ticker in ticker_dfs}
+    result.update(zip(tickers, map(float, scores)))
+    result = dict(sorted(result.items(), key=lambda p: (-p[1] if np.isfinite(p[1]) else float("inf"), p[0])))
+    return result, errors, _rank_observations(tickers, windows, raw)
+
+
 def _build_top10_supply_csv(final_df: pd.DataFrame) -> pd.DataFrame:
     columns = [
         "ticker",
@@ -659,6 +700,9 @@ def _build_top10_supply_csv(final_df: pd.DataFrame) -> pd.DataFrame:
         "종목명",
     ]
     out = final_df.copy()
+    columns += [column for column in final_df.columns if column in {
+        "rank_lb20", "rank_lb120", "score_lb20", "score_lb120", "model_agreement"
+    } or column.startswith("feat_pct_")]
     for col in columns:
         if col not in out.columns:
             out[col] = pd.NA

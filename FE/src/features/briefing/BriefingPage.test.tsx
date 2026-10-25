@@ -116,12 +116,12 @@ describe("briefing with raw model rank fixtures", () => {
     mockBackend(path => path === "/api/rank" && empty ? Promise.resolve(jsonResponse([])) : undefined);
     mount(); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
     empty = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("표시할 모델 예측이 없습니다.");
+    await screen.findByText("표시할 모델 순위가 없습니다.");
     expect(document.querySelectorAll("[data-model-code]")).toHaveLength(0);
   });
   it("shows rank loading independently of candidate generation", async () => {
     const pending = deferred<Response>(); mockBackend(path => path === "/api/rank" ? pending.promise : undefined); mount();
-    await screen.findByText("모델 예측 순위를 조회하고 있습니다.");
+    await screen.findByText("모델 순위를 조회하고 있습니다.");
     pending.resolve(jsonResponse(rows())); await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
   });
   it("keeps cached rank with a visible refresh failure label", async () => {
@@ -267,7 +267,7 @@ describe("BriefingPage comprehensive briefing integration", () => {
 
     mount();
     await screen.findByText("종합 브리핑 조회 실패 · 분석 결과를 가져오지 못했습니다.");
-    expect(screen.getByRole("heading", { name: "모델 예측 TOP5" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "모델 순위 TOP5" })).toBeInTheDocument();
   });
 
   it("calls narrative generation mutation and updates briefing on user click", async () => {

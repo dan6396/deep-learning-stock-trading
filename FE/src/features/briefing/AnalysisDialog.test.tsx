@@ -36,6 +36,8 @@ describe("header analysis dialog", () => {
     const fetcher = mount(), trigger = screen.getByRole("button", { name: "AI 분석 실행" });
     trigger.focus(); fireEvent.click(trigger);
     const dialog = screen.getByRole("dialog", { name: "AI 분석 실행" }), close = within(dialog).getByRole("button", { name: "분석 실행 대화상자 닫기" });
+    expect(dialog).toHaveTextContent("약 40초");
+    expect(dialog).toHaveTextContent("실행 중에도 현재 결과는 그대로 보입니다.");
     expect(close).toHaveFocus(); await screen.findByRole("button", { name: "분석 시작" });
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     expect(document.body.style.overflow).toBe("hidden"); expect(document.documentElement.style.overflow).toBe("hidden");

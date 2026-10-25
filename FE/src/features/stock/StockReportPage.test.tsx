@@ -91,12 +91,14 @@ describe("stock report using actual fetch fixtures", () => {
   it("never renders a missing model prose zero or invents final rank", async () => {
     const row = reportRow("005930", "원본 누락", null); row.result.summary = "Huber 예상수익률 0.00%."; Object.assign(row.input_row, { final_pred_return: null, final_rank: null });
     backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([row])) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(row)) : undefined); mount();
-    await screen.findByRole("heading", { name: "원본 누락" }); expect(screen.getByTestId("report-prediction")).toHaveTextContent("—"); expect(screen.getByTestId("report-final-rank")).toHaveTextContent("원본 미제공"); expect(document.body).not.toHaveTextContent("Huber 예상수익률 0.00%");
+    await screen.findByRole("heading", { name: "원본 누락" }); expect(screen.getByTestId("report-prediction")).toHaveTextContent("—"); expect(screen.queryByTestId("report-final-rank")).not.toBeInTheDocument(); expect(document.body).not.toHaveTextContent("Huber 예상수익률 0.00%");
   });
   it("cancels late A stock/quote/chart on code change and renders B only", async () => {
     const pending = [deferred<Response>(), deferred<Response>(), deferred<Response>()];
     const fetcher = backend(path => path.includes("005930") ? path.includes("stock-analysis") ? pending[0].promise : path.includes("quote") ? pending[1].promise : pending[2].promise : undefined);
-    mount(); await waitFor(() => expect(fetcher.mock.calls.filter(([path]) => String(path).includes("005930") && !String(path).startsWith("/api/performance"))).toHaveLength(3));
+    mount(); await waitFor(() => expect(fetcher.mock.calls.filter(([path]) => String(path).includes("005930") && !String(path).startsWith("/api/performance")).map(([path]) => new URL(String(path), "http://localhost").pathname).sort()).toEqual([
+      "/api/korean-market/quote", "/api/korean-market/stock-chart", "/api/stock-analysis", "/api/stock-insight",
+    ]));
     fireEvent.click(screen.getByRole("link", { name: "테스트 B" })); await screen.findByRole("heading", { name: "종목 B" });
     await waitFor(() => expect(screen.getByTestId("report-price")).toHaveTextContent("99,000원"));
     expect(fetcher.mock.calls.filter(([path]) => String(path).includes("005930")).every(([, options]) => options?.signal?.aborted)).toBe(true);
@@ -104,10 +106,12 @@ describe("stock report using actual fetch fixtures", () => {
     expect(document.querySelector('[data-report-code]')).toHaveAttribute("data-report-code", "000660"); expect(document.body).not.toHaveTextContent("늦은 A");
     await waitFor(() => expect(document.querySelector('[data-chart-code]')).toHaveAttribute("data-chart-code", "000660"));
   });
-  it("clears chart while switching ranges and does not let a late range replace the selected range", async () => {
+  it("keeps cached ranges visible and isolates a late refresh from the selected range", async () => {
     const late = deferred<Response>(); let chartReads = 0;
     backend(path => path.includes("stock-chart") && ++chartReads === 2 ? late.promise : undefined); mount(); await screen.findByRole("img");
-    fireEvent.click(screen.getByRole("button", { name: "1개월" })); await screen.findByText("선택한 기간의 가격 이력을 조회하고 있습니다."); expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "1개월" })); expect(screen.getByRole("img")).toHaveAttribute("data-chart-range", "1M");
+    expect(screen.queryByText("선택한 기간의 가격 이력을 조회하고 있습니다.")).not.toBeInTheDocument(); expect(chartReads).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: "가격 이력 다시 조회" })); await screen.findByText("가격 이력 갱신 중"); expect(screen.getByRole("img")).toHaveAttribute("data-chart-range", "1M");
     fireEvent.click(screen.getByRole("button", { name: "3개월" })); await screen.findByRole("img"); expect(document.querySelector('[data-chart-range]')).toHaveAttribute("data-chart-range", "3M");
     late.resolve(jsonResponse(chartBundle())); await Promise.resolve(); expect(document.querySelector('[data-chart-range]')).toHaveAttribute("data-chart-range", "3M");
   });

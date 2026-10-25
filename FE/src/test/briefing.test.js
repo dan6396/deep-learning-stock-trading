@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildBriefingInput, createBriefingService, formatSupplyWon } from "../../server/briefing";
 import { MACRO_UNIVERSE } from "../../server/marketMacro";
-import { templateNarrative } from "../../server/briefingNarrative";
+import { briefingInputHash, templateNarrative } from "../../server/briefingNarrative";
 import { buildBriefingComposition } from "../../server/briefingComposition";
 afterEach(() => vi.useRealTimers());
 
@@ -69,7 +69,7 @@ describe("model TOP5 briefing", () => {
     expect(result.stocks.map(row => row.rank)).toEqual([1, 2, 3, 4, 5]); expect(data).toEqual(original);
     expect(result.stocks[0].rankScore).toBe(6); expect(result.stocks[0].topPercent).toBeCloseTo(100 / 6);
     expect(result.stocks[0].evidence[0]).toMatchObject({ id: "E:000001:1", kind: "model", text: "전체 6개 중 1위(상위 16.67%)입니다." });
-    expect(result.stocks[0].cautions.map(row => row.kind)).toEqual(["model", "supply", "news", "data"]);
+    expect(result.stocks[0].cautions.map(row => row.kind)).toEqual(["model", "news", "data"]);
     expect(result.macro.context).toMatchObject({ usSessionDate: "2026-10-22" });
     expect(result.macro.context?.targetSessionNote).toContain("2026-10-23 한국 정규장");
     expect(templateNarrative(result, null).marketNote).toContain("미국 정규장 마감");
@@ -81,7 +81,7 @@ describe("model TOP5 briefing", () => {
     data[0].news = [{ index: 1, title: "종목1 공시", url: "https://example.com/article", source: "경제지", pub_date: "2026-10-22T08:00:00Z" }];
     data[1].data_meta.newsStatus = "collection_failed"; data[2].data_meta.newsStatus = "collected";
     const partial = structuredClone(macro); partial.indicators[0].status = "unavailable";
-    const result = buildBriefingInput(data, marker, partial, now);
+    const result = buildBriefingInput(data, marker, partial, now, { BRIEFING_SHOW_SUPPLY: "true" });
     expect(result.stocks[0].evidence.map(row => row.text).join(" ")).toContain("외국인 123원 순매수");
     expect(result.stocks[0].evidence.map(row => row.text).join(" ")).toContain("기관 10원 순매도");
     expect(JSON.stringify(result)).not.toContain("수급 조건");
@@ -109,7 +109,7 @@ describe("model TOP5 briefing", () => {
   it("never presents supply flags as a ranking filter and describes measured days in KRW", () => {
     const data = rows(); Object.assign(data[0].input_row, { supply_status: "ok", supply_pass: "false", supply_window: 5, supply_data_days: 5,
       foreign_net_buy_sum: 123000000, inst_net_buy_sum: -10000000, foreign_positive_days: 3, inst_positive_days: 2, combined_positive_days: 4 });
-    const result = buildBriefingInput(data, marker, macro, now), text = JSON.stringify(result.stocks[0]);
+    const result = buildBriefingInput(data, marker, macro, now, { BRIEFING_SHOW_SUPPLY: "true" }), text = JSON.stringify(result.stocks[0]);
     expect(result.stocks[0].rank).toBe(1); expect(text).toContain("1억 2,300만 원"); expect(text).toContain("순매수 양수 3일");
     expect(result.stocks[0].evidence.filter(fact => fact.kind === "supply")).toHaveLength(1);
     expect(text).not.toMatch(/수급 조건|통과|필터/);
@@ -132,5 +132,18 @@ describe("model TOP5 briefing", () => {
     const service = createBriefingService({ rank, marker: async () => marker, macro: async () => macro,
       narratives: { resolve: async input => templateNarrative(input, null, now) }, now: () => now });
     await service(false, selectedEnv); expect(rank).toHaveBeenCalledWith(selectedEnv);
+  });
+  it("omits unpublished supply from response, template, model input and identity by default", async () => {
+    const data = rows(); Object.assign(data[0].input_row, { supply_status: "ok", supply_data_days: 5, supply_window: 5, foreign_net_buy_sum: 1473000000, inst_net_buy_sum: -10000000 });
+    const resolve = vi.fn(async input => templateNarrative(input, null, now));
+    const service = createBriefingService({ rank: async () => data, marker: async () => marker, macro: async () => macro, narratives: { resolve }, now: () => now });
+    const hidden = await service(false, {}), initial = hidden.narrative.inputHash;
+    expect(JSON.stringify(hidden)).not.toMatch(/1473000000|14억|순매수|순매도|수급/);
+    expect(resolve.mock.calls[0][0].stocks[0].evidence.some(fact => fact.kind === "supply")).toBe(false);
+    data[0].input_row.foreign_net_buy_sum *= 100;
+    expect((await service(false, {})).narrative.inputHash).toBe(initial);
+    const visible = buildBriefingInput(data, marker, macro, now, { BRIEFING_SHOW_SUPPLY: "1" });
+    expect(briefingInputHash(visible)).not.toBe(initial);
+    expect(visible.stocks[0].evidence.some(fact => fact.kind === "supply")).toBe(true);
   });
 });

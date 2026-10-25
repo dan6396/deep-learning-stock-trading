@@ -125,7 +125,7 @@
   .briefing-detail-section-heading h3 { margin: 0; }
   .briefing-detail-section-heading { flex-wrap: wrap; gap: 4px; }
   .briefing-detail-section-heading small { color: var(--ds-fg-2); font-size: 12px; }
-  .briefing-mini-chart svg { width: 100%; height: 124px; display: block; margin: 8px 0; }
+  .briefing-mini-chart .price-chart-interactive > svg { width: 100%; height: auto; display: block; margin: 8px 0; }
   .briefing-mini-chart > small { display: block; margin-top: 4px; color: var(--ds-fg-2); font-size: 12px; }
   .briefing-chart-footnote { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; color: var(--ds-fg-2); font-size: 12px; }
   .briefing-chart-footnote small { font-size: 12px; }

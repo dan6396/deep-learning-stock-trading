@@ -43,8 +43,19 @@ describe("analysis launch control", () => {
     const test = setup();
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     expect(test.posts()).toHaveLength(0);
-    expect(screen.getByText(/모델 예측 순위를 계산한 뒤 TOP5의 관련 기사를 수집/)).toBeInTheDocument();
+    expect(screen.getByText(/모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "전체 순위 보기" })).toHaveAttribute("href", "/next/rank");
+  });
+  it("keeps existing rank and briefing data in cache when a new run starts", async () => {
+    const test = setup(), rank = [{ code: "005930", rankScore: 1.2 }], briefing = { status: "ready", stocks: rank };
+    test.client.setQueryData(["rank"], rank); test.client.setQueryData(["briefing"], briefing);
+    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
+    await screen.findByRole("button", { name: "분석 진행 중" });
+    expect(test.client.getQueryData(["rank"])).toEqual(rank);
+    expect(test.client.getQueryData(["briefing"])).toEqual(briefing);
+    expect(test.client.getQueryState(["rank"])?.isInvalidated).toBe(false);
+    expect(test.client.getQueryState(["briefing"])?.isInvalidated).toBe(false);
   });
   it("guards rapid clicks while a request is pending and attaches to the running job", async () => {
     const pending = deferred<Response>(), test = setup({ post: () => pending.promise });

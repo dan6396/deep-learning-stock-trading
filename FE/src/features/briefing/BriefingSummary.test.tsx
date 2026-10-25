@@ -23,11 +23,11 @@ describe("briefing summary status", () => {
     expect(summary).toHaveTextContent("상승 5종목"); expect(summary).not.toHaveTextContent("+0.38%");
     expect(within(summary).getByText("원본 순위 1~5위 · 예측 방향")).toBeInTheDocument();
     expect(summary).toHaveTextContent("다음 거래일 시가→종가 · 분석 기준일");
-    await screen.findByText("완료 시각 미확인"); expect(fetcher.mock.calls.some(call => String(call[0]).includes("performance"))).toBe(false);
+    expect(screen.getByRole("article", { name: "분석 및 데이터" }).querySelector("strong")).toHaveTextContent("—"); expect(fetcher.mock.calls.some(call => String(call[0]).includes("performance"))).toBe(false);
   });
   it("never labels an absent marker as a completed analysis", async () => {
-    mount(false); await screen.findByText("완료 시각 미확인"); expect(screen.getByText(/완료 기록 미확인/)).toBeInTheDocument();
-    expect(screen.queryByText(/최근 완료 기록/)).not.toBeInTheDocument(); expect(screen.getByText(/소요 미확인/)).toBeInTheDocument();
+    mount(false); expect(screen.getByRole("article", { name: "분석 및 데이터" }).querySelector("strong")).toHaveTextContent("—");
+    expect(screen.queryByText(/최근 완료 기록/)).not.toBeInTheDocument(); expect(screen.queryByText(/미확인/)).not.toBeInTheDocument();
   });
   it("renders KOSPI200 value and change rate when index data is provided", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });

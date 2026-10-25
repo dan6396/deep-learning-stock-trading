@@ -8,6 +8,7 @@ const queryClient = new QueryClient({
       // Market data goes stale quickly, but refetching on every window focus
       // would hammer the rate-limited KIS API.
       staleTime: 30_000,
+      gcTime: 30 * 60_000,
       refetchOnWindowFocus: false,
       retry: 1,
     },

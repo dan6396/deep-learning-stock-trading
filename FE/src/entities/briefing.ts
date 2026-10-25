@@ -1,5 +1,8 @@
 import { finiteNumber, nonnegativeInteger, record, stockCode, textValue } from "./value";
 import { formatNumber } from "../shared/lib/format";
+import { adaptModelEvidence, type ModelEvidence } from "./modelEvidence";
+import { adaptDiversification } from "./stockInsight";
+import type { Diversification } from "./stockInsight";
 
 export type BriefingStatus = "ready" | "no_run";
 
@@ -100,6 +103,7 @@ export type StockNews = {
 };
 
 export type BriefingStock = {
+  modelEvidence?: ModelEvidence | null;
   rank: number;
   code: string;
   name: string;
@@ -170,6 +174,7 @@ export type CompositionPerformance = {
 };
 
 export type BriefingComposition = {
+  diversification?: Diversification | null;
   basis: CompositionBasis;
   note: string;
   sectors: CompositionSector[] | null;
@@ -405,6 +410,7 @@ export function adaptBriefingStock(raw: unknown, _defaultRank: number): Briefing
     evidence,
     cautions,
     news,
+    modelEvidence: adaptModelEvidence(obj.modelEvidence),
   };
 }
 
@@ -548,6 +554,7 @@ export function adaptBriefingComposition(raw: unknown): BriefingComposition | nu
     sectorSource,
     performance,
     commonCautions,
+    diversification: adaptDiversification(obj.diversification),
   };
 }
 

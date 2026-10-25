@@ -76,10 +76,10 @@ export function BriefingNarrativeCard({
   const fallbackReasonInfo = formatFallbackReason(narrative.fallbackReason);
   const notices = [
     ...(isLlm ? [{ key: "ai", text: "입력 자료만 요약하며 순위에 영향을 주지 않습니다", warning: false, priority: 10 }] : []),
-    ...(isPartialTemplate ? [{ key: "partial", text: "일부 문장이 검증 기준을 통과하지 못해 규칙 기반 문장으로 대체되었습니다", warning: true, priority: 80 }] : []),
+    ...(isPartialTemplate ? [{ key: "partial", text: "입력 근거를 확인한 문장만 표시합니다", warning: false, priority: 80 }] : []),
     ...(isTemplate && fallbackReasonInfo ? [{ key: "fallback", text: fallbackReasonInfo.text, warning: !fallbackReasonInfo.isNeutral, priority: inProgress ? 100 : 70 }] : []),
     ...(isLlm && fallbackReasonInfo && !isPartialTemplate ? [{ key: "refresh", text: inProgress ? fallbackReasonInfo.text : `최신 지표로 갱신하지 못했습니다: ${fallbackReasonInfo.text}`, warning: !inProgress, priority: inProgress ? 100 : 90 }] : []),
-    ...(isStale ? [{ key: "stale", text: "요약 작성 이후 시장 지표가 갱신되었습니다", warning: !recentlyGenerated, priority: recentlyGenerated ? 20 : 40 }] : []),
+    ...(isStale ? [{ key: "stale", text: "요약 작성 이후 시장 지표가 갱신되었습니다", warning: false, priority: recentlyGenerated ? 20 : 40 }] : []),
   ].sort((left, right) => right.priority - left.priority);
   const overview = withoutRankScoreDisclaimer(narrative.overview);
   const marketNote = withoutRankScoreDisclaimer(narrative.marketNote);
@@ -102,12 +102,12 @@ export function BriefingNarrativeCard({
               {isLlm ? (
                 <span className={`briefing-badge is-ai ${isPartialTemplate ? "is-partial" : ""}`} data-testid="narrative-badge-ai">
                   <Bot aria-hidden="true" size={13} />
-                  {isPartialTemplate ? "AI 요약 · 일부 규칙 기반" : "AI 요약"} · {narrative.llmModel ?? "AI 모델"} · {formatKstTime(narrative.generatedAt)}
+                  {isPartialTemplate ? "AI 요약 · 검증 통과 문장만 표시" : "AI 요약"} · {formatKstTime(narrative.generatedAt)}
                 </span>
               ) : (
                 <span className="briefing-badge is-rule" data-testid="narrative-badge-rule">
                   <Cpu aria-hidden="true" size={13} />
-                  자동 생성 요약(규칙 기반)
+                  자동 생성 요약
                 </span>
               )}
               {narrative.macroAsOf && (
@@ -180,7 +180,7 @@ export function BriefingNarrativeCard({
               <h3 className="briefing-narrative-subtitle">시장 개황 및 흐름</h3>
               {isPartialTemplate && narrative.fieldSources?.overview === "template" && (
                 <span className="briefing-field-source-tag" data-testid="field-source-overview">
-                  규칙 기반
+                  자동 생성
                 </span>
               )}
             </div>
@@ -194,7 +194,7 @@ export function BriefingNarrativeCard({
               <h3 className="briefing-narrative-subtitle">거시 지표 관찰</h3>
               {isPartialTemplate && narrative.fieldSources?.marketNote === "template" && (
                 <span className="briefing-field-source-tag" data-testid="field-source-market-note">
-                  규칙 기반
+                  자동 생성
                 </span>
               )}
             </div>

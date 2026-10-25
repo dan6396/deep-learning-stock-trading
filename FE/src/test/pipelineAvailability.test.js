@@ -67,5 +67,14 @@ it("prevents retired news files from modifying model ranks", async () => {
 it("does not apply supply belonging to another model", async () => {
   set("step2_all_transformer_rank.csv", csv([row()]));
   set("step2_supply_checked.csv", csv([row().replace("plain_20_120_rank_mean_v1", "another_model")]));
-  const rank = await getRankPayload(); expect(rank[0].input_row.supply_status).toBeUndefined();
+  const rank = await getRankPayload({ BRIEFING_SHOW_SUPPLY: "true" }); expect(rank[0].input_row.supply_status).toBeUndefined();
+});
+it("does not publish supply from either CSV unless explicitly enabled, including stock detail", async () => {
+  set("step2_all_transformer_rank.csv", `${header},supply_status,foreign_net_buy_sum,inst_net_buy_sum,supply_data_days\n${row()},ok,1473000000,-10000000,5\n`);
+  const hidden = await getRankPayload({});
+  expect(JSON.stringify(hidden)).not.toMatch(/foreign_|inst_|supply_|1473000000|수급|Supply/);
+  expect(await getStockAnalysisPayload("100001", {})).toEqual(hidden[0]);
+  const visible = await getRankPayload({ BRIEFING_SHOW_SUPPLY: "true" });
+  expect(visible[0].input_row.foreign_net_buy_sum).toBe("1473000000");
+  expect(hidden[0].input_row.rank_score).toBe(visible[0].input_row.rank_score);
 });

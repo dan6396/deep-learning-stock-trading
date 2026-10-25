@@ -15,8 +15,11 @@ import { cachedDashboard } from "./snapshotMetadata";
 import { pipelineOutputDir } from "./pipelineFreshness";
 import { mkdir } from "node:fs/promises";
 import { readBoundedJson } from "./boundedJson";
-import { kisMaxRps, kisRequestLimiter } from "./kisRateLimit";
+import { kisMaxRps, kisRequestLimiter, kisRequestMetrics, type KisPriority } from "./kisRateLimit";
 import { inFlightKey, shareInFlight } from "./inFlight";
+import { createMarketDataCache } from "./marketDataCache";
+import { marketCacheExpiry, marketClock } from "./marketCachePolicy";
+import { marketHistorySessions } from "./marketHistoryCalendar";
 
 declare const process: {
   cwd: () => string;
@@ -32,6 +35,8 @@ type KisConfig = {
   env: KisEnv;
   requestDelayMs: number;
   maxRps: number;
+  priority?: KisPriority;
+  priorityKey?: string;
 };
 
 type TokenCache = {
@@ -44,7 +49,6 @@ type KisOutput = Record<string, unknown>;
 const quotePending = new Map<string, Promise<StockQuote>>();
 const pricePending = new Map<string, Promise<KisOutput>>();
 const indicesPending = new Map<string, Promise<MarketIndexSnapshot[]>>();
-const indexSnapshots = new Map<string, { builtAt: number; value: MarketIndexSnapshot[] }>();
 const chartPending = new Map<string, Promise<StockChartBundle>>();
 const kisScope = (config: KisConfig) => inFlightKey([config.env, config.baseUrl, config.appKey, config.appSecret]);
 
@@ -103,7 +107,27 @@ const INDEX_UNIVERSE: Array<{ code: string; name: string; symbol: string; yahooS
 
 let tokenCache: TokenCache | null = null;
 
-const stockChartCache = new Map<string, { builtAt: number; data: StockChartBundle }>();
+type RangeData = StockChartData["ranges"][TimeRange];
+function validCacheRange(value: unknown): value is RangeData {
+  const range = value as RangeData | null;
+  return !!range && Array.isArray(range.candles) && Array.isArray(range.prices)
+    && range.candles.every(row => row && typeof row.time === "string" && [row.open, row.high, row.low, row.close].every(Number.isFinite))
+    && range.prices.every(row => row && typeof row.date === "string" && Number.isFinite(row.price))
+    && (range.rawPrices === undefined || Array.isArray(range.rawPrices) && range.rawPrices.every(row => row
+      && (row.date === null || typeof row.date === "string") && (row.price === null || Number.isFinite(row.price))));
+}
+const quoteCache = createMarketDataCache<StockQuote>("quote", (value): value is StockQuote => !!value && typeof value === "object" && /^\d{6}$/.test((value as StockQuote).code));
+const indicesCache = createMarketDataCache<MarketIndexSnapshot[]>("indices", (value): value is MarketIndexSnapshot[] => Array.isArray(value) && value.length === 3);
+const stockChartCache = createMarketDataCache<StockChartBundle>("chart", (value): value is StockChartBundle => {
+  const bundle = value as StockChartBundle | null;
+  return !!bundle?.chartData && /^\d{6}$/.test(bundle.chartData.code) && bundle.sourceStock?.code === bundle.chartData.code && !!bundle.summary
+    && typeof bundle.asOf === "string" && Number.isFinite(Date.parse(bundle.asOf))
+    && TIME_RANGES.every(range => validCacheRange(bundle.chartData.ranges?.[range]));
+});
+const dailyChartCache = createMarketDataCache<RangeData>("daily", (value): value is RangeData => {
+  return validCacheRange(value) && value.candles.length > 0 && Array.isArray(value.rawPrices)
+    && value.candles.every(row => /^\d{4}-\d{2}-\d{2}$/.test(row.time));
+});
 const indexSeriesCache = new Map<string, { builtAt: number; values: number[] }>();
 const DEFAULT_STOCK_CHART_CACHE_TTL_MS = 60_000;
 const DEFAULT_INTRADAY_PAGE_COUNT = 14;
@@ -189,6 +213,7 @@ function getKisConfig(env = process.env): KisConfig {
     env: kisEnv,
     requestDelayMs: toNumber(env.KIS_REQUEST_DELAY_MS) || (kisEnv === "mock" ? 1000 : 200),
     maxRps: kisMaxRps(env, (env.KIS_BASE_URL ?? "").includes("openapivts.koreainvestment.com") ? "mock" : kisEnv),
+    priority: env.KIS_REQUEST_PRIORITY === "background" ? "background" : "user",
   };
 }
 
@@ -464,7 +489,9 @@ async function requestKisBody(
   });
 
   for (let attempt = 0; ; attempt++) {
-    await kisRequestLimiter.take(config.maxRps);
+    await (config.priority === "background" ? kisRequestLimiter.take(config.maxRps, "background", config.priorityKey) : kisRequestLimiter.take(config.maxRps));
+    const effectivePriority = kisRequestLimiter.priority?.(config.priorityKey, config.priority ?? "user") ?? config.priority ?? "user";
+    kisRequestMetrics[effectivePriority]++;
     try {
       const response = await fetch(url, {
         headers: {
@@ -482,6 +509,7 @@ async function requestKisBody(
 
       return await parseKisBody(response, trId, [accessToken, config.appKey, config.appSecret]);
     } catch (error) {
+      if (error instanceof KisRateLimitError) kisRequestMetrics.rateLimitErrors++;
       if (!(error instanceof KisRateLimitError) || attempt >= 1) throw error;
       await sleep(750);
     }
@@ -832,35 +860,55 @@ async function fetchIndexSnapshots(
  * which can take a while or fall back to an old snapshot; this keeps the
  * headline KOSPI200 card tied to fresh KIS index data.
  */
-export async function buildKisIndices(env = process.env): Promise<MarketIndexSnapshot[]> {
+export async function buildKisIndices(env = process.env, waitForRefresh = false): Promise<MarketIndexSnapshot[]> {
   const config = getKisConfig(env);
   const key = inFlightKey([kisScope(config), env.KIS_INDEX_SERIES_SOURCE, env.KIS_INDEX_SERIES_CACHE_TTL_MS]);
   const configured = Number(env.KIS_INDEX_SNAPSHOT_CACHE_TTL_MS), ttl = Number.isFinite(configured) && configured > 0 ? configured : 20_000;
-  const cached = indexSnapshots.get(key);
-  if (cached && Date.now() - cached.builtAt < ttl) return structuredClone(cached.value).map(row => ({ ...row, source: "cache" }));
-  return shareInFlight(indicesPending, key, async () => {
-    const value = await fetchIndexSnapshots(config, await getAccessToken(config), env);
-    indexSnapshots.set(key, { builtAt: Date.now(), value }); return value;
-  });
+  const cached = await indicesCache.read(key);
+  // Resolve authentication within the shared operation, never for a cache hit.
+  const refresh = () => shareInFlight(indicesPending, key, async () => fetchIndexSnapshots(config, await getAccessToken(config), env));
+  if (cached) {
+    if (Date.now() >= marketCacheExpiry(cached.builtAt, ttl)) {
+      if (waitForRefresh) return indicesCache.refresh(key, refresh);
+      indicesCache.revalidate(key, () => buildKisIndicesLive(env));
+    }
+    return cached.data.map(row => ({ ...row, source: "cache" }));
+  }
+  return indicesCache.refresh(key, refresh);
+}
+
+async function buildKisIndicesLive(env: Record<string, string | undefined>) {
+  const config = getKisConfig({ ...env, KIS_REQUEST_PRIORITY: "background" });
+  return fetchIndexSnapshots(config, await getAccessToken(config), env);
 }
 
 /** Fast single-stock quote endpoint for detail headers. */
-export async function buildKisStockQuote(symbol: string, env = process.env): Promise<StockQuote> {
+export async function buildKisStockQuote(symbol: string, env = process.env, waitForRefresh = false): Promise<StockQuote> {
   const code = normalizeStockCode(symbol);
   const seed = findStockSeed(code);
   const config = getKisConfig(env);
   const key = inFlightKey([kisScope(config), code, env.KIS_QUOTE_WITH_INVESTOR_FLOW]);
-  return shareInFlight(quotePending, key, async () => {
-    const accessToken = await getAccessToken(config);
+  const load = (background = false) => shareInFlight(quotePending, key, async () => {
+    const selected = background ? { ...config, priority: "background" as const } : config;
+    const accessToken = await getAccessToken(selected);
     const pipelineRows = await loadPipelineRows();
     const aiByTicker = pipelineRows ? indexPipelineByTicker(pipelineRows) : null;
 
-    const quote = await fetchStockQuote(config, accessToken, seed, {
+    const quote = await fetchStockQuote(selected, accessToken, seed, {
       aiRow: aiByTicker?.get(code),
       withInvestorFlow: env.KIS_QUOTE_WITH_INVESTOR_FLOW === "true",
     });
-    return { ...quote, source: "live", asOf: new Date().toISOString() };
+    return { ...quote, source: "live" as const, asOf: new Date().toISOString() };
   });
+  const cached = await quoteCache.read(key);
+  if (cached) {
+    if (Date.now() >= marketCacheExpiry(cached.builtAt, 25_000)) {
+      if (waitForRefresh) return quoteCache.refresh(key, () => load());
+      quoteCache.revalidate(key, () => load(true));
+    }
+    return { ...cached.data, source: "cache" };
+  }
+  return quoteCache.refresh(key, () => load());
 }
 
 const RANGE_LOOKBACK_DAYS: Record<TimeRange, number> = {
@@ -1169,25 +1217,91 @@ async function fetchDailyChartRange(
   code: string,
   range: Exclude<TimeRange, "1D">,
   rawPrices?: { date: string | null; price: number | null }[],
+  startDate?: string,
 ): Promise<CandlePoint[]> {
-  const body = await requestBodyWithRetry(
-    config,
-    accessToken,
-    "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
-    "FHKST03010100",
-    {
-      FID_COND_MRKT_DIV_CODE: "J",
-      FID_INPUT_DATE_1: kisDateDaysAgo(RANGE_LOOKBACK_DAYS[range]),
-      FID_INPUT_DATE_2: todayKisDate(),
-      FID_INPUT_ISCD: code,
-      FID_ORG_ADJ_PRC: "0",
-      FID_PERIOD_DIV_CODE: RANGE_PERIOD_CODE[range],
-    },
-  );
+  const start = startDate?.replace(/-/g, "") ?? kisDateDaysAgo(RANGE_LOOKBACK_DAYS[range]);
+  let end = todayKisDate();
+  const collected: KisOutput[] = [];
+  // KIS returns at most 100 bars per page. A year of actual daily bars needs pagination.
+  for (let page = 0; page < 8; page++) {
+    const body = await requestBodyWithRetry(
+      config,
+      accessToken,
+      "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+      "FHKST03010100",
+      {
+        FID_COND_MRKT_DIV_CODE: "J",
+        FID_INPUT_DATE_1: start,
+        FID_INPUT_DATE_2: end,
+        FID_INPUT_ISCD: code,
+        FID_ORG_ADJ_PRC: "0",
+        FID_PERIOD_DIV_CODE: RANGE_PERIOD_CODE[range],
+      },
+    );
 
-  const rows = outputRows(body);
+    const rows = outputRows(body);
+    collected.push(...rows);
+    const dates = rows.map(row => rawCandleTime(row.stck_bsop_date ?? row.bsop_date)).filter((date): date is string => date !== null).sort();
+    const oldest = dates[0];
+    if (rows.length < 100 || !oldest || oldest.replace(/-/g, "") <= start) break;
+    const nextEnd = new Date(Date.parse(`${oldest}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10).replace(/-/g, "");
+    if (nextEnd >= end) break; // Provider ignored the cursor: never loop or claim full history.
+    end = nextEnd;
+  }
+  const seen = new Set<string>();
+  const rows = collected.filter(row => {
+    const date = rawCandleTime(row.stck_bsop_date ?? row.bsop_date);
+    if (date === null) return true;
+    if (seen.has(date)) return false;
+    seen.add(date); return true;
+  });
   rawPrices?.push(...rows.map(row => ({ date: rawCandleTime(row.stck_bsop_date ?? row.bsop_date), price: pickNullableNumber(row, ["stck_clpr", "stck_prpr"]) })));
   return uniqueSortedCandles(rows.map(dailyRowToCandle).filter((candle): candle is CandlePoint => candle !== null));
+}
+
+export type DailyHistory = {
+  code: string;
+  rows: { date: string; open: number; high: number; low: number; close: number; volume: number | null }[];
+  source: "cache" | "live"; asOf: string | null; complete: boolean;
+  missingDates: string[];
+  calendarSource: "kis-index-cache" | "krx-table";
+};
+
+/** Read-only public daily OHLC history. Missing sessions are never filled or inferred as halts. */
+export async function getDailyHistory(code: string, opts: { start?: string; end?: string; allowNetwork?: boolean } = {}): Promise<DailyHistory | null> {
+  if (!/^\d{6}$/.test(code)) throw new Error("A valid 6-digit ticker is required.");
+  for (const value of [opts.start, opts.end]) if (value !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) throw new Error("Invalid history date.");
+  if (opts.start && opts.end && opts.start > opts.end) throw new Error("Invalid history interval.");
+  let config: KisConfig;
+  try { config = getKisConfig({ ...process.env, KIS_REQUEST_PRIORITY: "background" }); } catch { return null; }
+  config.priorityKey = `${kisScope(config)}:${code}:ALL`;
+  const key = inFlightKey([kisScope(config), code, "1Y"]);
+  let cached = await dailyChartCache.read(key, true), source: "cache" | "live" = "cache";
+  if (opts.allowNetwork && (!cached || Date.now() >= marketCacheExpiry(cached.builtAt, 600_000, true))) {
+    try {
+      await fetchRangeChart(config, await getAccessToken(config), code, "1Y", process.env);
+      cached = await dailyChartCache.read(key, true); source = "live";
+    } catch { /* A failed optional refresh still exposes the last observation as cache. */ }
+  }
+  if (!cached) return null;
+  const clock = marketClock(Date.now());
+  const start = opts.start ?? marketClock(Date.now() - 365 * 86_400_000).date;
+  // End defaults to the last completed day, never today's still-forming daily bar.
+  const end = opts.end ?? (clock.trading && Date.now() >= clock.close ? clock.date : new Date(Date.parse(clock.date) - 86_400_000).toISOString().slice(0, 10));
+  const rows = cached.data.candles.flatMap(candle => {
+    const raw = candle.rawValues, date = candle.rawTime;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date < start || date > end || !raw
+      || ![raw.open, raw.high, raw.low, raw.close].every(value => typeof value === "number" && Number.isFinite(value) && value > 0)
+      || raw.low! > Math.min(raw.open!, raw.close!) || raw.high! < Math.max(raw.open!, raw.close!)) return [];
+    return [{ date, open: raw.open!, high: raw.high!, low: raw.low!, close: raw.close!, volume: raw.volume !== null && Number.isFinite(raw.volume) && raw.volume >= 0 ? raw.volume : null }];
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  const present = new Set(rows.map(row => row.date));
+  const calendar = await marketHistorySessions(start, end);
+  const missingDates = calendar.dates.filter(date => !present.has(date));
+  const latest = rows[rows.length - 1]?.date;
+  const finalized = latest !== undefined && cached.builtAt >= Date.parse(`${latest}T15:30:00+09:00`);
+  return { code, rows, source, asOf: new Date(cached.builtAt).toISOString(), complete: calendar.confirmed && finalized && rows.length > 0 && missingDates.length === 0,
+    missingDates, calendarSource: calendar.source };
 }
 
 async function fetchIntradayChartRange(
@@ -1271,18 +1385,39 @@ async function fetchRangeChart(
   range: TimeRange,
   env: Record<string, string | undefined>,
 ): Promise<StockChartData["ranges"][TimeRange]> {
-  const rawPrices: { date: string | null; price: number | null }[] = [];
-  const candles =
-    range === "1D"
-      ? await fetchIntradayChartRange(config, accessToken, code, intradayPageCount(env), rawPrices)
-      : await fetchDailyChartRange(config, accessToken, code, range, rawPrices);
+  const key = inFlightKey([kisScope(config), code, range]);
+  const cached = range !== "1D" ? await dailyChartCache.read(key, true) : null;
+  if (cached && Date.now() < marketCacheExpiry(cached.builtAt, 600_000, true)) return cached.data;
+  const load = async (): Promise<RangeData> => {
+    const rawPrices: { date: string | null; price: number | null }[] = [];
+    const latest = cached?.data.candles[cached.data.candles.length - 1]?.time;
+    // Recheck recent dates for corrections as well as fetching dates after the last row.
+    const startDate = latest ? new Date(Date.parse(`${latest}T00:00:00Z`) - (range === "5Y" ? 62 : 14) * 86_400_000).toISOString().slice(0, 10) : undefined;
+    let candles =
+      range === "1D"
+        ? await fetchIntradayChartRange(config, accessToken, code, intradayPageCount(env), rawPrices)
+        : await fetchDailyChartRange(config, accessToken, code, range, rawPrices, startDate);
 
-  return {
-    candles,
-    prices: candlesToPrices(candles),
-    rawPrices,
-    coverage: chartCoverage(range, range, "requested", rawPrices),
+    if (cached) {
+      if (!candles.length) throw new Error("Empty daily chart refresh.");
+      const cutoff = isoDateDaysAgo(RANGE_LOOKBACK_DAYS[range]);
+      const refreshedDates = new Set(rawPrices.map(row => row.date).filter((date): date is string => date !== null));
+      candles = uniqueSortedCandles([...cached.data.candles.filter(row => !refreshedDates.has(row.time)), ...candles]).filter(row => row.time >= cutoff);
+      const merged = new Map<string, { date: string | null; price: number | null }>();
+      for (const row of [...(cached.data.rawPrices ?? []), ...rawPrices]) if (row.date === null || row.date >= cutoff) merged.set(row.date ?? `missing-${merged.size}`, row);
+      rawPrices.splice(0, rawPrices.length, ...merged.values());
+    }
+
+    const data = {
+      candles,
+      prices: candlesToPrices(candles),
+      rawPrices,
+      coverage: chartCoverage(range, range, "requested", rawPrices),
   };
+  if (range !== "1D" && !data.candles.length) throw new Error("Empty daily chart.");
+  return data;
+  };
+  return range === "1D" ? load() : dailyChartCache.refresh(key, load, true);
 }
 
 function normalizeMarketCap(output: KisOutput, currentPrice: number): number {
@@ -1431,21 +1566,31 @@ function fillMissingRanges(ranges: StockChartData["ranges"]): void {
  * are fetched best-effort: a single failing range leaves the others intact, and
  * the call only throws if every range came back empty.
  */
-export async function buildKisStockChart(symbol: string, env = process.env): Promise<StockChartBundle> {
+export async function buildKisStockChart(symbol: string, env = process.env, waitForRefresh = false): Promise<StockChartBundle> {
   const code = normalizeStockCode(symbol), config = getKisConfig(env);
   // The endpoint returns every range in one bundle; ALL is its existing range key.
-  return shareInFlight(chartPending, `${kisScope(config)}:${code}:ALL`, () => loadKisStockChart(code, env));
+  const key = `${kisScope(config)}:${code}:ALL`;
+  const cached = await stockChartCache.read(key, true);
+  const refresh = (background = false) => shareInFlight(chartPending, key, () => loadKisStockChart(code, background ? { ...env, KIS_REQUEST_PRIORITY: "background" } : env, cached?.data, cached?.builtAt));
+  if (cached) {
+    if (Date.now() >= marketCacheExpiry(cached.builtAt, stockChartCacheTtlMs(env))) {
+      if (waitForRefresh) return stockChartCache.refresh(key, () => refresh(), true);
+      stockChartCache.revalidate(key, () => refresh(true), true);
+    }
+    return { ...cached.data, source: "cache", sourceStock: { ...cached.data.sourceStock, source: "cache" } };
+  }
+  // A user joining a cold prewarm must not inherit the background budget for every page.
+  const foreground = env.KIS_REQUEST_PRIORITY !== "background";
+  if (foreground) kisRequestLimiter.promote?.(key);
+  try { return await stockChartCache.refresh(key, () => refresh(), true); }
+  finally { if (foreground) kisRequestLimiter.release?.(key); }
 }
 
-async function loadKisStockChart(symbol: string, env: Record<string, string | undefined>): Promise<StockChartBundle> {
+async function loadKisStockChart(symbol: string, env: Record<string, string | undefined>, previous?: StockChartBundle, previousBuiltAt = 0): Promise<StockChartBundle> {
   const code = normalizeStockCode(symbol);
   const seed = findStockSeed(code);
   const config = getKisConfig(env);
-  const cacheKey = `${kisScope(config)}:${code}:ALL`;
-  const cached = stockChartCache.get(cacheKey);
-  if (cached && Date.now() - cached.builtAt < stockChartCacheTtlMs(env)) {
-    return { ...cached.data, source: "cache", sourceStock: { ...cached.data.sourceStock, source: "cache" } };
-  }
+  config.priorityKey = `${kisScope(config)}:${code}:ALL`;
 
   const accessToken = await getAccessToken(config);
 
@@ -1458,17 +1603,35 @@ async function loadKisStockChart(symbol: string, env: Record<string, string | un
   }, {} as StockChartData["ranges"]);
   let firstError: unknown = null;
   let anySuccess = false;
+  let reused = false;
+  const observedAt: string[] = [];
 
   for (const range of CHART_FETCH_RANGES) {
     await sleep(config.requestDelayMs);
 
     try {
-      const rangeData = await fetchRangeChart(config, accessToken, code, range, env);
-      ranges[range] = rangeData;
+      const saved = range !== "1D" ? await dailyChartCache.read(inFlightKey([kisScope(config), code, range]), true) : null;
+      const isFresh = saved && Date.now() < marketCacheExpiry(saved.builtAt, 600_000, true);
+      const sameSession = previous?.chartData.ranges["1D"].candles.some(row => row.rawTime?.startsWith(marketClock(Date.now()).date));
+      const incremental = sameSession && Date.now() - previousBuiltAt < 15 * 60_000;
+      const rangeData = await fetchRangeChart(config, accessToken, code, range, incremental && range === "1D" ? { ...env, KIS_INTRADAY_PAGE_COUNT: "1" } : env);
+      if (range === "1D" && previous && rangeData.candles.length) {
+        const day = rangeData.candles[rangeData.candles.length - 1].time.slice(0, 10);
+        const refreshed = new Set(rangeData.rawPrices?.map(row => row.date));
+        const candles = uniqueSortedCandles([...previous.chartData.ranges[range].candles.filter(row => row.time.slice(0, 10) === day && !refreshed.has(row.time)), ...rangeData.candles]);
+        const raw = new Map<string | null, { date: string | null; price: number | null }>();
+        for (const row of [...(previous.chartData.ranges[range].rawPrices ?? []).filter(row => row.date?.slice(0, 10) === day), ...(rangeData.rawPrices ?? [])]) raw.set(row.date, row);
+        ranges[range] = { ...rangeData, candles, prices: candlesToPrices(candles), rawPrices: [...raw.values()].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "")) };
+      } else ranges[range] = rangeData;
+      if (isFresh) { reused = true; observedAt.push(new Date(saved.builtAt).toISOString()); }
       if (rangeData.candles.length > 0) {
         anySuccess = true;
       }
     } catch (error) {
+      if (previous?.chartData.ranges[range].candles.length) {
+        ranges[range] = previous.chartData.ranges[range]; reused = true;
+        if (previous.asOf) observedAt.push(previous.asOf);
+      }
       firstError = firstError ?? error;
       console.warn(`[kis] ${code} ${range} chart range failed: ${error instanceof Error ? error.message : error}`);
     }
@@ -1493,8 +1656,8 @@ async function loadKisStockChart(symbol: string, env: Record<string, string | un
   }
 
   const data: StockChartBundle = {
-    source: "live",
-    asOf: new Date().toISOString(),
+    source: reused ? "cache" : "live",
+    asOf: [...observedAt, new Date().toISOString()].sort()[0],
     chartData: {
       code,
       currentPrice: sourceStock.currentPrice,
@@ -1506,7 +1669,6 @@ async function loadKisStockChart(symbol: string, env: Record<string, string | un
     summary: quoteOutputToSummary(quoteOutput, code, sourceStock.currentPrice, summaryDailyCandles),
   };
 
-  stockChartCache.set(cacheKey, { builtAt: Date.now(), data });
   return data;
 }
 

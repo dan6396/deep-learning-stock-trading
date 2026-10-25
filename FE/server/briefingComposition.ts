@@ -3,12 +3,14 @@ import { getBriefingSectors } from "./kisBriefing";
 import type { PerformancePayload, PerformanceRun } from "../src/types/performance";
 import type { BriefingInput } from "./briefing";
 import type { KisReadOptions } from "./revalidatingCache";
+import { stockObservations } from "./stockObservations";
+import type { Diversification } from "../src/types/stockInsight";
 declare const process: { env: Record<string, string | undefined> };
 export type BriefingComposition = {
   basis: "equal_weight_reference"; note: "최적화하지 않은 동일 비중(각 20%) 참고 구성입니다. 투자 권유가 아닙니다.";
   sectors: { name: string; codes: string[] }[] | null; sectorSource: string | null;
   performance: { asOf: string | null; measuredDays: number; averageReturnPct: number | null; positiveDays: number;
-    recent: { date: string; returnPct: number }[] } | null; commonCautions: string[];
+    recent: { date: string; returnPct: number }[] } | null; commonCautions: string[]; diversification?: Diversification;
 };
 export function compositionPerformance(payload: PerformancePayload): NonNullable<BriefingComposition["performance"]> {
   const selected = payload.runs.filter(run => run.mode === "model_only" && run.modelId === "plain_20_120_rank_mean_v1" && run.scoreKind === "rank_zscore"
@@ -20,11 +22,21 @@ export function compositionPerformance(payload: PerformancePayload): NonNullable
   return { asOf: payload.asOf, measuredDays: recent.length, averageReturnPct: recent.length ? recent.reduce((sum, row) => sum + row.returnPct, 0) / recent.length : null,
     positiveDays: recent.filter(row => row.returnPct > 0).length, recent };
 }
-export function createCompositionProvider(performance = getPerformancePayload, sectors = getBriefingSectors) {
+export function createCompositionProvider(performance = getPerformancePayload, sectors = getBriefingSectors, observations = stockObservations) {
   return async (input: BriefingInput, env = process.env, options: KisReadOptions = {}): Promise<BriefingComposition> => {
-    const [history, classification] = await Promise.all([performance(env).then(compositionPerformance).catch(() => null),
-      sectors(input.stocks.map(stock => stock.code), env, options).catch(() => ({ sectors: null, sectorSource: null }))]);
-    return buildBriefingComposition(input, history, classification);
+    const [history, classification, observed] = await Promise.all([performance(env).then(compositionPerformance).catch(() => null),
+      sectors(input.stocks.map(stock => stock.code), env, options).catch(() => ({ sectors: null, sectorSource: null })),
+      observations.get(input.stocks.map(stock => stock.code)).catch(() => null)]);
+    const composition = buildBriefingComposition(input, history, classification);
+    if (observed) {
+      const names = new Map(input.stocks.map(stock => [stock.code, stock.name]));
+      observed.diversification.commonRisks = [
+        ...(classification.sectors ?? []).filter(row => row.codes.length > 1).map(row => `${row.name} 업종에 ${row.codes.length}종목이 함께 속합니다.`),
+        ...(observed.diversification.highestPair && observed.diversification.highestPair.correlation >= .8 ? [`${observed.diversification.highestPair.codes.map(code => names.get(code) ?? code).join("·")}의 과거 상관이 ${observed.diversification.highestPair.correlation.toFixed(2)}로 높게 관측됐습니다.`] : []),
+      ];
+      composition.diversification = observed.diversification;
+    }
+    return composition;
   };
 }
 export function buildBriefingComposition(input: BriefingInput, history: BriefingComposition["performance"] = null,

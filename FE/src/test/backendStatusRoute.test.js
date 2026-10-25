@@ -5,7 +5,7 @@ vi.mock("node:fs/promises", () => { const mocks = { stat: vi.fn(async () => ({ i
 vi.mock("../../server/pipelineFreshness", () => ({ pipelineRunMarkerPath: () => "/abs/private/outputs/.marker", readPipelineRunMarker: vi.fn(async () => disk.marker) }));
 vi.mock("../../server/pipelineResults", () => ({ inspectPipelineResultAvailability: vi.fn(), getCandidatesPayload: vi.fn(), getRankPayload: vi.fn(), getStockAnalysisPayload: vi.fn() }));
 vi.mock("../../server/pipelineRunner", () => ({ getCandidateAnalysisSnapshot: vi.fn(() => ({ status: "idle" })), getCandidateAnalysisStatus: vi.fn(), getStockNewsAnalysisStatus: vi.fn(), startCandidateAnalysis: vi.fn(), startStockNewsAnalysis: vi.fn() }));
-vi.mock("../../server/kisDashboard", () => ({ buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(), buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn(), refreshDashboardSnapshot: vi.fn() }));
+vi.mock("../../server/kisDashboard", () => ({ getDailyHistory: vi.fn().mockResolvedValue(null), buildFreshKisDashboard: vi.fn(), buildKisDashboard: vi.fn(), buildKisIndices: vi.fn(), buildKisStockChart: vi.fn(), buildKisStockQuote: vi.fn(), fetchKisTargetSession: vi.fn(), refreshDashboardSnapshot: vi.fn() }));
 import { createRoutes } from "../../server/routes";
 import { getBackendStatus } from "../../server/backendStatus";
 import { inspectPipelineResultAvailability } from "../../server/pipelineResults";

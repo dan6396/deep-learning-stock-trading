@@ -90,7 +90,7 @@ export function HistoryPage() {
           <div><dt>실행 기록</dt><dd><RunReference value={run?.runId} /></dd></div>
           <div><dt>출처</dt><dd>{analysis.data ? SOURCE_LABELS[analysis.data.source] : "—"}</dd></div>
           <div><dt>상태 기준 시각</dt><dd>{formatDate(analysis.data?.asOf, true)}</dd></div>
-        </dl></details><p className="history-footnote">경과 시간은 제공된 측정값입니다. 최근 상태 갱신 시각을 확인할 수 없으면 미확인으로 표시합니다.</p>
+        </dl></details><p className="history-footnote">경과 시간과 갱신 시각은 서버가 제공한 실행 기록입니다.</p>
       </section>
       <section className="history-card" aria-labelledby="current-results-heading"><h2 id="current-results-heading">현재 분석 결과</h2><p className="history-muted">저장된 결과와 실행 시각을 확인하세요. 공식 성과 집계 여부는 아래 성과 기록에서 별도로 확인합니다.</p>
         {candidates.isPending && <p role="status">현재 결과를 조회하고 있습니다.</p>}

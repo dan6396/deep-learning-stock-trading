@@ -17,6 +17,7 @@ describe("score table model-rank emphasis", () => {
     ].map(({ code, rank, score, target }) => {
       const raw = pipelineRow({ ticker: code, score_kind: "rank_zscore", rank_score: score, pred_rank: rank, pred_pool_size: 200, prediction_target: target });
       raw.result.ticker = code;
+      raw.news = [{ title: "검증 기사" }];
       return adaptCandidate(raw).data;
     });
     const { container } = render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><RankTable rows={rows} members={new Set()} membershipState="unknown" production="unproduced" /></MemoryRouter>);
@@ -29,5 +30,7 @@ describe("score table model-rank emphasis", () => {
       expect(row.querySelector('[data-signal]')).toBeNull();
       expect(row).not.toHaveTextContent(/모델 상위권|순위 미확인/);
     }
+    expect(container.querySelector('[data-rank-code="100001"] td:nth-child(5)')).toHaveTextContent("1건");
+    expect(container.querySelector('[data-rank-code="100011"] td:nth-child(5)')).toBeEmptyDOMElement();
   });
 });

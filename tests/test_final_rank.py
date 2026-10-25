@@ -37,6 +37,7 @@ class FinalRankTests(unittest.TestCase):
         cls.model = RankEnsemble()
 
     def test_frozen_research_predictions_on_three_full_cross_sections(self):
+        from integrated_pipeline import _rank_observations
         checks = json.loads((FIXTURES / "provenance.json").read_text())
         for name, digest in checks["fixtures"].items():
             path = FIXTURES / name
@@ -45,6 +46,21 @@ class FinalRankTests(unittest.TestCase):
                 scores, raw = self.model.predict_windows(f["windows"], f["market"], return_raw=True)
                 np.testing.assert_allclose(raw, f["expected_raw"], atol=2e-5, rtol=2e-4)
                 np.testing.assert_allclose(scores, f["expected_score"], atol=1e-12, rtol=0)
+                original = scores.copy()
+                tickers = [f"{100000+i}" for i in range(len(scores))]
+                facts = _rank_observations(tickers, f["windows"], raw)
+                # Requesting and summarizing raw outputs must preserve every score bit.
+                np.testing.assert_array_equal(scores.view(np.uint64), original.view(np.uint64))
+                plain = self.model.predict_windows(f["windows"], f["market"])
+                np.testing.assert_array_equal(scores.view(np.uint64), plain.view(np.uint64))
+                for lb, group in ((20, raw[:3]), (120, raw[3:])):
+                    expected = np.stack([rank_zscore(row) for row in group]).mean(axis=0)
+                    order = sorted(tickers, key=lambda t: (-expected[tickers.index(t)], t))
+                    self.assertEqual([facts[t][f"rank_lb{lb}"] for t in order], list(range(1, len(tickers)+1)))
+                    np.testing.assert_array_equal([facts[t][f"score_lb{lb}"] for t in tickers], expected)
+                for t in tickers:
+                    self.assertIn(facts[t]["model_agreement"], ["일치", "부분 일치", "불일치"])
+                    self.assertTrue(all(0 < v <= 100 for k, v in facts[t].items() if k.startswith("feat_pct_")))
 
     def test_batching_and_universe_order_do_not_change_scores(self):
         with np.load(FIXTURES / "day_212.npz") as f:
@@ -108,7 +124,10 @@ class FinalRankTests(unittest.TestCase):
         self.assertTrue(rank.prediction_base_date.eq(str(cutoff.date())).all())
         with patch("predict._load_inference_bundle", return_value=bundle):
             expected = predict_multiple(str(DEFAULT_MANIFEST), frames, market_frames=market, as_of=cutoff)
-        np.testing.assert_allclose(rank.rank_score, [expected[t] for t in rank.ticker], atol=1e-12)
+        np.testing.assert_array_equal(rank.rank_score.to_numpy().view(np.uint64), np.array([expected[t] for t in rank.ticker]).view(np.uint64))
+        self.assertTrue(rank.rank_lb20.between(1, 32).all())
+        self.assertTrue(rank.rank_lb120.between(1, 32).all())
+        self.assertEqual(len([c for c in rank.columns if c.startswith("feat_pct_")]), 11)
 
 
 if __name__ == "__main__":

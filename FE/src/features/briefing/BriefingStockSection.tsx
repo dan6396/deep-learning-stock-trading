@@ -142,6 +142,11 @@ export function BriefingStockSection({
                 </div>
               </div>
 
+              {stock.modelEvidence && (stock.modelEvidence.agreement || stock.modelEvidence.features.length > 0) && <p className="briefing-stock-observations">
+                {stock.modelEvidence.agreement && `20일·120일 모델 ${stock.modelEvidence.agreement}`}
+                {stock.modelEvidence.agreement && stock.modelEvidence.features.length > 0 && " · "}{stock.modelEvidence.features[0]?.text}
+                <span className="briefing-sr-only"> 입력 특징의 상대적 위치이며 모델 기여도는 아닙니다.</span>
+              </p>}
               {/* 종목 요약 문구 및 인용 칩 / 요약 칩 */}
               {summary && (
                 <div className="briefing-stock-summary-box">
@@ -154,7 +159,7 @@ export function BriefingStockSection({
                           className="briefing-field-source-tag"
                           data-testid={`stock-source-${stock.code}`}
                         >
-                          규칙 기반
+                          자동 생성
                         </span>
                       )}
                   </div>

@@ -8,10 +8,15 @@ function unitOf(token: string): string {
   return token.replace(/^[+-]?[\d,]+(?:\.\d+)?(?:[eE][+-]?\d+)?\s*/i, "").trim().replace(/^KRW$/i, "원")
     .replace(/^퍼센트$/, "%").replace(/^퍼센트포인트$/, "%p").toLowerCase();
 }
-type Quantity = { value: number; unit: string; precision?: number; offset?: number; end?: number; direction?: number; directional?: boolean };
+type Quantity = { value: number; unit: string; precision?: number; decimals?: number; maxDecimals?: number; offset?: number; end?: number; direction?: number; directional?: boolean };
+const decimalPlaces = (value: string | number) => {
+  const [coefficient, exponent = "0"] = String(value).toLowerCase().split("e");
+  return Math.max(0, (coefficient.split(".")[1]?.length ?? 0) - Number(exponent));
+};
 export function formatMarketValue(value: number, unit: "pt" | "KRW" | "%"): string {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}${unit === "KRW" ? "원" : unit}`;
+  return `${value.toLocaleString("ko-KR", { minimumFractionDigits: unit === "%" ? 2 : 0, maximumFractionDigits: 2 })}${unit === "KRW" ? "원" : unit}`;
 }
+export const roundMarketValue = (value: number) => Number(value.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 2 }));
 export function formatSupplyWon(value: number): string {
   if (Math.abs(value) < 10_000) return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
   let remaining = Math.round(Math.abs(value) / 10_000) * 10_000;
@@ -37,7 +42,7 @@ function quantities(text: string): Quantity[] | null {
       previous = multiplier;
     }
     if (!Number.isFinite(total) || total > Number.MAX_SAFE_INTEGER) malformed = true;
-    values.push({ value: total * sign, unit: "원", precision, offset, end: offset + whole.length });
+    values.push({ value: total * sign, unit: "원", precision, decimals: decimalPlaces(total), offset, end: offset + whole.length });
     // Preserve offsets for shared direction clauses after compound amounts.
     return " ".repeat(whole.length);
   });
@@ -47,7 +52,7 @@ function quantities(text: string): Quantity[] | null {
     if (numeric.includes(",") && !/^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(numeric)) return null;
     const value = Number(numeric.replace(/,/g, ""));
     if (!Number.isFinite(value)) return null;
-    values.push({ value, unit: unitOf(raw), offset: match.index!, end: match.index! + raw.length });
+    values.push({ value, unit: unitOf(raw), decimals: decimalPlaces(numeric), offset: match.index!, end: match.index! + raw.length });
   }
   return values.sort((left, right) => left.offset! - right.offset!);
 }
@@ -74,14 +79,19 @@ function assignDirections(text: string, values: Quantity[], directional: (quanti
 
 function sameMagnitude(actual: Quantity, expected: Quantity): boolean {
   if (actual.unit !== expected.unit) return false;
+  if (expected.maxDecimals !== undefined && (actual.decimals ?? decimalPlaces(actual.value)) > expected.maxDecimals) return false;
   const magnitude = Math.abs(actual.value), known = Math.abs(expected.value), precision = actual.precision;
-  return magnitude === known || Array.from({ length: 7 }, (_, decimals) => Number(known.toFixed(decimals))).includes(magnitude)
+  return magnitude === known || Array.from({ length: 7 }, (_, decimals) => [Number(known.toFixed(decimals)), Number(known.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: decimals }))]).flat().includes(magnitude)
     || actual.unit === "원" && precision !== undefined && precision <= Math.max(1, known)
       && Math.abs(Math.round(known / precision) * precision - magnitude) < Math.max(1e-6, precision * 1e-9);
 }
 
 /** Dates are calendar facts; clock digits, titles and identifiers cannot license quantities. */
 export function groundedNumbers(output: string, input: BriefingInput): boolean {
+  if (/(?:KRW|USD)/i.test(output)) return false;
+  // An unrelated matching number cannot license an unpublished supply claim.
+  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply"))
+    && /(?:외국인|기관|수급)[^.!?。\n]{0,100}(?:순매수|순매도|양수)/.test(output)) return false;
   const dates = new Set<string>(), monthDays = new Set<string>(), allowed: Quantity[] = [];
   const quarterTopics = new Set<string>();
   const addDate = (value: unknown) => {
@@ -100,11 +110,11 @@ export function groundedNumbers(output: string, input: BriefingInput): boolean {
     });
     return okay ? stripped : null;
   };
-  const add = (value: number | null, unit: string, directional = false) => {
+  const add = (value: number | null, unit: string, directional = false, maxDecimals = value === null ? 0 : decimalPlaces(value)) => {
     if (value === null || !Number.isFinite(value)) return;
-    allowed.push({ value, unit: unit.toLowerCase(), directional });
-    if (unit === "일") allowed.push({ value, unit: "거래일" });
-    if (unit === "거래일") allowed.push({ value, unit: "일" });
+    allowed.push({ value, unit: unit.toLowerCase(), directional, maxDecimals });
+    if (unit === "일") allowed.push({ value, unit: "거래일", maxDecimals });
+    if (unit === "거래일") allowed.push({ value, unit: "일", maxDecimals });
   };
   addDate(input.model?.baseDate); addDate(input.model?.runStartedAt); addDate(input.macro.asOf);
   if (input.model) addDate(nextKrxSession(input.model.baseDate));
@@ -113,12 +123,16 @@ export function groundedNumbers(output: string, input: BriefingInput): boolean {
     addDate(indicator.asOf);
     if (indicator.status !== "ok") continue;
     const unit = indicator.unit === "KRW" ? "원" : indicator.unit;
-    add(indicator.value, unit); add(indicator.change, unit, true); add(indicator.changePct, "%", true);
+    const measured = (value: number | null, outputUnit: string, directional = false) => {
+      const rounded = value === null ? null : roundMarketValue(value);
+      add(value, outputUnit, directional, outputUnit === "%" ? 2 : rounded === null ? 0 : decimalPlaces(rounded));
+    };
+    measured(indicator.value, unit); measured(indicator.change, unit, true); measured(indicator.changePct, "%", true);
   }
   add(input.model?.poolSize ?? null, "개");
   add(input.stocks.length, "개");
   for (const stock of input.stocks) {
-    add(stock.rank, "위"); add(stock.rankScore, ""); add(stock.poolSize, "개"); add(stock.topPercent, "%");
+    add(stock.rank, "위"); add(stock.rankScore, ""); add(stock.poolSize, "개"); add(Number(stock.topPercent.toFixed(2)), "%", false, 2);
     add(stock.news.articles.length, "건");
     for (const article of stock.news.articles) {
       addDate(article.pubDate);

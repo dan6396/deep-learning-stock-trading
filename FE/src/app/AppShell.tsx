@@ -27,13 +27,14 @@ export function AppShell() {
       </nav>
       <div className="ds-header-actions">
         <SearchDialog />
+        <ConnectionNotice />
         <button type="button" onClick={toggleTheme} aria-label={theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"} className="ds-theme-button">
           {theme === "dark" ? <Sun aria-hidden="true" size={18} /> : <Moon aria-hidden="true" size={18} />}
         </button>
-        <AnalysisDialog />
+        {import.meta.env.VITE_DEMO_HIDE_RUN !== "1" && <AnalysisDialog />}
       </div>
     </header>
-    <main id="main-content" data-route-path={pathname} tabIndex={-1} className={`ds-main${pathname === paths.briefing ? " ds-main-briefing" : ""} px-7 pt-5 pb-12 focus:outline-none`}><ConnectionNotice /><Outlet /></main>
+    <main id="main-content" data-route-path={pathname} tabIndex={-1} className={`ds-main${pathname === paths.briefing ? " ds-main-briefing" : ""} px-7 pt-5 pb-12 focus:outline-none`}><Outlet /></main>
     <footer className="ds-footer">
       <div><strong>{BRAND_NAME}</strong><p>예측은 실제 성과와 다릅니다. 데이터의 출처와 기준 시각을 함께 확인하세요.</p></div>
       <nav aria-label="서비스 안내"><NavLink to={paths.about}>서비스 소개</NavLink><NavLink to={paths.history}>기록 확인</NavLink></nav>

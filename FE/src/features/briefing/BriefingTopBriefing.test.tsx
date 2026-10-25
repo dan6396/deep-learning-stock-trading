@@ -224,10 +224,8 @@ describe("BriefingMacroGrid", () => {
     };
 
     render(<BriefingMacroGrid macro={unavailableMacro} />);
-    expect(screen.getByTestId("macro-value-UST10Y")).toHaveTextContent("미수집");
-    expect(screen.getByTestId("macro-change-UST10Y")).toHaveTextContent("미수집");
-    // 기준 시각 미표시 확인 (기준: —)
-    expect(screen.getByText("기준: —")).toBeInTheDocument();
+    expect(screen.queryByTestId("macro-card-UST10Y")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("시장 지표를 불러오지 못했습니다");
   });
 });
 
@@ -248,7 +246,7 @@ describe("BriefingNarrativeCard", () => {
     );
 
     // AI Badge
-    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · gemini-2.5-flash");
+    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약");
     expect(screen.getByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다")).toBeInTheDocument();
     expect(screen.getByTestId("narrative-macro-as-of")).toHaveTextContent("요약에 쓴 지표 시점 10/23 15:30 KST");
     expect(screen.getByTestId("narrative-macro-as-of")).toHaveAttribute("title", "지표별 기준 시각은 시장 지표 카드 참고");
@@ -280,7 +278,7 @@ describe("BriefingNarrativeCard", () => {
       />
     );
 
-    expect(screen.getByTestId("narrative-badge-rule")).toHaveTextContent("자동 생성 요약(규칙 기반)");
+    expect(screen.getByTestId("narrative-badge-rule")).toHaveTextContent("자동 생성 요약");
     // 권장 5: generation_timeout 매핑 텍스트 확인
     expect(screen.getByText("AI 요약 생성 시간이 초과되어 규칙 기반 요약을 표시합니다")).toBeInTheDocument();
     expect(screen.getByText("요약 작성 이후 시장 지표가 갱신되었습니다")).toBeInTheDocument();
@@ -734,7 +732,7 @@ describe("KOSPI200_NIGHT & 7 Indicators Layout", () => {
     expect(screen.getByText("야간 종가")).toBeInTheDocument();
   });
 
-  it("renders '미수집' only once when KOSPI200_NIGHT is unavailable", () => {
+  it("omits an unavailable night indicator while preserving other measured indicators", () => {
     const unavailableNightMacro: typeof mockExtendedBriefingData.macro = {
       ...mockExtendedBriefingData.macro,
       indicators: mockExtendedBriefingData.macro.indicators.map((ind) =>
@@ -742,8 +740,8 @@ describe("KOSPI200_NIGHT & 7 Indicators Layout", () => {
       ),
     };
     render(<BriefingMacroGrid macro={unavailableNightMacro} />);
-    expect(screen.getByTestId("macro-value-KOSPI200_NIGHT")).toHaveTextContent("미수집");
-    expect(screen.getByTestId("macro-change-KOSPI200_NIGHT")).toHaveTextContent("—");
+    expect(screen.queryByTestId("macro-card-KOSPI200_NIGHT")).not.toBeInTheDocument();
+    expect(screen.getByTestId("macro-card-KOSPI")).toBeInTheDocument();
   });
 });
 
@@ -1181,20 +1179,21 @@ describe("Narrative fieldSources & partial_template (서버 계약 optional 추�
     );
 
     // 1. partial_template 배지 확인
-    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · 일부 규칙 기반");
+    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · 검증 통과 문장만 표시");
 
     // 2. 안내 문구 확인
     expect(screen.getByTestId("narrative-partial-template-notice")).toHaveTextContent(
-      "일부 문장이 검증 기준을 통과하지 못해 규칙 기반 문장으로 대체되었습니다"
+      "입력 근거를 확인한 문장만 표시합니다"
     );
 
     // 3. overview 필드 '규칙 기반' 태그 확인
-    expect(screen.getByTestId("field-source-overview")).toHaveTextContent("규칙 기반");
+    expect(screen.getByTestId("field-source-overview")).toHaveTextContent("자동 생성");
     // marketNote는 llm이므로 태그 없음
     expect(screen.queryByTestId("field-source-market-note")).not.toBeInTheDocument();
 
     // 4. 종목 요약 '규칙 기반' 태그 확인
-    expect(screen.getByTestId("stock-source-005930")).toHaveTextContent("규칙 기반");
+    expect(screen.getByTestId("stock-source-005930")).toHaveTextContent("자동 생성");
+    expect(screen.getByTestId("narrative-partial-template-notice")).not.toHaveClass("is-warning");
   });
 
   it("handles missing optional fieldSources and stock.source gracefully", () => {
@@ -1229,7 +1228,7 @@ describe("Narrative fieldSources & partial_template (서버 계약 optional 추�
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · gemini-2.5-flash");
+    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약");
     expect(screen.queryByTestId("narrative-partial-template-notice")).not.toBeInTheDocument();
     expect(screen.queryByTestId("field-source-overview")).not.toBeInTheDocument();
     expect(screen.queryByTestId("stock-source-005930")).not.toBeInTheDocument();

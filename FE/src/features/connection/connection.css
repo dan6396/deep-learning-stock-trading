@@ -18,3 +18,14 @@
   @media (max-width: 520px) { .connection-notice { padding: 0 12px; } .connection-notice-results { display: grid; gap: 2px; } .connection-notice-heading { gap: 6px; } .connection-notice-heading strong { font-size: 12px; } }
 }
 
+@layer components {
+  .connection-notice { position: relative; flex-shrink: 0; margin: 0; padding: 0; border: 0; background: transparent; }
+  .connection-notice .connection-notice-heading { min-height: 36px; gap: 6px; padding: 4px 8px; border-radius: 8px; }
+  .connection-notice-heading > span { margin: 0; color: var(--ds-fg-2); }
+  .connection-notice-heading .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ds-fg-2); }
+  .connection-notice-heading .connection-dot.connection-attention { background: var(--ds-warn); }
+  .connection-notice-body { position: absolute; z-index: 50; right: 0; top: 46px; width: min(420px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--ds-line); border-radius: 12px; background: var(--ds-surface); box-shadow: 0 12px 36px #0003; }
+  .connection-notice-body > strong { display: block; margin-bottom: 12px; color: var(--ds-fg); }
+  .connection-notice-body button { margin-top: 8px; }
+  @media (max-width: 520px) { .connection-notice { padding: 0; } .connection-notice .connection-notice-heading { padding: 4px; } .connection-notice-body { position: fixed; top: 68px; right: 16px; } }
+}

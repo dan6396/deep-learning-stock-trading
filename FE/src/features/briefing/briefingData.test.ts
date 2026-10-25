@@ -8,7 +8,7 @@ describe("briefing factual summaries", () => {
   it("summarizes model rank without exposing retained supply data", () => {
     const row = adaptCandidate(pipelineRow({ pred_rank: 1, pred_pool_size: 199, foreign_net_buy_sum: -430_000_000, inst_net_buy_sum: -450_000_000, supply_window: 5 })).data;
     const summary = evidenceSummary({ ...row, supply: { ...row.supply, window: 5 } });
-    expect(summary).toBe("모델 예측 199종목 중 1위");
+    expect(summary).toBe("모델 순위 199종목 중 1위");
     expect(evidenceSummary({ ...row, rank: null, supply: { ...row.supply, window: null, combinedNetBuy: null } })).toBe("모델 원본 순위 미제공");
     expect(formatBillions(0)).toBe("0.0억"); expect(formatBillions(null)).toBe("—");
   });

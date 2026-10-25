@@ -1,0 +1,18 @@
+@layer components {
+  .price-chart { width: 100%; min-width: 0; font-size: 12px; color: var(--ds-fg); }
+  .price-chart-heading { line-height: 1.8; margin: 12px 0 0; }
+  .price-chart-muted { color: var(--ds-fg-2); font-size: 12px; }
+  .price-chart-interactive { position: relative; width: 100%; touch-action: pan-y; }
+  .price-chart-tooltip { position: absolute; top: 0; z-index: 1; pointer-events: none; display: grid; gap: 2px; padding: 5px 8px; border: 1px solid var(--ds-line); border-radius: 6px; background: var(--ds-surface); font-size: 12px; line-height: 1.5; }
+  .price-chart-interactive:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; border-radius: 4px; }
+  .price-chart-interactive svg { display: block; width: 100%; font: 12px sans-serif; overflow: visible; }
+  .price-chart-interactive text { fill: var(--ds-fg-2); }
+  .price-chart-interactive .price-chart-extreme { fill: var(--ds-fg); paint-order: stroke; stroke: var(--ds-surface); stroke-width: 4px; stroke-linejoin: round; }
+  .price-chart-interactive [data-price-last-label] { fill: var(--ds-fg); font-weight: 700; }
+  .price-chart-explore { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .price-chart-explore p { flex: 1; min-width: 0; text-align: center; line-height: 1.7; }
+  .price-chart-explore button { flex-shrink: 0; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--ds-line); border-radius: 8px; background: var(--ds-surface-2); color: var(--ds-fg); cursor: pointer; }
+  .price-chart-explore button:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+  .price-chart-explore button:disabled { opacity: .5; cursor: default; }
+  .price-chart-explore button > svg { width: 16px; height: 16px; margin: 0; }
+}

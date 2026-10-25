@@ -24,4 +24,37 @@ describe("process KIS token bucket", () => {
     expect(kisMaxRps({ KIS_MAX_RPS: "3" }, "mock")).toBe(1);
     expect(kisMaxRps({ KIS_MAX_RPS: "0.5" }, "mock")).toBe(0.5);
   });
+  it("gives a newly arrived user the next slot ahead of queued background work", async () => {
+    let time = 0, release;
+    const order = [];
+    const limiter = createKisRequestLimiter({ now: () => time, wait: ms => new Promise(resolve => { release = () => { time += ms; resolve(); }; }) });
+    await limiter.take(1, "background");
+    const background = limiter.take(1, "background").then(() => order.push("background"));
+    await Promise.resolve();
+    const user = limiter.take(1).then(() => order.push("user"));
+    release(); await user; expect(order).toEqual(["user"]);
+    release(); await background; expect(order).toEqual(["user", "background"]);
+  });
+  it("caps background permits at thirty per minute while preserving the common one-RPS ceiling", async () => {
+    let time = 0; const starts = [];
+    const limiter = createKisRequestLimiter({ now: () => time, wait: async ms => { time += ms; } });
+    for (let i = 0; i < 31; i++) { await limiter.take(1, "background"); starts.push(time); }
+    expect(starts.filter(value => value < 60_000)).toHaveLength(30);
+    expect(starts[30]).toBe(60_000);
+    for (let i = 1; i < starts.length; i++) expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(2000);
+  });
+  it("promotes a cold shared chart's queued and future pages when a user joins, then releases the promotion", async () => {
+    let time = 0, release; const order = [];
+    const limiter = createKisRequestLimiter({ now: () => time, wait: ms => new Promise(resolve => { release = () => { time += ms; resolve(); }; }) });
+    await limiter.take(1, "background", "other");
+    const other = limiter.take(1, "background", "other").then(() => order.push("other"));
+    const chart = limiter.take(1, "background", "chart").then(() => order.push("chart"));
+    await Promise.resolve(); limiter.promote("chart"); release(); await chart;
+    expect(order).toEqual(["chart"]); expect(time).toBe(1000);
+    expect(limiter.priority("chart", "background")).toBe("user");
+    const nextPage = limiter.take(1, "background", "chart").then(() => order.push("next-page"));
+    release(); await nextPage; expect(order).toEqual(["chart", "next-page"]);
+    limiter.release("chart"); expect(limiter.priority("chart", "background")).toBe("background");
+    release(); await other; expect(order).toEqual(["chart", "next-page", "other"]);
+  });
 });

@@ -1654,3 +1654,19 @@
     .briefing-svg-bar { transition: none; }
   }
 }
+
+@layer components {
+  .briefing-session-notice { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px; margin: 0 0 16px; border: 1px solid var(--ds-line); border-radius: 10px; background: var(--ds-surface); color: var(--ds-fg-2); font-size: 13px; line-height: 1.7; }
+  .briefing-session-notice > svg { flex-shrink: 0; margin-top: 3px; }
+  .briefing-session-notice p { margin: 0; }
+  .briefing-session-notice a { display: inline-block; min-height: 24px; color: var(--ds-link); text-decoration: underline; text-underline-offset: 3px; }
+}
+/* Observations use neutral tones; values remain available as an accessible table. */
+.briefing-correlation-block { margin: 20px 0; padding-top: 16px; border-top: 1px solid var(--ds-line); }
+.briefing-correlation-block p { margin: 8px 0; }
+.briefing-correlation-scroll { overflow-x: auto; margin: 12px 0; }
+.briefing-correlation-scroll:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+.briefing-correlation-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.briefing-correlation-table th, .briefing-correlation-table td { padding: 8px 6px; border: 1px solid var(--ds-line); text-align: center; min-width: 55px; }
+.briefing-correlation-table caption { text-align: left; color: var(--ds-fg-2); padding-bottom: 8px; }
+.briefing-stock-observations { color: var(--ds-fg-2); font-size: 12px; line-height: 1.6; margin: 12px 0 4px; }

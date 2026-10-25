@@ -43,5 +43,5 @@ export function RankPage() {
         : !rank.isError && <p className="rank-empty">{rank.data?.data.length ? activeFilter === "candidate" && !confirmed ? "최종 후보 목록을 확인할 수 없어 필터 결과를 제공하지 않습니다." : "검색 조건에 맞는 종목이 없습니다." : "최신 전체 분석 결과가 비어 있습니다."}</p>}
       {rows.length > 0 && <nav className="rank-pagination" aria-label="전체 순위 페이지"><span aria-live="polite">{current + 1} / {pages}페이지 · {rows.length}종목</span><button className="rank-button" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="이전 순위 페이지"><ChevronLeft aria-hidden="true" size={16} />이전</button><button className="rank-button" disabled={current === pages - 1} onClick={() => setPage(current + 1)} aria-label="다음 순위 페이지">다음<ChevronRight aria-hidden="true" size={16} /></button></nav>}
       <p className="rank-muted rank-help">누락값은 —이며 양방향 정렬 모두 마지막에 표시합니다. 화면 순서를 모델 순위로 만들지 않습니다. {rankModel ? "원본 모델 순위·순위 점수와 확인된 기사 수를 표시합니다." : modelOnly ? "모델 원본 예측과 모델 신호를 표시합니다." : "최종 후보 여부는 모델 판정에만 사용하고, 뉴스는 실제 원본 근거로 평가합니다."}</p>
-    </section><p className="rank-muted">모델 예측은 투자 추천·수익 보장·실현 성과가 아닙니다. 다음 거래일은 거래일 달력 미연결로 미확인입니다.</p></div>;
+    </section><p className="rank-muted">순위는 다음 거래일 시가→종가 상대 순위입니다. 하루 등락만으로 모델을 평가하지 않습니다. 투자 추천·수익 보장·실현 성과가 아닙니다.</p></div>;
 }

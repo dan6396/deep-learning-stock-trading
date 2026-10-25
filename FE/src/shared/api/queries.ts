@@ -4,7 +4,7 @@ import { adaptChart, adaptDashboard, adaptIndex, adaptQuote } from "../../entiti
 import { adaptBriefing, type BriefingPayload } from "../../entities/briefing";
 import { aggregateSource } from "../../entities/source";
 import { record, stockCode } from "../../entities/value";
-import type { TimeRange } from "../../types/stockChart";
+import { TIME_RANGES, type TimeRange } from "../../types/stockChart";
 import type { BackendStatus, PipelineAvailability } from "../../types/backendStatus";
 import { apiClient, type ApiClient } from "./client";
 import type { PerformancePayload } from "../../types/performance";
@@ -53,8 +53,8 @@ export function createQueries(client: ApiClient = apiClient) {
       const response = await client.request("/api/korean-market/dashboard", { signal, timeoutMs: 75000 });
       return adaptDashboard(response.data, response);
     } }),
-    indices: () => queryOptions({ queryKey: queryKeys.indices(), staleTime: 15000, queryFn: async ({ signal }) => {
-      const response = await client.request("/api/korean-market/indices", { signal });
+    indices: () => queryOptions({ queryKey: queryKeys.indices(), staleTime: 20000, gcTime: 30 * 60_000, queryFn: async ({ signal }) => {
+      const response = await client.request("/api/korean-market/indices", { signal, timeoutMs: 75000 });
       if (!Array.isArray(response.data)) throw new Error("지수 응답이 배열이 아닙니다.");
       const data = response.data.map(index => adaptIndex(index, response));
       return { ...response, data, source: aggregateSource([response.source, ...data.map(index => index.source)]) };
@@ -80,8 +80,8 @@ export function createQueries(client: ApiClient = apiClient) {
     } }),
     quote: (code: string) => {
       const normalized = requireCode(code);
-      return queryOptions({ queryKey: queryKeys.quote(normalized), queryFn: async ({ signal }) => {
-        const response = await client.request(`/api/korean-market/quote?symbol=${normalized}`, { signal });
+      return queryOptions({ queryKey: queryKeys.quote(normalized), staleTime: 20000, gcTime: 30 * 60_000, queryFn: async ({ signal }) => {
+        const response = await client.request(`/api/korean-market/quote?symbol=${normalized}`, { signal, timeoutMs: 75000 });
         if (response.data === null) return { ...response, data: null };
         const adapted = adaptQuote(response.data, normalized, response);
         return { ...adapted, source: aggregateSource([adapted.source, response.source]) };
@@ -89,9 +89,18 @@ export function createQueries(client: ApiClient = apiClient) {
     },
     chart: (code: string, range: TimeRange) => {
       const normalized = requireCode(code);
-      return queryOptions({ queryKey: queryKeys.chart(normalized, range), queryFn: async ({ signal }) => {
+      return queryOptions({ queryKey: queryKeys.chart(normalized, range), staleTime: range === "1D" ? 60000 : 10 * 60_000, gcTime: 30 * 60_000, queryFn: async ({ signal, client: cache }) => {
         const response = await client.request(`/api/korean-market/stock-chart?symbol=${normalized}`, { signal, timeoutMs: 75000 });
         const adapted = adaptChart(response.data, normalized, range, response);
+        // One server bundle already contains every range. Populate the other tabs as well,
+        // while keeping code/range validation and authoritative missing values intact.
+        const ranges = record(record(response.data).chartData).ranges;
+        for (const other of TIME_RANGES) {
+          const supplied = record(record(ranges)[other]);
+          if (other === range || !Array.isArray(supplied.prices) || !Array.isArray(supplied.candles)) continue;
+          const sibling = adaptChart(response.data, normalized, other, response);
+          cache.setQueryData(queryKeys.chart(normalized, other), { ...sibling, source: aggregateSource([sibling.source, response.source]) });
+        }
         return { ...adapted, source: aggregateSource([adapted.source, response.source]) };
       } });
     },

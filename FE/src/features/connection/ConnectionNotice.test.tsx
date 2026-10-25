@@ -28,7 +28,7 @@ describe("compact connection status", () => {
   });
   it("automatically exposes a failed status request and offers a read-only retry", async () => {
     mount(async () => new Response("{}", { status: 502 }));
-    await screen.findByText("확인 필요");
+    await screen.findByText("주의");
     await waitFor(() => expect(document.querySelector(".connection-disclosure")).toHaveAttribute("open"));
     expect(screen.getByRole("status")).toHaveTextContent("연결 상태 미확인");
     expect(screen.getByRole("button", { name: "연결 상태 다시 확인" })).toBeVisible();
@@ -62,7 +62,7 @@ describe("compact connection status", () => {
   it.each(["missing","empty", "invalid", "stale", "sample", "unknown"])("opens when model results are %s", async state => {
     const body = backendStatusBody({ state: "not_produced" }); body.results.rank.state = state;
     mount(async () => jsonResponse(body));
-    await screen.findByText("확인 필요");
+    await screen.findByText("주의");
     await waitFor(() => expect(document.querySelector(".connection-disclosure")).toHaveAttribute("open"));
   });
 });

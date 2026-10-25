@@ -5,6 +5,7 @@ import { formatKstTime } from "../../entities/briefing";
 import { useAppPaths } from "../../app/paths";
 import { formatNumber } from "../../shared/lib/format";
 import { Layers, AlertTriangle, ArrowRight, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { CompositionObservations } from "./CompositionObservations";
 
 export type BriefingCompositionCardProps = {
   composition: BriefingComposition | null | undefined;
@@ -101,6 +102,7 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
         </div>
       )}
 
+      <CompositionObservations data={composition.diversification} stocks={stocks} />
       {/* 2. 동일 비중 실측 기록 */}
       <div className="briefing-composition-perf-block" data-testid="composition-performance">
         <div className="briefing-composition-subheading-row">
