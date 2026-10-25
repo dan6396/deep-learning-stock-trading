@@ -189,7 +189,7 @@ function hasUnnegatedPhrase(text: string, unsafe: RegExp): boolean {
   for (const clause of text.split(/[.!?。;\n,，]|하지만|그러나|다만|반면|지만/)) {
     // Exempt complete coordinated noun phrases, including overlapping unsafe matches.
     const negated = /아니라/.test(clause) ? [] : [...clause.matchAll(directDisclaimer)]
-      .filter(match => { const tail = clause.slice(match.index! + match[0].length); return /^\s*으며\s/.test(tail) || !/아니|아닙|아님|않|없/.test(tail); });
+      .filter(match => { const tail = clause.slice(match.index! + match[0].length); return /^\s*으며\s/.test(tail) || /아니며$/.test(match[0]) && /^\s+/.test(tail) || !/아니|아닙|아님|않|없/.test(tail); });
     for (const match of clause.matchAll(unsafe)) {
       if (!negated.some(denial => denial.index! <= match.index! && denial.index! + denial[0].length >= match.index! + match[0].length)) return true;
     }

@@ -87,7 +87,7 @@ describe("briefing narrative guard", () => {
   it("repairs only newly invalid fields of an older persisted cache without calling Gemini", async () => {
     const data = input(), transport = vi.fn(async () => response());
     await createNarrativeStore({ transport }).resolve(data, true, env);
-    for (const [path, body] of disk) { const cached = JSON.parse(body); cached.narrative.overview = "환율은 1324.92 KRW입니다. 시장 관측 자료입니다."; disk.set(path, JSON.stringify(cached)); }
+    for (const [path, body] of disk) { const cached = JSON.parse(body); delete cached.rawFields; cached.narrative.overview = "환율은 1324.92 KRW입니다. 시장 관측 자료입니다."; disk.set(path, JSON.stringify(cached)); }
     const result = await createNarrativeStore({ transport }).resolve(data, false, env);
     expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template", fieldSources: { overview: "template", marketNote: "llm" } });
     expect(result.overview).not.toContain("KRW"); expect(result.stocks[0].source).toBe("llm"); expect(transport).toHaveBeenCalledOnce();
@@ -366,6 +366,49 @@ describe("briefing narrative guard", () => {
 });
 
 describe("Gemini narrative generation and cache", () => {
+  it("restores previously rejected raw fields only after current validation, preserving identity and metadata", async () => {
+    const data = input(), transport = vi.fn(async () => response()), original = content();
+    const first = await createNarrativeStore({ transport }).resolve(data, true, env);
+    for (const [path, body] of disk) {
+      const cached = JSON.parse(body), fallback = templateNarrative(data, "forbidden_content", Date.parse(first.generatedAt));
+      cached.narrative = { ...fallback, llmModel: null }; cached.lastFailureAt = Date.now();
+      cached.rawFields.overview.text = "순위 점수는 수익률이 아니며 확률을 의미하지 않습니다. 입력 사실을 설명합니다.";
+      disk.set(path, JSON.stringify(cached));
+    }
+    const store = createNarrativeStore({ transport }), result = await store.resolve(data, false, env);
+    expect(result).toMatchObject({ status: "llm", fallbackReason: null, llmModel: first.llmModel, generatedAt: first.generatedAt,
+      inputHash: first.inputHash, fieldSources: { overview: "llm", marketNote: "llm" } });
+    expect(result.overview).toContain("아니며"); expect(result.stocks[0]).toMatchObject({ source: "llm", summary: original.stocks[0].summary });
+    expect(await store.resolve(data, true, env)).toEqual(result); expect(transport).toHaveBeenCalledOnce();
+    expect(JSON.stringify(result)).not.toMatch(/rawFields|provenance|response/);
+  });
+  it.each(["매수하세요.", "기관 매수세가 유입됐습니다.", "순 매수가 외국인에게 확인됐습니다."])("never trusts raw text that fails current rules: %s", async summary => {
+    const data = input(), transport = vi.fn(async () => response());
+    await createNarrativeStore({ transport }).resolve(data, true, env);
+    for (const [path, body] of disk) { const cached = JSON.parse(body); cached.rawFields.stocks["005930"].text = summary; disk.set(path, JSON.stringify(cached)); }
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const store = createNarrativeStore({ transport }), result = await store.resolve(data, false, env);
+      expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template" });
+      expect(result.stocks[0]).toEqual(templateNarrative(data, null).stocks[0]);
+      const count = warning.mock.calls.length;
+      await store.resolve(data, false, env); await store.resolve(data, true, env);
+      expect(warning).toHaveBeenCalledTimes(count); expect(transport).toHaveBeenCalledOnce();
+    } finally { warning.mockRestore(); }
+  });
+  it("rejects unknown raw citations and all-raw failures without leaking raw fields", async () => {
+    const data = input(), transport = vi.fn(async () => response()); await createNarrativeStore({ transport }).resolve(data, true, env);
+    for (const [path, body] of disk) { const cached = JSON.parse(body);
+      cached.rawFields.overview.citations = ["M:FAKE"]; cached.rawFields.marketNote.text = "매수하세요.";
+      cached.rawFields.stocks["005930"].text = "전체 999개 중 1위입니다."; disk.set(path, JSON.stringify(cached)); }
+    const result = await createNarrativeStore({ transport }).resolve(data, false, env);
+    expect(result).toMatchObject({ status: "template", fallbackReason: "invalid_citation", fieldSources: { overview: "template", marketNote: "template" }, llmModel: null });
+    expect(result.stocks[0].source).toBe("template"); expect(transport).toHaveBeenCalledOnce();
+  });
+  it.each(["순위 점수는 수익률이 아니며 확률을 의미하지 않습니다.", "이 설명은 매수 권유가 아니며 수익을 보장하지 않습니다."])("accepts coordinated direct disclaimers ending in 아니며: %s", value => {
+    expect(forbiddenNarrative(value)).toBe(false);
+    for (const bypass of ["관망이 아니라 매수 타이밍입니다", "확률이 아니라 확실한 추세", "매수 추천이 전혀 없는 것은 아닙니다", "목표주가는 허황된 수치가 아닙니다", "나스닥 상승 영향으로 강세이나 과열은 아닙니다", "확률이 아니며 높은 수익률이 기대됩니다."]) expect(forbiddenNarrative(bypass) || forbiddenCausality(bypass)).toBe(true);
+  });
   it("reuses a successful explanation when a night indicator recovers, ignoring macro caution IDs", async () => {
     const data = input(); data.stocks[0].cautions.push({ id: "C:005930:2", kind: "macro", text: "일부 시장 지표를 확보하지 못했습니다." }, { id: "C:005930:3", kind: "data", text: "모델 기준일은 2026-10-22입니다." });
     data.macro.indicators.push({ id: "KOSPI200_NIGHT", name: "코스피200 야간선물", value: null, change: null, changePct: null, asOf: null, status: "unavailable", source: "kis", unit: "pt" });
@@ -508,7 +551,7 @@ describe("Gemini narrative generation and cache", () => {
   });
   it("replaces a corrupted persisted stock field while retaining independently validated fields", async () => {
     const transport = vi.fn(async () => response()); await createNarrativeStore({ transport }).resolve(input(), true, env);
-    for (const [path, body] of disk) { const cache = JSON.parse(body); cache.narrative.stocks[0].summary = "매수하세요."; disk.set(path, JSON.stringify(cache)); }
+    for (const [path, body] of disk) { const cache = JSON.parse(body); delete cache.rawFields; cache.narrative.stocks[0].summary = "매수하세요."; disk.set(path, JSON.stringify(cache)); }
     const result = await createNarrativeStore({ transport }).resolve(input(), false, env);
     expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template" });
     expect(result.stocks[0].source).toBe("template"); expect(JSON.stringify(result)).not.toContain("매수하세요");

@@ -1,0 +1,190 @@
+{
+  "recordType": "existing_execution_verification_summary",
+  "baseDate": "2026-10-23",
+  "targetSession": "2026-10-26",
+  "predictionTarget": "next_session_open_to_close",
+  "modelId": "plain_20_120_rank_mean_v1",
+  "scoreKind": "rank_zscore",
+  "rows": 199,
+  "valid": 199,
+  "failed": 0,
+  "extraColumns": [
+    "rank_lb20",
+    "rank_lb120",
+    "score_lb20",
+    "score_lb120",
+    "model_agreement",
+    "feat_pct_f_open",
+    "feat_pct_f_high",
+    "feat_pct_f_low",
+    "feat_pct_f_close",
+    "feat_pct_f_volume",
+    "feat_pct_f_rsi",
+    "feat_pct_f_macd",
+    "feat_pct_f_macd_signal",
+    "feat_pct_f_pct_b",
+    "feat_pct_f_norm_bw",
+    "feat_pct_f_rel_bw"
+  ],
+  "extraMissingValid": 0,
+  "failedValuesPresent": 0,
+  "rawShape": [
+    6,
+    199
+  ],
+  "maxFinalScoreError": 0,
+  "bitIdentical": true,
+  "lookbacksAndPercentilesExact": true,
+  "top5": [
+    {
+      "ticker": "055550",
+      "company_name": "신한지주",
+      "pred_rank": 1,
+      "rank_score": 1.6479351430472728,
+      "rank_lb20": 1,
+      "rank_lb120": 4,
+      "model_agreement": "일치"
+    },
+    {
+      "ticker": "047810",
+      "company_name": "한국항공우주",
+      "pred_rank": 2,
+      "rank_score": 1.5579950208034956,
+      "rank_lb20": 11,
+      "rank_lb120": 2,
+      "model_agreement": "일치"
+    },
+    {
+      "ticker": "042660",
+      "company_name": "한화오션",
+      "pred_rank": 3,
+      "rank_score": 1.523179489612356,
+      "rank_lb20": 15,
+      "rank_lb120": 1,
+      "model_agreement": "일치"
+    },
+    {
+      "ticker": "003490",
+      "company_name": "대한항공",
+      "pred_rank": 4,
+      "rank_score": 1.502870429750858,
+      "rank_lb20": 9,
+      "rank_lb120": 7,
+      "model_agreement": "일치"
+    },
+    {
+      "ticker": "004000",
+      "company_name": "롯데정밀화학",
+      "pred_rank": 5,
+      "rank_score": 1.453548427230077,
+      "rank_lb20": 5,
+      "rank_lb120": 21,
+      "model_agreement": "일치"
+    }
+  ],
+  "previousBaseDates": [
+    "2026-10-22"
+  ],
+  "previousTop5": [
+    {
+      "ticker": "042660",
+      "company_name": "한화오션"
+    },
+    {
+      "ticker": "004000",
+      "company_name": "롯데정밀화학"
+    },
+    {
+      "ticker": "004170",
+      "company_name": "신세계"
+    },
+    {
+      "ticker": "088350",
+      "company_name": "한화생명"
+    },
+    {
+      "ticker": "071970",
+      "company_name": "HD현대마린엔진"
+    }
+  ],
+  "narrativeRevalidation": {
+    "inputHash": "de527d703da3079dc776ded944d307a1a591e59d89c64375eb2a93fdd34ae821",
+    "generatedAt": "2026-10-25T03:25:44.036Z",
+    "llmModel": "gemini-3.8-flash",
+    "status": "llm",
+    "fallbackReason": null,
+    "fieldSources": {
+      "overview": "llm",
+      "marketNote": "llm"
+    },
+    "stockSources": [
+      {
+        "code": "055550",
+        "source": "llm"
+      },
+      {
+        "code": "047810",
+        "source": "llm"
+      },
+      {
+        "code": "042660",
+        "source": "llm"
+      },
+      {
+        "code": "003490",
+        "source": "llm"
+      },
+      {
+        "code": "004000",
+        "source": "llm"
+      }
+    ],
+    "validationVersion": "2026-10-25-raw-fields-v1",
+    "provenance": "gemini-3.8-flash 2026-10-25T03:25:44.036Z 응답, 비밀 제거 거부 로그에서 복원; 인용은 기존 캐시와 입력 사실로 재검증",
+    "restoredRawFields": [
+      "overview",
+      "stocks.055550.summary",
+      "stocks.004000.summary"
+    ],
+    "hashUnchanged": true,
+    "generatedAtUnchanged": true,
+    "paidCalls": 0
+  },
+  "getAfterRevalidation": {
+    "http": 200,
+    "status": "ready",
+    "baseDate": "2026-10-23",
+    "inputHash": "de527d703da3079dc776ded944d307a1a591e59d89c64375eb2a93fdd34ae821",
+    "generatedAt": "2026-10-25T03:25:44.036Z",
+    "llmModel": "gemini-3.8-flash",
+    "narrativeStatus": "llm",
+    "fallbackReason": null,
+    "fieldSources": {
+      "overview": "llm",
+      "marketNote": "llm"
+    },
+    "stocks": [
+      {
+        "code": "055550",
+        "source": "llm"
+      },
+      {
+        "code": "047810",
+        "source": "llm"
+      },
+      {
+        "code": "042660",
+        "source": "llm"
+      },
+      {
+        "code": "003490",
+        "source": "llm"
+      },
+      {
+        "code": "004000",
+        "source": "llm"
+      }
+    ],
+    "rawDataExposed": false
+  }
+}

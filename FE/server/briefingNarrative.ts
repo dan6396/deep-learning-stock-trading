@@ -22,6 +22,9 @@ declare const process: { env: Record<string, string | undefined> };
 export const DEFAULT_BRIEFING_MODEL = "gemini-3.8-flash";
 type FieldSource = "llm" | "template";
 type NarrativeContent = { overview: string; marketNote: string; stocks: { code: string; summary: string; citations: string[]; source?: FieldSource }[]; citations: string[] };
+export const NARRATIVE_VALIDATION_VERSION = "2026-10-25-raw-fields-v1";
+type RawField = { text: string; citations: string[]; provenance: string };
+type RawFields = { overview?: RawField; marketNote?: RawField; stocks?: Record<string, RawField> };
 export type BriefingNarrative = NarrativeContent & {
   status: "llm" | "template"; generatedAt: string; llmModel: string | null; inputHash: string; fallbackReason: string | null;
   macroAsOf?: string | null; macroStale?: boolean;
@@ -162,6 +165,51 @@ function revalidateCachedNarrative(narrative: BriefingNarrative, input: Briefing
   return repaired;
 }
 
+/** Raw text is only a candidate: current field guards and the pinned facts always decide. */
+function revalidateRawFields(narrative: BriefingNarrative, input: BriefingInput, raw: RawFields): BriefingNarrative {
+  const result = structuredClone(revalidateCachedNarrative(narrative, input));
+  result.fieldSources ??= { overview: "llm", marketNote: "llm" };
+  result.stocks = result.stocks.map(stock => ({ ...stock, source: stock.source ?? "llm" }));
+  const fallback = templateNarrative(input, null, Date.parse(narrative.generatedAt));
+  const globalIds = citationIds(input), globalCitations: string[] = [];
+  const validRaw = (value: unknown): value is RawField => record(value) && exactKeys(value, ["text", "citations", "provenance"])
+    && text(value.text) && stringArray(value.citations) && value.citations.length > 0 && text(value.provenance);
+  let firstReason: string | null = null;
+  for (const field of ["overview", "marketNote"] as const) {
+    const candidate = raw[field];
+    if (candidate === undefined) { globalCitations.push(...result.citations); continue; }
+    const reason = !validRaw(candidate) ? "invalid_schema" : candidate.citations.some(id => !globalIds.has(id)) ? "invalid_citation" : textReason(candidate.text, input, field === "overview");
+    result[field] = reason ? fallback[field] : candidate!.text;
+    result.fieldSources = { ...result.fieldSources!, [field]: reason ? "template" : "llm" };
+    globalCitations.push(...(reason ? fallback.citations : candidate!.citations));
+    if (reason) { firstReason ??= reason; console.warn("[briefing] Raw cached field replaced", { field, reason }); }
+  }
+  result.stocks = result.stocks.map((stock, index) => {
+    const candidate = raw.stocks?.[stock.code];
+    if (candidate === undefined) return stock;
+    const reason = !validRaw(candidate) ? "invalid_schema" : stockReason({ code: stock.code, summary: candidate.text, citations: candidate.citations }, input, index);
+    if (reason) { firstReason ??= reason; console.warn("[briefing] Raw cached field replaced", { field: `stocks[${index}].summary`, reason }); return fallback.stocks[index]; }
+    return { code: stock.code, summary: candidate!.text, citations: candidate!.citations, source: "llm" };
+  });
+  result.citations = [...new Set(globalCitations)];
+  const sources = [...Object.values(result.fieldSources!), ...result.stocks.map(stock => stock.source)];
+  result.status = sources.includes("llm") ? "llm" : "template";
+  result.fallbackReason = result.status === "llm" ? sources.includes("template") ? "partial_template" : null : firstReason ?? result.fallbackReason ?? "invalid_schema";
+  result.llmModel = result.status === "llm" ? narrative.llmModel : null;
+  return result;
+}
+
+function captureRawFields(value: unknown, provenance: string): RawFields {
+  if (!record(value) || !exactKeys(value, ["overview", "marketNote", "stocks", "citations"])) return {};
+  const field = (content: unknown, citations: unknown): RawField | undefined => text(content) && stringArray(citations)
+    ? { text: content, citations, provenance } : undefined;
+  const stocks: Record<string, RawField> = {};
+  if (Array.isArray(value.stocks)) for (const row of value.stocks) if (record(row) && typeof row.code === "string" && /^\d{6}$/.test(row.code) && exactKeys(row, ["code", "summary", "citations"])) {
+    const candidate = field(row.summary, row.citations); if (candidate) stocks[row.code] = candidate;
+  }
+  return { overview: field(value.overview, value.citations), marketNote: field(value.marketNote, value.citations), stocks };
+}
+
 /** Strict shape, immutable stock order, grounded citations and conservative factual guards. */
 export function validateNarrative(value: unknown, input: BriefingInput): string | null {
   if (!record(value) || !exactKeys(value, ["overview", "marketNote", "stocks", "citations"]) || !text(value.overview) || !text(value.marketNote)
@@ -214,13 +262,26 @@ const systemInstruction = `당신은 한국어 시장 브리핑 편집자입니�
 사용 가능한 citation id는 M:<지표ID>, R:<종목코드>, E:<종목코드>:<번호>, C:<종목코드>:<번호>, N:<종목코드>:<번호> 중 입력에 존재하는 것뿐입니다.
 JSON에는 overview, marketNote, stocks[{code,summary,citations}], citations만 넣으세요.`;
 
-type CacheRecord = { version: 1; input: BriefingInput; inputHash: string; narrative: BriefingNarrative;
+type CacheRecord = { version: 1; input: BriefingInput; inputHash: string; narrative: BriefingNarrative; rawFields?: RawFields; rawModel?: string;
   lastAttemptAt: number; lastFailureAt: number | null };
 const failureReasons = new Set(["missing_api_key", "invalid_model", "sensitive_output", "invalid_schema", "invalid_citation",
   "forbidden_content", "ungrounded_number", "generation_timeout", "generation_failed", "partial_template"]);
 type Options = { transport?: typeof fetch; now?: () => number };
 export function createNarrativeStore({ transport = (...args) => fetch(...args), now = Date.now }: Options = {}) {
   const memory = new Map<string, CacheRecord>();
+  const validated = new Map<string, { key: string; narrative: BriefingNarrative }>();
+  const validatedRecord = (path: string, cached: CacheRecord): CacheRecord => {
+    if (!cached.rawFields || !record(cached.rawFields)) return cached;
+    const key = `${cached.inputHash}:${NARRATIVE_VALIDATION_VERSION}`;
+    let memo = validated.get(path);
+    if (memo?.key !== key) {
+      const model = typeof cached.rawModel === "string" && /^[a-zA-Z0-9._-]{1,100}$/.test(cached.rawModel) ? cached.rawModel : cached.narrative.llmModel;
+      memo = { key, narrative: revalidateRawFields({ ...cached.narrative, llmModel: model }, cached.input, cached.rawFields) };
+      validated.set(path, memo);
+    }
+    const operationalFailure = cached.lastFailureAt !== null && ["generation_failed", "generation_timeout", "missing_api_key", "sensitive_output"].includes(cached.narrative.fallbackReason ?? "") ? cached.narrative.fallbackReason : null;
+    return { ...cached, narrative: { ...memo.narrative, fallbackReason: operationalFailure ?? memo.narrative.fallbackReason } };
+  };
   let active: { path: string; hash: string; promise: Promise<BriefingNarrative> } | null = null;
   let lastFailureAt = -Infinity;
   const macroSnapshot = (input: BriefingInput) => ({ asOf: input.macro.asOf, indicators: input.macro.indicators, context: input.macro.context });
@@ -245,7 +306,7 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
   };
   const pathFor = (env: Record<string, string | undefined>) => join(pipelineOutputDir(env), "briefing-narrative.json");
   async function read(path: string): Promise<CacheRecord | null> {
-    if (memory.has(path)) return memory.get(path)!;
+    if (memory.has(path)) return validatedRecord(path, memory.get(path)!);
     try {
       const cached = JSON.parse(await readFile(path, "utf8")) as CacheRecord;
       // Keep the current hash policy: caches with a different fingerprint are not migrated.
@@ -259,11 +320,12 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
       }
       if (cached.narrative.status !== "llm" && cached.narrative.status !== "template") return null;
       if (cached.narrative.fallbackReason !== null && !failureReasons.has(cached.narrative.fallbackReason)) return null;
-      memory.set(path, cached); return cached;
+      memory.set(path, cached); return validatedRecord(path, cached);
     } catch { return null; }
   }
   async function save(path: string, cached: CacheRecord) {
     cached = structuredClone(cached);
+    validated.delete(path);
     memory.set(path, cached);
     try {
       await mkdir(dirname(path), { recursive: true });
@@ -271,7 +333,7 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
       await writeFile(temporary, JSON.stringify(cached), "utf8"); await rename(temporary, path);
     } catch { /* In-memory safety/cooldown remains effective on read-only deployments. */ }
   }
-  async function generate(input: BriefingInput, env: Record<string, string | undefined>, deadline?: number): Promise<BriefingNarrative> {
+  async function generate(input: BriefingInput, env: Record<string, string | undefined>, deadline?: number, capture?: (raw: RawFields, model: string) => void): Promise<BriefingNarrative> {
     const fallback = (reason: string) => templateNarrative(input, reason, now());
     const key = env.GEMINI_API_KEY?.trim();
     if (!key) return fallback("missing_api_key");
@@ -303,6 +365,7 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
       ]);
       // Prevent even an echoed credential from reaching disk or HTTP responses.
       if (key.length >= 16 && JSON.stringify(value).includes(key)) return fallback("sensitive_output");
+      capture?.(captureRawFields(value, `${model} ${new Date(now()).toISOString()} response`), model);
       const repaired = repairNarrative(value, input, now(), (field, reason, content) => {
         let safe = typeof content === "string" ? content : "";
         for (const [name, secret] of Object.entries(env)) if (/key|secret|token|password|account|cano/i.test(name) && secret) safe = safe.split(secret).join("[REDACTED]");
@@ -325,14 +388,16 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
     if (active) {
       if (active.path !== path || active.hash !== hash) return templateNarrative(input, "generation_in_progress", now());
       await active.promise;
-      const completed = memory.get(path);
+      const completed = await read(path);
       return completed?.inputHash === hash && completed.narrative.status === "llm" ? withMacroState(completed.narrative, completed.input, input)
         : templateNarrative(input, completed?.narrative.fallbackReason ?? "generation_failed", now());
     }
     const previousFailure = cached?.lastFailureAt ?? -Infinity;
     if (now() - Math.max(previousFailure, lastFailureAt) < 60_000) return reused ?? templateNarrative(input, cached?.inputHash === hash ? cached.narrative.fallbackReason : "cooldown", now());
     const promise = (async () => {
-      const narrative = await generate(input, env, deadline);
+      let rawFields: RawFields | undefined;
+      let rawModel: string | undefined;
+      const narrative = await generate(input, env, deadline, (raw, model) => { rawFields = raw; rawModel = model; });
       if (narrative.status === "template") lastFailureAt = now();
       // Failed refreshes do not discard the last validated explanation for this run.
       if (narrative.status === "template" && successful) {
@@ -340,7 +405,7 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
         await save(path, preserved);
         return withMacroState(preserved.narrative, preserved.input, input);
       }
-      await save(path, { version: 1, input, inputHash: hash, narrative, lastAttemptAt: now(), lastFailureAt: narrative.status === "template" ? now() : null });
+      await save(path, { version: 1, input, inputHash: hash, narrative, rawFields, rawModel, lastAttemptAt: now(), lastFailureAt: narrative.status === "template" ? now() : null });
       return narrative;
     })();
     active = { path, hash, promise };
