@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildBriefingInput, createBriefingService, formatSupplyWon } from "../../server/briefing";
 import { MACRO_UNIVERSE } from "../../server/marketMacro";
-import { briefingInputHash, templateNarrative } from "../../server/briefingNarrative";
+import { briefingInputHash, templateNarrative, createNarrativeStore, isTargetSessionCaution, targetSessionCautionText } from "../../server/briefingNarrative";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve, sep } from "node:path";
 import { buildBriefingComposition } from "../../server/briefingComposition";
 afterEach(() => vi.useRealTimers());
 
@@ -20,13 +23,71 @@ function rows() {
   }));
 }
 describe("model TOP5 briefing", () => {
-  it("renders a neutral target-session caution after resolving the unchanged input hash", async () => {
-    let rawHash;
+  it("shares the exact historical date-caution bytes between generation and classification", () => {
+    const oldText = "모델 기준일은 2026-10-22이며 오늘 날짜와 다릅니다.";
+    expect(Buffer.from(targetSessionCautionText("2026-10-22"), "utf8")).toEqual(Buffer.from(oldText, "utf8"));
+    const input = buildBriefingInput(rows(), marker, macro, now), previous = structuredClone(input);
+    for (const stock of previous.stocks) stock.cautions.find(fact => fact.kind === "data").text = oldText;
+    expect(briefingInputHash(input)).toBe(briefingInputHash(previous));
+    expect(isTargetSessionCaution({ kind: "data", text: oldText }, "2026-10-22")).toBe(true);
+    expect(isTargetSessionCaution({ kind: "data", text: oldText }, "2026-10-23")).toBe(false);
+  });
+  it("omits only the target-session caution and its citations after resolving the unchanged input hash", async () => {
+    let rawHash, originalInput, cachedNarrative;
     const service = createBriefingService({ rank: async () => rows(), marker: async () => marker, macro: async () => macro,
       composition: async input => buildBriefingComposition(input), now: () => now,
-      narratives: { resolve: async input => { rawHash = briefingInputHash(input); expect(input.stocks[0].cautions.find(fact => fact.kind === "data").text).toContain("오늘 날짜"); return templateNarrative(input, null, now); } } });
+      narratives: { resolve: async input => {
+        rawHash = briefingInputHash(input); originalInput = input;
+        expect(input.stocks[0].cautions.find(fact => fact.kind === "data").text).toContain("오늘 날짜");
+        cachedNarrative = templateNarrative(input, null, now);
+        cachedNarrative.citations.push(...input.stocks.flatMap(stock => stock.cautions.filter(fact => isTargetSessionCaution(fact, input.model.baseDate)).map(fact => fact.id)));
+        return cachedNarrative;
+      } } });
     const result = await service(false, {});
-    expect(result.narrative.inputHash).toBe(rawHash); expect(result.stocks[0].cautions.find(fact => fact.kind === "data").text).toBe("10/23(금) 정규장 시가→종가를 대상으로 한 순위입니다.");
+    expect(result.narrative.inputHash).toBe(rawHash); expect(briefingInputHash(originalInput)).toBe(rawHash);
+    const hiddenDate = fact => isTargetSessionCaution(fact, originalInput.model.baseDate);
+    const hidden = new Set(originalInput.stocks.flatMap(stock => stock.cautions.filter(hiddenDate).map(fact => fact.id)));
+    for (const [index, stock] of result.stocks.entries()) {
+      expect(stock.cautions).toEqual(originalInput.stocks[index].cautions.filter(fact => !hiddenDate(fact)));
+      expect(result.narrative.stocks[index].citations).toEqual([`E:${stock.code}:1`, `C:${stock.code}:1`, `C:${stock.code}:2`]);
+    }
+    expect(result.narrative.citations).toEqual(MACRO_UNIVERSE.map(row => `M:${row.id}`));
+    expect(result.stocks[0].cautions.map(fact => fact.kind)).toEqual(["model", "news"]);
+    expect(result.narrative.stocks[0].summary).toContain("10/23(금) 정규장 시가→종가");
+    const ids = new Set([...result.macro.indicators.map(row => `M:${row.id}`), ...result.stocks.flatMap(stock => [`R:${stock.code}`, ...stock.evidence.map(fact => fact.id), ...stock.cautions.map(fact => fact.id), ...stock.news.articles.map(article => article.id)])]);
+    for (const id of [...result.narrative.citations, ...result.narrative.stocks.flatMap(stock => stock.citations)]) { expect(hidden.has(id)).toBe(false); expect(ids.has(id)).toBe(true); }
+    expect(cachedNarrative.citations.some(id => hidden.has(id))).toBe(true);
+    expect(cachedNarrative.stocks[0].citations.some(id => hidden.has(id))).toBe(true);
+    expect(hiddenDate({ kind: "data", text: "일부 가격 자료를 확인하지 못했습니다." })).toBe(false);
+    expect(hiddenDate({ kind: "news", text: "모델 기준일은 2026-10-22이며 오늘 날짜와 다릅니다." })).toBe(false);
+  });
+  it.each([false, true])("preserves seven LLM fields and exact visible citations (new POST generation: %s)", async generate => {
+    const directory = await mkdtemp(join(tmpdir(), "briefing-date-caution-"));
+    if (!resolve(directory).startsWith(resolve(tmpdir()) + sep)) throw new Error("Unexpected test cache path");
+    try {
+      const selectedEnv = { PIPELINE_OUTPUT_DIR: directory, GEMINI_API_KEY: "fixture-public-not-an-actual-key" };
+      const input = buildBriefingInput(rows(), marker, macro, now, selectedEnv), template = templateNarrative(input, null, now);
+      const dateIds = input.stocks.flatMap(stock => stock.cautions.filter(fact => isTargetSessionCaution(fact, input.model.baseDate)).map(fact => fact.id));
+      const value = { overview: template.overview, marketNote: template.marketNote, stocks: template.stocks.map(({ source, ...stock }) => stock), citations: [...template.citations, ...dateIds] };
+      const transport = vi.fn(async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(value) }] } }] }) }));
+      const store = createNarrativeStore({ transport, now: () => now });
+      if (!generate) await store.resolve(input, true, selectedEnv);
+      const path = join(directory, "briefing-narrative.json"), before = generate ? null : await readFile(path, "utf8");
+      const service = createBriefingService({ rank: async () => rows(), marker: async () => marker, macro: async () => macro,
+        composition: async input => buildBriefingComposition(input), now: () => now, narratives: createNarrativeStore({ transport, now: () => now }) });
+      const result = await service(generate, selectedEnv);
+      expect(result.narrative).toMatchObject({ status: "llm", fallbackReason: null, inputHash: briefingInputHash(input), generatedAt: template.generatedAt, fieldSources: { overview: "llm", marketNote: "llm" } });
+      expect(result.narrative.stocks).toHaveLength(5); expect(result.narrative.stocks.every(stock => stock.source === "llm")).toBe(true);
+      expect(result.stocks.every(stock => stock.cautions.every(fact => !isTargetSessionCaution(fact, input.model.baseDate)))).toBe(true);
+      expect(result.narrative.citations).toEqual(template.citations);
+      for (const stock of result.narrative.stocks) expect(stock.citations).toEqual([`E:${stock.code}:1`, `C:${stock.code}:1`, `C:${stock.code}:2`]);
+      expect([...result.narrative.citations, ...result.narrative.stocks.flatMap(stock => stock.citations)].some(id => dateIds.includes(id))).toBe(false);
+      const saved = await readFile(path, "utf8");
+      if (before !== null) expect(saved).toBe(before);
+      expect(JSON.parse(saved).narrative.citations).toEqual(value.citations);
+      expect(JSON.parse(saved).input.stocks[0].cautions.find(fact => fact.kind === "data").text).toBe("모델 기준일은 2026-10-22이며 오늘 날짜와 다릅니다.");
+      expect(transport).toHaveBeenCalledOnce();
+    } finally { await rm(directory, { recursive: true, force: true }); }
   });
   it.each(["official", "adhoc", undefined, "invalid"])("classifies a stable completed result from run metadata (%s)", async kind => {
     const service = createBriefingService({ rank: async () => rows(), marker: async () => ({ ...marker, runId: "fixture-run", kind }),

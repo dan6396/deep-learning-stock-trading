@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-25T09:13:42.345Z",
+  "capturedAt": "2026-10-25T09:38:36.947Z",
   "model": {
     "modelId": "plain_20_120_rank_mean_v1",
     "scoreKind": "rank_zscore",
@@ -89,6 +89,7 @@
   "captures": [
     {
       "name": "poster-briefing-1440-dark.png",
+      "capturedAt": "2026-10-25T09:38:34.943Z",
       "width": 1440,
       "height": 1000,
       "fullHeight": 3465,
@@ -109,10 +110,12 @@
       "loading": false,
       "adminControls": [],
       "requiredTop": 85.96875,
-      "pixelHeight": 1000
+      "pixelHeight": 1000,
+      "capturedAt": "2026-10-25T09:13:42.345Z"
     },
     {
       "name": "poster-top5-1440-dark.png",
+      "capturedAt": "2026-10-25T09:38:35.501Z",
       "width": 1440,
       "height": 1000,
       "fullHeight": 3803,
@@ -133,7 +136,8 @@
       "loading": false,
       "adminControls": [],
       "requiredTop": 85.5625,
-      "pixelHeight": 1000
+      "pixelHeight": 1000,
+      "capturedAt": "2026-10-25T09:13:42.345Z"
     },
     {
       "name": "poster-composition-1440-dark.png",
@@ -145,10 +149,12 @@
       "loading": false,
       "adminControls": [],
       "requiredTop": 86.328125,
-      "pixelHeight": 1000
+      "pixelHeight": 1000,
+      "capturedAt": "2026-10-25T09:13:42.345Z"
     },
     {
       "name": "home-1440-dark-full.png",
+      "capturedAt": "2026-10-25T09:38:36.128Z",
       "width": 1440,
       "height": 1000,
       "fullHeight": 4295,
@@ -161,15 +167,16 @@
     },
     {
       "name": "home-375-dark-full.png",
+      "capturedAt": "2026-10-25T09:38:36.946Z",
       "width": 375,
       "height": 812,
-      "fullHeight": 7720,
+      "fullHeight": 7700,
       "scrollY": 0,
       "overflow": false,
       "loading": false,
       "adminControls": [],
       "requiredTop": null,
-      "pixelHeight": 7720
+      "pixelHeight": 7700
     },
     {
       "name": "poster-stock-1440-dark.png",
@@ -181,7 +188,8 @@
       "loading": false,
       "adminControls": [],
       "requiredTop": 85.953125,
-      "pixelHeight": 1000
+      "pixelHeight": 1000,
+      "capturedAt": "2026-10-25T09:13:42.345Z"
     },
     {
       "name": "poster-chart-1440-dark.png",
@@ -193,10 +201,119 @@
       "loading": false,
       "adminControls": [],
       "requiredTop": 85.640625,
-      "pixelHeight": 1000
+      "pixelHeight": 1000,
+      "capturedAt": "2026-10-25T09:13:42.345Z"
     }
   ],
   "requests": [
+    {
+      "path": "/api/candidates/run",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/indices",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/backend/status",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/rank",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=047810",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=042660",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=003490",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/quote",
+      "query": "?symbol=004000",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/stock-chart",
+      "query": "?symbol=055550",
+      "status": 200
+    },
+    {
+      "path": "/api/briefing",
+      "query": "",
+      "status": 200
+    },
+    {
+      "path": "/api/korean-market/next-session",
+      "query": "?baseDate=2026-10-23",
+      "status": 200
+    }
+  ],
+  "httpErrors": [],
+  "consoleErrors": [],
+  "exceptions": [],
+  "nonGetApiBlocked": [],
+  "stockSensitivity": {
+    "code": "055550",
+    "status": "ready",
+    "samples": 243,
+    "periodStart": "2025-10-27",
+    "periodEnd": "2026-10-23",
+    "metrics": [
+      {
+        "definition": "close_to_close",
+        "correlation": 0.2588794930615453,
+        "beta": 0.5387587586847901,
+        "samples": 243
+      },
+      {
+        "definition": "open_to_close",
+        "correlation": 0.08272292083399244,
+        "beta": 0.14646325906736002,
+        "samples": 243
+      }
+    ],
+    "conditional": {
+      "count": 56,
+      "total": 131,
+      "ratioPct": 42.74809160305343,
+      "baselinePct": 41.1522633744856,
+      "baselineCount": 100,
+      "baselineTotal": 243
+    }
+  },
+  "warmup": {
+    "method": "GET",
+    "requests": 16,
+    "successes": 16
+  },
+  "previousCapturedAt": "2026-10-25T09:13:42.345Z",
+  "refreshReason": "Date caution removed from response presentation; input identity and stored narrative preserved.",
+  "updatedFiles": [
+    "poster-briefing-1440-dark.png",
+    "poster-top5-1440-dark.png",
+    "home-1440-dark-full.png",
+    "home-375-dark-full.png"
+  ],
+  "previousCaptureRequests": [
     {
       "path": "/api/candidates/run",
       "query": "",
@@ -298,42 +415,21 @@
       "status": 200
     }
   ],
-  "httpErrors": [],
-  "consoleErrors": [],
-  "exceptions": [],
-  "nonGetApiBlocked": [],
-  "stockSensitivity": {
-    "code": "055550",
-    "status": "ready",
-    "samples": 243,
-    "periodStart": "2025-10-27",
-    "periodEnd": "2026-10-23",
-    "metrics": [
-      {
-        "definition": "close_to_close",
-        "correlation": 0.2588794930615453,
-        "beta": 0.5387587586847901,
-        "samples": 243
-      },
-      {
-        "definition": "open_to_close",
-        "correlation": 0.08272292083399244,
-        "beta": 0.14646325906736002,
-        "samples": 243
-      }
+  "dateCautionVerification": {
+    "dateCautions": 0,
+    "orphanCitations": [],
+    "sources": [
+      "llm",
+      "llm",
+      "llm",
+      "llm",
+      "llm",
+      "llm",
+      "llm"
     ],
-    "conditional": {
-      "count": 56,
-      "total": 131,
-      "ratioPct": 42.74809160305343,
-      "baselinePct": 41.1522633744856,
-      "baselineCount": 100,
-      "baselineTotal": 243
-    }
-  },
-  "warmup": {
-    "method": "GET",
-    "requests": 16,
-    "successes": 16
+    "fallbackReason": null,
+    "hashUnchanged": true,
+    "generatedAtUnchanged": true,
+    "diskBytesUnchanged": true
   }
 }

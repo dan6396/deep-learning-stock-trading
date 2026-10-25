@@ -14,8 +14,14 @@ export function targetSessionSentence(baseDate: string): string {
   const date = new Date(`${target}T00:00:00Z`), weekday = "일월화수목금토"[date.getUTCDay()];
   return `${date.getUTCMonth() + 1}/${date.getUTCDate()}(${weekday}) 정규장 시가→종가를 대상으로 한 순위입니다.`;
 }
+export function targetSessionCautionText(baseDate: string): string {
+  return `모델 기준일은 ${baseDate}이며 오늘 날짜와 다릅니다.`;
+}
+export function isTargetSessionCaution(fact: { kind: string; text: string }, baseDate: string): boolean {
+  return fact.kind === "data" && fact.text === targetSessionCautionText(baseDate);
+}
 export function displayCaution(fact: { kind: string; text: string }, baseDate?: string): string {
-  return fact.kind === "data" && baseDate && /^모델 기준일은 .+이며 오늘 날짜와 다릅니다\.$/.test(fact.text) ? targetSessionSentence(baseDate) : fact.text;
+  return baseDate && isTargetSessionCaution(fact, baseDate) ? targetSessionSentence(baseDate) : fact.text;
 }
 
 declare const process: { env: Record<string, string | undefined> };

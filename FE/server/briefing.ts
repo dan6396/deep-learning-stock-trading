@@ -9,7 +9,7 @@ import { formatSupplyWon } from "./briefingValidation";
 import { showBriefingSupply } from "./supplyVisibility";
 import { modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
 export { formatSupplyWon } from "./briefingValidation";
-import { createNarrativeStore, briefingInputHash, templateNarrative, displayCaution, type BriefingNarrative } from "./briefingNarrative";
+import { createNarrativeStore, briefingInputHash, templateNarrative, isTargetSessionCaution, targetSessionCautionText, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
 
 declare const process: { env: Record<string, string | undefined> };
@@ -68,7 +68,7 @@ function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string, s
       source: typeof article.source === "string" ? article.source : "", pubDate: typeof article.pub_date === "string" && Number.isFinite(Date.parse(article.pub_date)) ? new Date(article.pub_date).toISOString() : null })) : [];
   if (articles.length) addEvidence("news", `관련 기사 ${articles.length}건을 확인했습니다. 출처: ${[...new Set(articles.map(article => article.source || "출처 미상"))].join(", ")}입니다.`);
   else caution("news", status === "collection_failed" ? "관련 기사 수집에 실패했습니다." : status === "not_collected" ? "관련 기사를 수집하지 않았습니다." : "확인된 관련 기사가 없습니다.");
-  if (input.prediction_base_date !== today) caution("data", `모델 기준일은 ${String(input.prediction_base_date)}이며 오늘 날짜와 다릅니다.`);
+  if (input.prediction_base_date !== today) caution("data", targetSessionCautionText(String(input.prediction_base_date)));
   // Keep stock-specific citation IDs stable when macro collection recovers.
   if (macro.indicators.some(indicator => indicator.status !== "ok")) caution("macro", "일부 시장 지표를 확보하지 못했습니다.");
   return { rank, code, name: row.result.company_name, rankScore: numeric(input.rank_score)!, poolSize, topPercent, modelEvidence: modelEvidence(input), evidence, cautions, news: { status, articles } };
@@ -144,8 +144,13 @@ export function createBriefingService({ rank = getRankPayload, marker = readPipe
     ]);
     const kind = input.model && (after?.kind === "official" || after?.kind === "adhoc") ? after.kind : "unknown";
     // Change presentation after identity/cache resolution; hashed input facts stay untouched.
-    const stocks = input.stocks.map(stock => ({ ...stock, cautions: stock.cautions.map(fact => ({ ...fact, text: displayCaution(fact, input.model?.baseDate) })) }));
-    return { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, stocks, narrative, composition: candidateComposition,
+    const hiddenDateCaution = (fact: BriefingFact) => isTargetSessionCaution(fact, input.model?.baseDate ?? "");
+    const hiddenCitations = new Set(input.stocks.flatMap(stock => stock.cautions.filter(hiddenDateCaution).map(fact => fact.id)));
+    const visibleCitations = (ids: string[]) => ids.filter(id => !hiddenCitations.has(id));
+    const stocks = input.stocks.map(stock => ({ ...stock, cautions: stock.cautions.filter(fact => !hiddenDateCaution(fact)) }));
+    const visibleNarrative = { ...narrative, citations: visibleCitations(narrative.citations),
+      stocks: narrative.stocks.map(stock => ({ ...stock, citations: visibleCitations(stock.citations) })) };
+    return { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, stocks, narrative: visibleNarrative, composition: candidateComposition,
       disclaimer: "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
       data_meta: { source: "cache", asOf: input.model?.runStartedAt ?? market.asOf } };
   };
