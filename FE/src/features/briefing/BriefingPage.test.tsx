@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { BriefingPage, INTRO_STORAGE_KEY, useBriefingGenerationPolling } from "./BriefingPage";
@@ -72,6 +72,61 @@ describe("briefing with raw model rank fixtures", () => {
     expect(evidence).toHaveTextContent(/모델 (상위권|중위권|하위권)|순위 미확인/);
     expect(evidence).not.toHaveTextContent("긍정");
     expect(evidence?.querySelector(".lucide-triangle")).toBeNull();
+  });
+  it("merges only matching stock evidence into the original rank rows and leaves selection to the row button", async () => {
+    mockBackend(path => path === "/api/briefing" ? Promise.resolve(jsonResponse({
+      version: 1, status: "ready", model: null,
+      macro: { asOf: null, indicators: [] },
+      stocks: ["000660", "999999"].map(code => ({
+        code, name: "근거 종목", rank: 1, rankScore: 1.2, poolSize: 200, topPercent: .5,
+        evidence: [{ id: `E:${code}:1`, kind: "model", text: "모델 근거" }], cautions: [],
+        news: { status: "not_collected", articles: [] },
+      })),
+      narrative: { status: "template", generatedAt: null, llmModel: null, inputHash: "", fallbackReason: null,
+        overview: "통합 브리핑", marketNote: "", citations: [],
+        stocks: [{ code: "000660", summary: "종목 B 자동 요약", citations: ["E:000660:1"] }],
+      },
+      disclaimer: "테스트 면책 조항", data_meta: { source: "cache", asOf: null },
+    })) : undefined);
+    mount(["/next?code=005930"]);
+    await screen.findByText("종목 B 자동 요약");
+    const first = document.querySelector('[data-model-code="005930"]')!;
+    const second = document.querySelector('[data-model-code="000660"]')!;
+    expect(first.querySelector(".briefing-related-news")).not.toBeNull();
+    expect(second.querySelector(".briefing-related-news")).toBeNull();
+    expect(second.contains(screen.getByTestId("stock-card-000660"))).toBe(true);
+    expect(screen.queryByTestId("stock-card-999999")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "종목별 근거·주의점" })).not.toBeInTheDocument();
+    expect(within(second as HTMLElement).getByRole("button", { name: "종목 B 000660 상세 보기" })).toHaveTextContent("종목 B");
+    expect(second.querySelector(".briefing-top-rank")).toHaveTextContent("02");
+    expect(within(second as HTMLElement).getByRole("link", { name: "리포트" })).toHaveAttribute("href", "/next/stock/000660");
+    fireEvent.click(screen.getByTestId("stock-expand-btn-000660"));
+    fireEvent.click(screen.getByText("종목 B 자동 요약"));
+    expect(screen.getByTestId("stock-details-000660")).toBeVisible();
+    expect(screen.getByTestId("location")).toHaveTextContent("/next?code=005930");
+    expect(first).toHaveAttribute("data-selected", "true");
+    expect(second).not.toHaveAttribute("data-selected");
+  });
+  it.each([
+    ["000660", "000660", "종목 B"],
+    ["999999", "005930", "종목 A"],
+  ])("chooses a TOP5 default when the first briefing code is %s", async (briefingCode, selectedCode, selectedName) => {
+    mockBackend(path => path === "/api/briefing" ? Promise.resolve(jsonResponse({
+      version: 1, status: "ready", model: null, macro: { asOf: null, indicators: [] },
+      stocks: [{ code: briefingCode, name: "근거 종목", rank: 1, rankScore: 1.2, poolSize: 200, topPercent: .5,
+        evidence: [], cautions: [], news: { status: "not_collected", articles: [] } }],
+      narrative: { status: "template", generatedAt: null, llmModel: null, inputHash: "", fallbackReason: null,
+        overview: "기본 선택 검증", marketNote: "", citations: [`R:${briefingCode}`], stocks: [] },
+      disclaimer: "테스트 면책 조항", data_meta: { source: "cache", asOf: null },
+    })) : undefined);
+    mount();
+    await screen.findByText("기본 선택 검증");
+    const selected = await screen.findByRole("button", { name: `${selectedName} ${selectedCode} 상세 보기` });
+    await waitFor(() => expect(selected).toHaveAttribute("aria-pressed", "true"));
+    expect(await screen.findByRole("heading", { name: selectedName })).toBeInTheDocument();
+    expect(document.querySelectorAll('.briefing-top-five > li[data-selected="true"]')).toHaveLength(1);
+    expect(selected.closest("[data-model-code]")).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/next$/);
   });
   it("retains previous comprehensive briefing data and announces a failed refresh", async () => {
     let failed = false;
@@ -258,6 +313,8 @@ describe("BriefingPage comprehensive briefing integration", () => {
     mount();
     await screen.findByText("진행된 종합 브리핑 결과가 없습니다");
     expect(screen.getByText("새 분석 실행")).toBeInTheDocument();
+    expect(document.querySelectorAll(".briefing-top-five .briefing-related-news")).toHaveLength(2);
+    expect(document.querySelector(".briefing-stock-evidence")).toBeNull();
   });
 
   it("handles briefing fetch error without crashing the page", async () => {

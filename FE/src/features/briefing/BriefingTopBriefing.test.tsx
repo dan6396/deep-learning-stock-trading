@@ -1,12 +1,19 @@
+import { useState, type ComponentProps } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { modelEvidence } from "../../entities/modelEvidence";
+import { adaptCandidate } from "../../entities/candidate";
+import { pipelineRow } from "../../test/dataFixtures";
+import { queryKeys } from "../../shared/api/queries";
+import { ModelTopFiveList } from "./ModelTopFiveTable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { BriefingPayload } from "../../entities/briefing";
 import { adaptBriefing } from "../../entities/briefing";
 import { BriefingMacroGrid } from "./BriefingMacroGrid";
 import { BriefingNarrativeCard } from "./BriefingNarrativeCard";
-import { BriefingStockSection } from "./BriefingStockSection";
-import { BriefingTopContainer, highlightCitationTarget } from "./BriefingTopContainer";
+import { BriefingStockEvidence } from "./BriefingStockSection";
+import { BriefingTopContainer, highlightCitationTarget, type RenderStockEvidence } from "./BriefingTopContainer";
 import { expectReadableUserText } from "../../test/assertUserText";
 
 const mockBriefingData: BriefingPayload = {
@@ -102,6 +109,8 @@ const mockBriefingData: BriefingPayload = {
       rank: 1,
       code: "005930",
       name: "삼성전자",
+      modelEvidence: modelEvidence({ score_kind: "rank_zscore", prediction_status: "ok", pred_rank: 1, pred_pool_size: 199, rank_score: 2.34,
+        rank_lb20: 1, score_lb20: 2.1, rank_lb120: 2, score_lb120: 2.3, model_agreement: "일치", feat_pct_f_rsi: 2.01 }),
       rankScore: 2.34,
       poolSize: 200,
       topPercent: 0.5,
@@ -179,6 +188,35 @@ const mockBriefingData: BriefingPayload = {
   disclaimer: "본 브리핑의 모델 순위 점수와 AI 요약은 투자 권유가 아니며 실제 수익률과 다를 수 있습니다.",
   data_meta: { source: "live", asOf: "2026-10-23T06:30:00Z" },
 };
+
+function TestTopFive({ renderEvidence }: { renderEvidence: RenderStockEvidence }) {
+  const [client] = useState(() => {
+    const value = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+    mockBriefingData.stocks.forEach(stock => value.setQueryData(queryKeys.quote(stock.code), { source: "sample", data: null }));
+    return value;
+  });
+  const rows = mockBriefingData.stocks.map(stock => ({
+    ...adaptCandidate(pipelineRow()).data,
+    code: stock.code, name: stock.name, rank: stock.rank, baseDate: null,
+  }));
+  return <QueryClientProvider client={client}><section data-testid="mock-top5-table" aria-labelledby="test-top5-heading">
+    <h2 id="test-top5-heading">모델 순위 TOP5</h2>
+    <ModelTopFiveList rows={rows} selectedCode="005930" onSelect={() => {}} renderEvidence={renderEvidence} />
+  </section></QueryClientProvider>;
+}
+const renderTestTopFive = (renderEvidence: RenderStockEvidence) => <TestTopFive renderEvidence={renderEvidence} />;
+
+function StockEvidenceList({ stocks, narrative, onCitationClick = () => {} }: {
+  stocks: BriefingPayload["stocks"];
+  narrative: BriefingPayload["narrative"];
+  onCitationClick?: ComponentProps<typeof BriefingStockEvidence>["onCitationClick"];
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  return <>{stocks.map(stock => <BriefingStockEvidence key={stock.code} stock={stock} stocks={stocks} narrative={narrative}
+    isExpanded={expanded.has(stock.code)} onCitationClick={onCitationClick} onToggleExpand={code => setExpanded(previous => {
+      const next = new Set(previous); if (next.has(code)) next.delete(code); else next.add(code); return next;
+    })} />)}</>;
+}
 
 describe("BriefingMacroGrid", () => {
   it("renders all 6 indicators with correct formatting, sessions and context note", () => {
@@ -379,27 +417,25 @@ describe("BriefingNarrativeCard", () => {
   });
 });
 
-describe("BriefingStockSection", () => {
+describe("BriefingStockEvidence", () => {
   it("renders stock cards, evidence, cautions and citations below summary", () => {
-    const onSelectStock = vi.fn();
     const onCitationClick = vi.fn();
 
     render(
       <MemoryRouter>
-        <BriefingStockSection
+        <StockEvidenceList
           stocks={mockBriefingData.stocks}
           narrative={mockBriefingData.narrative}
-          selectedCode="005930"
-          onSelectStock={onSelectStock}
           onCitationClick={onCitationClick}
         />
       </MemoryRouter>
     );
 
-    // 삼성전자 rank, score, topPercent
-    expect(screen.getByText("삼성전자")).toBeInTheDocument();
-    expect(screen.getByText(/순위 점수: 2.3400/)).toBeInTheDocument();
-    expect(screen.getByText(/200종목 중 상위 0.5%/)).toBeInTheDocument();
+    // 근거 본문에 중복 종목 선택 버튼과 순위 헤더가 없는지 확인
+    expect(screen.queryByRole("button", { name: /삼성전자.*상세 보기/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("1위")).not.toBeInTheDocument();
+    expect(screen.queryByText(/순위 점수:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/200종목 중 상위/)).not.toBeInTheDocument();
 
     // Summary
     expect(screen.getByText(/외국인 자금 유입과 HBM 모멘텀이 맞물리며/)).toBeInTheDocument();
@@ -448,11 +484,9 @@ describe("BriefingStockSection", () => {
 
     render(
       <MemoryRouter>
-        <BriefingStockSection
+        <StockEvidenceList
           stocks={[stockWithManyArticles]}
           narrative={mockBriefingData.narrative}
-          selectedCode={null}
-          onSelectStock={vi.fn()}
         />
       </MemoryRouter>
     );
@@ -471,6 +505,8 @@ describe("BriefingStockSection", () => {
     expect(screen.getByTestId("stock-details-005930")).not.toBeVisible();
     expect(document.getElementById(toggleBtn.getAttribute("aria-controls")!)).not.toBeNull();
     expect(screen.getByTestId("stock-chip-evidence-005930").tagName).toBe("SPAN");
+    fireEvent.click(screen.getByTestId("stock-chip-evidence-005930"));
+    expect(toggleBtn).toHaveAttribute("aria-expanded", "false");
 
     // 자세히 클릭 -> 펼침
     fireEvent.click(toggleBtn);
@@ -491,6 +527,83 @@ describe("BriefingStockSection", () => {
   });
 });
 
+describe("TOP5 integrated evidence", () => {
+  it("preserves model agreement, the leading feature, summary and chips inside a single row", () => {
+    const { container } = render(<MemoryRouter><BriefingTopContainer briefing={mockBriefingData} onSelectStock={vi.fn()}
+      isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} renderTopFive={renderTestTopFive} /></MemoryRouter>);
+    const row = container.querySelector('[data-model-code="005930"]')!;
+    const evidence = screen.getByTestId("stock-card-005930");
+    expect(row.contains(evidence)).toBe(true);
+    expect(within(evidence).getByText(/20일·120일 모델 일치/)).toBeVisible();
+    expect(within(evidence).getByText(/상대강도 지표 관측값이 199종목 중 하위 2.01%입니다/)).toBeVisible();
+    expect(within(evidence).getByText(mockBriefingData.narrative.stocks[0].summary)).toBeVisible();
+    expect(screen.getByTestId("stock-chip-evidence-005930")).toBeVisible();
+    expect(screen.getByTestId("stock-chip-caution-005930")).toBeVisible();
+    expect(screen.getByTestId("stock-chip-news-005930")).toBeVisible();
+    expect(within(evidence).getByRole("link", { name: "리포트" })).toHaveAttribute("href", "/stock/005930");
+    expect(row).toHaveAttribute("data-selected", "true");
+    expect(evidence).toHaveAttribute("class", "briefing-stock-evidence is-collapsed");
+    expect(within(evidence).getAllByRole("button")).toHaveLength(1);
+    expect(within(evidence).queryByText("1위")).not.toBeInTheDocument();
+    expect(row.querySelector(".briefing-related-news")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "종목별 근거·주의점" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(within(evidence).getByRole("heading", { level: 3, name: "분석 근거" })).toBeVisible();
+    expect(within(evidence).getByRole("heading", { level: 3, name: "주의점" })).toBeVisible();
+  });
+
+  it.each(["missing", "empty", "filtered"] as const)("shows all count chips without a %s summary", summaryCase => {
+    const data = structuredClone(mockBriefingData);
+    if (summaryCase === "missing") data.narrative.stocks = [];
+    else data.narrative.stocks[0].summary = summaryCase === "empty" ? "" : "순위 점수는 수익률·확률이 아닙니다.";
+    render(<MemoryRouter><BriefingTopContainer briefing={data} onSelectStock={vi.fn()}
+      isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} renderTopFive={renderTestTopFive} /></MemoryRouter>);
+    const card = screen.getByTestId("stock-card-005930");
+    expect(card.querySelector(".briefing-stock-summary-text")).toBeNull();
+    expect(screen.getByTestId("stock-chip-evidence-005930")).toBeVisible();
+    expect(screen.getByTestId("stock-chip-evidence-005930")).toHaveTextContent("근거 2건");
+    expect(screen.getByTestId("stock-chip-caution-005930")).toBeVisible();
+    expect(screen.getByTestId("stock-chip-caution-005930")).toHaveTextContent("주의 1건");
+    expect(screen.getByTestId("stock-chip-news-005930")).toBeVisible();
+    expect(screen.getByTestId("stock-chip-news-005930")).toHaveTextContent("기사 1건");
+    expect(card.closest("[data-model-code]")?.querySelector(".briefing-related-news")).toBeNull();
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(screen.getByTestId("evidence-E:005930:1")).toBeVisible();
+  });
+
+  it.each(["E:005930:1", "C:005930:1", "N:005930:1"])("opens from the overview and navigates to %s with scroll, highlight and focus", citation => {
+    vi.useFakeTimers();
+    const scroll = vi.fn();
+    const originalScroll = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    const data = structuredClone(mockBriefingData);
+    data.narrative.stocks[0].citations = ["E:005930:1", "C:005930:1", "N:005930:1"];
+    const onSelect = vi.fn();
+    try {
+      const view = render(<MemoryRouter><BriefingTopContainer briefing={data} onSelectStock={onSelect}
+        isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} renderTopFive={renderTestTopFive} /></MemoryRouter>);
+      const toggle = screen.getByTestId("stock-expand-btn-005930");
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(screen.getByTestId("citation-chip-R:005930"));
+      act(() => { vi.advanceTimersByTime(64); });
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByTestId("stock-card-005930")).toHaveClass("briefing-highlight");
+      expect(screen.getByTestId("stock-card-005930")).toHaveFocus();
+      for (const id of data.narrative.stocks[0].citations) expect(screen.getByTestId(`stock-citation-chip-${id}`)).toBeVisible();
+      fireEvent.click(screen.getByTestId(`stock-citation-chip-${citation}`));
+      act(() => { vi.advanceTimersByTime(64); });
+      const target = document.getElementById(`cite-${citation.replace(/:/g, "-")}`)!;
+      expect(target).toHaveClass("briefing-highlight");
+      expect(target).toHaveFocus();
+      expect(scroll.mock.contexts[scroll.mock.contexts.length - 1]).toBe(target);
+      expect(scroll).toHaveBeenLastCalledWith({ behavior: "smooth", block: "center" });
+      expect(screen.getByTestId("stock-details-005930")).toBeVisible();
+      expect(onSelect).not.toHaveBeenCalled();
+      view.unmount();
+    } finally { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); HTMLElement.prototype.scrollIntoView = originalScroll; }
+  });
+});
+
 describe("Citation DOM ID Navigation (차단 사항 1 실제 DOM 검증)", () => {
   let scrollMock: ReturnType<typeof vi.fn>;
 
@@ -506,9 +619,8 @@ describe("Citation DOM ID Navigation (차단 사항 1 실제 DOM 검증)", () =>
   it("scrolls and highlights target DOM elements for E, C, N, M, R citations", () => {
     const { container } = render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={mockBriefingData}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -569,9 +681,8 @@ describe("Prohibited Terms Check (차단 사항 검증)", () => {
   it("does not contain any prohibited terms in rendered text", () => {
     const { container } = render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={mockBriefingData}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -830,9 +941,8 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={mockExtendedBriefingData}
-          selectedCode="005930"
           onSelectStock={onSelectStock}
           isGenerating={false}
           generateError={null}
@@ -907,9 +1017,8 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={nullFieldsBriefing}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -942,9 +1051,8 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={zeroPerfBriefing}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -1013,9 +1121,8 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={adapted}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -1039,9 +1146,8 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={nullCompBriefing}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -1055,19 +1161,16 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
 });
 
 describe("Layout Hierarchy Order (화면 위계 순서 검증)", () => {
-  it("renders in order: narrative card -> children (TOP5 table) -> stocks section -> macro grid -> composition card -> disclaimer", () => {
+  it("renders in order: narrative card -> TOP5 with evidence -> macro grid -> composition card -> disclaimer", () => {
     const { container } = render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={mockExtendedBriefingData}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
           onGenerateNarrative={vi.fn()}
-        >
-          <div data-testid="mock-top5-table">TOP5 표</div>
-        </BriefingTopContainer>
+        />
       </MemoryRouter>
     );
 
@@ -1075,7 +1178,9 @@ describe("Layout Hierarchy Order (화면 위계 순서 검증)", () => {
     const macro = container.querySelector(".briefing-macro-section")!;
     const top5Table = container.querySelector("[data-testid='mock-top5-table']")!;
     const composition = container.querySelector(".briefing-composition-card")!;
-    const stocks = container.querySelector(".briefing-stocks-section")!;
+    const stocks = container.querySelector(".briefing-stock-evidence")!;
+    expect(screen.queryByRole("heading", { name: "종목별 근거·주의점" })).not.toBeInTheDocument();
+    expect(top5Table.contains(stocks)).toBe(true);
     const disclaimer = container.querySelector(".briefing-disclaimer")!;
 
     expect(narrative).not.toBeNull();
@@ -1090,8 +1195,7 @@ describe("Layout Hierarchy Order (화면 위계 순서 검증)", () => {
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
     expect(isFollowing(narrative, top5Table)).toBe(true);
-    expect(isFollowing(top5Table, stocks)).toBe(true);
-    expect(isFollowing(stocks, macro)).toBe(true);
+    expect(isFollowing(top5Table, macro)).toBe(true);
     expect(isFollowing(macro, composition)).toBe(true);
     expect(isFollowing(composition, disclaimer)).toBe(true);
   });
@@ -1101,9 +1205,8 @@ describe("Extended Prohibited Terms Check with Composition & Reference", () => {
   it("allows '동일 비중' and '순매수' while prohibiting forbidden advisory terms across all components", () => {
     const { container } = render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={mockExtendedBriefingData}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -1164,12 +1267,11 @@ describe("Narrative fieldSources & partial_template (서버 계약 optional 추�
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={{
             ...mockBriefingData,
             narrative: partialNarrative,
           }}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -1215,12 +1317,11 @@ describe("Narrative fieldSources & partial_template (서버 계약 optional 추�
 
     render(
       <MemoryRouter>
-        <BriefingTopContainer
+        <BriefingTopContainer renderTopFive={renderTestTopFive}
           briefing={{
             ...mockBriefingData,
             narrative: defaultNarrative,
           }}
-          selectedCode="005930"
           onSelectStock={vi.fn()}
           isGenerating={false}
           generateError={null}
@@ -1245,7 +1346,7 @@ describe("briefing review regressions", () => {
     data.narrative.status = reason === "partial_template" ? "llm" : "template";
     data.narrative.macroStale = false;
     data.narrative.generatedAt = new Date(Date.now() - 601_000).toISOString();
-    const { container } = render(<MemoryRouter><BriefingTopContainer briefing={data} selectedCode={null} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
+    const { container } = render(<MemoryRouter><BriefingTopContainer renderTopFive={renderTestTopFive} briefing={data} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
     fireEvent.click(screen.getByTestId("macro-reference-toggle-btn"));
     expectReadableUserText(container);
     expect(container.textContent).not.toMatch(/macroStale|fallbackReason|partial_template|generation_timeout/);
@@ -1257,16 +1358,6 @@ describe("briefing review regressions", () => {
     expect(screen.getAllByTestId("citation-chip-M:KOSPI")).toHaveLength(1);
     expect(screen.queryByTestId("citation-chip-R:999999")).not.toBeInTheDocument();
     expect(screen.getByTestId("citation-chip-R:005930")).toHaveAttribute("aria-label", "삼성전자 종목 카드로 이동");
-  });
-  it("shows absent stock measurements as dashes and makes summary chips informational", () => {
-    render(<MemoryRouter><BriefingStockSection stocks={[{ ...mockBriefingData.stocks[0], rankScore: null, poolSize: null, topPercent: null }]} narrative={mockBriefingData.narrative} selectedCode={null} onSelectStock={vi.fn()} /></MemoryRouter>);
-    const card = screen.getByTestId("stock-card-005930");
-    expect(card).toHaveTextContent("상위 — · 순위 점수: —");
-    expect(card).not.toHaveTextContent("종목 중");
-    const chip = screen.getByTestId("stock-chip-evidence-005930");
-    fireEvent.click(chip);
-    expect(screen.getByTestId("stock-expand-btn-005930")).toHaveAttribute("aria-expanded", "false");
-    expect(document.getElementById("stock-details-005930")).not.toBeNull();
   });
 });
 
@@ -1304,12 +1395,12 @@ describe("narrative regeneration policy", () => {
     const supporting = screen.getByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다");
     expect(supporting.closest("details")).not.toHaveAttribute("open");
   });
-  it("uses the same two-decimal precision as model evidence without inventing a population", () => {
+  it("does not render redundant pool size or top percent in stock card header", () => {
     const stock = { ...mockBriefingData.stocks[0], poolSize: 199, topPercent: 2 / 199 * 100 };
-    const { rerender } = render(<MemoryRouter><BriefingStockSection stocks={[stock]} narrative={mockBriefingData.narrative} selectedCode={null} onSelectStock={vi.fn()} /></MemoryRouter>);
-    expect(screen.getByTestId("stock-card-005930")).toHaveTextContent("199종목 중 상위 1.01%");
-    rerender(<MemoryRouter><BriefingStockSection stocks={[{ ...stock, poolSize: null }]} narrative={mockBriefingData.narrative} selectedCode={null} onSelectStock={vi.fn()} /></MemoryRouter>);
-    expect(screen.getByTestId("stock-card-005930")).not.toHaveTextContent("종목 중");
+    render(<MemoryRouter><StockEvidenceList stocks={[stock]} narrative={mockBriefingData.narrative} /></MemoryRouter>);
+    const card = screen.getByTestId("stock-card-005930");
+    expect(card.querySelector(".briefing-stock-card-top")).not.toHaveTextContent("종목 중");
+    expect(card).not.toHaveTextContent("순위 점수:");
   });
   it("counts only articles retained by the adapter and removes repeated rank-score disclaimers", () => {
     const raw = structuredClone(mockBriefingData);
@@ -1317,7 +1408,7 @@ describe("narrative regeneration policy", () => {
     raw.stocks[0].cautions.push({ id: "C:005930:2", kind: "model", text: "순위 점수는 수익률·확률이 아닙니다." });
     raw.narrative.stocks[0].summary = "상위 0.5%입니다. 순위 점수는 수익률·확률이 아닙니다.";
     const data = adaptBriefing(raw);
-    render(<MemoryRouter><BriefingStockSection stocks={data.stocks} narrative={data.narrative} selectedCode={null} onSelectStock={vi.fn()} /></MemoryRouter>);
+    render(<MemoryRouter><StockEvidenceList stocks={data.stocks} narrative={data.narrative} /></MemoryRouter>);
     expect(screen.getByTestId("stock-chip-news-005930")).toHaveTextContent("기사 1건");
     fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
     expect(screen.getByTestId("stock-card-005930")).toHaveTextContent("1건 중 상위 1건");

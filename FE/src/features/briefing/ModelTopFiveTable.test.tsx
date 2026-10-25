@@ -39,6 +39,26 @@ describe("original model Top-5 selection", () => {
     fireEvent.click(buttons[0], { detail: 1 }); expect(onSelect).toHaveBeenLastCalledWith("005930");
     view.unmount(); client.clear();
   });
+  it("renders evidence by code and retains related articles only for rows without evidence", () => {
+    const client = new QueryClient();
+    const rows = ["005930", "000660"].map(code => ({ ...adaptCandidate(pipelineRow()).data, code, name: code, baseDate: null }));
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({})));
+    const onSelect = vi.fn();
+    const evidence = (code: string) => code === "000660" ? <div data-testid="evidence-body">근거 본문<button type="button">자세히</button></div> : null;
+    const view = render(<QueryClientProvider client={client}><ModelTopFiveList rows={rows} selectedCode="005930" onSelect={onSelect} renderEvidence={evidence} /></QueryClientProvider>);
+    const first = view.container.querySelector('[data-model-code="005930"]')!;
+    const second = view.container.querySelector('[data-model-code="000660"]')!;
+    expect(first.querySelector(".briefing-related-news")).not.toBeNull();
+    expect(second.querySelector(".briefing-related-news")).toBeNull();
+    expect(second.contains(screen.getByTestId("evidence-body"))).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "자세히" }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect([...view.container.querySelectorAll<HTMLButtonElement>(".briefing-stock-button")].map(button => button.tabIndex)).toEqual([0, -1]);
+    view.rerender(<QueryClientProvider client={client}><ModelTopFiveList rows={rows} selectedCode="005930" onSelect={onSelect} /></QueryClientProvider>);
+    expect(view.container.querySelectorAll(".briefing-related-news")).toHaveLength(2);
+    expect(screen.queryByTestId("evidence-body")).not.toBeInTheDocument();
+    view.unmount(); client.clear();
+  });
   it("uses the first selection tab stop when no row is selected", () => {
     const client = new QueryClient(), rows = ["005930", "000660"].map(code => ({ ...adaptCandidate(pipelineRow()).data, code, baseDate: null }));
     vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({})));
@@ -61,6 +81,36 @@ describe("original model Top-5 selection", () => {
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getByRole("link")).toHaveAttribute("href", "https://example.com/real");
     expect(screen.getByText(/테스트일보/)).toHaveTextContent("19:30");
+    expect(screen.queryByRole("group")).toBeNull();
+  });
+  it("folds additional related articles into a details disclosure when multiple articles exist", () => {
+    const candidate = adaptCandidate(pipelineRow()).data;
+    candidate.name = "삼성전자";
+    candidate.news = [
+      { title: "삼성전자 1번 기사", url: "https://example.com/1", source: "언론사1", publishedAt: null, sentiment: null },
+      { title: "삼성전자 2번 기사", url: "https://example.com/2", source: "언론사2", publishedAt: null, sentiment: null },
+      { title: "삼성전자 3번 기사", url: "https://example.com/3", source: "언론사3", publishedAt: null, sentiment: null },
+    ];
+    const { container, rerender } = render(<RelatedArticles candidate={candidate} />);
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+    const firstArticle = screen.getByText("삼성전자 1번 기사");
+    expect(details?.contains(firstArticle)).toBe(false);
+    const secondArticle = screen.getByText("삼성전자 2번 기사");
+    const thirdArticle = screen.getByText("삼성전자 3번 기사");
+    expect(details?.contains(secondArticle)).toBe(true);
+    expect(details?.contains(thirdArticle)).toBe(true);
+    expect(screen.getByText("기사 2건 더 보기")).toBeInTheDocument();
+
+    const twoArticles = { ...candidate, news: candidate.news.slice(0, 2) };
+    rerender(<RelatedArticles candidate={twoArticles} />);
+    expect(screen.getByText("기사 1건 더 보기")).toBeInTheDocument();
+
+    const oneArticle = { ...candidate, news: candidate.news.slice(0, 1) };
+    rerender(<RelatedArticles candidate={oneArticle} />);
+    expect(container.querySelector("details")).toBeNull();
+    expect(screen.getByText("삼성전자 1번 기사")).toBeInTheDocument();
   });
   it.each([["collection_failed", false, "기사 수집 실패"], ["collected", true, "관련 기사 0건"], ["not_collected", false, "기사 수집 기록 없음"]] as const)("distinguishes %s from successful zero", (newsStatus, newsCollected, expected) => {
     render(<RelatedArticles candidate={{ ...adaptCandidate(pipelineRow()).data, newsStatus, newsCollected }} />);

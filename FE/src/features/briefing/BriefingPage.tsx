@@ -11,7 +11,7 @@ import { DetailPanel } from "./DetailPanel";
 import { BriefingSummary, BriefingExecutionBar } from "./BriefingSummary";
 import { SourceMeta } from "./SourceMeta";
 import { WatchlistNotice } from "../watchlist/WatchToggle";
-import { BriefingTopContainer } from "./BriefingTopContainer";
+import { BriefingTopContainer, type RenderStockEvidence } from "./BriefingTopContainer";
 import { AnalysisControl } from "./AnalysisControl";
 import { ExpiredSessionNotice } from "./ExpiredSessionNotice";
 import "./briefing.css";
@@ -59,7 +59,8 @@ export function BriefingPage() {
   const rows = modelTopFive(rank.data?.data ?? []);
   const rawCode = params.get("code"), code = rawCode && /^\d{6}$/.test(rawCode) && rawCode !== "000000" ? rawCode : null;
   const briefingFirstCode = briefing.data?.stocks[0]?.code;
-  const selectedCode = code ?? (!rawCode ? (briefingFirstCode ?? rows[0]?.code ?? null) : null);
+  const defaultCode = rows.some(row => row.code === briefingFirstCode) ? briefingFirstCode : rows[0]?.code;
+  const selectedCode = code ?? (!rawCode ? (defaultCode ?? null) : null);
   const selected = rank.data?.data.find(row => row.code === selectedCode);
   const dates = [...new Set(rows.map(row => row.baseDate).filter((date): date is string => date !== null))];
   const baseDate = dates.length === 1 ? formatDate(dates[0]) : dates.length > 1 ? "종목별 상이" : "—";
@@ -80,13 +81,13 @@ export function BriefingPage() {
     await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey, exact: true })));
     await Promise.all(keys.map(queryKey => client.refetchQueries({ queryKey, exact: true, type: "active" })));
   }
-  const topFiveTable = (
+  const renderTopFive = (renderEvidence?: RenderStockEvidence) => (
     <section className="briefing-card briefing-comparison-card" aria-labelledby="candidate-heading">
       <div className="briefing-section-heading"><h2 id="candidate-heading" tabIndex={-1}>모델 순위 TOP5</h2><span className="briefing-muted">{rows.some(row => row.scoreKind === "rank_zscore") ? "원본 모델 순위" : "원본 예측 순위"}</span></div>
       <div className="briefing-result-meta"><span>분석 기준일 <strong>{baseDate}</strong> · 모집단 {formatNumber(pool)}종목</span>{rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="저장 시각" />}</div>
       {rank.data?.source === "sample" && <p className="briefing-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
       {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
-      {rank.isPending ? <p className="briefing-empty" role="status">모델 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} /> : !rank.isError && <p className="briefing-empty">표시할 모델 순위가 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
+      {rank.isPending ? <p className="briefing-empty" role="status">모델 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} renderEvidence={renderEvidence} /> : !rank.isError && <p className="briefing-empty">표시할 모델 순위가 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
       <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
       <p className="briefing-table-help">다음 거래일 시가→종가 기준 상대 순위입니다. 기사 시각은 한국시간입니다.</p>
     </section>
@@ -94,6 +95,7 @@ export function BriefingPage() {
 
   return <div className="briefing-page briefing-dashboard">
     <div className="briefing-title-row"><h1>오늘의 브리핑</h1><button type="button" className="briefing-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={14} />다시 조회</button></div>
+    {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>예측과 근거를 읽는 기준은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
     <WatchlistNotice />
     {briefing.data?.status === "ready" && <ExpiredSessionNotice baseDate={briefing.data.model?.baseDate} />}
     <div className="briefing-columns"><div className="briefing-primary">
@@ -107,22 +109,19 @@ export function BriefingPage() {
           <BriefingExecutionBar pool={pool} />
           <BriefingTopContainer
             briefing={briefing.data}
-            selectedCode={selectedCode}
             onSelectStock={nextCode => select(nextCode, "pointer")}
             isGenerating={narrativeMutation.isPending}
             generateError={generateError}
             onGenerateNarrative={() => narrativeMutation.mutate()}
-          >
-            {topFiveTable}
-          </BriefingTopContainer>
+            renderTopFive={renderTopFive}
+          />
         </>
       ) : (
         <>
-          {topFiveTable}
+          {renderTopFive()}
           <BriefingSummary indices={indices.data?.data ?? []} pending={indices.isPending} error={indices.isError} count={pool} rows={rows} rankPending={rank.isPending} rankError={rank.isError} rankSource={rank.data?.source} />
         </>
       )}
-      {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>예측과 근거를 읽는 기준은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
       {briefing.data?.status !== "ready" && <p className="briefing-disclaimer">모델 순위는 투자 추천·수익 보장·실제 성과가 아닙니다.</p>}
     </div>
       {selectedCode ? <DetailPanel key={selectedCode} code={selectedCode} candidate={selected} candidateMeta={selected ? rank.data : undefined} membership={rank.isPending ? "pending" : "unknown"} production="unproduced" />

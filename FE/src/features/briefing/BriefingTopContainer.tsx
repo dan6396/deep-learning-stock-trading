@@ -4,17 +4,18 @@ import { citationDomId, parseCitation } from "../../entities/briefing";
 import { BriefingMacroGrid } from "./BriefingMacroGrid";
 import { BriefingNarrativeCard } from "./BriefingNarrativeCard";
 import { BriefingCompositionCard } from "./BriefingCompositionCard";
-import { BriefingStockSection } from "./BriefingStockSection";
+import { BriefingStockEvidence } from "./BriefingStockSection";
 import "./briefingTop.css";
+
+export type RenderStockEvidence = (code: string) => React.ReactNode;
 
 export type BriefingTopContainerProps = {
   briefing: BriefingPayload;
-  selectedCode: string | null;
   onSelectStock: (code: string) => void;
   isGenerating: boolean;
   generateError: string | null;
   onGenerateNarrative: () => void;
-  children?: React.ReactNode;
+  renderTopFive: (renderEvidence: RenderStockEvidence) => React.ReactNode;
 };
 
 const highlightTimers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
@@ -43,12 +44,11 @@ export function highlightCitationTarget(citationId: string) {
 
 export function BriefingTopContainer({
   briefing,
-  selectedCode,
   onSelectStock,
   isGenerating,
   generateError,
   onGenerateNarrative,
-  children,
+  renderTopFive,
 }: BriefingTopContainerProps) {
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(
     () => new Set()
@@ -93,26 +93,25 @@ export function BriefingTopContainer({
         onCitationClick={handleCitationClick}
       />
 
-      {/* 2. TOP5 표 (children 슬롯) */}
-      {children}
+      {/* 2. TOP5 행 안에 종목별 근거를 함께 렌더링 */}
+      {renderTopFive(code => {
+        const stock = briefing.stocks.find(item => item.code === code);
+        return stock ? (
+          <BriefingStockEvidence
+            stock={stock}
+            stocks={briefing.stocks}
+            narrative={briefing.narrative}
+            isExpanded={expandedCodes.has(code)}
+            onToggleExpand={toggleExpand}
+            onCitationClick={handleCitationClick}
+          />
+        ) : null;
+      })}
 
-      {/* 3. 종목별 근거·주의점 */}
-      {briefing.stocks.length > 0 && (
-        <BriefingStockSection
-          stocks={briefing.stocks}
-          narrative={briefing.narrative}
-          selectedCode={selectedCode}
-          onSelectStock={onSelectStock}
-          onCitationClick={handleCitationClick}
-          expandedCodes={expandedCodes}
-          onToggleExpand={toggleExpand}
-        />
-      )}
-
-      {/* 4. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
+      {/* 3. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
       <BriefingMacroGrid macro={briefing.macro} />
 
-      {/* 5. TOP5 후보 구성 카드 */}
+      {/* 4. TOP5 후보 구성 카드 */}
       {briefing.composition && (
         <BriefingCompositionCard
           composition={briefing.composition}
@@ -121,7 +120,7 @@ export function BriefingTopContainer({
         />
       )}
 
-      {/* 6. 면책 조항 */}
+      {/* 5. 면책 조항 */}
       {briefing.disclaimer && (
         <p className="briefing-disclaimer" data-testid="briefing-disclaimer">
           {briefing.disclaimer}

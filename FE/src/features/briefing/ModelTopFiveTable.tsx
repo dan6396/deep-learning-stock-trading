@@ -1,6 +1,7 @@
 import type { CandidateData } from "../../entities/candidate";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { queries } from "../../shared/api/queries";
 import { formatDate, formatSessionDate, formatWon } from "../../shared/lib/format";
 import { PredictionDirection } from "./PredictionDirection";
@@ -22,15 +23,79 @@ export function useNextSession(baseDate: string | null | undefined) {
   return useQuery({ ...queries.nextSession(baseDate ?? ""), enabled: Boolean(baseDate && /^\d{4}-\d{2}-\d{2}$/.test(baseDate)) });
 }
 
-export function RelatedArticles({ candidate }: { candidate: CandidateData }) {
-  const articles = [...new Map(candidate.news.filter(article => isRelatedArticle(article.title, candidate.name) && safeArticleUrl(article.url)).map(article => [safeArticleUrl(article.url)!, article])).values()].slice(0, 3);
-  return <div className="briefing-related-news"><h3>관련 기사</h3>{articles.length ? <ul>{articles.map(article => <li key={safeArticleUrl(article.url)!}>
-    <a href={safeArticleUrl(article.url)!} target="_blank" rel="noopener noreferrer" title={article.title ?? undefined}>{article.title}</a>
-    <small>{[article.source, article.publishedAt ? formatDate(article.publishedAt, true) : null, new URL(safeArticleUrl(article.url)!).hostname === "news.google.com" ? "Google News 경유" : null].filter(Boolean).join(" · ")}</small>
-  </li>)}</ul> : <p className="briefing-muted" role="status">{candidate.newsStatus === "collection_failed" ? "기사 수집 실패 · 다시 분석하면 재수집합니다." : candidate.newsStatus === "collected" && candidate.newsCollected ? "최근 7일 검색에서 관련 기사 0건" : "현재 분석의 기사 수집 기록 없음"}</p>}</div>;
+interface RelatedArticleItem {
+  key: string;
+  url: string;
+  title: string | null;
+  meta: string;
 }
 
-export function ModelTopFiveList({ rows, selectedCode, onSelect }: { rows: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void }) {
+function renderArticleItem(item: RelatedArticleItem) {
+  return (
+    <li key={item.key}>
+      <a href={item.url} target="_blank" rel="noopener noreferrer" title={item.title ?? undefined}>{item.title}</a>
+      <small>{item.meta}</small>
+    </li>
+  );
+}
+
+export function RelatedArticles({ candidate }: { candidate: CandidateData }) {
+  const items: RelatedArticleItem[] = [];
+  const seenUrls = new Set<string>();
+  for (const article of candidate.news) {
+    if (!isRelatedArticle(article.title, candidate.name)) continue;
+    const url = safeArticleUrl(article.url);
+    if (!url || seenUrls.has(url)) continue;
+    seenUrls.add(url);
+    let isGoogleNews = false;
+    try {
+      isGoogleNews = new URL(url).hostname === "news.google.com";
+    } catch { /* safeArticleUrl로 이미 검증된 URL이라 도달하지 않는다. */ }
+    const meta = [
+      article.source,
+      article.publishedAt ? formatDate(article.publishedAt, true) : null,
+      isGoogleNews ? "Google News 경유" : null,
+    ].filter(Boolean).join(" · ");
+    items.push({ key: url, url, title: article.title, meta });
+    if (items.length >= 3) break;
+  }
+
+  if (!items.length) {
+    return (
+      <div className="briefing-related-news">
+        <h3>관련 기사</h3>
+        <p className="briefing-muted" role="status">
+          {candidate.newsStatus === "collection_failed"
+            ? "기사 수집 실패 · 다시 분석하면 재수집합니다."
+            : candidate.newsStatus === "collected" && candidate.newsCollected
+            ? "최근 7일 검색에서 관련 기사 0건"
+            : "현재 분석의 기사 수집 기록 없음"}
+        </p>
+      </div>
+    );
+  }
+
+  const firstArticle = items[0];
+  const moreArticles = items.slice(1);
+
+  return (
+    <div className="briefing-related-news">
+      <h3>관련 기사</h3>
+      <ul>{renderArticleItem(firstArticle)}</ul>
+      {moreArticles.length > 0 && (
+        <details>
+          <summary>
+            <span>기사 {moreArticles.length}건 더 보기</span>
+            <ChevronDown aria-hidden="true" size={14} />
+          </summary>
+          <ul>{moreArticles.map(renderArticleItem)}</ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence }: { rows: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void; renderEvidence?: (code: string) => ReactNode }) {
   const [focusedCode, setFocusedCode] = useState(selectedCode);
   useEffect(() => setFocusedCode(selectedCode), [selectedCode]);
   const entryCode = rows.some(row => row.code === selectedCode) ? selectedCode : rows[0]?.code;
@@ -39,6 +104,7 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect }: { rows: Candi
   const quotes = useQueries({ queries: rows.map(row => ({ ...queries.quote(row.code), retry: false, staleTime: 30_000, refetchOnMount: false })) });
   return <ol className="briefing-top-five" aria-label="모델 순위 TOP5" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedCode(entryCode ?? null); }}>{rows.map((row, index) => {
     const quote = quotes[index], price = quote.isError || quote.data?.source === "sample" ? null : quote.data?.data;
+    const evidence = renderEvidence?.(row.code) ?? null;
     return <li key={row.code} data-model-code={row.code} data-selected={row.code === selectedCode ? "true" : undefined}>
       <div className="briefing-top-stock"><span className="briefing-top-rank">{String(row.rank).padStart(2, "0")}</span>
         <button type="button" className="briefing-stock-button" tabIndex={row.code === tabCode ? 0 : -1} onFocus={() => setFocusedCode(row.code)} aria-label={(row.name ?? "종목명 미확인") + " " + row.code + " 상세 보기"} aria-pressed={row.code === selectedCode} onClick={() => onSelect(row.code)} onKeyDown={event => {
@@ -52,7 +118,7 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect }: { rows: Candi
       </div>
       <div className="briefing-top-prediction"><span>{row.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측"}</span><strong><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></strong><small>{predictionPeriod(row, row.baseDate === sessionBase ? nextSession : null)} · 기준일 {formatDate(row.baseDate)}</small>{row.predictedReturn === null && row.rankScore == null && <small>{row.scoreKind === "rank_zscore" ? "순위 점수 없음" : "원본 예측값 없음"}</small>}</div>
       <div className="briefing-top-price"><span>현재가</span><strong>{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small></div>
-      <RelatedArticles candidate={row} />
+      {evidence ?? <RelatedArticles candidate={row} />}
     </li>;
   })}</ol>;
 }

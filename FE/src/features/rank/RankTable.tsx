@@ -13,6 +13,18 @@ import "../briefing/briefing.css";
 import "./rank.css";
 import type { CandidateProduction } from "../briefing/membership";
 
+function renderRankNewsCell(row: CandidateData) {
+  if (row.rank !== null && row.rank >= 1 && row.rank <= 5) {
+    if (row.news.length > 0) return <td>{`${row.news.length}건`}</td>;
+    if (row.newsCollected) return <td>0건</td>;
+    if (row.newsStatus === "collection_failed") {
+      return <td><span aria-hidden="true">—</span><span className="watch-sr-only">기사 수집 실패</span></td>;
+    }
+    return <td><span aria-hidden="true">—</span><span className="watch-sr-only">기사 미수집</span></td>;
+  }
+  return <td><span aria-hidden="true">—</span><span className="watch-sr-only">해당 없음</span></td>;
+}
+
 const columns: { key: RankSort; label: string }[] = [
   { key: "predictedReturn", label: "이전 모델 값" }, { key: "rank", label: "원본 모델 순위" },
   { key: "finalRank", label: "최종 보정 순위" }, { key: "finalPredictedReturn", label: "최종 보정 예측" },
@@ -67,7 +79,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
             <td><div className="rank-score-stock"><Link to={paths.stock(row.code)}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link>{top && <SignalView signal={model} model />}</div>{note && <small className="rank-row-note">{note}</small>}</td>
             <td data-value="predictedReturn">{formatRankScore(row.rankScore)}</td>
             <td>{percent === null ? "—" : `${formatNumber(percent, 2)}%`}</td>
-            <td>{row.rank !== null && row.rank <= 5 && (row.news.length || row.newsCollected) ? `${row.news.length}건` : ""}</td>
+            {renderRankNewsCell(row)}
             <td><WatchToggle code={row.code} name={row.name} /></td>
           </tr>;
         })}</tbody>
