@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Play, LoaderCircle, X } from "lucide-react";
 import { queries } from "../../shared/api/queries";
 import { AnalysisControl } from "./AnalysisControl";
+import { useAdminAccess } from "../../shared/api/adminAccess";
 import "./briefing.css";
 import "./analysisDialog.css";
 
@@ -50,11 +51,13 @@ function DialogContent({ close, running }: { close: (restore?: boolean) => void;
   </dialog>, document.body);
 }
 export function AnalysisDialog() {
+  const admin = useAdminAccess();
   const [open, setOpen] = useState(false), trigger = useRef<HTMLButtonElement>(null), location = useLocation();
   const route = `${location.pathname}${location.search}`, previousRoute = useRef(route);
   const run = useQuery(queries.analysisRun()), backend = useQuery(queries.backendStatus());
   const running = run.data?.data.status === "running" || backend.data?.runtime.state === "running";
   function close(restore = true) { setOpen(false); if (restore) trigger.current?.focus(); }
   useEffect(() => { if (previousRoute.current !== route) { previousRoute.current = route; if (open) close(false); } }, [route, open]);
+  if (!admin) return null;
   return <><button ref={trigger} type="button" className="ds-analysis-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{running ? <LoaderCircle className="analysis-spinner" aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}<span>{running ? "분석 진행 중" : "AI 분석 실행"}</span></button>{open && <DialogContent close={close} running={running} />}</>;
 }

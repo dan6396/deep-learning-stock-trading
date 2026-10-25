@@ -6,14 +6,14 @@ import { ArrowRight, CheckCircle2, LoaderCircle, Play, RefreshCw } from "lucide-
 import { useAppPaths } from "../../app/paths";
 import { useAnalysisRun, useStartAnalysis } from "../../shared/api/analysis";
 import { queries } from "../../shared/api/queries";
-import type { RunKind } from "../../types/performance";
+import { ApiRequestError, useAdminAccess } from "../../shared/api/adminAccess";
 
 /** onShowTopFive: when provided, a completed run offers a primary shortcut to the briefing TOP5. */
 export function AnalysisControl({ onShowTopFive }: { onShowTopFive?: () => void } = {}) {
+  const admin = useAdminAccess();
   const paths = useAppPaths(), backend = useQuery(queries.backendStatus());
   const analysis = useAnalysisRun(), start = useStartAnalysis();
   const [checking, setChecking] = useState(false), [requestError, setRequestError] = useState<string | null>(null);
-  const [kind, setKind] = useState<RunKind>("adhoc");
   const submitting = useRef(false), run = analysis.data?.data;
   const running = run?.status === "running" || backend.data?.runtime.state === "running";
   const busy = checking || start.isPending || running;
@@ -27,7 +27,7 @@ export function AnalysisControl({ onShowTopFive }: { onShowTopFive?: () => void 
     ? Math.floor(elapsed / 60000) + "분 " + Math.floor(elapsed % 60000 / 1000) + "초 경과" : null;
 
   async function launch() {
-    if (submitting.current || busy || uncertain) return;
+    if (!admin || submitting.current || busy || uncertain) return;
     submitting.current = true; setChecking(true); setRequestError(null);
     try {
       const [configuration, status] = await Promise.all([backend.refetch(), analysis.refetch()]);
@@ -35,14 +35,15 @@ export function AnalysisControl({ onShowTopFive }: { onShowTopFive?: () => void 
         setRequestError("실행 설정과 상태를 확인하지 못했습니다. 상태를 다시 확인해 주세요."); return;
       }
       if (configuration.data.runtime.state === "running" || status.data.data.status === "running") return;
-      await start.mutateAsync({ mode: "model_only", kind });
-    } catch {
-      setRequestError("실행 요청을 확인하지 못했습니다. 서버에서 시작됐을 수 있으니 상태를 다시 확인해 주세요.");
+      await start.mutateAsync({ mode: "model_only", kind: "adhoc" });
+    } catch (error) {
+      setRequestError(error instanceof ApiRequestError ? error.message : "실행 요청을 확인하지 못했습니다. 서버에서 시작됐을 수 있으니 상태를 다시 확인해 주세요.");
       await Promise.all([backend.refetch(), analysis.refetch()]);
     } finally { submitting.current = false; setChecking(false); }
   }
   async function recheck() { setRequestError(null); await Promise.all([backend.refetch(), analysis.refetch()]); }
 
+  if (!admin) return <p className="briefing-muted">새 분석은 장 마감 후 자동으로 생성됩니다.</p>;
   return <section className="briefing-card analysis-control" aria-labelledby="analysis-control-heading">
     <div className="analysis-control-main">
       <div className="analysis-control-copy">
@@ -50,8 +51,7 @@ export function AnalysisControl({ onShowTopFive }: { onShowTopFive?: () => void 
         <h2 id="analysis-control-heading">새 분석 실행</h2>
         <p id="analysis-mode-description" className="analysis-control-description">모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집합니다.</p>
         <p className="analysis-control-caption">최근 실행은 약 40초가 걸렸으며 상황에 따라 더 걸릴 수 있습니다. 실행 중에도 현재 결과는 그대로 보입니다.</p>
-        <label className="analysis-official-choice"><input type="checkbox" checked={(running ? run?.kind : kind) === "official"} disabled={busy || !backend.data} onChange={event => setKind(event.target.checked ? "official" : "adhoc")} />공식 성과 기록 요청</label>
-        <p className="analysis-control-caption">기본은 수시 실행입니다. 공식 요청은 기준일별 첫 완료 예측을 고정하고, 목표일 09:00 한국시간 전 완료 여부를 검증합니다.</p>
+        <p className="analysis-control-caption">관리자 실행은 수시 기록입니다. 공식 기록은 장 마감 후 예약 작업에서 생성합니다.</p>
       </div>
       <button type="button" className={`briefing-button analysis-start-button${completed && onShowTopFive ? " analysis-start-secondary" : ""}`} onClick={() => void launch()}
         disabled={busy || uncertain} aria-describedby="analysis-mode-description" aria-busy={busy}>

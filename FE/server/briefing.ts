@@ -26,6 +26,7 @@ export type BriefingInput = {
   macro: MarketMacro; stocks: BriefingStock[];
 };
 export type BriefingPayload = BriefingInput & {
+  kind: "official" | "adhoc" | "unknown";
   version: 1; status: "ready" | "no_run"; narrative: BriefingNarrative; disclaimer: string;
   composition: BriefingComposition;
   data_meta: { source: "live" | "cache" | "sample"; asOf: string | null };
@@ -131,7 +132,8 @@ export function createBriefingService({ rank = getRankPayload, marker = readPipe
     const marketRequest = macro(env, kisOptions()).then(value => { markets.set(environmentKey, value); return value; });
     const [rows, market] = await Promise.all([within(rank(env), preparationDeadline, () => []), within(marketRequest, preparationDeadline, emptyMarket)]);
     const after = await within(marker(env), preparationDeadline, () => null);
-    const unchanged = before && after && before.startedAt === after.startedAt && before.finishedAt === after.finishedAt && before.status === after.status && before.mode === after.mode;
+    const unchanged = before && after && before.startedAt === after.startedAt && before.finishedAt === after.finishedAt && before.status === after.status && before.mode === after.mode
+      && before.runId === after.runId && before.kind === after.kind;
     const input = buildBriefingInput(rows, unchanged ? after : null, market, now(), env);
     const compositionKey = briefingInputHash(input);
     const compositionRequest = composition(input, env, kisOptions()).then(value => { compositions.set(environmentKey, { hash: compositionKey, value }); return value; });
@@ -140,7 +142,8 @@ export function createBriefingService({ rank = getRankPayload, marker = readPipe
         () => templateNarrative(input, "generation_timeout", now())),
       within(compositionRequest, deadline, () => compositions.get(environmentKey)?.hash === compositionKey ? compositions.get(environmentKey)!.value : buildBriefingComposition(input)),
     ]);
-    return { version: 1, status: input.model ? "ready" : "no_run", ...input, narrative, composition: candidateComposition,
+    const kind = input.model && (after?.kind === "official" || after?.kind === "adhoc") ? after.kind : "unknown";
+    return { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, narrative, composition: candidateComposition,
       disclaimer: "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
       data_meta: { source: "cache", asOf: input.model?.runStartedAt ?? market.asOf } };
   };

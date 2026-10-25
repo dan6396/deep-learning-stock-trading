@@ -44,23 +44,23 @@ describe("shared legacy route contracts", () => {
     expect(deps.generateBriefingNarrative).not.toHaveBeenCalled(); expect(deps.startCandidateAnalysis).not.toHaveBeenCalled();
   });
   it("exposes read-only briefing GET and generation POST with provenance and no-store", async () => {
-    const deps = dependencies(), env = { GEMINI_API_KEY: "fixture-private-key" }, routes = createRoutes(deps, env);
+    const deps = dependencies(), env = { GEMINI_API_KEY: "fixture-private-key", CRON_SECRET: "fixture-cron" }, routes = createRoutes(deps, env);
     const get = response(); await routes["/api/briefing"]({ method: "GET" }, get.res);
     expect(get.res.statusCode).toBe(200); expect(deps.getBriefing).toHaveBeenCalledWith(env);
     expect(deps.generateBriefingNarrative).not.toHaveBeenCalled();
     expect(get.headers).toMatchObject({ "Cache-Control": "no-store", "X-Data-Source": "cache", "X-Data-As-Of": "2026-10-22T20:00:00Z" });
-    const post = response(); await routes["/api/briefing/narrative"]({ method: "POST" }, post.res);
+    const post = response(); await routes["/api/briefing/narrative"]({ method: "POST", headers: { authorization: "Bearer fixture-cron" } }, post.res);
     expect(post.res.statusCode).toBe(200); expect(post.body().narrative.fallbackReason).toBe("missing_api_key");
     for (const [path, method] of [["/api/briefing", "POST"], ["/api/briefing/narrative", "GET"], ["/api/briefing/narrative", "PUT"]]) {
       const denied = response(); await routes[path]({ method }, denied.res); expect(denied.res.statusCode).toBe(405);
     }
   });
   it("validates and forwards explicit official classification without changing defaults", async () => {
-    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "model_only" }, handler = createRoutes(deps, env)["/api/candidates/run"];
-    const ok = response(); await handler({ method: "POST", url: "/api/candidates/run?mode=model_only&kind=official" }, ok.res);
+    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "model_only", CRON_SECRET: "fixture-cron" }, handler = createRoutes(deps, env)["/api/candidates/run"];
+    const ok = response(); await handler({ method: "POST", url: "/api/candidates/run?mode=model_only&kind=official", headers: { authorization: "Bearer fixture-cron" } }, ok.res);
     expect(ok.res.statusCode).toBe(200);
     expect(deps.startCandidateAnalysis).toHaveBeenCalledWith({ ...env, PIPELINE_RUN_KIND: "official" });
-    const invalid = response(); await handler({ method: "POST", url: "/api/candidates/run?kind=invalid" }, invalid.res);
+    const invalid = response(); await handler({ method: "POST", url: "/api/candidates/run?kind=invalid", headers: { authorization: "Bearer fixture-cron" } }, invalid.res);
     expect(invalid.res.statusCode).toBe(400);
     expect(env.PIPELINE_RUN_KIND).toBeUndefined();
   });
@@ -72,7 +72,7 @@ describe("shared legacy route contracts", () => {
     const accepted = response(); await handler({ method: "GET", headers: { authorization: "Bearer fixture-cron" } }, accepted.res);
     expect(accepted.res.statusCode).toBe(200); expect(deps.runPerformanceCollection).toHaveBeenCalledOnce();
     expect(accepted.body().status).toBe("completed"); expect(accepted.headers["Cache-Control"]).toBe("no-store");
-    const local = response(); await handler({ method: "POST" }, local.res);
+    const local = response(); await handler({ method: "POST", headers: { authorization: "Bearer fixture-cron" } }, local.res);
     expect(local.body().status).toBe("running"); expect(deps.startPerformanceCollection).toHaveBeenCalledOnce();
   });
   it("returns the KIS next session for a base date and rejects malformed dates", async () => {
@@ -97,22 +97,22 @@ describe("shared legacy route contracts", () => {
     expect(result.body()).toMatchObject({ source: "live", asOf: "2026-10-09T11:47:34.355Z" });
   });
   it("applies the requested mode only to this job and preserves the server default", async () => {
-    const deps = dependencies(), env = { PIPELINE_ANALYSIS_MODE: "full", NAVER_CLIENT_ID: "fixture", NAVER_CLIENT_SECRET: "fixture", GEMINI_API_KEY: "fixture" };
+    const deps = dependencies(), env = { ADMIN_API_TOKEN: "fixture-admin", PIPELINE_ANALYSIS_MODE: "full", NAVER_CLIENT_ID: "fixture", NAVER_CLIENT_SECRET: "fixture", GEMINI_API_KEY: "fixture" };
     const handler = createRoutes(deps, env)["/api/candidates/run"];
     for (const mode of ["model_only"]) {
       const result = response();
-      await handler({ method: "POST", url: `/api/candidates/run?mode=${mode}` }, result.res);
+      await handler({ method: "POST", url: `/api/candidates/run?mode=${mode}`, headers: { authorization: "Bearer fixture-admin" } }, result.res);
       expect(result.res.statusCode).toBe(200);
-      expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: mode });
+      expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: mode, PIPELINE_RUN_KIND: "adhoc" });
     }
     expect(env.PIPELINE_ANALYSIS_MODE).toBe("full");
-    await handler({ method: "POST" }, response().res);
-    expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: "model_only" });
+    await handler({ method: "POST", headers: { authorization: "Bearer fixture-admin" } }, response().res);
+    expect(deps.startCandidateAnalysis).toHaveBeenLastCalledWith({ ...env, PIPELINE_ANALYSIS_MODE: "model_only", PIPELINE_RUN_KIND: "adhoc" });
   });
   it("rejects invalid modes and missing news credentials before starting a job", async () => {
-    const deps = dependencies(), handler = createRoutes(deps, {})["/api/candidates/run"];
+    const deps = dependencies(), handler = createRoutes(deps, { ADMIN_API_TOKEN: "fixture-admin" })["/api/candidates/run"];
     for (const mode of ["invalid", "", "full"]) {
-      const result = response(); await handler({ method: "POST", url: `/api/candidates/run?mode=${mode}` }, result.res);
+      const result = response(); await handler({ method: "POST", url: `/api/candidates/run?mode=${mode}`, headers: { authorization: "Bearer fixture-admin" } }, result.res);
       expect(result.res.statusCode).toBe(400);
     }
     expect(deps.startCandidateAnalysis).not.toHaveBeenCalled();
@@ -139,10 +139,10 @@ describe("shared legacy route contracts", () => {
     expect(unauthorized.res.statusCode).toBe(401);
     expect(deps.refreshDashboardSnapshot).toHaveBeenCalledTimes(3);
   });
-  it("allows keyless local POST, restricts cron GET, and keeps method errors", async () => {
+  it("rejects keyless production POST, restricts cron GET, and keeps method errors", async () => {
     const deps = dependencies(), handler = createRoutes(deps, { CRON_SECRET: "fixture-cron-only" })["/api/korean-market/refresh"];
     for (const [request, status] of [
-      [{ method: "POST" }, 200], [{ method: "GET" }, 401],
+      [{ method: "POST" }, 401], [{ method: "GET" }, 401],
       [{ method: "GET", headers: { authorization: "Bearer fixture-cron-only" } }, 200],
       [{ method: "GET", query: { key: "fixture-cron-only" } }, 401], [{ method: "PUT" }, 405],
     ]) {
@@ -179,7 +179,7 @@ describe("shared legacy route contracts", () => {
     expect(missing.res.statusCode).toBe(400);
     const wrongMethod = response(); await routes["/api/candidates"]({ method: "POST" }, wrongMethod.res);
     expect(wrongMethod.res.statusCode).toBe(405);
-    const next = vi.fn(); apiMiddleware({ method: "GET", url: "/api/candidates/extra" }, response().res, next); expect(next).toHaveBeenCalledOnce();
+    const next = vi.fn(), unknown = response(); apiMiddleware({ method: "GET", url: "/api/candidates/extra" }, unknown.res, next); expect(unknown.res.statusCode).toBe(404); expect(next).not.toHaveBeenCalled();
     vi.mocked(getCandidatesPayload).mockResolvedValue([]);
     const result = response(); apiMiddleware({ method: "GET", url: "/api/candidates?unused=1" }, result.res, next);
     await vi.waitFor(() => expect(result.res.statusCode).toBe(200));

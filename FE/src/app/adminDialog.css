@@ -1,0 +1,59 @@
+@layer components {
+  .admin-token-dialog {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    margin: auto;
+    width: min(440px, calc(100vw - var(--ds-space-7)));
+    max-width: calc(100vw - var(--ds-space-7));
+    max-height: calc(100dvh - var(--ds-space-8));
+    overflow: auto;
+    padding: var(--ds-space-6);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-space-5);
+    background: var(--ds-surface);
+    color: var(--ds-fg);
+    font: inherit;
+  }
+
+  .admin-token-dialog::backdrop {
+    background: color-mix(in srgb, var(--ds-bg) 72%, transparent);
+  }
+
+  .admin-token-dialog form { display: grid; gap: var(--ds-space-4); min-width: 0; }
+  .admin-token-dialog h2 { margin: 0; font-size: calc((var(--ds-text-lg) + var(--ds-text-xl)) / 2); font-weight: 700; }
+  .admin-token-dialog p { margin: 0; color: var(--ds-fg-2); font-size: var(--ds-text-base); line-height: 1.6; }
+  .admin-token-dialog [role="alert"] { color: var(--ds-warn); }
+  .admin-token-field { display: grid; gap: var(--ds-space-2); min-width: 0; }
+  .admin-token-field label { font-size: var(--ds-text-base); font-weight: 600; }
+  .admin-token-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: calc(var(--ds-space-8) + var(--ds-space-1));
+    padding: 0 var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-space-3);
+    background: var(--ds-surface-2);
+    color: var(--ds-fg);
+    font: inherit;
+    font-size: var(--ds-text-md);
+  }
+
+  .admin-token-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ds-space-2); }
+  .admin-token-actions button {
+    min-height: calc(var(--ds-space-8) + var(--ds-space-1));
+    padding: var(--ds-space-2) var(--ds-space-4);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-space-3);
+    background: var(--ds-surface-2);
+    color: var(--ds-fg);
+    font: inherit;
+    font-size: var(--ds-text-base);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .admin-token-actions .admin-token-save { border-color: var(--ds-primary); background: var(--ds-primary); color: var(--ds-on-primary); }
+  .admin-token-actions button:disabled { opacity: .5; cursor: not-allowed; }
+  .admin-token-dialog :is(input, button):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+}

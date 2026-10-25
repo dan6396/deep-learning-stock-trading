@@ -1323,3 +1323,5 @@ describe("narrative regeneration policy", () => {
     expect(screen.getByTestId("stock-card-005930")).not.toHaveTextContent("순위 점수는 수익률");
   });
 });
+
+beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));

@@ -3,9 +3,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { apiMiddleware, type ApiRequest, type ApiResponse } from "./server/routes";
+import { createRoutes, middlewareForRoutes, type ApiRequest, type ApiResponse } from "./server/routes";
 import { startPerformanceScheduler } from "./server/performance";
 import { startRefreshAhead } from "./server/refreshAhead";
+import { validateDevelopmentAccess } from "./server/writeSecurity";
 
 declare const process: {
   cwd: () => string;
@@ -15,6 +16,8 @@ declare const process: {
 function kisApiPlugin(): Plugin {
   return {
     configureServer(server) {
+      validateDevelopmentAccess(process.env);
+      const apiMiddleware = middlewareForRoutes(createRoutes(undefined, process.env, { development: true }));
       if (!process.env.VITEST) {
         const stop = startPerformanceScheduler();
         server.httpServer?.once("close", stop);
@@ -72,10 +75,7 @@ export default defineConfig(({ mode }) => {
       // splitting API state across multiple Vite processes.
       port: process.env.PORT ? Number(process.env.PORT) : 5173,
       strictPort: true,
-      // Dev only: accept any Host header so dynamic tunnel domains
-      // (*.trycloudflare.com, *.ngrok-free.app) aren't rejected by Vite's
-      // host check. Does not affect production builds.
-      allowedHosts: true,
+      allowedHosts: process.env.DEV_ALLOWED_HOSTS?.split(",").map(host => host.trim()).filter(Boolean),
     },
   };
 });

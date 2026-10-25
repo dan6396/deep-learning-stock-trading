@@ -20,6 +20,20 @@ function rows() {
   }));
 }
 describe("model TOP5 briefing", () => {
+  it.each(["official", "adhoc", undefined, "invalid"])("classifies a stable completed result from run metadata (%s)", async kind => {
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => ({ ...marker, runId: "fixture-run", kind }),
+      macro: async () => macro, composition: async input => buildBriefingComposition(input),
+      narratives: { resolve: async input => templateNarrative(input, null, now) }, now: () => now });
+    const result = await service(false, {});
+    expect(result.status).toBe("ready"); expect(result.kind).toBe(kind === "official" || kind === "adhoc" ? kind : "unknown");
+  });
+  it.each(["kind", "runId"])("does not attribute a result to changed %s metadata", async field => {
+    const read = vi.fn().mockResolvedValueOnce({ ...marker, runId: "first", kind: "adhoc" })
+      .mockResolvedValueOnce({ ...marker, runId: "first", kind: "adhoc", [field]: field === "kind" ? "official" : "second" });
+    const service = createBriefingService({ rank: async () => rows(), marker: read, macro: async () => macro,
+      composition: async input => buildBriefingComposition(input), narratives: { resolve: async input => templateNarrative(input, null, now) }, now: () => now });
+    expect(await service(false, {})).toMatchObject({ status: "no_run", kind: "unknown", model: null });
+  });
   it("uses background KIS reads only for GET and carries the same 1.5-second budget into composition", async () => {
     const market = vi.fn(async () => macro), composition = vi.fn(async input => buildBriefingComposition(input));
     const service = createBriefingService({ rank: async () => rows(), marker: async () => marker, macro: market, composition,

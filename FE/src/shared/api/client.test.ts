@@ -1,9 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApiClient } from "./client";
 import { deferred, jsonResponse } from "../../test/dataFixtures";
+import { setAdminToken } from "./adminAccess";
 
 afterEach(() => vi.useRealTimers());
 describe("fetch transport", () => {
+  it("blocks redirects only for requests carrying Authorization", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({})), client = createApiClient("", fetcher);
+    await client.request("/api/briefing"); await client.request("/api/briefing/narrative", { method: "POST" });
+    expect(fetcher.mock.calls[0][1]).not.toHaveProperty("redirect"); expect(fetcher.mock.calls[1][1]).not.toHaveProperty("redirect");
+    setAdminToken("fixture-admin"); await client.request("/api/briefing/narrative", { method: "POST" });
+    expect(fetcher.mock.calls[2][1]).toHaveProperty("redirect", "error");
+    await client.request("/api/briefing"); expect(fetcher.mock.calls[3][1]).not.toHaveProperty("redirect");
+  });
   it("propagates caller cancellation and rejects a late success instead of fallback", async () => {
     const pending = deferred<Response>();
     const fetcher = vi.fn<typeof fetch>().mockReturnValue(pending.promise);

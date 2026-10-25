@@ -1,5 +1,39 @@
 # 최종 모델 웹 화면
 
+## 운영 서버와 관리자 인증
+
+FE/vercel.json과 api/*는 지원하지 않는 배포 경로다. 단일 Node 인스턴스(npm run start)만 지원한다. 파일 기반 배포는 시작 시 토큰 검사를 보장하지 않고, 프로세스 내 실행 잠금·제한기를 공유하지 않으며, 브리핑 API 진입점도 없습니다. 기존 파일은 남겨 두지만 배포에 사용하지 않습니다.
+
+같은 종류의 동시 분석 요청은 진행 중인 실행을 공유합니다. 요청 종류가 다르면 409와 현재 runId·kind·재시도 안내를 반환하므로 공식 예약 작업은 완료 후 재시도해야 합니다. [API 계약의 외부 스케줄러 예시](docs/api-contract.md#외부-공식-실행-예약)를 따르세요. 브리핑 응답의 kind는 결과의 실행 메타로 판단하며 수시 결과에는 ‘수시 분석 결과 · 공식 기록 아님’을 표시합니다. 구분할 수 없는 이전 결과는 unknown이며 표시를 생략합니다.
+
+Node 24에서 `npm ci`, `npm run build`, `npm run start` 순으로 실행합니다. `start`는 런타임 의존성 `tsx`로 `server/prodServer.ts`를 실행하므로 Vite 개발 서버 없이 API와 `dist`를 함께 제공합니다. 기존 서버 모듈의 확장자 없는 TS import를 유지하고 별도 서버 빌드 산출물 없이 실행하기 위해 tsx를 사용합니다. 배포에는 `server/`, 서버가 참조하는 `src/` 타입·공용 모듈과 기존 모델/출력 경로도 필요합니다. `vite preview`는 정적 점검 전용입니다.
+
+환경 변수는 프로세스 환경으로 주입합니다. 운영 서버는 Vite의 dotenv 로딩을 사용하지 않습니다. 기본 `PORT=3000`, `HOST=0.0.0.0`입니다. 정적 `/about`은 프리렌더 파일을 우선하고 다른 페이지 경로는 SPA로 연결합니다. 보안 헤더를 기본 제공하며 성과 수집과 refresh-ahead는 시작 때 기동하고 SIGINT/SIGTERM·서버 종료 때 타이머를 정리합니다.
+
+| 변수 | 용도 |
+| --- | --- |
+| `ADMIN_API_TOKEN` | 관리자 POST Bearer 토큰. 브라우저용 `VITE_` 변수에 넣지 않습니다. |
+| `CRON_SECRET` | 예약 작업 Bearer 토큰. 관리자 토큰과 서로 다른 값을 사용합니다. |
+| `SNAPSHOT_REFRESH_KEY` | refresh POST 키. trim 후 빈 값은 미설정이며, 설정된 값이 32자 미만이면 시작을 거부합니다. query `key`보다 `x-refresh-key` 헤더 전달을 권장합니다. |
+| `TRUST_PROXY` | 기본 비활성. 신뢰하는 프록시 홉 수 N(양의 정수)입니다. X-Forwarded-For의 오른쪽 N번째 주소를 사용합니다. `1`은 마지막 주소입니다. 원본 서버 직접 접근을 차단하고 모든 신뢰 홉에서 실제 peer를 추가하거나 헤더를 덮어써야 합니다. |
+| `DEV_ALLOWED_HOSTS` | Vite에서 허용할 호스트 이름의 쉼표 목록. 빈 값이면 Vite 기본 검사입니다. 설정됐는데 관리자·cron 토큰이 모두 비어 있으면 개발 서버 시작을 거부합니다. |
+
+`POST /api/candidates/run`은 관리자가 호출하면 항상 `adhoc`이며 `kind=official` 요청은 403입니다. 장 마감 후 외부 스케줄러만 CRON_SECRET으로 `POST /api/candidates/run?kind=official`을 호출하도록 구성합니다. 서버는 공식 분석 자동 일정을 새로 만들지 않습니다. narrative 생성·성과 수집 POST는 관리자 또는 cron 토큰이 필요합니다. 인증 없음/불일치는 401입니다. 쓰기는 먼저 토큰을 검증하고 관리자·cron은 각각 별도 분당 30회 버킷을 사용합니다. 유효한 refresh 키와 로컬 개발 예외도 별도 분당 30회 버킷입니다. 미인증 요청은 IP별 분당 10회로 제한하므로 익명 요청이 cron을 막지 않습니다. 초과하면 429와 Retry-After(초)를 반환하며 IP 맵 포화 시 가장 오래된 항목을 제거합니다. 제한과 분석 실행 잠금은 단일 Node 프로세스 범위이므로 한 인스턴스로 운영합니다.
+
+운영 서버 시작 시 ADMIN_API_TOKEN·CRON_SECRET의 앞뒤 공백을 제거해 검사합니다. 빈 토큰은 경고하고 해당 인증을 거부합니다. 설정한 값이 32자 미만이거나 두 값이 같으면 시작을 거부하며 토큰 값은 로그에 남기지 않습니다. refresh POST는 query `key` 또는 `x-refresh-key` 헤더의 `SNAPSHOT_REFRESH_KEY`를 검사하고, 운영에서는 키 미설정도 401입니다. refresh GET은 기존 cron Bearer 인증입니다. 동시 snapshot 갱신은 한 번의 전체 빌드·저장을 공유합니다.
+
+개발 분석·요약·성과 POST는 **관리자·cron 토큰이 모두 비어 있을 때만**, refresh POST는 snapshot 키가 비어 있을 때만 로컬 예외를 허용합니다. 공통 조건은 실제 loopback peer, Host 호스트명 localhost/127.0.0.1/[::1], 전달 헤더(x-forwarded-*·forwarded·cf-connecting-ip·cf-ray) 없음입니다. Origin이 있으면 요청의 scheme·Host와 같은 origin이어야 합니다. Origin이 없으면 Sec-Fetch-Site가 same-origin/none이거나 없어야 합니다(curl). 터널 공개 전에는 반드시 토큰을 설정하세요.
+
+운영 CSP는 self 출처와 빌드된 index.html에서 시작 시 계산한 테마 스크립트 SHA-256 해시만 script-src에 허용합니다. style-src의 unsafe-inline은 React style 속성·초기 배경 때문에 유지하고 이미지·폰트의 data: URI를 허용합니다. connect-src는 self이므로 운영 API도 같은 origin으로 제공합니다. `/assets/*`는 1년 immutable, HTML은 no-cache·mtime/size 기반 ETag·304를 지원하며 텍스트 자산은 Accept-Encoding에 따라 gzip과 Vary를 제공합니다. `/api`는 SPA 대신 404 JSON입니다. 비동기 API 오류는 500 JSON으로 처리하고 서버 포트 충돌은 EADDRINUSE 안내를 남깁니다.
+
+`connect-src 'self'` 때문에 운영 빌드의 `VITE_API_BASE_URL`에 다른 오리진을 지정할 수 없습니다. 같은 오리진의 API 경로를 사용하세요. TCP 터널(`ssh -R`)은 HTTP 전달 헤더 없이 loopback·로컬 Host 조건을 유지해 개발 로컬 예외를 통과할 수 있으므로 터널 공개 전 토큰을 반드시 설정해야 합니다. refresh 키는 URL 기록에 남는 query보다 `x-refresh-key` 헤더로 전달하세요.
+
+정적 전송은 pipeline이 원본·gzip·응답 스트림을 함께 관리합니다. 클라이언트 중단은 조용히 정리하고 다른 오류는 응답 가능한 경우 500과 `Cache-Control: no-store`를 반환합니다. unhandledRejection 로그에는 오류 name·code만 남기고 메시지는 제외합니다. 제한기 맵 전체의 만료 정리는 요청 시 최소 1초 간격으로 수행하며, 요청한 IP의 만료는 즉시 반영합니다.
+
+화면 URL에 `?admin`을 붙여 관리자 대화상자를 열고 password 입력란에 토큰을 저장합니다. 현재 탭의 sessionStorage에만 보관하고 POST에만 Authorization을 첨부합니다. 같은 대화상자의 ‘해제’로 지웁니다. 토큰이 없으면 실행/요약 생성 버튼을 숨기고 안내하며 `VITE_DEMO_HIDE_RUN=1`도 계속 지원합니다. 401이면 토큰 재입력, 403이면 수시 실행, 429이면 안내한 시간 후 재시도합니다. 공개 서버는 HTTPS로 제공합니다.
+
+터널 시연은 PowerShell에서 `$env:DEV_ALLOWED_HOSTS='example.trycloudflare.com,example.ngrok-free.app'`처럼 실제 호스트 이름을 설정하고 관리자/cron 토큰을 주입한 뒤 Vite를 시작합니다. URL 스킴·경로는 넣지 않습니다. 호스트가 바뀌면 목록을 수정하고 재시작합니다. 모든 호스트 허용 설정은 사용하지 않습니다.
+
 루트 [실행 안내](../README.md)와 [API 계약](docs/api-contract.md)을 기준으로 실행합니다.
 
 ```powershell
@@ -29,7 +63,7 @@ KIS 공통 스로틀 `KIS_MAX_RPS`는 실전/모의 모두 기본 1건/초이며
 
 차트의 3개월·1년 일봉과 5년 월봉은 다음 거래일 마감까지 재사용합니다. `server/cache/market-v1/`에 기간별 원본과 전체 묶음을 임시 파일→rename으로 저장해 서버 재시작 직후에도 응답합니다. 해당 경로는 `FE/.gitignore`의 `server/cache/` 규칙으로 제외됩니다. 손상된 JSON/형식은 캐시 미스로 처리하며, 읽기 전용 파일시스템에서는 메모리 캐시로 동작합니다. 새 수집은 마지막 날짜 이후와 최근 14일(5년 월봉은 62일)을 다시 받아 정정값을 덮어씁니다. KIS의 한 번당 100행 제한은 페이지 조회로 이어받습니다. 1년은 최대 390달력일의 실제 일봉이며, 5년 월봉을 일봉으로 취급하지 않습니다. 분봉의 후속 갱신은 최근 한 페이지를 같은 거래일 원본에 합칩니다.
 
-`refresh-ahead`는 Vite 개발 서버의 `configureServer`에서 시작하고 종료 때 타이머를 정리합니다. 빌드·테스트·정적 preview에서는 시작하지 않습니다. 서버 시작 시 최신 모델 TOP5 현재가·전 기간 차트와 기존 3개 지수를 한 번 예열합니다. 장중 현재가·지수는 30초, 분봉은 60초 주기로 갱신하며 마감 뒤 한 번 갱신 후 다음 장까지 쉽니다. `REFRESH_AHEAD=0`이면 끕니다. 브리핑 매크로의 기존 SWR 정책은 유지합니다. KIS 공용 제한기는 사용자 요청을 우선하고 백그라운드 호출은 최대 30회/분으로 제한합니다. 기본 공용 한도는 여전히 1 RPS입니다. 최초 TOP5 전체 이력 수집은 이 예산 안에서 수 분 걸릴 수 있고, 캐시가 없는 종목의 첫 조회는 여전히 수집을 기다립니다. 이미 진행 중인 동일 예열·화면 조회는 Promise를 공유합니다. 1분마다 `[refresh-ahead]` 로그에 실제 사용자/백그라운드 호출 수와 `EGW00201` 수를 비밀 없이 기록합니다.
+`refresh-ahead`는 Node 운영 서버와 Vite 개발 서버의 `configureServer`에서 시작하고 종료 때 타이머를 정리합니다. 빌드·테스트·정적 preview에서는 시작하지 않습니다. 서버 시작 시 최신 모델 TOP5 현재가·전 기간 차트와 기존 3개 지수를 한 번 예열합니다. 장중 현재가·지수는 30초, 분봉은 60초 주기로 갱신하며 마감 뒤 한 번 갱신 후 다음 장까지 쉽니다. `REFRESH_AHEAD=0`이면 끕니다. 브리핑 매크로의 기존 SWR 정책은 유지합니다. KIS 공용 제한기는 사용자 요청을 우선하고 백그라운드 호출은 최대 30회/분으로 제한합니다. 기본 공용 한도는 여전히 1 RPS입니다. 최초 TOP5 전체 이력 수집은 이 예산 안에서 수 분 걸릴 수 있고, 캐시가 없는 종목의 첫 조회는 여전히 수집을 기다립니다. 이미 진행 중인 동일 예열·화면 조회는 Promise를 공유합니다. 1분마다 `[refresh-ahead]` 로그에 실제 사용자/백그라운드 호출 수와 `EGW00201` 수를 비밀 없이 기록합니다.
 
 클라이언트 캐시는 30분 유지하며 현재가·지수 `staleTime`은 20초, 분봉 60초, 일봉 탭 10분입니다. 차트 묶음 한 번으로 함께 받은 다른 기간 탭도 채웁니다. 같은 종목의 기존 값은 조용히 갱신하고, 다른 종목으로 이동할 때 이전 종목 값을 보여주지 않습니다. 차트·현재가·지수·대시보드의 요청 제한은 75초이며 narrative POST는 60초입니다.
 

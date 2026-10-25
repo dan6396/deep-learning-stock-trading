@@ -7,6 +7,7 @@ import { collectTopFiveArticles } from "./relatedNews";
 import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
 import type { RunKind } from "../src/types/performance";
+import { HttpError } from "./writeSecurity";
 
 declare const process: {
   cwd: () => string;
@@ -51,6 +52,14 @@ const CANDIDATE_PROGRESS_STAGES = [
 ] as const;
 
 let activeRun: Promise<CandidateAnalysisRunResult> | null = null;
+let activeIdentity: { runId: string; kind: RunKind } | undefined;
+
+function assertCompatibleRun(kind: RunKind): void {
+  if (activeRun && activeIdentity && activeIdentity.kind !== kind) {
+    const retry = "진행 중인 실행이 끝난 뒤 같은 kind로 다시 요청해 주세요.";
+    throw new HttpError(409, `다른 종류의 분석이 진행 중입니다. ${retry}`, { ...activeIdentity, retry });
+  }
+}
 
 function boundedPercent(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value)));
@@ -553,10 +562,11 @@ export function getCandidateAnalysisStatus(): CandidateAnalysisStatus {
 export function startCandidateAnalysis(env = process.env): CandidateAnalysisStatus {
   const mode = analysisMode(env);
   const kind = runKind(env);
+  assertCompatibleRun(kind);
   if (!activeRun) {
     runMode = mode;
     const startedAt = Date.now();
-    runIdentity = { runId: randomUUID(), kind };
+    runIdentity = activeIdentity = { runId: randomUUID(), kind };
     runState = { status: "running", startedAt, progress: initialProgress() };
 
     activeRun = executeCandidateAnalysis(env, startedAt, runIdentity);
@@ -586,6 +596,7 @@ export function startCandidateAnalysis(env = process.env): CandidateAnalysisStat
       })
       .finally(() => {
         activeRun = null;
+        activeIdentity = undefined;
       });
   }
 
@@ -598,9 +609,13 @@ export function startCandidateAnalysis(env = process.env): CandidateAnalysisStat
  * or tunnel that enforces a request timeout.
  */
 export async function runCandidateAnalysis(env = process.env): Promise<CandidateAnalysisRunResult> {
+  const kind = runKind(env);
+  assertCompatibleRun(kind);
   if (!activeRun) {
-    activeRun = executeCandidateAnalysis(env).finally(() => {
+    activeIdentity = { runId: randomUUID(), kind };
+    activeRun = executeCandidateAnalysis(env, Date.now(), activeIdentity).finally(() => {
       activeRun = null;
+      activeIdentity = undefined;
     });
   }
 

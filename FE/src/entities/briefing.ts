@@ -186,6 +186,7 @@ export type BriefingComposition = {
 export type BriefingPayload = {
   version: 1;
   status: BriefingStatus;
+  kind?: "official" | "adhoc" | "unknown";
   model: BriefingModelMeta | null;
   macro: MacroData;
   stocks: BriefingStock[];
@@ -580,6 +581,7 @@ export function adaptBriefing(value: unknown): BriefingPayload {
   return {
     version: 1,
     status,
+    kind: status === "ready" && model && (root.kind === "official" || root.kind === "adhoc") ? root.kind : "unknown",
     model,
     macro,
     stocks,

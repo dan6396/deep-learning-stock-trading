@@ -1,5 +1,6 @@
 import { aggregateSource, dataSource, resultMeta, type DataResult, type DataSource } from "../../entities/source";
 import { record } from "../../entities/value";
+import { ApiRequestError, getAdminToken } from "./adminAccess";
 
 const DEFAULT_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 export type ApiClient = ReturnType<typeof createApiClient>;
@@ -12,9 +13,10 @@ export function createApiClient(baseUrl = DEFAULT_BASE_URL, fetcher: typeof fetc
     const timeout = setTimeout(() => controller.abort(new DOMException("요청 시간이 초과되었습니다.", "TimeoutError")), options.timeoutMs ?? 15000);
     try {
       if (controller.signal.aborted) throw controller.signal.reason;
-      const response = await fetcher(`${baseUrl}${path}`, { method: options.method ?? "GET", signal: controller.signal, headers: { Accept: "application/json" } });
+      const token = options.method === "POST" ? getAdminToken() : "";
+      const response = await fetcher(`${baseUrl}${path}`, { method: options.method ?? "GET", signal: controller.signal, ...(token ? { redirect: "error" as const } : {}), headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
       if (controller.signal.aborted) throw controller.signal.reason;
-      if (!response.ok) throw new Error(`요청 실패 (${response.status}): ${path}`);
+      if (!response.ok) throw new ApiRequestError(response.status, response.headers.get("Retry-After"));
       if (!(response.headers.get("content-type") ?? "").includes("application/json")) throw new Error(`JSON 응답이 아닙니다: ${path}`);
       const payload: unknown = await response.json();
       if (controller.signal.aborted) throw controller.signal.reason;

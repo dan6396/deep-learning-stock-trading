@@ -50,6 +50,7 @@ const quotePending = new Map<string, Promise<StockQuote>>();
 const pricePending = new Map<string, Promise<KisOutput>>();
 const indicesPending = new Map<string, Promise<MarketIndexSnapshot[]>>();
 const chartPending = new Map<string, Promise<StockChartBundle>>();
+const snapshotPending = new Map<string, Promise<MarketDashboardData>>();
 const kisScope = (config: KisConfig) => inFlightKey([config.env, config.baseUrl, config.appKey, config.appSecret]);
 
 const KIS_BASE_URLS: Record<KisEnv, string> = {
@@ -1853,10 +1854,14 @@ export async function buildFreshKisDashboard(env = process.env): Promise<MarketD
  * unless `KIS_UNIVERSE_SIZE` narrows it.
  */
 export async function refreshDashboardSnapshot(env = process.env): Promise<MarketDashboardData> {
-  const data = await buildLiveDashboard(env, {
-    universeSize: resolveSnapshotUniverseSize(env),
-    withInvestorFlow: env.KIS_WITH_INVESTOR_FLOW !== "false",
+  const config = getKisConfig(env);
+  const key = inFlightKey([kisScope(config), resolveSnapshotUniverseSize(env), env.KIS_WITH_INVESTOR_FLOW, env.KIS_INDEX_SERIES_SOURCE, env.KIS_INDEX_SERIES_CACHE_TTL_MS]);
+  return shareInFlight(snapshotPending, key, async () => {
+    const data = await buildLiveDashboard(env, {
+      universeSize: resolveSnapshotUniverseSize(env),
+      withInvestorFlow: env.KIS_WITH_INVESTOR_FLOW !== "false",
+    });
+    await writeDashboardSnapshot(data);
+    return data;
   });
-  await writeDashboardSnapshot(data);
-  return data;
 }

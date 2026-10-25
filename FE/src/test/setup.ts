@@ -4,6 +4,8 @@ import { cleanup } from "@testing-library/react";
 
 afterEach(() => {
   cleanup();
+  if (typeof window === "undefined") return;
   window.localStorage.clear();
+  window.sessionStorage.clear();
   delete document.documentElement.dataset.theme;
 });

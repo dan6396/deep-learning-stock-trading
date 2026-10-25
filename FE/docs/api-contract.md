@@ -1,9 +1,71 @@
 # 현재 최종 모델 API 계약
 
+## 서버·쓰기 인증
+
+FE/vercel.json과 api/*는 지원하지 않는 배포 경로다. 단일 Node 인스턴스(npm run start)만 지원한다. 파일 기반 배포에는 시작 시 토큰 검사 보장이 없고, 프로세스 내 잠금·제한기를 공유할 수 없으며, 브리핑 API 진입점도 없습니다. 해당 파일은 보존하지만 지원 배포 대상으로 사용하지 않습니다.
+
+`npm run build && npm run start`에 해당하는 두 명령을 순서대로 실행하면 Node 24 + tsx 운영 서버가 dist 정적 페이지와 기존 공통 API 라우터를 제공합니다. `PORT` 기본 3000, `HOST` 기본 0.0.0.0입니다. 환경은 프로세스에 주입하며 운영 서버는 dotenv를 자동으로 읽지 않습니다. 운영 서버와 Vite 개발 서버 모두 성과 수집·refresh-ahead를 기동하고 종료 시 정리합니다. 정적 preview는 API를 제공하지 않습니다.
+
+| 요청 | 허용 자격 |
+| --- | --- |
+| POST `/api/candidates/run` | `Authorization: Bearer <ADMIN_API_TOKEN>` 또는 `<CRON_SECRET>`. 관리자 요청은 adhoc 강제. official은 cron만 허용. kind 생략 시 adhoc. |
+| POST `/api/briefing/narrative` | 관리자 또는 cron Bearer |
+| POST `/api/performance/collect` | 관리자 또는 cron Bearer |
+| GET `/api/performance/collect` | 기존 cron Bearer만 허용, 수집 완료까지 대기 |
+| GET `/api/korean-market/refresh` | 기존 cron Bearer 계약 유지 |
+| POST `/api/korean-market/refresh` | SNAPSHOT_REFRESH_KEY 검사. `x-refresh-key` 헤더 권장, query `key`도 지원. 운영에서 키 미설정은 401. 개발 키 미설정은 아래 로컬 규칙 적용. |
+
+관리자·cron은 서로 다른 서버 환경 토큰을 사용합니다. expected는 trim 후 고정 길이 SHA-256 해시로 상수 시간 비교합니다. 운영 서버는 빈 ADMIN_API_TOKEN·CRON_SECRET을 경고하고 해당 인증을 거부하며, 설정된 토큰이 32자 미만이거나 두 값이 같으면 시작을 거부합니다. 값은 로그에 남기지 않습니다. 미설정·불일치는 401, 관리자 official 요청은 403이며 실행 공급자를 호출하지 않습니다.
+
+SNAPSHOT_REFRESH_KEY는 trim 후 빈 값이면 미설정으로 취급합니다. 비어 있지 않은 값이 32자 미만이면 운영 서버 시작을 거부합니다. URL 기록에 키를 남기지 않도록 query보다 `x-refresh-key` 헤더를 권장합니다.
+
+Vite에서 관리자·cron 토큰이 모두 비어 있을 때 분석·요약·성과 POST의 로컬 예외를 허용합니다. refresh POST는 snapshot 키가 비어 있을 때 같은 로컬 규칙을 적용합니다. 실제 socket peer가 127.0.0.1/::1(IPv4 mapped loopback 포함), Host 호스트명이 localhost/127.0.0.1/[::1], x-forwarded-*·forwarded·cf-connecting-ip·cf-ray 헤더 없음이어야 합니다. Origin이 있으면 요청 scheme·Host와 동일한 origin이어야 하고, 없으면 Sec-Fetch-Site가 same-origin/none이거나 헤더가 없어야 합니다. 터널·크로스 사이트 요청은 거부합니다. 로컬 예외로 official을 만들 수 없으며 운영 서버에는 예외가 없습니다. snapshot 전체 갱신은 같은 KIS 구성·갱신 옵션의 in-flight 빌드와 저장을 공유하며 실패 후 재시도할 수 있습니다.
+
+`/api/*`의 POST/PUT/PATCH/DELETE 등 쓰기 메서드는 토큰을 먼저 검증합니다. 유효한 admin/cron은 각각 IP와 무관한 별도 고정 60초 창 30회 버킷을 사용하고, 유효한 refresh 키·로컬 예외도 각 30회입니다. 미인증 요청은 IP별 10회이며 익명 IP 소진이 cron 버킷에 영향을 주지 않습니다. 초과 시 429 및 `Retry-After` 초를 반환합니다. IP 맵은 최대 10,000개이며 포화되면 가장 오래된 항목을 제거합니다. GET/HEAD/OPTIONS는 제외합니다. 기본 IP는 socket peer입니다. `TRUST_PROXY=N`(양의 정수)에서만 X-Forwarded-For 오른쪽 N번째 주소를 사용하며 `1`은 마지막 주소입니다. 체인이 짧거나 선택 값이 유효한 IP가 아니면 socket으로 되돌아갑니다. 신뢰 홉 수를 실제 경로와 맞추고 각 ingress가 실제 peer를 추가/덮어쓰도록 구성하며 원본 서버 직접 접근을 막아야 합니다. 창 상태와 pipelineRunner 실행 잠금은 프로세스별입니다. 같은 kind의 동시 요청만 기존 runId·kind를 HTTP 200으로 공유합니다. 다른 kind는 HTTP 409와 진행 중인 runId·kind·retry 안내를 반환하며 완료 후 요청한 kind로 재시도해야 합니다. 단일 인스턴스 배포를 전제로 합니다.
+
+운영 CSP는 `default-src 'self'; script-src 'self' 'sha256-<시작 시 dist/index.html 테마 스크립트에서 계산한 해시>'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`입니다. API는 같은 origin으로 제공합니다. `/assets/*`는 `public, max-age=31536000, immutable`, HTML은 `no-cache`, mtime+size ETag와 If-None-Match 304를 지원합니다. 텍스트 자산은 gzip 협상과 Vary: Accept-Encoding을 지원하고 `/api`는 404 JSON입니다. 비동기 미처리 라우트 실패는 headersSent 전에 500 JSON, 이후에는 응답 종료로 처리하며 원본 예외는 공개하지 않습니다. 운영 서버는 unhandledRejection·HTTP 서버 오류를 값 없는 안전 로그로 남기며 EADDRINUSE 안내를 제공합니다.
+
+브라우저 관리자 진입은 `?admin`이며 토큰을 현재 탭의 sessionStorage에만 저장·해제합니다. 공통 클라이언트는 POST에만 Bearer를 첨부하며 리디렉션을 따라 토큰을 보내지 않습니다. 401·403·429는 각각 토큰 재입력·수시 실행·대기 후 재시도 안내로 표시합니다. `ADMIN_API_TOKEN`/`CRON_SECRET`을 VITE_ 변수에 넣지 않습니다. `DEV_ALLOWED_HOSTS`는 쉼표로 구분한 Vite 허용 호스트 목록이며 비어 있으면 Vite 기본값을 유지합니다. 설정됐는데 관리자·cron 토큰이 모두 비어 있으면 개발 서버 시작을 거부합니다. 터널 사용 시 loopback 예외를 방지하도록 토큰을 반드시 설정합니다.
+
+CSP의 `connect-src 'self'` 때문에 운영에서 `VITE_API_BASE_URL`로 다른 오리진을 사용할 수 없습니다. API를 같은 오리진으로 제공해야 합니다. HTTP 전달 헤더가 없는 TCP 터널(`ssh -R`)은 실제 loopback·로컬 Host 조건을 보존해 개발 로컬 예외를 통과할 수 있으므로 반드시 토큰을 설정해야 합니다.
+
+정적 파일은 ReadStream의 open 이벤트 이후에만 `stream/promises.pipeline`을 시작해 원본·gzip 압축기·응답을 함께 종료합니다. 열기 실패는 응답을 파괴하기 전에 500 JSON과 `Cache-Control: no-store`를 반환합니다. 클라이언트 중단의 `ERR_STREAM_PREMATURE_CLOSE`는 조용히 무시하고 그 외 오류는 headersSent를 확인해 응답 가능한 경우 500 JSON과 `Cache-Control: no-store`, 전송 이후에는 응답 종료로 처리합니다. unhandledRejection 로그는 error.name·code만 기록하며 메시지는 제외합니다. 제한기의 전체 만료 순회는 요청 시 최소 1초 간격이고 요청한 IP의 만료는 전체 순회 사이에도 즉시 초기화합니다.
+
+## 외부 공식 실행 예약
+
+외부 스케줄러(예: Windows 작업 스케줄러)를 한국 시간 기준 장 마감 후 18:40에 실행하도록 설정합니다. 거래일·휴장일과 특별장 종료 시각은 운영자가 확인하고 일정을 조정합니다. 아래 PowerShell 예시는 프로세스에 주입된 CRON_SECRET을 Authorization 헤더로 전달하며, 409 충돌이면 30초 간격으로 최대 30분 재시도합니다. 제한을 넘기면 스케줄러에 실패를 보고해 누락을 감지하도록 합니다.
+
+```powershell
+$endpoint = 'https://service.example/api/candidates/run?mode=model_only&kind=official'
+$headers = @{ Authorization = 'Bearer ' + $env:CRON_SECRET.Trim() }
+$accepted = $false
+for ($attempt = 0; $attempt -lt 60; $attempt++) {
+  try {
+    $run = Invoke-RestMethod -Uri $endpoint -Method Post -Headers $headers
+    $accepted = $true
+    break
+  } catch {
+    if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 409) {
+      Start-Sleep -Seconds 30
+    } else {
+      throw
+    }
+  }
+}
+if (-not $accepted) { throw 'Official analysis was not accepted: retry window exhausted.' }
+$run | Select-Object runId, kind, status
+```
+
+HTTP 200은 실행 접수·동일 종류 실행 공유를 뜻하며 완료 보장이 아닙니다. GET `/api/candidates/run`을 폴링해 접수한 runId와 kind=official, status=completed를 확인하고 실패·다른 runId·시간 초과를 경보로 처리합니다. HTTP 409 본문은 `{error, runId, kind, retry}`이며 runId·kind는 진행 중인 실행입니다. 수시 실행이 끝났다고 공식 기록이 자동 생성되지는 않습니다.
+
+`GET /api/briefing`과 narrative POST는 결과 실행 메타에서 판단한 최상위 `kind: official | adhoc | unknown`을 제공합니다. 완료된 결과와 메타가 일치할 때만 분류하고, 누락되거나 조회 중 바뀌면 unknown입니다. 공개 실행 정보 영역은 adhoc일 때 ‘수시 분석 결과 · 공식 기록 아님’을 표시하며 unknown은 별도 표시하지 않습니다.
+
+## 엔드포인트
+
 - `GET /api/rank`: 최종 모델의 전체 유효 종목 순위. 실행 미완료·오래된 결과·다른 모델 결과는 제공하지 않습니다.
 - `GET /api/stock-analysis?ticker=005930`: 같은 전체 순위에서 해당 종목과 관련 기사를 반환합니다.
 - `GET /api/candidates`: 별도 뉴스 보정 최종 목록을 생성하지 않아 빈 배열을 반환합니다. 화면 TOP5는 원본 모델 순위 1~5위입니다.
-- `POST /api/candidates/run?mode=model_only&kind=adhoc`: 현재 최종 모델 추론과 RSS 기사 수집을 시작합니다. `kind=official`은 공식 성과 기록 요청입니다.
+- `POST /api/candidates/run?mode=model_only&kind=adhoc`: 관리자 Bearer 인증으로 최종 모델 추론과 RSS 기사 수집을 시작합니다. 관리자 수동 실행은 항상 adhoc이며 official 요청은 403입니다. `kind=official`은 장 마감 후 외부 예약 작업의 CRON_SECRET Bearer 요청만 허용합니다.
 - `GET /api/candidates/run`: 비동기 실행 상태·진행률.
 - `GET /api/backend/status`: 읽기 전용 로컬 구성·실행·산출물 상태.
 - `GET /api/briefing`: TOP5 종합 브리핑과 캐시 설명. Gemini를 호출하지 않습니다.
@@ -53,12 +115,13 @@ GET 브리핑의 야간선물·업종은 stale-while-revalidate를 사용합니�
 
 구성 성과는 `performance.ts`가 이미 만든 `model_only`·동일 최종 모델의 검증된 공식 동일 비중 시가→종가 수익률만 읽습니다. 기존 `summarizePerformance`와 같은 공식 자격·완료·일별 중복 제거 기준을 적용해 최근 최대 10일을 요약합니다. 종목 수익률이나 새 포트폴리오 수익률을 계산하지 않고 기존 `actualReturn`을 %로 표시합니다. 기록이 없으면 `measuredDays=0`·평균 null이며 원장 읽기 실패는 `performance=null`입니다. 공통 주의는 기사 전부 없음·시장 지표 누락·점수 해석 등의 결정적 규칙으로 생성합니다.
 
-두 브리핑 API는 아래와 같은 전체 객체를 HTTP 200으로 반환합니다. `GET /api/briefing`은 GET만, `/api/briefing/narrative`는 POST만 허용하며 다른 메서드는 405입니다. 응답은 `Cache-Control: no-store`, `X-Data-Source`, `X-Data-As-Of`를 제공합니다. 파일 기반 실행 결과를 포함하므로 `data_meta.source`는 `cache`입니다. Vite의 공용 라우트 맵에서 제공하며 정적 preview에서는 실행되지 않습니다.
+두 브리핑 API는 아래와 같은 전체 객체를 HTTP 200으로 반환합니다. `GET /api/briefing`은 GET만, `/api/briefing/narrative`는 POST만 허용하며 다른 메서드는 405입니다. 응답은 `Cache-Control: no-store`, `X-Data-Source`, `X-Data-As-Of`를 제공합니다. 파일 기반 실행 결과를 포함하므로 `data_meta.source`는 `cache`입니다. Node/Vite의 공용 라우트 맵에서 제공하며 정적 preview에서는 실행되지 않습니다.
 
 ```typescript
 type Briefing = {
   version: 1;
   status: "ready" | "no_run";
+  kind: "official" | "adhoc" | "unknown";
   model: {
     modelId: string; scoreKind: "rank_zscore"; baseDate: string;
     predictionTarget: "next_session_open_to_close"; poolSize: number;
@@ -154,7 +217,7 @@ LLM에는 시장 수치를 소수 2자리까지 반올림한 숫자와 `display`
 
 차트 API는 종전처럼 모든 기간을 한 묶음으로 반환합니다. 3M·1Y는 일봉, 5Y는 월봉이며 이 기간 원본은 다음 거래일 마감까지 메모리/파일에서 재사용합니다. 파일은 `FE/server/cache/market-v1/`의 공개 시세 JSON(해시로 구분한 환경/종목/기간)이며 원자적으로 저장하고 형식이 손상되면 재수집합니다. 서버 재시작 후 전체 묶음 파일을 먼저 반환하므로 장중 만료 시에도 새 KIS 수집을 기다리지 않습니다. 후속 일봉 수집은 마지막 날짜 이후와 최근 14일(월봉 62일)을 다시 받습니다. 여러 페이지를 연결해 1Y의 KIS 100행 제한을 보완하며, 후속 분봉은 최근 한 페이지와 같은 거래일의 기존 원본을 합칩니다. 실패한 기간은 이전 원본·시각을 보존합니다.
 
-`REFRESH_AHEAD=0`을 제외한 Vite 개발 서버는 시작 시 최신 모델 TOP5 현재가·차트와 3개 지수를 예열합니다. 장중 현재가·지수 30초, 분봉 60초이며 마감 직후 한 번 갱신 후 다음 장까지 대기합니다. 빌드·테스트·preview에서는 스케줄러를 시작하지 않습니다. 공용 KIS 기본 1 RPS 안에서 사용자 대기열이 먼저 처리되고 백그라운드는 최대 30회/분입니다. 초기 수집·미보유 종목 조회는 네트워크 지연이 남습니다. 브리핑 매크로/야간선물/업종 계약은 변경하지 않습니다. 클라이언트는 30분 보관·현재가/지수 20초·분봉 60초·일봉 탭 10분의 staleTime을 사용하고 기존 값을 유지하면서 갱신합니다. 현재가·지수·차트 요청 제한은 75000ms입니다.
+`REFRESH_AHEAD=0`을 제외한 Node 운영 서버와 Vite 개발 서버는 시작 시 최신 모델 TOP5 현재가·차트와 3개 지수를 예열합니다. 장중 현재가·지수 30초, 분봉 60초이며 마감 직후 한 번 갱신 후 다음 장까지 대기합니다. 빌드·테스트·preview에서는 스케줄러를 시작하지 않습니다. 공용 KIS 기본 1 RPS 안에서 사용자 대기열이 먼저 처리되고 백그라운드는 최대 30회/분입니다. 초기 수집·미보유 종목 조회는 네트워크 지연이 남습니다. 브리핑 매크로/야간선물/업종 계약은 변경하지 않습니다. 클라이언트는 30분 보관·현재가/지수 20초·분봉 60초·일봉 탭 10분의 staleTime을 사용하고 기존 값을 유지하면서 갱신합니다. 현재가·지수·차트 요청 제한은 75000ms입니다.
 
 서버 내부 `getDailyHistory(code, { start?, end?, allowNetwork? })`는 `{ code, rows: [{ date, open, high, low, close, volume }], source, asOf, complete, missingDates, calendarSource } | null`을 반환합니다. `date`는 KST 거래일 오름차순, 가격은 원, 거래량 결측은 null이며 raw OHLC가 검증되지 않으면 해당 행을 제외합니다. 대상은 1Y 실제 일봉(최대 390달력일)입니다. 기본은 캐시만 읽고 없으면 null이며 `allowNetwork:true`도 백그라운드 호출만 허용합니다. start 기본은 최근 365일, end 기본은 현재 미완성 일봉 제외입니다. `pipelineProjectRoot()` 아래 `outputs/market_index_history/KOSPI.csv`의 유효한 `source=kis` 날짜를 거래일 참조로 우선 사용하고, 파일 미보유·손상 또는 끝 이후는 지원되는 내장 KRX 달력으로 보완합니다. 달력을 확인한 범위의 모든 거래일이 종목 원본에 있을 때만 `complete:true`입니다. 상장 전·거래정지·누락을 임의 구분하지 않고 `missingDates`에 남깁니다. `calendarSource`는 `kis-index-cache` 또는 `krx-table`입니다.
 

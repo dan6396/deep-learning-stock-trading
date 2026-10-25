@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BriefingSummary } from "./BriefingSummary";
+import { BriefingExecutionBar, BriefingSummary } from "./BriefingSummary";
+import { adaptAnalysisStatus, adaptBackendStatus, queries } from "../../shared/api/queries";
+import { adaptBriefing } from "../../entities/briefing";
 import { backendStatusBody, jsonResponse, pipelineRow } from "../../test/dataFixtures";
 import { adaptCandidate } from "../../entities/candidate";
 
@@ -14,6 +16,20 @@ function mount(pending: boolean) {
   render(<QueryClientProvider client={client}><BriefingSummary indices={[]} pending={pending} error={false} count={199} rows={rows} rankPending={false} rankError={false} rankSource="cache" /></QueryClientProvider>); return fetcher;
 }
 describe("briefing summary status", () => {
+  it.each(["adhoc", "official", "unknown", undefined] as const)("warns about adhoc or unverified result metadata, leaving official results unlabelled (%s)", kind => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } }); clients.push(client);
+    // A newer official job must not relabel the adhoc result currently displayed.
+    client.setQueryData(queries.backendStatus().queryKey, adaptBackendStatus(backendStatusBody({ state: "not_produced" }, { marker: { state: "completed", kind: "official" } })));
+    client.setQueryData(queries.analysisRun().queryKey, { data: adaptAnalysisStatus({ status: "idle" }), source: "live", asOf: null });
+    const briefing = adaptBriefing({});
+    if (kind === undefined) delete briefing.kind; else briefing.kind = kind;
+    client.setQueryData(queries.briefing().queryKey, briefing);
+    render(<QueryClientProvider client={client}><BriefingExecutionBar pool={199} /></QueryClientProvider>);
+    const notice = screen.queryByText("수시 분석 결과 · 공식 기록 아님");
+    const unknown = screen.queryByText("공식 여부 확인 불가");
+    if (kind === "adhoc") expect(notice).toHaveClass("briefing-execution-error"); else expect(notice).not.toBeInTheDocument();
+    if (kind === "unknown" || kind === undefined) expect(unknown).toHaveClass("briefing-execution-error"); else expect(unknown).not.toBeInTheDocument();
+  });
   it("shows index loading separately from the displayed TOP5 model summary", async () => {
     const fetcher = mount(true); expect(screen.getByText("지수 조회 중")).toBeInTheDocument(); expect(screen.queryByText(/판정 불가/)).not.toBeInTheDocument();
     expect(screen.queryByText(/모의투자 기록|고정 기록/)).not.toBeInTheDocument();

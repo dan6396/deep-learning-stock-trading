@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -29,15 +29,14 @@ function setup(options: { mode?: "model_only" | "full" | "unknown"; newsReady?: 
 }
 
 describe("analysis launch control", () => {
-  it("defaults to adhoc and sends official intent only after the user selects it", async () => {
+  it("always sends adhoc and does not offer official execution", async () => {
     const test = setup();
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
-    expect(screen.getByRole("checkbox", { name: "공식 성과 기록 요청" })).not.toBeChecked();
-    fireEvent.click(screen.getByRole("checkbox", { name: "공식 성과 기록 요청" }));
+    expect(screen.queryByRole("checkbox", { name: "공식 성과 기록 요청" })).not.toBeInTheDocument();
     expect(test.posts()).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
     await waitFor(() => expect(test.posts()).toHaveLength(1));
-    expect(test.posts()[0][0]).toBe("/api/candidates/run?mode=model_only&kind=official");
+    expect(test.posts()[0][0]).toBe("/api/candidates/run?mode=model_only&kind=adhoc");
   });
   it("does not launch on mount and explains model-only output", async () => {
     const test = setup();
@@ -93,6 +92,13 @@ describe("analysis launch control", () => {
     expect(await screen.findByRole("button", { name: "분석 진행 중" })).toBeDisabled();
     expect(test.posts()).toHaveLength(1);
   });
+  it.each([401, 403, 429])("renders recovery guidance for a rejected HTTP %s launch without retrying it", async status => {
+    const test = setup({ post: async () => new Response("", { status, headers: { "Retry-After": "30" } }) });
+    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
+    await screen.findByText(status === 401 ? /토큰을 다시 저장/ : status === 403 ? /수시 실행으로 요청/ : /30초 후 다시 시도/);
+    expect(test.posts()).toHaveLength(1);
+  });
   it("refreshes existing result queries on completion and explains model-only candidates", async () => {
     const test = setup({ post: async () => jsonResponse({ status: "completed", result: { mode: "model_only", rows: 0 } }) });
     test.client.setQueryData(queryKeys.rank(), { data: ["old result"] });
@@ -111,3 +117,5 @@ describe("analysis launch control", () => {
     expect(test.posts()).toHaveLength(0);
   });
 });
+
+beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));

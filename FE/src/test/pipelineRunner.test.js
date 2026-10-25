@@ -82,10 +82,10 @@ describe("model-only process safety (mock child; never executes Python)", () => 
       return { rows: 199, modelSelectionRows: 10 };
     });
     collectTopFiveArticles.mockImplementationOnce(async () => { stages.push(getCandidateAnalysisStatus().progress.stageIndex); return {}; });
-    const handlers = createRoutes({ startCandidateAnalysis, getCandidateAnalysisStatus }, { PIPELINE_ANALYSIS_MODE: "full" });
+    const handlers = createRoutes({ startCandidateAnalysis, getCandidateAnalysisStatus }, { PIPELINE_ANALYSIS_MODE: "full", ADMIN_API_TOKEN: "fixture-admin" });
     let body;
     const response = { statusCode: 0, setHeader: vi.fn(), end: text => { body = JSON.parse(text); } };
-    await handlers["/api/candidates/run"]({ method: "POST", url: "/api/candidates/run" }, response);
+    await handlers["/api/candidates/run"]({ method: "POST", url: "/api/candidates/run", headers: { authorization: "Bearer fixture-admin" } }, response);
     expect(response.statusCode).toBe(200);
     expect(body).toMatchObject({ status: "running", mode: "model_only" });
     await vi.waitFor(() => expect(getCandidateAnalysisStatus().status).toBe("completed"));
@@ -95,5 +95,53 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(getCandidateAnalysisStatus().result).toMatchObject({ mode: "model_only", newsRows: 0 });
     expect(stages).toEqual([3, 4]);
     expect(getCandidateAnalysisStatus().progress.stageIndex).toBe(6);
+  });
+  it.each(["adhoc", "official"])("accepts a new run of the other kind with HTTP 200 after %s fails", async kind => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      validateModelOnlyOutputs.mockRejectedValueOnce(new Error("Invalid model output schema."));
+      const handlers = createRoutes({ startCandidateAnalysis, getCandidateAnalysisStatus }, { ADMIN_API_TOKEN: "fixture-admin", CRON_SECRET: "fixture-cron" });
+      async function request(selected) {
+        let body;
+        const response = { statusCode: 0, setHeader: vi.fn(), end: text => { body = JSON.parse(text); } };
+        await handlers["/api/candidates/run"]({ method: "POST", url: `/api/candidates/run?kind=${selected}`, headers: { authorization: `Bearer fixture-${selected === "official" ? "cron" : "admin"}` } }, response);
+        return { statusCode: response.statusCode, ...body };
+      }
+      const first = await request(kind);
+      expect(first).toMatchObject({ statusCode: 200, status: "running", kind });
+      await vi.waitFor(() => expect(getCandidateAnalysisStatus()).toMatchObject({ status: "failed", runId: first.runId, kind }));
+      const other = kind === "adhoc" ? "official" : "adhoc", retried = await request(other);
+      expect(retried).toMatchObject({ statusCode: 200, status: "running", kind: other });
+      expect(retried.runId).not.toBe(first.runId);
+      await vi.waitFor(() => expect(getCandidateAnalysisStatus()).toMatchObject({ status: "completed", runId: retried.runId, kind: other }));
+      expect(mock.spawned).toHaveLength(2);
+      expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "failed", "running", "completed"]);
+      expect(collectTopFiveArticles).toHaveBeenCalledOnce();
+    } finally { log.mockRestore(); }
+  });
+  it.each(["adhoc", "official"])("shares concurrent %s runs and rejects a different kind with retry details", async kind => {
+    const handlers = createRoutes({ startCandidateAnalysis, getCandidateAnalysisStatus }, { ADMIN_API_TOKEN: "fixture-admin", CRON_SECRET: "fixture-cron" });
+    const responses = [];
+    function response() { const res = { statusCode: 0, setHeader: vi.fn(), end: text => responses.push({ statusCode: res.statusCode, ...JSON.parse(text) }) }; return res; }
+    const other = kind === "adhoc" ? "official" : "adhoc";
+    const request = selected => ({ method: "POST", url: `/api/candidates/run?kind=${selected}`, headers: { authorization: `Bearer fixture-${selected === "official" ? "cron" : "admin"}` } });
+    await Promise.all([
+      handlers["/api/candidates/run"](request(kind), response()),
+      handlers["/api/candidates/run"](request(kind), response()),
+      handlers["/api/candidates/run"](request(other), response()),
+    ]);
+    expect(responses).toHaveLength(3);
+    const shared = responses.filter(result => result.statusCode === 200), conflict = responses.find(result => result.statusCode === 409);
+    expect(shared).toHaveLength(2); expect(shared[0]).toMatchObject({ status: "running", kind });
+    expect(shared[1]).toMatchObject({ runId: shared[0].runId, kind, status: "running" });
+    expect(conflict).toMatchObject({ runId: shared[0].runId, kind, retry: expect.stringContaining("다시 요청") });
+    expect(conflict.error).toContain("다른 종류");
+    await vi.waitFor(() => expect(getCandidateAnalysisStatus().status).toBe("completed"));
+    expect(mock.spawned).toHaveLength(1); expect(collectTopFiveArticles).toHaveBeenCalledOnce();
+    const retried = startCandidateAnalysis({ PIPELINE_ANALYSIS_MODE: "model_only", PIPELINE_RUN_KIND: other });
+    expect(retried).toMatchObject({ status: "running", kind: other });
+    expect(retried.runId).not.toBe(shared[0].runId);
+    await vi.waitFor(() => expect(getCandidateAnalysisStatus().status).toBe("completed"));
+    expect(mock.spawned).toHaveLength(2);
   });
 });

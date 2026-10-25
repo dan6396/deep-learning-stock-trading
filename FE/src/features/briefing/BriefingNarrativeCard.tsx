@@ -3,6 +3,7 @@ import type { BriefingNarrative, BriefingStock } from "../../entities/briefing";
 import { formatFallbackReason, formatKstTime, parseCitation, withoutRankScoreDisclaimer } from "../../entities/briefing";
 import { Sparkles, RefreshCw, AlertCircle, Bot, Cpu, Info } from "lucide-react";
 import { safeArticleUrl } from "../../shared/lib/articleUrl";
+import { useAdminAccess } from "../../shared/api/adminAccess";
 
 export type BriefingNarrativeCardProps = {
   narrative: BriefingNarrative;
@@ -21,6 +22,7 @@ export function BriefingNarrativeCard({
   onGenerate,
   onCitationClick,
 }: BriefingNarrativeCardProps) {
+  const admin = useAdminAccess();
   const isLlm = narrative.status === "llm";
   const isTemplate = narrative.status === "template";
   const isPartialTemplate = isLlm && narrative.fallbackReason === "partial_template";
@@ -130,7 +132,7 @@ export function BriefingNarrativeCard({
           </details>}
         </div>
 
-        <div className="briefing-narrative-action">
+        {admin && <div className="briefing-narrative-action">
           <button
             type="button"
             className="briefing-button briefing-narrative-generate-button"
@@ -163,10 +165,10 @@ export function BriefingNarrativeCard({
               {recentlyGenerated ? "최근 생성 후 10분이 지나면 최신 지표로 다시 생성할 수 있습니다" : "시장 지표가 갱신되면 다시 생성할 수 있습니다"}
             </span>
           )}
-        </div>
+        </div>}
       </div>
 
-      {generateError && (
+      {admin && generateError && (
         <p className="briefing-narrative-error" role="alert">
           <AlertCircle aria-hidden="true" size={14} />
           {generateError}

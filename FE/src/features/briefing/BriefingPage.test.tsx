@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
@@ -393,3 +393,5 @@ describe("briefing generation polling budget", () => {
     } finally { vi.useRealTimers(); }
   });
 });
+
+beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));

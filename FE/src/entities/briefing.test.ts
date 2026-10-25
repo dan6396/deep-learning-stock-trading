@@ -18,6 +18,11 @@ import {
 } from "./briefing";
 
 describe("adaptBriefing", () => {
+  it.each(["official", "adhoc", "unknown", undefined, "invalid"])("normalizes run kind metadata (%s)", kind => {
+    const model = { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-22", predictionTarget: "next_session_open_to_close", poolSize: 199, runStartedAt: "2026-10-22T07:00:00Z" };
+    expect(adaptBriefing({ status: "ready", model, kind }).kind).toBe(kind === "official" || kind === "adhoc" ? kind : "unknown");
+    expect(adaptBriefing({ status: "no_run", kind }).kind).toBe("unknown");
+  });
   it("adapts full payload correctly", () => {
     const raw = {
       version: 1,

@@ -12,6 +12,7 @@ import { topFiveSummary } from "./topFiveSummary";
 
 export function BriefingExecutionBar({ pool }: { pool: number | null }) {
   const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
+  const briefing = useQuery(queries.briefing());
   const completed = status?.marker.state === "completed", finishedAt = completed ? status.marker.finishedAt ?? status.marker.asOf : null;
   return (
     <div className="briefing-execution-bar" role="status" aria-label="분석 실행 상태">
@@ -26,6 +27,9 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
       <span className="briefing-execution-item">
         {status?.runtime.state === "running" ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최근 완료 기록" : "저장된 분석 결과"}
       </span>
+      {briefing.data && briefing.data.kind !== "official" && <span className="briefing-execution-item briefing-execution-error">
+        {briefing.data.kind === "adhoc" ? "수시 분석 결과 · 공식 기록 아님" : "공식 여부 확인 불가"}
+      </span>}
       {(backend.isError || analysis.isError) && (
         <>
           <span className="briefing-execution-divider">·</span>

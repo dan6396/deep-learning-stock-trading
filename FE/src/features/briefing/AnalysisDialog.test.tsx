@@ -65,3 +65,5 @@ describe("header analysis dialog", () => {
     expect(document.body.style.overflow).toBe("");
   });
 });
+
+beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));

@@ -21,6 +21,26 @@ beforeEach(async () => {
 afterEach(() => { release(); vi.unstubAllGlobals(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("KIS in-flight endpoint sharing", () => {
+  it("shares the full snapshot build and persistence across concurrent refreshes, with isolated results", async () => {
+    const cache = await import("../../server/dashboardCache"), persist = vi.spyOn(cache, "writeDashboardSnapshot");
+    const config = { ...env, KIS_SNAPSHOT_UNIVERSE_SIZE: "1", KIS_WITH_INVESTOR_FLOW: "false" };
+    const pending = Array.from({ length: 8 }, () => api.refreshDashboardSnapshot(config));
+    await vi.waitFor(() => expect(calls).toHaveLength(1)); release();
+    const values = await Promise.all(pending);
+    expect(calls.filter(url => url.pathname.endsWith("inquire-index-price"))).toHaveLength(3);
+    expect(calls.filter(url => url.pathname.endsWith("inquire-price"))).toHaveLength(1);
+    expect(persist).toHaveBeenCalledOnce();
+    values[0].stocks[0].currentPrice = 999; expect(values[1].stocks[0].currentPrice).toBe(100);
+    await api.refreshDashboardSnapshot(config); expect(persist).toHaveBeenCalledTimes(2);
+  });
+  it("clears a failed snapshot refresh so the next request can retry", async () => {
+    const config = { ...env, KIS_SNAPSHOT_UNIVERSE_SIZE: "1", KIS_WITH_INVESTOR_FLOW: "false" };
+    shouldFail = true;
+    const rejected = Promise.allSettled([api.refreshDashboardSnapshot(config), api.refreshDashboardSnapshot(config)]);
+    await vi.waitFor(() => expect(calls).toHaveLength(1)); release();
+    expect((await rejected).every(row => row.status === "rejected")).toBe(true);
+    shouldFail = false; await expect(api.refreshDashboardSnapshot(config)).resolves.toMatchObject({ stocks: [expect.objectContaining({ currentPrice: 100 })] });
+  });
   it("promotes a pending background chart when a user joins without duplicating its upstream work", async () => {
     const { kisRequestLimiter } = await import("../../server/kisRateLimit");
     const background = api.buildKisStockChart("005930", { ...env, KIS_REQUEST_PRIORITY: "background" });
