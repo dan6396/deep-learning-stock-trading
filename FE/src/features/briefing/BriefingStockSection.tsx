@@ -104,7 +104,7 @@ export function BriefingStockEvidence({
           </div>
         )}
 
-        {/* 근거 n건 / 주의 n건 / 기사 n건 요약 칩 */}
+        {/* 근거 n건 / 주의 n건(1건 이상일 때만) / 기사 n건 요약 칩 */}
         <div className="briefing-stock-summary-meta-chips">
           <span
             className="briefing-stock-meta-chip is-evidence"
@@ -113,13 +113,15 @@ export function BriefingStockEvidence({
           >
             <span>근거 {stock.evidence.length}건</span>
           </span>
-          <span
-            className="briefing-stock-meta-chip is-caution"
-            data-testid={`stock-chip-caution-${stock.code}`}
-            title={`${stock.name} 주의점 ${visibleCautions.length}건`}
-          >
-            <span>주의 {visibleCautions.length}건</span>
-          </span>
+          {visibleCautions.length > 0 && (
+            <span
+              className="briefing-stock-meta-chip is-caution"
+              data-testid={`stock-chip-caution-${stock.code}`}
+              title={`${stock.name} 주의점 ${visibleCautions.length}건`}
+            >
+              <span>주의 {visibleCautions.length}건</span>
+            </span>
+          )}
           <span
             className="briefing-stock-meta-chip is-news"
             data-testid={`stock-chip-news-${stock.code}`}
@@ -226,7 +228,7 @@ export function BriefingStockEvidence({
                   })}
                 </ul>
               ) : (
-                <p className="briefing-empty-hint">특이 주의 사항이 없습니다.</p>
+                <p className="briefing-empty-hint">표시할 주의점이 없습니다.</p>
               )}
             </div>
           </div>

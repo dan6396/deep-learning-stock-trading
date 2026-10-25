@@ -467,6 +467,54 @@ describe("BriefingStockEvidence", () => {
     expect(screen.getByTestId("news-N:005930:1")).toHaveAttribute("id", "cite-N-005930-1");
   });
 
+  it("omits the caution chip and shows the empty hint when there are no cautions", () => {
+    const stockWithoutCautions = { ...mockBriefingData.stocks[0], cautions: [] };
+
+    render(
+      <MemoryRouter>
+        <StockEvidenceList
+          stocks={[stockWithoutCautions]}
+          narrative={mockBriefingData.narrative}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByTestId("stock-chip-caution-005930")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(screen.getByText("표시할 주의점이 없습니다.")).toBeVisible();
+  });
+
+  it("omits disclaimer-only cautions and their citation chip", () => {
+    const stockWithDisclaimerOnly = {
+      ...mockBriefingData.stocks[0],
+      cautions: [
+        { id: "C:005930:2", kind: "model" as const, text: "순위 점수는 수익률·확률이 아닙니다." },
+      ],
+    };
+    const narrativeWithDisclaimerCitation = {
+      ...mockBriefingData.narrative,
+      stocks: mockBriefingData.narrative.stocks.map((stock) =>
+        stock.code === "005930"
+          ? { ...stock, citations: [...stock.citations, "C:005930:2"] }
+          : stock
+      ),
+    };
+
+    render(
+      <MemoryRouter>
+        <StockEvidenceList
+          stocks={[stockWithDisclaimerOnly]}
+          narrative={narrativeWithDisclaimerCitation}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByTestId("stock-chip-caution-005930")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stock-citation-chip-C:005930:2")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(screen.getByText("표시할 주의점이 없습니다.")).toBeVisible();
+  });
+
   it("toggles card folding with '자세히'/'접기' button and limits news to 3 articles", () => {
     const stockWithManyArticles = {
       ...mockBriefingData.stocks[0],
