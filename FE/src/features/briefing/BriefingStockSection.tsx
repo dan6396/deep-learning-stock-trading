@@ -32,6 +32,11 @@ export function BriefingStockEvidence({
   const articlesToDisplay = stock.news.articles.slice(0, 3);
   const hasArticles = articlesToDisplay.length > 0;
   const visibleCautions = stock.cautions.filter(item => withoutRankScoreDisclaimer(item.text));
+  const citationsToDisplay = [...new Set(stockNarrative?.citations ?? [])]
+    .map(parseCitation)
+    .filter((p) => p.isValid
+      && (p.type !== "rank" || stocks.some(item => item.code === p.code))
+      && (p.type !== "caution" || visibleCautions.some(item => item.id === p.rawId)));
   const summary = withoutRankScoreDisclaimer(stockNarrative?.summary ?? "");
   const cardDomId = citationDomId(`R:${stock.code}`);
 
@@ -139,15 +144,11 @@ export function BriefingStockEvidence({
           className="briefing-stock-expanded-content"
           data-testid={`stock-details-${stock.code}`}
         >
-          {stockNarrative?.citations && stockNarrative.citations.length > 0 && (
+          {citationsToDisplay.length > 0 && (
             <div className="briefing-stock-summary-citations">
               <span className="briefing-stock-citations-label">인용 근거:</span>
               <div className="briefing-stock-chip-list">
-                {[...new Set(stockNarrative.citations)]
-                  .map(parseCitation)
-                  .filter((p) => p.isValid && (p.type !== "rank" || stocks.some(item => item.code === p.code))
-                    && !stock.cautions.some(item => item.id === p.rawId && !withoutRankScoreDisclaimer(item.text)))
-                  .map((parsed) => {
+                {citationsToDisplay.map((parsed) => {
                     const cId = parsed.rawId;
                     const ariaLabel =
                       parsed.type === "macro"

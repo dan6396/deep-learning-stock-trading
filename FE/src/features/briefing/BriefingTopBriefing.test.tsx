@@ -515,6 +515,48 @@ describe("BriefingStockEvidence", () => {
     expect(screen.getByText("표시할 주의점이 없습니다.")).toBeVisible();
   });
 
+  it("omits caution citation chips without a visible caution", () => {
+    const data = structuredClone(mockBriefingData);
+    data.narrative.stocks[0].citations.push("C:005930:9");
+
+    render(
+      <MemoryRouter>
+        <StockEvidenceList stocks={data.stocks} narrative={data.narrative} />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(screen.queryByTestId("stock-citation-chip-C:005930:9")).not.toBeInTheDocument();
+  });
+
+  it("renders caution citation chips for visible cautions", () => {
+    const data = structuredClone(mockBriefingData);
+    data.narrative.stocks[0].citations.push("C:005930:1");
+
+    render(
+      <MemoryRouter>
+        <StockEvidenceList stocks={data.stocks} narrative={data.narrative} />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(screen.getByTestId("stock-citation-chip-C:005930:1")).toBeInTheDocument();
+  });
+
+  it("omits the citation label when all citations are filtered out", () => {
+    const data = structuredClone(mockBriefingData);
+    data.narrative.stocks[0].citations = ["C:005930:9"];
+
+    render(
+      <MemoryRouter>
+        <StockEvidenceList stocks={data.stocks} narrative={data.narrative} />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("stock-expand-btn-005930"));
+    expect(within(screen.getByTestId("stock-details-005930")).queryByText("인용 근거:")).not.toBeInTheDocument();
+  });
+
   it("toggles card folding with '자세히'/'접기' button and limits news to 3 articles", () => {
     const stockWithManyArticles = {
       ...mockBriefingData.stocks[0],
