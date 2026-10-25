@@ -4,7 +4,7 @@ import { waitFor } from "@testing-library/react";
 import { createApiClient } from "./client";
 import { createQueries, queryKeys, requestBriefingNarrative } from "./queries";
 import { analysisMutationOptions, invalidateAnalysisResults } from "./analysis";
-import { deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
+import { backendStatusBody, deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
 import { chartBundle } from "../../test/fixtures/reportFixtures";
 import { adaptDashboard, adaptIndex, adaptQuote } from "../../entities/market";
 
@@ -13,6 +13,44 @@ function client() { const c = new QueryClient({ defaultOptions: { queries: { ret
 afterEach(() => clients.splice(0).forEach(c => c.clear()));
 
 describe("query contracts and race boundaries", () => {
+  it.each(["idle", "running"])("keeps ready briefing across a temporary no_run and accepts the next ready result (%s)", async status => {
+    const snapshot = (status: string, overview: string) => ({ version: 1, status, model: null, stocks: [], narrative: { status: "template", overview } });
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(snapshot("ready", "이전 요약"))).mockResolvedValueOnce(jsonResponse(snapshot("no_run", ""))).mockResolvedValueOnce(jsonResponse(snapshot("ready", "새 요약")));
+    const cache = client(), options = { ...createQueries(createApiClient("", fetcher)).briefing(), staleTime: 0 };
+    cache.setQueryData(queryKeys.analysisRun(), { data: { status } });
+    expect((await cache.fetchQuery(options)).narrative.overview).toBe("이전 요약");
+    const preserved = await cache.fetchQuery(options);
+    expect(preserved.status).toBe("ready"); expect(preserved.narrative.overview).toBe("이전 요약");
+    expect((await cache.fetchQuery(options)).narrative.overview).toBe("새 요약");
+  });
+  it("refreshes the idle backend snapshot after launch so runtime polling starts", async () => {
+    let running = false;
+    const fetcher = vi.fn<typeof fetch>(async (_url, request) => {
+      if (request?.method === "POST") { running = true; return jsonResponse({ status: "running" }); }
+      return jsonResponse(backendStatusBody({ state: "not_produced" }, { runtime: { state: running ? "running" : "idle" } }));
+    });
+    const cache = client(), transport = createApiClient("", fetcher), queries = createQueries(transport);
+    const observer = new QueryObserver(cache, queries.backendStatus()), unsubscribe = observer.subscribe(() => {});
+    try {
+      await waitFor(() => expect(observer.getCurrentResult().data?.runtime.state).toBe("idle"));
+      await analysisMutationOptions(cache, transport).mutationFn();
+      expect(observer.getCurrentResult().data?.runtime.state).toBe("running");
+      const interval = queries.backendStatus().refetchInterval;
+      if (typeof interval !== "function") throw new Error("missing runtime interval");
+      expect(interval(cache.getQueryCache().find({ queryKey: queryKeys.backendStatus() }) as never)).toBe(5000);
+    } finally { unsubscribe(); }
+  });
+  it("refreshes active briefing and rank snapshots after an immediately completed launch", async () => {
+    let revision = "old";
+    const cache = client(), rank = new QueryObserver(cache, { queryKey: queryKeys.rank(), queryFn: async () => revision }), briefing = new QueryObserver(cache, { queryKey: queryKeys.briefing(), queryFn: async () => revision });
+    const stopRank = rank.subscribe(() => {}), stopBriefing = briefing.subscribe(() => {});
+    try {
+      await waitFor(() => expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["old", "old"]));
+      const fetcher = vi.fn<typeof fetch>(async () => { revision = "new"; return jsonResponse({ status: "completed" }); });
+      await analysisMutationOptions(cache, createApiClient("", fetcher)).mutationFn();
+      expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["new", "new"]);
+    } finally { stopRank(); stopBriefing(); }
+  });
   it("hydrates every supplied chart range from one bundle and uses thirty-minute retention", async () => {
     const request = vi.fn().mockResolvedValue({ data: chartBundle(), source: "cache", asOf: "2026-10-22T07:00:00Z" });
     const queries = createQueries({ request }), cache = client();

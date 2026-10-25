@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { AnalysisControl } from "./AnalysisControl";
 import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
@@ -96,8 +96,28 @@ describe("analysis launch control", () => {
     const test = setup({ post: async () => new Response("", { status, headers: { "Retry-After": "30" } }) });
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
-    await screen.findByText(status === 401 ? /토큰을 다시 저장/ : status === 403 ? /수시 실행으로 요청/ : /30초 후 다시 시도/);
+    await screen.findByText(status === 401 ? /관리자 인증이 필요합니다/ : status === 403 ? /수시 실행으로 요청/ : /30초 후 다시 시도/);
+    if (status === 401) expect(screen.getByRole("link", { name: "관리자 인증하기" })).toHaveAttribute("href", "/next?admin=");
     expect(test.posts()).toHaveLength(1);
+  });
+  it("shows server percent and stage position with viewer labels, keeping identifiers collapsed", async () => {
+    setup({ run: { status: "running", runId: "fixture-run", elapsedMs: 23000, progress: { stage: "OHLCV 수집·앙상블 예측", stageIndex: 2, stageCount: 7, progressPercent: 62, message: "OHLCV 수집·앙상블 예측 중 · 199종목 중 124종목 처리" } } });
+    expect(await screen.findByText("종목 가격 수집·모델 예측 · 3/7단계")).toBeInTheDocument();
+    expect(screen.getByText("62%")).toBeInTheDocument();
+    expect(screen.getByText("199종목 중 124종목 처리 · 0분 23초 경과")).toBeInTheDocument();
+    expect(screen.getAllByText(/종목 가격 수집·모델 예측/)).toHaveLength(1);
+    expect(screen.queryByText(/OHLCV/)).not.toBeInTheDocument();
+    const information = screen.getByText("실행 정보").closest("details");
+    expect(information).not.toHaveAttribute("open");
+    expect(screen.getByText(/실행 식별자 fixture-run/)).not.toBeVisible();
+  });
+  it("preserves unknown stage messages without inventing percent or stage positions", async () => {
+    setup({ run: { status: "running", progress: { stage: "새 단계", stageIndex: 7, stageCount: 7, message: "새 작업 처리 중" } } });
+    expect(await screen.findByText(/새 작업 처리 중/)).toBeInTheDocument();
+    expect(screen.getByText("새 단계")).toBeInTheDocument();
+    expect(screen.getByText("진행률 확인 중")).toBeInTheDocument();
+    expect(screen.queryByText(/8\/7단계/)).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).not.toHaveAttribute("value");
   });
   it("refreshes existing result queries on completion and explains model-only candidates", async () => {
     const test = setup({ post: async () => jsonResponse({ status: "completed", result: { mode: "model_only", rows: 0 } }) });
@@ -108,6 +128,21 @@ describe("analysis launch control", () => {
     await screen.findByText(/분석 완료 · 모델 TOP5가 준비됐습니다/);
     expect(test.client.getQueryState(queryKeys.rank())?.isInvalidated).toBe(true);
     expect(test.client.getQueryState(queryKeys.candidates())?.isInvalidated).toBe(true);
+  });
+  it("refreshes active briefing and rank when a polled running job completes", async () => {
+    let revision = "old";
+    const test = setup({ run: { status: "running" } });
+    const rank = new QueryObserver(test.client, { queryKey: queryKeys.rank(), queryFn: async () => revision });
+    const briefing = new QueryObserver(test.client, { queryKey: queryKeys.briefing(), queryFn: async () => revision });
+    const stopRank = rank.subscribe(() => {}), stopBriefing = briefing.subscribe(() => {});
+    try {
+      await screen.findByRole("progressbar");
+      await waitFor(() => expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["old", "old"]));
+      revision = "new"; test.setRun({ status: "completed", elapsedMs: 42000, result: { runId: "new-run" } });
+      await test.client.refetchQueries({ queryKey: queryKeys.analysisRun() });
+      await waitFor(() => expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["new", "new"]));
+      expect(test.posts()).toHaveLength(0);
+    } finally { stopRank(); stopBriefing(); }
   });
   it("shows a server failure and lets the user recheck without a new launch", async () => {
     const test = setup({ run: { status: "failed", error: "결과 파일 확인 필요" } });

@@ -13,6 +13,7 @@ import { topFiveSummary } from "./topFiveSummary";
 export function BriefingExecutionBar({ pool }: { pool: number | null }) {
   const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
   const briefing = useQuery(queries.briefing());
+  const running = analysis.data?.data.status === "running" || status?.runtime.state === "running";
   const completed = status?.marker.state === "completed", finishedAt = completed ? status.marker.finishedAt ?? status.marker.asOf : null;
   return (
     <div className="briefing-execution-bar" role="status" aria-label="분석 실행 상태">
@@ -25,7 +26,7 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
       </span>
       <span className="briefing-execution-divider">·</span>
       <span className="briefing-execution-item">
-        {status?.runtime.state === "running" ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최신 완료 결과" : "저장된 분석 결과"}
+        {running ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최신 완료 결과" : "저장된 분석 결과"}
       </span>
       {briefing.data && briefing.data.kind !== "official" && <span className="briefing-execution-item briefing-execution-error">
         {briefing.data.kind === "adhoc" ? "수시 분석 결과 · 공식 기록 아님" : "공식 여부 확인 불가"}
@@ -42,6 +43,7 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
 
 export function BriefingSummary({ indices, pending, error, count, rows, rankPending, rankError, rankSource }: { indices: DataResult<IndexData>[]; pending: boolean; error: boolean; count: number | null; rows: CandidateData[]; rankPending: boolean; rankError: boolean; rankSource?: DataResult<unknown>["source"] }) {
   const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
+  const running = analysis.data?.data.status === "running" || status?.runtime.state === "running";
   const index = indices.find(item => item.data.symbol === "KOSPI200"), assessment = marketAssessment(indices);
   const completed = status?.marker.state === "completed", finishedAt = completed ? status.marker.finishedAt ?? status.marker.asOf : null;
   const direction = pending ? "pending" : assessment.startsWith("상승") ? "positive" : assessment.startsWith("하락") ? "negative" : "neutral";
@@ -55,7 +57,7 @@ export function BriefingSummary({ indices, pending, error, count, rows, rankPend
       <p>{prediction.count}</p><small>{prediction.period}</small><small>{rows[0]?.scoreKind === "rank_zscore" ? "원본 모델 순위" : "원본 모델 예측"} · 실제 성과 아님{rankSource === "sample" ? " · 예시 데이터" : ""}</small>
     </article>
     <article className="briefing-summary-data" aria-label="분석 및 데이터"><p className="briefing-eyebrow">분석 · 데이터</p><strong className="briefing-summary-value">{finishedAt ? formatDate(finishedAt, true) : "—"}</strong>
-      <p>{formatNumber(count ?? status?.results.rank.count)}종목 · {formatDuration(savedRunDuration(status, analysis.data?.data))}</p><small>{status?.runtime.state === "running" ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최신 완료 결과" : "저장된 분석 결과"}</small>
+      <p>{formatNumber(count ?? status?.results.rank.count)}종목 · {formatDuration(savedRunDuration(status, analysis.data?.data))}</p><small>{running ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최신 완료 결과" : "저장된 분석 결과"}</small>
       {(backend.isError || analysis.isError) && <small role="status">실행 상태 갱신 실패</small>}
     </article>
   </section>;

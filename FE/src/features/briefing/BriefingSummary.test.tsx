@@ -45,11 +45,11 @@ describe("briefing summary status", () => {
     mount(false); expect(screen.getByRole("article", { name: "분석 및 데이터" }).querySelector("strong")).toHaveTextContent("—");
     expect(screen.queryByText(/최신 완료 결과/)).not.toBeInTheDocument(); expect(screen.queryByText(/미확인/)).not.toBeInTheDocument();
   });
-  it("displays latest completion label when analysis state is completed", () => {
+  it.each(["idle", "running"])("uses live analysis status even while backend still describes the previous completion (%s)", status => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } });
     clients.push(client);
     client.setQueryData(queries.backendStatus().queryKey, adaptBackendStatus(backendStatusBody({ state: "not_produced" }, { marker: { state: "completed", kind: "official" } })));
-    client.setQueryData(queries.analysisRun().queryKey, { data: adaptAnalysisStatus({ status: "idle" }), source: "live", asOf: null });
+    client.setQueryData(queries.analysisRun().queryKey, { data: adaptAnalysisStatus({ status }), source: "live", asOf: null });
     client.setQueryData(queries.briefing().queryKey, adaptBriefing({}));
     const rows = [.004].map((value, index) => adaptCandidate(pipelineRow({ ensemble_pred_return: value, pred_rank: index + 1, prediction_base_date: "2026-10-08" })).data);
     render(
@@ -58,7 +58,10 @@ describe("briefing summary status", () => {
         <BriefingSummary indices={[]} pending={false} error={false} count={199} rows={rows} rankPending={false} rankError={false} rankSource="cache" />
       </QueryClientProvider>
     );
-    expect(screen.getAllByText("최신 완료 결과").length).toBeGreaterThanOrEqual(1);
+    if (status === "running") {
+      expect(screen.getAllByText("새 분석 진행 중 · 현재 결과 유지")).toHaveLength(2);
+      expect(screen.queryByText("최신 완료 결과")).not.toBeInTheDocument();
+    } else expect(screen.getAllByText("최신 완료 결과").length).toBeGreaterThanOrEqual(1);
   });
   it("renders KOSPI200 value and change rate when index data is provided", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });

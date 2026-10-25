@@ -37,6 +37,11 @@ async function candidateList(client: ApiClient, path: string, final: boolean, si
   return { data: rows.map(row => row.data), source, asOf: response.asOf ?? rows.map(row => row.asOf).filter((time): time is string => time !== null).sort()[0] ?? null };
 }
 
+/** A partial run may temporarily have no completed snapshot. Keep the last ready result. */
+export function preserveReadyBriefing(previous: BriefingPayload | undefined, incoming: BriefingPayload): BriefingPayload {
+  return previous?.status === "ready" && incoming.status === "no_run" ? previous : incoming;
+}
+
 export function createQueries(client: ApiClient = apiClient) {
   return {
     performance: (code?: string) => queryOptions({ queryKey: ["performance", code ?? "all"], staleTime: 30000, retry: false, queryFn: async ({ signal }) => {
@@ -111,9 +116,9 @@ export function createQueries(client: ApiClient = apiClient) {
     briefing: () => queryOptions({
       queryKey: queryKeys.briefing(),
       staleTime: 30000,
-      queryFn: async ({ signal }) => {
+      queryFn: async ({ signal, client: cache }) => {
         const response = await client.request("/api/briefing", { signal, fallbackSource: "cache" });
-        return adaptBriefing(response.data);
+        return preserveReadyBriefing(cache.getQueryData<BriefingPayload>(queryKeys.briefing()), adaptBriefing(response.data));
       },
     }),
   };

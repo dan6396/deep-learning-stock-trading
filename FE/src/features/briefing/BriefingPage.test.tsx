@@ -252,6 +252,58 @@ describe("panel model membership and market heuristic", () => {
 });
 
 describe("BriefingPage comprehensive briefing integration", () => {
+  const briefingSnapshot = (status: "ready" | "no_run", overview = "이전 브리핑 유지") => ({ version: 1, status, model: null, stocks: [], narrative: { status: "template", overview } });
+  it.each(["analysis", "backend"])("disables narrative regeneration while %s reports a running analysis", async source => {
+    const fetcher = mockBackend(path => {
+      if (path === "/api/briefing") return Promise.resolve(jsonResponse(briefingSnapshot("ready")));
+      if (path === "/api/candidates/run") return Promise.resolve(jsonResponse({ status: source === "analysis" ? "running" : "idle" }));
+      if (path === "/api/backend/status") return Promise.resolve(jsonResponse(backendStatusBody(undefined, { runtime: { state: source === "backend" ? "running" : "idle" } })));
+      return undefined;
+    });
+    mount(); const button = await screen.findByTestId("narrative-generate-btn");
+    await waitFor(() => expect(button).toBeDisabled());
+    expect(button).toHaveAccessibleDescription("분석 진행 중에는 요약을 다시 만들 수 없습니다.");
+    fireEvent.click(button);
+    expect(fetcher.mock.calls.some(([path, request]) => String(path) === "/api/briefing/narrative" && request?.method === "POST")).toBe(false);
+  });
+  it("checks the current cache before sending a narrative request even before disabled props update", async () => {
+    const fetcher = mockBackend(); const client = mount(), button = await screen.findByTestId("narrative-generate-btn");
+    await waitFor(() => expect(button).toBeEnabled());
+    act(() => {
+      client.setQueryData(queryKeys.analysisRun(), { data: { status: "running" }, source: "live", asOf: null });
+      fireEvent.click(button);
+    });
+    await waitFor(() => expect(button).toBeDisabled());
+    expect(fetcher.mock.calls.some(([path, request]) => String(path) === "/api/briefing/narrative" && request?.method === "POST")).toBe(false);
+  });
+  it.each(["idle", "running"])("retains the ready briefing when a later GET temporarily returns no_run (%s)", async status => {
+    let missing = false;
+    mockBackend(path => path === "/api/briefing" ? Promise.resolve(jsonResponse(briefingSnapshot(missing ? "no_run" : "ready"))) : path === "/api/candidates/run" ? Promise.resolve(jsonResponse({ status })) : undefined);
+    const client = mount(); await screen.findByText("이전 브리핑 유지"); missing = true;
+    await act(async () => { await client.refetchQueries({ queryKey: queryKeys.briefing() }); });
+    expect(client.getQueryData(queryKeys.briefing())).toMatchObject({ status: "ready", narrative: { overview: "이전 브리핑 유지" } });
+    expect(screen.getByText("이전 브리핑 유지")).toBeInTheDocument();
+    expect(screen.queryByText("진행된 종합 브리핑 결과가 없습니다")).not.toBeInTheDocument();
+  });
+  it.each([
+    { running: false, status: "no_run" as const },
+    { running: true, status: "no_run" as const },
+    { running: true, status: "ready" as const },
+  ])("keeps the prior ready result when a pending narrative response arrives (running=$running, status=$status)", async ({ running, status }) => {
+    const pending = deferred<Response>();
+    const fetcher = mockBackend((path, request) => path === "/api/briefing" ? Promise.resolve(jsonResponse(briefingSnapshot("ready"))) : path === "/api/briefing/narrative" && request?.method === "POST" ? pending.promise : undefined);
+    const client = mount(); await screen.findByText("이전 브리핑 유지");
+    const button = screen.getByTestId("narrative-generate-btn"); fireEvent.click(button);
+    await waitFor(() => expect(fetcher.mock.calls.some(([path, request]) => String(path) === "/api/briefing/narrative" && request?.method === "POST")).toBe(true));
+    await act(async () => {
+      if (running) client.setQueryData(queryKeys.analysisRun(), { data: { status: "running" }, source: "live", asOf: null });
+      pending.resolve(jsonResponse(briefingSnapshot(status, "늦게 도착한 요약")));
+    });
+    await waitFor(() => expect(button).toHaveAttribute("aria-busy", "false"));
+    expect(client.getQueryData(queryKeys.briefing())).toMatchObject({ status: "ready", narrative: { overview: "이전 브리핑 유지" } });
+    expect(screen.getByText("이전 브리핑 유지")).toBeInTheDocument();
+    expect(screen.queryByText("늦게 도착한 요약")).not.toBeInTheDocument();
+  });
   it("renders ready briefing with macro grid and narrative", async () => {
     mockBackend(path => {
       if (path === "/api/briefing") {

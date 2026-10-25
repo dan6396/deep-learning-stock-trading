@@ -560,17 +560,18 @@
 
   .briefing-stock-card-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--ds-space-2);
     flex-wrap: wrap;
   }
 
   .briefing-stock-link-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--ds-space-2);
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .briefing-stock-report-link {
@@ -1522,4 +1523,11 @@
 .briefing-correlation-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .briefing-correlation-table th, .briefing-correlation-table td { padding: 8px 6px; border: 1px solid var(--ds-line); text-align: center; min-width: 55px; }
 .briefing-correlation-table caption { text-align: left; color: var(--ds-fg-2); padding-bottom: 8px; }
-.briefing-stock-observations { color: var(--ds-fg-2); font-size: 12px; line-height: 1.6; margin: 0; }
+.briefing-stock-observations {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--ds-fg-2);
+  font-size: var(--ds-text-xs);
+  line-height: 1.6;
+  margin: 0;
+}

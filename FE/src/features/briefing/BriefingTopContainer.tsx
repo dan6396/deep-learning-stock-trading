@@ -13,6 +13,7 @@ export type BriefingTopContainerProps = {
   briefing: BriefingPayload;
   onSelectStock: (code: string) => void;
   isGenerating: boolean;
+  analysisRunning?: boolean;
   generateError: string | null;
   onGenerateNarrative: () => void;
   renderTopFive: (renderEvidence: RenderStockEvidence) => React.ReactNode;
@@ -46,6 +47,7 @@ export function BriefingTopContainer({
   briefing,
   onSelectStock,
   isGenerating,
+  analysisRunning = false,
   generateError,
   onGenerateNarrative,
   renderTopFive,
@@ -88,6 +90,7 @@ export function BriefingTopContainer({
         narrative={briefing.narrative}
         stocks={briefing.stocks}
         isGenerating={isGenerating}
+        analysisRunning={analysisRunning}
         generateError={generateError}
         onGenerate={onGenerateNarrative}
         onCitationClick={handleCitationClick}

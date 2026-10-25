@@ -20,7 +20,7 @@
     border-top: 1px solid var(--ds-line);
     overflow-wrap: anywhere;
   }
-  .briefing-stock-evidence .briefing-stock-card-top { justify-content: flex-end; }
+  .briefing-stock-evidence .briefing-stock-card-top { align-items: flex-start; justify-content: space-between; }
   .briefing-stock-evidence .briefing-stock-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .briefing-stock-evidence .briefing-stock-details-grid > div,
   .briefing-stock-evidence .briefing-detail-text,

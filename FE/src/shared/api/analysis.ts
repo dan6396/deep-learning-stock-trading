@@ -8,6 +8,11 @@ const launchVersions = new WeakMap<QueryClient, number>();
 export type AnalysisMode = "model_only" | "full";
 const resultPrefixes = [["candidates"], ["rank"], ["stock"], ["dashboard"], ["backend-status"], ["performance"], ["briefing"]] as const;
 
+export function isAnalysisRunning(client: QueryClient): boolean {
+  return client.getQueryData<{ data: { status: string } }>(queryKeys.analysisRun())?.data.status === "running"
+    || client.getQueryData<{ runtime: { state: string } }>(queryKeys.backendStatus())?.runtime.state === "running";
+}
+
 export async function invalidateAnalysisResults(client: QueryClient): Promise<void> {
   // Cancel pre-completion reads before invalidation so a slow prior snapshot cannot win.
   await Promise.all(resultPrefixes.map(queryKey => client.cancelQueries({ queryKey })));
@@ -30,6 +35,11 @@ export function analysisMutationOptions(client: QueryClient, transport: ApiClien
         await client.cancelQueries({ queryKey: queryKeys.analysisRun() });
         if (launchVersions.get(client) === version) {
           client.setQueryData(queryKeys.analysisRun(), result);
+          if (result.data.status === "running") {
+            // A pre-launch idle snapshot must not keep runtime polling asleep.
+            await client.cancelQueries({ queryKey: queryKeys.backendStatus() });
+            await client.invalidateQueries({ queryKey: queryKeys.backendStatus() });
+          }
           if (result.data.status === "completed") await invalidateAnalysisResults(client);
         }
       }

@@ -58,6 +58,15 @@ export function BriefingStockEvidence({
       data-testid={`stock-card-${stock.code}`}
     >
       <div className="briefing-stock-card-top">
+        {stock.modelEvidence && (stock.modelEvidence.agreement || stock.modelEvidence.features.length > 0) && (
+          <p className="briefing-stock-observations">
+            {stock.modelEvidence.agreement && `20일·120일 모델 ${stock.modelEvidence.agreement}`}
+            {stock.modelEvidence.agreement && stock.modelEvidence.features.length > 0 && " · "}
+            {stock.modelEvidence.features[0]?.text}
+            <span className="briefing-sr-only"> 입력 특징의 상대적 위치이며 모델 기여도는 아닙니다.</span>
+          </p>
+        )}
+
         <div className="briefing-stock-link-wrap">
           <Link
             to={paths.stock(stock.code)}
@@ -85,12 +94,6 @@ export function BriefingStockEvidence({
           </button>
         </div>
       </div>
-
-      {stock.modelEvidence && (stock.modelEvidence.agreement || stock.modelEvidence.features.length > 0) && <p className="briefing-stock-observations">
-        {stock.modelEvidence.agreement && `20일·120일 모델 ${stock.modelEvidence.agreement}`}
-        {stock.modelEvidence.agreement && stock.modelEvidence.features.length > 0 && " · "}{stock.modelEvidence.features[0]?.text}
-        <span className="briefing-sr-only"> 입력 특징의 상대적 위치이며 모델 기여도는 아닙니다.</span>
-      </p>}
       {/* 요약이 없어도 근거·주의·기사 개수를 표시한다. */}
       <div className="briefing-stock-summary-box">
         {summary && (

@@ -3,10 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { AnalysisDialog, dialogTabStops } from "./AnalysisDialog";
-import { backendStatusBody, jsonResponse } from "../../test/dataFixtures";
+import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   if (!HTMLDialogElement.prototype.showModal) HTMLDialogElement.prototype.showModal = function() { this.setAttribute("open", ""); };
   if (!HTMLDialogElement.prototype.close) HTMLDialogElement.prototype.close = function() { this.removeAttribute("open"); };
   vi.spyOn(HTMLDialogElement.prototype, "showModal").mockImplementation(function(this: HTMLDialogElement) { this.setAttribute("open", ""); });
@@ -14,14 +15,26 @@ beforeEach(() => {
 });
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function RouteProbe() { const navigate = useNavigate(), location = useLocation(); return <><button onClick={() => navigate("/rank")}>경로 이동</button><output data-testid="route">{location.pathname + location.search}</output></>; }
-function mount(running = false, status = running ? "running" : "idle", initialEntries = ["/"]) {
-  const fetcher = vi.fn<typeof fetch>(async path => jsonResponse(String(path) === "/api/backend/status" ? backendStatusBody({ state: "not_produced" }) : { status, mode: "model_only" }));
+function mount(running = false, status = running ? "running" : "idle", initialEntries = ["/"], post?: () => Promise<Response>) {
+  const fetcher = vi.fn<typeof fetch>(async (path, request) => request?.method === "POST" && post ? post() : jsonResponse(String(path) === "/api/backend/status" ? backendStatusBody({ state: "not_produced" }) : { status, mode: "model_only" }));
   vi.stubGlobal("fetch", fetcher);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, refetchOnWindowFocus: false } } }); clients.push(client);
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AnalysisDialog /><RouteProbe /></MemoryRouter></QueryClientProvider>);
   return fetcher;
 }
 describe("header analysis dialog", () => {
+  it("moves focus to close before disabling the focused launch button and keeps run details in the trap", async () => {
+    const pending = deferred<Response>(); mount(false, "idle", ["/"], () => pending.promise);
+    fireEvent.click(screen.getByRole("button", { name: "AI 분석 실행" }));
+    const start = await screen.findByRole("button", { name: "분석 시작" });
+    await waitFor(() => expect(start).toBeEnabled()); start.focus(); fireEvent.click(start);
+    const close = screen.getByRole("button", { name: "분석 실행 대화상자 닫기" }); expect(close).toHaveFocus();
+    pending.resolve(jsonResponse({ status: "running", runId: "fixture-run" }));
+    await screen.findByRole("progressbar"); expect(close).toHaveFocus();
+    const dialog = screen.getByRole("dialog"), summary = screen.getByText("실행 정보");
+    const stops = dialogTabStops(dialog); expect(stops[stops.length - 1]).toBe(summary);
+    summary.focus(); fireEvent.keyDown(summary, { key: "Tab" }); expect(close).toHaveFocus();
+  });
   it("offers a TOP5 shortcut after completion that closes the dialog and opens the briefing", async () => {
     mount(false, "completed", ["/rank?code=005930"]);
     fireEvent.click(screen.getByRole("button", { name: "AI 분석 실행" }));
@@ -36,6 +49,10 @@ describe("header analysis dialog", () => {
     const fetcher = mount(), trigger = screen.getByRole("button", { name: "AI 분석 실행" });
     trigger.focus(); fireEvent.click(trigger);
     const dialog = screen.getByRole("dialog", { name: "AI 분석 실행" }), close = within(dialog).getByRole("button", { name: "분석 실행 대화상자 닫기" });
+    expect(within(dialog).getAllByRole("heading")).toHaveLength(1);
+    expect(within(dialog).getByRole("heading")).toHaveTextContent("AI 분석 실행");
+    expect(within(dialog).getByRole("region", { name: "AI 분석 실행" })).toBeInTheDocument();
+    expect(within(dialog).queryByText("새 분석 실행")).not.toBeInTheDocument();
     expect(dialog).toHaveTextContent("약 40초");
     expect(dialog).toHaveTextContent("실행 중에도 현재 결과는 그대로 보입니다.");
     expect(close).toHaveFocus(); await screen.findByRole("button", { name: "분석 시작" });

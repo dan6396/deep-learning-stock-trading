@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { Info, X, RefreshCw, ArrowRight } from "lucide-react";
 import { useAppPaths } from "../../app/paths";
-import { queries, queryKeys, requestBriefingNarrative } from "../../shared/api/queries";
+import { queries, queryKeys, requestBriefingNarrative, preserveReadyBriefing } from "../../shared/api/queries";
+import { isAnalysisRunning, useAnalysisRun } from "../../shared/api/analysis";
+import type { BriefingPayload } from "../../entities/briefing";
 import { formatDate, formatNumber } from "../../shared/lib/format";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { modelTopFive, ModelTopFiveList } from "./ModelTopFiveTable";
@@ -36,17 +38,21 @@ export function useBriefingGenerationPolling(active: boolean, refetch: () => Pro
 export function BriefingPage() {
   usePageTitle("브리핑");
   const rank = useQuery(queries.rank()), indices = useQuery(queries.indices()), briefing = useQuery({ ...queries.briefing(), retry: false });
+  const analysis = useAnalysisRun(), backend = useQuery(queries.backendStatus());
+  const analysisRunning = analysis.data?.data.status === "running" || backend.data?.runtime.state === "running";
   const generationPending = briefing.data?.narrative.fallbackReason === "generation_in_progress";
   const generationPollingExpired = useBriefingGenerationPolling(generationPending, briefing.refetch);
   const paths = useAppPaths(), client = useQueryClient(), [params, setParams] = useSearchParams(), [intro, setIntro] = useState(showIntro);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const narrativeMutation = useMutation({
     onMutate: () => setGenerateError(null),
-    mutationFn: () => requestBriefingNarrative(),
+    mutationFn: async () => isAnalysisRunning(client) ? null : requestBriefingNarrative(),
     onSuccess: async data => {
+      if (!data || isAnalysisRunning(client)) return;
       setGenerateError(null);
       await client.cancelQueries({ queryKey: queryKeys.briefing() });
-      client.setQueryData(queryKeys.briefing(), data);
+      if (isAnalysisRunning(client)) return;
+      client.setQueryData<BriefingPayload>(queryKeys.briefing(), previous => preserveReadyBriefing(previous, data));
     },
     onError: () => setGenerateError("AI 요약 생성 요청이 실패했습니다. 잠시 후 다시 시도하세요"),
     onSettled: async (_data, error) => {
@@ -111,8 +117,9 @@ export function BriefingPage() {
             briefing={briefing.data}
             onSelectStock={nextCode => select(nextCode, "pointer")}
             isGenerating={narrativeMutation.isPending}
+            analysisRunning={analysisRunning}
             generateError={generateError}
-            onGenerateNarrative={() => narrativeMutation.mutate()}
+            onGenerateNarrative={() => { if (!isAnalysisRunning(client)) narrativeMutation.mutate(); }}
             renderTopFive={renderTopFive}
           />
         </>

@@ -16,7 +16,15 @@ export function createApiClient(baseUrl = DEFAULT_BASE_URL, fetcher: typeof fetc
       const token = options.method === "POST" ? getAdminToken() : "";
       const response = await fetcher(`${baseUrl}${path}`, { method: options.method ?? "GET", signal: controller.signal, ...(token ? { redirect: "error" as const } : {}), headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
       if (controller.signal.aborted) throw controller.signal.reason;
-      if (!response.ok) throw new ApiRequestError(response.status, response.headers.get("Retry-After"));
+      if (!response.ok) {
+        let conflictKind: unknown;
+        if (response.status === 409) {
+          // Display only recognized public metadata; never render arbitrary server errors.
+          try { conflictKind = record(await response.json()).kind; } catch { /* Generic conflict guidance remains available. */ }
+          if (controller.signal.aborted) throw controller.signal.reason;
+        }
+        throw new ApiRequestError(response.status, response.headers.get("Retry-After"), conflictKind);
+      }
       if (!(response.headers.get("content-type") ?? "").includes("application/json")) throw new Error(`JSON 응답이 아닙니다: ${path}`);
       const payload: unknown = await response.json();
       if (controller.signal.aborted) throw controller.signal.reason;

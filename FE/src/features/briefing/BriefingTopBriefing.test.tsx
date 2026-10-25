@@ -1485,11 +1485,22 @@ describe("narrative regeneration policy", () => {
     const supporting = screen.getByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다");
     expect(supporting.closest("details")).not.toHaveAttribute("open");
   });
-  it("does not render redundant pool size or top percent in stock card header", () => {
-    const stock = { ...mockBriefingData.stocks[0], poolSize: 199, topPercent: 2 / 199 * 100 };
+  it.each([
+    { side: "lower", percentile: 2.01, text: "199종목 중 하위 2.01%" },
+    { side: "upper", percentile: 82.16, text: "199종목 중 상위 18.34%" },
+  ])("keeps $side observations alongside links without a redundant rank line", ({ percentile, text }) => {
+    const stock = { ...mockBriefingData.stocks[0], poolSize: 199, topPercent: 2 / 199 * 100,
+      modelEvidence: modelEvidence({ score_kind: "rank_zscore", prediction_status: "ok", pred_rank: 1, pred_pool_size: 199, rank_score: 2.34, feat_pct_f_rsi: percentile }) };
     render(<MemoryRouter><StockEvidenceList stocks={[stock]} narrative={mockBriefingData.narrative} /></MemoryRouter>);
     const card = screen.getByTestId("stock-card-005930");
-    expect(card.querySelector(".briefing-stock-card-top")).not.toHaveTextContent("종목 중");
+    const top = card.querySelector(".briefing-stock-card-top")!;
+    const observations = top.querySelector(".briefing-stock-observations");
+    expect(observations).toHaveTextContent(text);
+    expect(observations?.tagName).toBe("P");
+    expect(Array.from(top.children)).toEqual([observations, top.querySelector(".briefing-stock-link-wrap")]);
+    const withoutObservations = top.cloneNode(true) as HTMLElement;
+    withoutObservations.querySelectorAll(".briefing-stock-observations").forEach(node => node.remove());
+    expect(withoutObservations).not.toHaveTextContent("종목 중");
     expect(card).not.toHaveTextContent("순위 점수:");
   });
   it("counts only articles retained by the adapter and removes repeated rank-score disclaimers", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { BriefingNarrative, BriefingStock } from "../../entities/briefing";
 import { formatFallbackReason, formatKstTime, parseCitation, withoutRankScoreDisclaimer } from "../../entities/briefing";
 import { Sparkles, RefreshCw, AlertCircle, Bot, Cpu, Info } from "lucide-react";
@@ -9,6 +9,7 @@ export type BriefingNarrativeCardProps = {
   narrative: BriefingNarrative;
   stocks: BriefingStock[];
   isGenerating: boolean;
+  analysisRunning?: boolean;
   generateError: string | null;
   onGenerate: () => void;
   onCitationClick: (citationId: string) => void;
@@ -18,11 +19,13 @@ export function BriefingNarrativeCard({
   narrative,
   stocks,
   isGenerating,
+  analysisRunning = false,
   generateError,
   onGenerate,
   onCitationClick,
 }: BriefingNarrativeCardProps) {
   const admin = useAdminAccess();
+  const analysisReasonId = useId();
   const isLlm = narrative.status === "llm";
   const isTemplate = narrative.status === "template";
   const isPartialTemplate = isLlm && narrative.fallbackReason === "partial_template";
@@ -39,7 +42,7 @@ export function BriefingNarrativeCard({
   }, [isLlm, generated]);
   // Template timestamps are render times, not successful generation times.
   const recentlyGenerated = isLlm && Number.isFinite(generated) && clock < generated + 600_000;
-  const isButtonDisabled = isGenerating || inProgress || isLlm && (recentlyGenerated || !isStale);
+  const isButtonDisabled = analysisRunning || isGenerating || inProgress || isLlm && (recentlyGenerated || !isStale);
 
   let buttonText = "AI 요약 생성";
   if (isGenerating || inProgress) {
@@ -140,6 +143,7 @@ export function BriefingNarrativeCard({
             disabled={isButtonDisabled}
             onClick={onGenerate}
             aria-busy={isGenerating || inProgress}
+            aria-describedby={analysisRunning ? analysisReasonId : undefined}
             data-testid="narrative-generate-btn"
           >
             {isGenerating ? (
@@ -149,7 +153,8 @@ export function BriefingNarrativeCard({
             )}
             <span>{buttonText}</span>
           </button>
-          {isGenerating && (
+          {analysisRunning && <span id={analysisReasonId} className="briefing-partial-policy-hint">분석 진행 중에는 요약을 다시 만들 수 없습니다.</span>}
+          {isGenerating && !analysisRunning && (
             <span
               className="briefing-narrative-generating-hint"
               data-testid="narrative-generating-hint"
@@ -158,7 +163,7 @@ export function BriefingNarrativeCard({
               최대 1분 정도 걸릴 수 있습니다
             </span>
           )}
-          {isLlm && (recentlyGenerated || !isStale) && (
+          {!analysisRunning && isLlm && (recentlyGenerated || !isStale) && (
             <span
               className="briefing-partial-policy-hint"
               data-testid="partial-template-policy-hint"

@@ -72,6 +72,18 @@ describe("admin session controls", () => {
   });
   it.each([401, 403, 429])("shows recovery guidance for HTTP %s", async status => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status, headers: { "Retry-After": "42" } }));
-    await expect(createApiClient("", fetcher).request("/api/briefing/narrative", { method: "POST" })).rejects.toMatchObject({ status, message: expect.stringMatching(status === 401 ? /토큰을 다시 저장/ : status === 403 ? /수시 실행/ : /42초 후 다시 시도/) });
+    await expect(createApiClient("", fetcher).request("/api/briefing/narrative", { method: "POST" })).rejects.toMatchObject({ status, message: expect.stringMatching(status === 401 ? /관리자 인증이 필요합니다/ : status === 403 ? /수시 실행/ : /42초 후 다시 시도/) });
+  });
+  it.each([
+    [{ kind: "official", runId: "fixture-official" }, "다른 분석(공식 예약 실행)이 진행 중입니다. 끝난 뒤 다시 시도해 주세요."],
+    [{ kind: "adhoc" }, "다른 분석(관리자 수시 실행)이 진행 중입니다. 끝난 뒤 다시 시도해 주세요."],
+    [{ kind: "unknown", error: "untrusted internal details" }, "다른 분석이 진행 중입니다. 끝난 뒤 다시 시도해 주세요."],
+  ])("uses recognized conflict metadata for 409 feedback (%j)", async (body, message) => {
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(JSON.stringify(body), { status: 409, headers: { "Content-Type": "application/json" } }));
+    await expect(createApiClient("", fetcher).request("/api/candidates/run", { method: "POST" })).rejects.toMatchObject({ status: 409, message });
+  });
+  it("keeps helpful 409 guidance when the error body cannot be read", async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => new Response("not json", { status: 409 }));
+    await expect(createApiClient("", fetcher).request("/api/candidates/run", { method: "POST" })).rejects.toMatchObject({ status: 409, message: "다른 분석이 진행 중입니다. 끝난 뒤 다시 시도해 주세요." });
   });
 });

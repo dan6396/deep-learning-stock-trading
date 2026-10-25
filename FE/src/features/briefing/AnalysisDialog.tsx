@@ -12,7 +12,10 @@ import "./analysisDialog.css";
 
 /** Match native radio tab stops; unchecked members must not become trap boundaries. */
 export function dialogTabStops(dialog: HTMLElement) {
-  const nodes = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(node => node.tabIndex >= 0 && !node.closest("[hidden],[inert]"));
+  const nodes = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],summary,input:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(node => {
+    const collapsed = node.closest('details:not([open])');
+    return node.tabIndex >= 0 && !node.closest("[hidden],[inert]") && (!collapsed || node.matches("summary") && node.parentElement === collapsed);
+  });
   return nodes.filter(node => {
     if (!(node instanceof HTMLInputElement) || node.type !== "radio" || !node.name) return true;
     const group = nodes.filter((item): item is HTMLInputElement => item instanceof HTMLInputElement && item.type === "radio" && item.name === node.name && item.form === node.form);
@@ -47,7 +50,7 @@ function DialogContent({ close, running }: { close: (restore?: boolean) => void;
   }}>
     <div className="analysis-dialog-heading"><h2 id="analysis-dialog-title">AI 분석 실행</h2><button ref={closeButton} type="button" className="briefing-icon-button" aria-label="분석 실행 대화상자 닫기" onClick={dismiss}><X aria-hidden="true" size={20} /></button></div>
     {running && <p className="analysis-dialog-running" role="status">대화상자를 닫아도 분석은 서버에서 계속 진행됩니다.</p>}
-    <AnalysisControl onShowTopFive={showTopFive} />
+    <AnalysisControl labelledBy="analysis-dialog-title" onShowTopFive={showTopFive} onRequestStart={() => closeButton.current?.focus()} />
   </dialog>, document.body);
 }
 export function AnalysisDialog() {
