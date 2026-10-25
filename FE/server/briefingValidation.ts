@@ -86,12 +86,20 @@ function sameMagnitude(actual: Quantity, expected: Quantity): boolean {
       && Math.abs(Math.round(known / precision) * precision - magnitude) < Math.max(1e-6, precision * 1e-9);
 }
 
+/** A topic label is allowed; asserting an unprovided supply observation is not. */
+export function unpublishedSupplyClaim(text: string): boolean {
+  const topic = /(?:순\s*매\s*[수도]|매\s*[수도]\s*세|수급)(?:\s*(?:동향|관련|현황|분석|변화))*\s*(?:기사|뉴스|보도)(?:의\s*주제)?(?:를\s*(?:확인|소개|요약)|가\s*(?:있|확인)|에\s*(?:관한|대한))?/g;
+  return text.split(/[.!?。;\n]/).some(clause => {
+    if (/(?:순\s*매\s*[수도]|매\s*[수도]\s*세|수급)/.test(clause) && /유입|유출|증가|감소/.test(clause)) return true;
+    return /순\s*매\s*[수도]|매\s*[수도]\s*세|(?:외국인|기관)[^.!?。]{0,60}양수|수급[^.!?。]{0,30}(?:유입|유출|증가|감소|양수|통과)/.test(clause.replace(topic, "기사 주제"));
+  });
+}
+
 /** Dates are calendar facts; clock digits, titles and identifiers cannot license quantities. */
 export function groundedNumbers(output: string, input: BriefingInput): boolean {
   if (/(?:KRW|USD)/i.test(output)) return false;
   // An unrelated matching number cannot license an unpublished supply claim.
-  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply"))
-    && /(?:외국인|기관|수급)[^.!?。\n]{0,100}(?:순매수|순매도|양수)/.test(output)) return false;
+  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply")) && unpublishedSupplyClaim(output)) return false;
   const dates = new Set<string>(), monthDays = new Set<string>(), allowed: Quantity[] = [];
   const quarterTopics = new Set<string>();
   const addDate = (value: unknown) => {
@@ -132,11 +140,12 @@ export function groundedNumbers(output: string, input: BriefingInput): boolean {
   add(input.model?.poolSize ?? null, "개");
   add(input.stocks.length, "개");
   for (const stock of input.stocks) {
-    add(stock.rank, "위"); add(stock.rankScore, ""); add(stock.poolSize, "개"); add(Number(stock.topPercent.toFixed(2)), "%", false, 2);
+    add(stock.rank, "위"); add(stock.rankScore, "", false, Math.min(4, decimalPlaces(stock.rankScore))); add(stock.poolSize, "개"); add(Number(stock.topPercent.toFixed(2)), "%", false, 2);
     add(stock.news.articles.length, "건");
     for (const article of stock.news.articles) {
       addDate(article.pubDate);
       for (const quarter of article.title.matchAll(/[1-4]\s*분기/g)) quarterTopics.add(quarter[0].replace(/\s/g, ""));
+      for (const quarter of article.title.matchAll(/\b(?:([1-4])Q(?:\d{2,4})?|Q([1-4])(?:\s*\d{2,4})?)\b/gi)) quarterTopics.add(`${quarter[1] ?? quarter[2]}분기`);
     }
     for (const fact of [...stock.evidence, ...stock.cautions]) {
       addDate(fact.text);
@@ -175,12 +184,12 @@ export function groundedNumbers(output: string, input: BriefingInput): boolean {
 }
 
 const disclaimerNoun = String.raw`(?:상승\s*확률|(?:기대|예측|예상)\s*수익률|수익률|확\s*률|매\s*[수도](?:\s*(?:권유|의견|추천))?|투자\s*권유|추천|권유|의견|(?:수익\s*)?보장|예측|전망|목표\s*(?:주\s*)?가|적정\s*주가|비\s*중|원인|영향)`;
-const directDisclaimer = new RegExp(String.raw`${disclaimerNoun}(?:\s*(?:과|와|이나|나|·)\s*${disclaimerNoun})*(?:\s*(?:은|는|이|가|을|를|에))*\s*(?:의미\s*하지\s*않|아닙니다|아님|아니며|보장\s*하지\s*않|해당\s*하지\s*않|주지\s*않)`, "g");
+const directDisclaimer = new RegExp(String.raw`${disclaimerNoun}(?:\s*(?:과|와|이나|나|·)\s*${disclaimerNoun})*(?:\s*(?:은|는|이|가|을|를|에))*\s*(?:의미\s*하지\s*않|나타내지\s*않|아닙니다|아님|아니며|보장\s*하지\s*않|해당\s*하지\s*않|주지\s*않)`, "g");
 function hasUnnegatedPhrase(text: string, unsafe: RegExp): boolean {
   for (const clause of text.split(/[.!?。;\n,，]|하지만|그러나|다만|반면|지만/)) {
     // Exempt complete coordinated noun phrases, including overlapping unsafe matches.
     const negated = /아니라/.test(clause) ? [] : [...clause.matchAll(directDisclaimer)]
-      .filter(match => !/아니|아닙|아님|않|없/.test(clause.slice(match.index! + match[0].length)));
+      .filter(match => { const tail = clause.slice(match.index! + match[0].length); return /^\s*으며\s/.test(tail) || !/아니|아닙|아님|않|없/.test(tail); });
     for (const match of clause.matchAll(unsafe)) {
       if (!negated.some(denial => denial.index! <= match.index! && denial.index! + denial[0].length >= match.index! + match[0].length)) return true;
     }

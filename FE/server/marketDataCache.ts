@@ -7,7 +7,7 @@ declare const process: { cwd(): string };
 export type CacheEntry<T> = { builtAt: number; data: T };
 
 /** Only public market payloads are persisted; keys contain hashed scopes, never credentials. */
-export function createMarketDataCache<T>(name: string, validate: (value: unknown) => value is T, directory?: string) {
+export function createMarketDataCache<T>(name: string, validate: (value: unknown) => value is T, directory?: string, maxAgeMs = 14 * 86_400_000) {
   const memory = new Map<string, CacheEntry<T>>(), pending = new Map<string, Promise<T>>();
   const reads = new Map<string, Promise<CacheEntry<T> | null>>();
   const failedAt = new Map<string, number>();
@@ -15,7 +15,8 @@ export function createMarketDataCache<T>(name: string, validate: (value: unknown
   const path = (key: string) => join(root(), `${name}-${inFlightKey([key])}.json`);
   async function read(key: string, persistent = false): Promise<CacheEntry<T> | null> {
     const existing = memory.get(key);
-    if (existing) return structuredClone(existing);
+    if (existing && Date.now() - existing.builtAt <= maxAgeMs) return structuredClone(existing);
+    if (existing) memory.delete(key);
     if (!persistent) return null;
     let reading = reads.get(key);
     if (!reading) {
@@ -24,7 +25,7 @@ export function createMarketDataCache<T>(name: string, validate: (value: unknown
           const text = await readFile(path(key), "utf8");
           if (text.length > 8_000_000) return null;
           const parsed = JSON.parse(text);
-          if (parsed.version !== 2 || !Number.isFinite(parsed.builtAt) || parsed.builtAt <= 0 || parsed.builtAt > Date.now() + 60_000 || !validate(parsed.data)) return null;
+          if (parsed.version !== 2 || !Number.isFinite(parsed.builtAt) || parsed.builtAt <= 0 || parsed.builtAt > Date.now() + 60_000 || Date.now() - parsed.builtAt > maxAgeMs || !validate(parsed.data)) return null;
           const entry: CacheEntry<T> = { builtAt: parsed.builtAt, data: parsed.data };
           memory.set(key, entry);
           return entry;

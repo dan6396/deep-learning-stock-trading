@@ -13,6 +13,16 @@ afterEach(async () => {
   await rm(directory, { recursive: true, force: true });
 });
 describe("public market file cache", () => {
+  it("ignores observations older than fourteen days in memory and on disk, then recollects", async () => {
+    let now = Date.now(); vi.spyOn(Date, "now").mockImplementation(() => now);
+    const cache = createMarketDataCache("fixture", valid, directory);
+    await cache.write("symbol", { price: 100 }, true);
+    now += 14 * 86_400_000; expect(await cache.read("symbol", true)).not.toBeNull();
+    now++; expect(await cache.read("symbol", true)).toBeNull();
+    const restarted = createMarketDataCache("fixture", valid, directory); expect(await restarted.read("symbol", true)).toBeNull();
+    const load = vi.fn(async () => ({ price: 101 })); await restarted.refresh("symbol", load, true);
+    expect(load).toHaveBeenCalledOnce(); expect((await restarted.read("symbol", true)).data.price).toBe(101);
+  });
   it("persists atomically, hydrates a fresh process cache and isolates returned values", async () => {
     const first = createMarketDataCache("fixture", valid, directory);
     await first.write("scope-005930", { price: 100 }, true);

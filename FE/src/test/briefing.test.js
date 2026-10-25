@@ -20,6 +20,14 @@ function rows() {
   }));
 }
 describe("model TOP5 briefing", () => {
+  it("renders a neutral target-session caution after resolving the unchanged input hash", async () => {
+    let rawHash;
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => marker, macro: async () => macro,
+      composition: async input => buildBriefingComposition(input), now: () => now,
+      narratives: { resolve: async input => { rawHash = briefingInputHash(input); expect(input.stocks[0].cautions.find(fact => fact.kind === "data").text).toContain("오늘 날짜"); return templateNarrative(input, null, now); } } });
+    const result = await service(false, {});
+    expect(result.narrative.inputHash).toBe(rawHash); expect(result.stocks[0].cautions.find(fact => fact.kind === "data").text).toBe("10/23(금) 정규장 시가→종가를 대상으로 한 순위입니다.");
+  });
   it.each(["official", "adhoc", undefined, "invalid"])("classifies a stable completed result from run metadata (%s)", async kind => {
     const service = createBriefingService({ rank: async () => rows(), marker: async () => ({ ...marker, runId: "fixture-run", kind }),
       macro: async () => macro, composition: async input => buildBriefingComposition(input),

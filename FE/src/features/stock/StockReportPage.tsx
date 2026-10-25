@@ -11,6 +11,7 @@ import { useCandidateProduction, productionNotice } from "../briefing/candidateP
 import { mergeCandidateDetail } from "../briefing/DetailPanel";
 import { useNextSession } from "../briefing/ModelTopFiveTable";
 import { SourceMeta } from "../briefing/SourceMeta";
+import { PastObservationTag } from "../briefing/PastObservationTag";
 import { SignalView } from "../briefing/SignalView";
 import { ReportChart } from "./ReportChart";
 import { StockInsightSection } from "./StockInsightSection";
@@ -50,7 +51,7 @@ function StockReport({ code }: { code: string }) {
     {(candidates.data?.source === "sample" || stock.data?.source === "sample") && <p className="report-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
     <StockInsightSection code={code} />
     <div className="report-top-grid"><section className="report-card" aria-labelledby="report-price-title"><h2 id="report-price-title">조회 가격</h2><p className="report-price" data-testid="report-price">{formatWon(quote.data?.data?.currentPrice)}</p><p className={tone(quote.data?.data?.changeRate)}>{formatPercent(quote.data?.data?.changeRate, "percent")} · {formatWon(quote.data?.data?.change)}</p>
-      {quote.data && <SourceMeta source={quote.data.source} asOf={quote.data.asOf} label="시세 기준 시각" />}
+      {quote.data && <><SourceMeta source={quote.data.source} asOf={quote.data.asOf} label="시세 기준 시각" /><PastObservationTag asOf={quote.data.asOf} /></>}
       {quote.isPending && <p role="status" className="report-muted">시세를 조회하고 있습니다.</p>}
       {quote.isError && <p className="report-notice" role="status">{quote.data ? "이전 조회 결과 · 시세 갱신 실패" : "시세 조회 실패"}</p>}
       {quote.isSuccess && quote.data.data === null && <p className="report-muted">시세 결과가 없습니다.</p>}

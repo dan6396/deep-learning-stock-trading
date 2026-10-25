@@ -31,6 +31,18 @@ def histories():
 
 
 class FinalRankTests(unittest.TestCase):
+    def test_observation_failure_keeps_finite_scores_and_blanks_only_optional_columns(self):
+        import integrated_pipeline as pipeline
+        frames, market, cutoff = histories()
+        tickers, windows, context, _ = prepare_inputs(frames, market, cutoff)
+        expected = np.linspace(1, -1, len(tickers))
+        class BrokenObservationModel:
+            def predict_windows(self, *args, **kwargs):
+                return expected.copy(), np.full((6, len(tickers)), np.nan)
+        scores, errors, observations = pipeline._predict_with_observations(BrokenObservationModel(), frames, market, cutoff)
+        np.testing.assert_array_equal(np.array([scores[t] for t in tickers]).view(np.uint64), expected.view(np.uint64))
+        self.assertFalse(any(errors.values()))
+        self.assertTrue(all(len(row) == 16 and all(pd.isna(value) for value in row.values()) for row in observations.values()))
     @classmethod
     def setUpClass(cls):
         torch.set_num_threads(4)

@@ -5,6 +5,7 @@ import { queries, queryKeys } from "../../shared/api/queries";
 import { TIME_RANGES, type ChartMode, type TimeRange } from "../../types/stockChart";
 import { formatDate } from "../../shared/lib/format";
 import { SourceMeta } from "../briefing/SourceMeta";
+import { PastObservationTag } from "../briefing/PastObservationTag";
 import { PriceChart } from "./PriceChart";
 import { validatedChart } from "./reportData";
 import type { ChartData } from "../../entities/market";
@@ -38,5 +39,6 @@ export function ReportChart({ code }: { code: string }) {
       : chart.data && !allowed ? <p className="report-empty">{chart.data.source === "sample" ? "예시 데이터이므로 실제 가격 이력 차트를 제공하지 않습니다." : "가격 이력 출처 미확인으로 차트를 제공하지 않습니다."}</p>
         : chart.data && allowed ? <PriceChart key={`${range}-${mode}`} data={chart.data.data} mode={mode} /> : null}
     {chart.data && <details className="report-muted report-footnote"><summary>데이터 출처·기간</summary><SourceMeta source={chart.data.source} asOf={chart.data.asOf} label="확인 시각" />{allowed && <CoverageNote data={chart.data.data} />}<p>각 점은 제공된 관측 시각의 가격입니다. 가격이 없는 구간은 선으로 잇지 않습니다.</p></details>}
+    <PastObservationTag asOf={chart.data?.asOf} />
   </section>;
 }

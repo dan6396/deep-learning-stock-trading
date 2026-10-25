@@ -28,7 +28,7 @@ export function adaptStockInsight(raw: unknown, expectedCode: string): StockInsi
   const articles = Array.isArray(news.articles) ? news.articles.flatMap(value => { const a = record(value), id = textValue(a.id), title = textValue(a.title), url = safeArticleUrl(textValue(a.url));
     return id && title && url ? [{ id, title, url, source: textValue(a.source) ?? "", pubDate: textValue(a.pubDate) }] : []; }) : [];
   return { version: 1, code: expectedCode, name: textValue(root.name) ?? expectedCode, status: root.status === "ready" ? "ready" : "no_model", baseDate: textValue(root.baseDate), model: adaptModelEvidence(root.model),
-    sensitivity: { status: s.status === "ready" && metrics.length === 2 ? "ready" : "preparing", metrics, samples: finiteNumber(s.samples) ?? 0,
+    sensitivity: { status: s.status === "ready" && metrics.length === 2 ? "ready" : "preparing", metrics, samples: finiteNumber(s.samples) ?? 0, asOf: textValue(s.asOf),
       periodStart: textValue(s.periodStart), periodEnd: textValue(s.periodEnd), complete: s.complete === true,
       conditional: validConditional ? { count: nums[0]!, total: nums[1]!, ratioPct: nums[2]!, baselinePct: nums[3]!, baselineCount: nums[4]!, baselineTotal: nums[5]! } : null,
       source: textValue(s.source) ?? "", note: textValue(s.note) ?? "" },

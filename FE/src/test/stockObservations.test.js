@@ -8,6 +8,17 @@ function history(code = "005930", offset = 0) {
   }); return { code, rows, source: "cache", complete: true, asOf: null };
 }
 describe("stock historical observations", () => {
+  it("bounds its LRU, does not cache absent histories and invalidates on missing dates and interval changes", async () => {
+    let clock = Date.parse("2025-12-30T08:00:00Z"); const histories = history();
+    const read = vi.fn(async code => code === "999999" ? null : structuredClone(histories));
+    const provider = createObservationProvider({ history: read, transport: vi.fn(async () => ({ ok: false })), now: () => clock, maxEntries: 2 });
+    const first = await provider.get(["005930"]); const second = await provider.get(["005930"]);
+    expect(second.sensitivities[0]).toBe(first.sensitivities[0]);
+    histories.missingDates = [histories.rows[100].date]; const changed = await provider.get(["005930"]); expect(changed.sensitivities[0]).not.toBe(first.sensitivities[0]);
+    clock += 86_400_000; expect((await provider.get(["005930"])).sensitivities[0]).not.toBe(changed.sensitivities[0]);
+    await provider.get(["000660", "042660"]); expect(provider.cacheSize()).toBe(2);
+    await provider.get(["999999"]); expect(provider.cacheSize()).toBe(2);
+  });
   it("uses strictly prior US dates through weekends and holidays, never the same-day session", () => {
     const us = ["2026-10-08", "2026-10-09", "2026-10-12", "2026-10-13"].map((date, i) => ({ date, open: 100, close: 100 + i }));
     const kr = ["2026-10-09", "2026-10-12", "2026-10-13"].map((date, i) => ({ date, open: 100, close: 102 + i }));

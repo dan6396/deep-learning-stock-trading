@@ -12,7 +12,8 @@ describe("read-only demo preparation", () => {
       await Promise.resolve(); active--; return { ok: true, status: 200, json: async () => data };
     });
     const pause = vi.fn(async () => {}), rows = await warmup("http://localhost:5173", { transport, pause });
-    expect(rows).toHaveLength(14); expect(maximum).toBe(1); expect(pause).toHaveBeenCalledTimes(13);
+    expect(rows).toHaveLength(16); expect(maximum).toBe(1); expect(pause).toHaveBeenCalledTimes(15);
+    expect(rows.slice(-2).map(row => row.request)).toEqual(["/api/briefing", "/api/stock-insight?code=100001"]);
     expect(rows[2].note).toContain("지표 미제공 1개");
     expect(transport.mock.calls.every(([url]) => !String(url).includes("/run") && !String(url).includes("/narrative"))).toBe(true);
   });

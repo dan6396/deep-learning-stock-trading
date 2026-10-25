@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../../shared/api/client";
 import { adaptStockInsight } from "../../entities/stockInsight";
 import { formatRankScore } from "../../shared/lib/format";
+import { PastObservationTag } from "../briefing/PastObservationTag";
 import "./stockInsight.css";
 
 export function StockInsightSection({ code }: { code: string }) {
@@ -26,7 +27,7 @@ export function StockInsightSection({ code }: { code: string }) {
     <div className="insight-block"><h3>직전 미국장과의 과거 관측</h3>{sensitivity.status === "ready" ? <>
       <div className="insight-scroll"><table><caption>최근 1년 나스닥 민감도 · {sensitivity.samples}일</caption><thead><tr><th scope="col">종목 수익 구간</th><th scope="col">상관계수</th><th scope="col">베타</th></tr></thead><tbody>{sensitivity.metrics.map(metric => <tr key={metric.definition}><th scope="row">{metric.definition === "close_to_close" ? "종가→종가" : "시가→종가"}</th><td>{metric.correlation.toFixed(2)}</td><td>{metric.beta.toFixed(2)}</td></tr>)}</tbody></table></div>
       {conditional && <p>나스닥 상승 뒤 이 종목의 시가→종가 상승 비율 {conditional.ratioPct.toFixed(1)}% ({conditional.count}/{conditional.total}일) · 같은 표본 기준선 {conditional.baselinePct.toFixed(1)}% ({conditional.baselineCount}/{conditional.baselineTotal}일)</p>}
-      <p className="report-muted">{sensitivity.periodStart} ~ {sensitivity.periodEnd} · {sensitivity.source}</p>
+      <p className="report-muted">{sensitivity.periodStart} ~ {sensitivity.periodEnd} · {sensitivity.source}</p><PastObservationTag asOf={sensitivity.asOf} />
     </> : <p>데이터 준비 중 · 최근 1년 유효 관측 200일 이상 확보 후 통계를 표시합니다.</p>}
       <p className="report-muted">{sensitivity.note}</p></div>
     <div className="insight-block"><h3>뉴스 이슈와 출처</h3><p>{news.summary}</p><div className="insight-news-chips">{news.articles.map(article => <a key={article.id} href={article.url} target="_blank" rel="noopener noreferrer" title={`${article.title}${article.pubDate ? ` · ${article.pubDate}` : ""}`}>{article.source || "기사 원문"}</a>)}</div><p className="report-muted">{news.limitation}</p></div>

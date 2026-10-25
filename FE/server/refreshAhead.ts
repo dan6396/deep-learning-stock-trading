@@ -16,14 +16,20 @@ type Dependencies = {
 /** Independent jobs prevent a cold multi-page chart from blocking the quote/index cadence. */
 export function createRefreshAhead({ symbols, quote, chart, history, indices, now = Date.now }: Dependencies) {
   const pending = new Map<string, Promise<void>>(), attempted = new Map<string, number>();
+  const failures = new Map<string, { count: number; retryAt: number }>();
   let stopped = false, ticking = false;
   const stats = { completed: 0, failed: 0 };
   function schedule(key: string, period: number, load: () => Promise<unknown>) {
     const last = attempted.get(key);
-    if (stopped || pending.has(key) || last !== undefined && now() < marketCacheExpiry(last, period)) return;
+    const failed = failures.get(key);
+    if (stopped || pending.has(key) || (failed ? now() < failed.retryAt : last !== undefined && now() < marketCacheExpiry(last, period))) return;
     attempted.set(key, now());
     const started = now();
-    const task = Promise.resolve().then(load).then(() => { stats.completed++; }, () => { stats.failed++; }).finally(() => {
+    const task = Promise.resolve().then(load).then(value => { if (value === null) throw new Error("No observation available."); }).then(() => { stats.completed++; failures.delete(key); }, () => {
+      stats.failed++;
+      const count = (failures.get(key)?.count ?? 0) + 1;
+      failures.set(key, { count, retryAt: now() + Math.min(600_000, 60_000 * 2 ** Math.min(count - 1, 4)) });
+    }).finally(() => {
       // Space normal jobs from completion, but still finalize jobs that crossed the closing boundary.
       if (!(marketClock(started).active && !marketClock(now()).active)) attempted.set(key, now());
       pending.delete(key);

@@ -30,9 +30,16 @@ export async function warmup(base = "http://127.0.0.1:5173", { transport = fetch
   }
   rank = await read("/api/rank");
   const codes = Array.isArray(rank) && rank.length ? [...rank].sort((a, b) => Number(a.input_row?.pred_rank) - Number(b.input_row?.pred_rank)).map(row => row.input_row?.ticker) : stocks.map(row => row.code);
-  for (const code of [...new Set(codes)].filter(code => /^\d{6}$/.test(String(code))).slice(0, 5)) {
+  const selected = [...new Set(codes)].filter(code => /^\d{6}$/.test(String(code))).slice(0, 5);
+  for (const code of selected) {
     await read(`/api/korean-market/quote?symbol=${code}`);
     await read(`/api/korean-market/stock-chart?symbol=${code}&range=1M`);
+  }
+  if (selected.length) {
+    const ready = await read("/api/briefing");
+    if (ready) rows.at(-1).note = `가격 이력 준비 후 · 상관 ${ready.composition?.diversification?.status === "ready" ? "준비됨" : "준비 중"}`;
+    const insight = await read(`/api/stock-insight?code=${selected[0]}`);
+    if (insight) rows.at(-1).note = `나스닥 과거 통계 ${insight.sensitivity?.status === "ready" ? "준비됨" : "준비 중"}`;
   }
   return rows;
 }

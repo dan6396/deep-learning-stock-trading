@@ -669,7 +669,14 @@ def _predict_with_observations(ensemble, ticker_dfs, market_frames, signal_date)
     result = {ticker: float("nan") for ticker in ticker_dfs}
     result.update(zip(tickers, map(float, scores)))
     result = dict(sorted(result.items(), key=lambda p: (-p[1] if np.isfinite(p[1]) else float("inf"), p[0])))
-    return result, errors, _rank_observations(tickers, windows, raw)
+    try:
+        observations = _rank_observations(tickers, windows, raw)
+    except Exception as error:
+        from features import FEATURE_COLS
+        columns = ["rank_lb20", "rank_lb120", "score_lb20", "score_lb120", "model_agreement"] + [f"feat_pct_{name}" for name in FEATURE_COLS]
+        observations = {ticker: {column: pd.NA for column in columns} for ticker in tickers}
+        print(f"  [WARN] 모델 관측 계산 실패 ({type(error).__name__}); 관측 열만 비우고 모델 점수를 유지합니다.", flush=True)
+    return result, errors, observations
 
 
 def _build_top10_supply_csv(final_df: pd.DataFrame) -> pd.DataFrame:

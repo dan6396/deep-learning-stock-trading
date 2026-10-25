@@ -1,5 +1,6 @@
 import { getDailyHistory, type DailyHistory } from "./kisDashboard";
 import { readBoundedJson } from "./boundedJson";
+import { createHash } from "node:crypto";
 import type { NasdaqSensitivity, Diversification } from "../src/types/stockInsight";
 type Bar = { date: string; open: number; close: number };
 type Pair = { date: string; previousDate: string; nasdaqDate: string; us: number; cc: number; oc: number };
@@ -45,7 +46,7 @@ export function pairedMoments(x: number[], y: number[]): { correlation: number; 
 export function nasdaqSensitivity(history: DailyHistory | null, us: Bar[], start: string, end: string): NasdaqSensitivity {
   const pairs = history ? alignPriorSessions(historyBars(history), us, start, end) : [];
   const base: NasdaqSensitivity = { status: "preparing", samples: pairs.length, periodStart: pairs[0]?.date ?? null, periodEnd: pairs[pairs.length - 1]?.date ?? null,
-    metrics: [], conditional: null, complete: history?.complete ?? false,
+    metrics: [], conditional: null, complete: history?.complete ?? false, asOf: history?.asOf ?? null,
     source: "KIS 종목 일봉 · Yahoo Finance 나스닥 일봉",
     note: "직전 미국 거래일을 한국 거래일에 연결한 최근 1년 과거 통계입니다. 상관·베타는 인과나 미래 성과를 뜻하지 않습니다. 같은 미국장이 한국 휴장 차이로 재사용될 수 있습니다." };
   if (pairs.length < 200) return base;
@@ -79,7 +80,7 @@ export function compositionObservations(codes: string[], histories: (DailyHistor
     matrix, averageCorrelation: pairs.length ? pairs.reduce((sum, row) => sum + row.correlation, 0) / pairs.length : null, highestPair, nasdaqBetas,
     commonRisks: [], note: "최근 60거래일 중 공통 관측 55일 이상일 때 종가→종가 수익률 상관을 표시합니다. 과거 상관은 변하며 분산 효과나 미래 성과를 보장하지 않습니다." };
 }
-export function createObservationProvider({ history = getDailyHistory, transport = fetch, now = Date.now }: { history?: HistoryReader; transport?: typeof fetch; now?: () => number } = {}) {
+export function createObservationProvider({ history = getDailyHistory, transport = fetch, now = Date.now, maxEntries = 300 }: { history?: HistoryReader; transport?: typeof fetch; now?: () => number; maxEntries?: number } = {}) {
   let usCache: { at: number; rows: Bar[] } | null = null, pending: Promise<Bar[]> | null = null;
   let retryAt = 0;
   const cache = new Map<string, { expires: number; fingerprint: string; value: NasdaqSensitivity }>();
@@ -108,12 +109,19 @@ export function createObservationProvider({ history = getDailyHistory, transport
       if (histories.some(Boolean)) void american();
       const us = usCache?.rows ?? [];
       const sensitivities = histories.map((rows, i) => {
-        const fingerprint = JSON.stringify([rows?.rows, rows?.complete, us]), cached = cache.get(codes[i]);
-        if (cached && cached.expires > now() && cached.fingerprint === fingerprint) return cached.value;
-        const value = nasdaqSensitivity(rows, us, start, end); cache.set(codes[i], { expires: now() + DAY, fingerprint, value }); return value;
+        if (!rows?.rows.length) { cache.delete(codes[i]); return nasdaqSensitivity(rows, us, start, end); }
+        const fingerprint = createHash("sha256").update(JSON.stringify([rows.rows, rows.complete, rows.missingDates, rows.asOf, start, end, us])).digest("hex"), cached = cache.get(codes[i]);
+        if (cached && cached.expires > now() && cached.fingerprint === fingerprint) {
+          cache.delete(codes[i]); cache.set(codes[i], cached); return cached.value;
+        }
+        const value = nasdaqSensitivity(rows, us, start, end);
+        cache.delete(codes[i]); cache.set(codes[i], { expires: now() + DAY, fingerprint, value });
+        while (cache.size > Math.max(1, maxEntries)) cache.delete(cache.keys().next().value!);
+        return value;
       });
       return { histories, sensitivities, diversification: compositionObservations(codes, histories, sensitivities) };
     },
+    cacheSize: () => cache.size,
   };
 }
 export const stockObservations = createObservationProvider();

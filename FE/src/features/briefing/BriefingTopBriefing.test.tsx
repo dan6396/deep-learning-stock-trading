@@ -1179,11 +1179,12 @@ describe("Narrative fieldSources & partial_template (서버 계약 optional 추�
     );
 
     // 1. partial_template 배지 확인
-    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · 검증 통과 문장만 표시");
+    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · 일부 자동 생성 문장 포함");
+    expect(screen.getByTestId("narrative-model")).toHaveTextContent("gemini-2.5-flash");
 
     // 2. 안내 문구 확인
     expect(screen.getByTestId("narrative-partial-template-notice")).toHaveTextContent(
-      "입력 근거를 확인한 문장만 표시합니다"
+      "AI 문장과 자동 생성 문장을 함께 표시합니다"
     );
 
     // 3. overview 필드 '규칙 기반' 태그 확인

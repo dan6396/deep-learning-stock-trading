@@ -9,7 +9,7 @@ import { formatSupplyWon } from "./briefingValidation";
 import { showBriefingSupply } from "./supplyVisibility";
 import { modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
 export { formatSupplyWon } from "./briefingValidation";
-import { createNarrativeStore, briefingInputHash, templateNarrative, type BriefingNarrative } from "./briefingNarrative";
+import { createNarrativeStore, briefingInputHash, templateNarrative, displayCaution, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
 
 declare const process: { env: Record<string, string | undefined> };
@@ -143,7 +143,9 @@ export function createBriefingService({ rank = getRankPayload, marker = readPipe
       within(compositionRequest, deadline, () => compositions.get(environmentKey)?.hash === compositionKey ? compositions.get(environmentKey)!.value : buildBriefingComposition(input)),
     ]);
     const kind = input.model && (after?.kind === "official" || after?.kind === "adhoc") ? after.kind : "unknown";
-    return { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, narrative, composition: candidateComposition,
+    // Change presentation after identity/cache resolution; hashed input facts stay untouched.
+    const stocks = input.stocks.map(stock => ({ ...stock, cautions: stock.cautions.map(fact => ({ ...fact, text: displayCaution(fact, input.model?.baseDate) })) }));
+    return { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, stocks, narrative, composition: candidateComposition,
       disclaimer: "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
       data_meta: { source: "cache", asOf: input.model?.runStartedAt ?? market.asOf } };
   };

@@ -1,6 +1,7 @@
 import type { ModelEvidence } from "./modelEvidence";
 export type SensitivityMetric = { definition: "close_to_close" | "open_to_close"; correlation: number; beta: number; samples: number };
 export type NasdaqSensitivity = {
+  asOf?: string | null;
   status: "ready" | "preparing"; samples: number; periodStart: string | null; periodEnd: string | null;
   metrics: SensitivityMetric[]; conditional: { count: number; total: number; ratioPct: number; baselinePct: number; baselineCount: number; baselineTotal: number } | null;
   source: string; note: string; complete: boolean;

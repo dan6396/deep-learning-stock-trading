@@ -78,7 +78,7 @@ export function BriefingNarrativeCard({
   const fallbackReasonInfo = formatFallbackReason(narrative.fallbackReason);
   const notices = [
     ...(isLlm ? [{ key: "ai", text: "입력 자료만 요약하며 순위에 영향을 주지 않습니다", warning: false, priority: 10 }] : []),
-    ...(isPartialTemplate ? [{ key: "partial", text: "입력 근거를 확인한 문장만 표시합니다", warning: false, priority: 80 }] : []),
+    ...(isPartialTemplate ? [{ key: "partial", text: "AI 문장과 자동 생성 문장을 함께 표시합니다", warning: false, priority: 80 }] : []),
     ...(isTemplate && fallbackReasonInfo ? [{ key: "fallback", text: fallbackReasonInfo.text, warning: !fallbackReasonInfo.isNeutral, priority: inProgress ? 100 : 70 }] : []),
     ...(isLlm && fallbackReasonInfo && !isPartialTemplate ? [{ key: "refresh", text: inProgress ? fallbackReasonInfo.text : `최신 지표로 갱신하지 못했습니다: ${fallbackReasonInfo.text}`, warning: !inProgress, priority: inProgress ? 100 : 90 }] : []),
     ...(isStale ? [{ key: "stale", text: "요약 작성 이후 시장 지표가 갱신되었습니다", warning: false, priority: recentlyGenerated ? 20 : 40 }] : []),
@@ -104,7 +104,7 @@ export function BriefingNarrativeCard({
               {isLlm ? (
                 <span className={`briefing-badge is-ai ${isPartialTemplate ? "is-partial" : ""}`} data-testid="narrative-badge-ai">
                   <Bot aria-hidden="true" size={13} />
-                  {isPartialTemplate ? "AI 요약 · 검증 통과 문장만 표시" : "AI 요약"} · {formatKstTime(narrative.generatedAt)}
+                  {isPartialTemplate ? "AI 요약 · 일부 자동 생성 문장 포함" : "AI 요약"} · {formatKstTime(narrative.generatedAt)}
                 </span>
               ) : (
                 <span className="briefing-badge is-rule" data-testid="narrative-badge-rule">
@@ -112,6 +112,7 @@ export function BriefingNarrativeCard({
                   자동 생성 요약
                 </span>
               )}
+              {isLlm && narrative.llmModel && <span className="briefing-badge" data-testid="narrative-model">사용 모델 {narrative.llmModel}</span>}
               {narrative.macroAsOf && (
                 <span
                   className="briefing-badge is-macro-as-of"

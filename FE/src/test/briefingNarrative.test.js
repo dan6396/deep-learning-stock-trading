@@ -9,7 +9,9 @@ vi.mock("node:fs/promises", () => {
   };
   return { ...api, default: api };
 });
-import { BRIEFING_DISCLAIMER_EXAMPLES, briefingInputHash, createNarrativeStore, templateNarrative, validateNarrative } from "../../server/briefingNarrative";
+import { BRIEFING_DISCLAIMER_EXAMPLES, briefingInputHash, createNarrativeStore, templateNarrative, validateNarrative, displayCaution } from "../../server/briefingNarrative";
+import { rejected20261025 } from "./fixtures/narrative20261025";
+import { withoutSupplyFields } from "../../server/supplyVisibility";
 import { forbiddenCausality, forbiddenNarrative, formatMarketValue, groundedNumbers } from "../../server/briefingValidation";
 import { readFile, rename } from "node:fs/promises";
 
@@ -30,6 +32,38 @@ beforeEach(() => { disk.clear(); vi.clearAllMocks(); });
 afterEach(() => vi.useRealTimers());
 
 describe("briefing narrative guard", () => {
+  it.each(["외국인은 순 매수했습니다.", "순 매수 흐름이 외국인에게 확인됐습니다.", "기관의 매수세가 유입됐습니다.", "매 도 세가 유출됐습니다.", "외국인 양수 일수가 늘었습니다.", "외국인 매수세 뉴스에서 유입이 확인됐습니다."])("blocks unpublished supply assertions: %s", sentence => {
+    expect(groundedNumbers(sentence, input())).toBe(false);
+  });
+  it.each(["외국인 순매수 관련 기사가 있습니다.", "기관 매수세 동향 관련 뉴스를 확인했습니다.", "수급 동향 기사 주제를 소개했습니다."])("allows explicit article topics without inventing measured supply: %s", sentence => {
+    expect(groundedNumbers(sentence, input())).toBe(true);
+  });
+  it("strips total supply amounts and formats templates without changing hashed facts", () => {
+    expect(withoutSupplyFields({ ticker: "005930", total_supply_net_buy: 123, supply_window: 5, foreign_net_buy_sum: 123 })).toEqual({ ticker: "005930" });
+    const data = input(), before = briefingInputHash(data);
+    data.stocks[0].cautions.push({ id: "C:005930:2", kind: "data", text: "모델 기준일은 2026-10-23이며 오늘 날짜와 다릅니다." }); data.model.baseDate = "2026-10-23";
+    const hash = briefingInputHash(data), value = templateNarrative(data, null);
+    expect(value.stocks[0].summary).toContain("삼성전자는"); expect(value.stocks[0].summary).toContain("10/26(월) 정규장 시가→종가");
+    expect(displayCaution(data.stocks[0].cautions[1], data.model.baseDate)).not.toContain("오늘 날짜"); expect(briefingInputHash(data)).toBe(hash);
+    expect(hash).not.toBe(before); // Changing a real run date still changes identity.
+  });
+  it("retains legitimate direct disclaimers and quarter topics from the 10/25 rejection log", () => {
+    expect(forbiddenNarrative("확률을 나타내지 않는 것은 아닙니다.")).toBe(true);
+    expect(forbiddenNarrative("확률을 의미하지 않으며 수익이 기대됩니다.")).toBe(true);
+    expect(forbiddenNarrative(rejected20261025[0])).toBe(false); expect(forbiddenNarrative(rejected20261025[1])).toBe(false);
+    const data = input(); Object.assign(data.stocks[0], { code: "055550", name: "신한지주", rankScore: 1.6479351430472728, poolSize: 199, topPercent: 100 / 199 });
+    expect(groundedNumbers(rejected20261025[1], data)).toBe(true);
+    Object.assign(data.stocks[0], { code: "004000", name: "롯데정밀화학", rank: 5, rankScore: 1.453548427230077, poolSize: 199, topPercent: 500 / 199 });
+    data.stocks[0].news.articles[0].title = "3Q26 영업이익 228억원 목표가 70,000원";
+    expect(groundedNumbers(rejected20261025[2], data)).toBe(true);
+    expect(groundedNumbers("3분기 영업이익은 228억원입니다.", data)).toBe(false);
+    expect(groundedNumbers("관측값은 26입니다.", data)).toBe(false);
+  });
+  it("caps rank score output at four decimals without changing input identity", () => {
+    const data = input(); data.stocks[0].rankScore = 1.6479351430472728; const hash = briefingInputHash(data);
+    expect(groundedNumbers("순위 점수는 1.6479입니다.", data)).toBe(true); expect(groundedNumbers("순위 점수는 1.64794입니다.", data)).toBe(false);
+    expect(briefingInputHash(data)).toBe(hash);
+  });
   it.each(["원·달러 환율은 1,324.92 KRW입니다.", "환율은 1324.92USD입니다.", "USD2.35입니다.", "USDKRW 환율은 1,324.92원입니다.", "미국 국채 10년 금리는 4.953%로 집계됐습니다.", "나스닥은 12345.678pt입니다.", "삼성전자 순위 점수는 2.350입니다.", "관측 기간은 5.000일입니다."])("rejects currency codes and precision beyond published input: %s", sentence => {
     const data = input(); data.macro.indicators.push({ id: "USDKRW", name: "원·달러 환율", value: 1324.92, change: 0, changePct: 0, unit: "KRW", status: "ok" },
       { id: "UST10Y", name: "미국 국채 10년 금리", value: 4.953, change: 0, changePct: 0, unit: "%", status: "ok" });
@@ -344,8 +378,8 @@ describe("Gemini narrative generation and cache", () => {
     const reused = await store.resolve(recovered, false, env);
     expect(reused.status).toBe("llm"); expect(reused.generatedAt).toBe(first.generatedAt); expect(reused.macroStale).toBe(true); expect(transport).toHaveBeenCalledTimes(1);
     for (const [path, body] of disk) { const saved = JSON.parse(body); saved.inputHash = briefingInputHash(saved.input, true); saved.narrative.inputHash = saved.inputHash; disk.set(path, JSON.stringify(saved)); }
-    const migrated = await createNarrativeStore({ transport }).resolve(recovered, false, env);
-    expect(migrated.status).toBe("llm"); expect(migrated.inputHash).toBe(briefingInputHash(data)); expect(transport).toHaveBeenCalledTimes(1);
+    const differentPolicy = await createNarrativeStore({ transport }).resolve(recovered, false, env);
+    expect(differentPolicy.status).toBe("template"); expect(differentPolicy.inputHash).toBe(briefingInputHash(data)); expect(transport).toHaveBeenCalledTimes(1);
   });
   it("GET never calls Gemini; missing key POST returns template without leaking secrets", async () => {
     const transport = vi.fn(); const store = createNarrativeStore({ transport });

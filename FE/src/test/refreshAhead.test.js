@@ -8,6 +8,23 @@ const fixture = (now, extra = {}) => {
 };
 afterEach(() => vi.restoreAllMocks());
 describe("server refresh-ahead schedule", () => {
+  it("retries failed after-close jobs after one minute and caps exponential backoff at ten minutes", async () => {
+    let now = at("2026-10-23T16:00:00");
+    const load = vi.fn().mockRejectedValue(new Error("offline")), { worker } = fixture(() => now, { quote: load });
+    await worker.tick(); await worker.idle(); expect(load).toHaveBeenCalledTimes(2);
+    for (const interval of [60_000, 120_000, 240_000, 480_000, 600_000, 600_000]) {
+      now += interval - 1; await worker.tick(); await worker.idle(); const before = load.mock.calls.length;
+      now++; await worker.tick(); await worker.idle(); expect(load).toHaveBeenCalledTimes(before + 2);
+    }
+    load.mockResolvedValue({ ok: true }); now += 600_000; await worker.tick(); await worker.idle(); const done = load.mock.calls.length;
+    now += 600_000; await worker.tick(); await worker.idle(); expect(load).toHaveBeenCalledTimes(done);
+  });
+  it("treats a missing daily history as failure and recovers on the weekend without waiting until Monday", async () => {
+    let now = at("2026-10-24T12:00:00"), history = vi.fn().mockResolvedValueOnce(null).mockResolvedValue({ rows: [] });
+    const { worker } = fixture(() => now, { symbols: async () => ["005930"], history });
+    await worker.tick(); await worker.idle(); expect(worker.stats().failed).toBe(1);
+    now += 60_000; await worker.tick(); await worker.idle(); expect(history).toHaveBeenCalledTimes(2);
+  });
   it("warms once, then quotes/indices every thirty seconds and charts every sixty", async () => {
     let now = at("2026-10-22T10:00:00");
     const { worker, providers: p } = fixture(() => now);
