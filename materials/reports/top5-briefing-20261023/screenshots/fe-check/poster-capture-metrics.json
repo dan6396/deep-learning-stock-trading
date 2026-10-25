@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-25T09:38:36.947Z",
+  "capturedAt": "2026-10-25T14:36:58.270Z",
   "model": {
     "modelId": "plain_20_120_rank_mean_v1",
     "scoreKind": "rank_zscore",
@@ -89,12 +89,14 @@
   "captures": [
     {
       "name": "poster-briefing-1440-dark.png",
-      "capturedAt": "2026-10-25T09:38:34.943Z",
+      "capturedAt": "2026-10-25T10:02:35.442Z",
       "width": 1440,
       "height": 1000,
       "fullHeight": 3465,
       "scrollY": 124,
       "overflow": false,
+      "cautionChips": 0,
+      "oldEmptyCopy": false,
       "loading": false,
       "adminControls": [],
       "requiredTop": 85.59375,
@@ -115,12 +117,16 @@
     },
     {
       "name": "poster-top5-1440-dark.png",
-      "capturedAt": "2026-10-25T09:38:35.501Z",
+      "capturedAt": "2026-10-25T14:36:56.698Z",
       "width": 1440,
       "height": 1000,
       "fullHeight": 3803,
       "scrollY": 527,
       "overflow": false,
+      "cautionChips": 0,
+      "oldEmptyCopy": false,
+      "orphanCautionChips": [],
+      "emptyCitationAreas": 0,
       "loading": false,
       "adminControls": [],
       "requiredTop": 85.5625,
@@ -154,12 +160,16 @@
     },
     {
       "name": "home-1440-dark-full.png",
-      "capturedAt": "2026-10-25T09:38:36.128Z",
+      "capturedAt": "2026-10-25T14:36:57.375Z",
       "width": 1440,
       "height": 1000,
       "fullHeight": 4295,
       "scrollY": 0,
       "overflow": false,
+      "cautionChips": 0,
+      "oldEmptyCopy": false,
+      "orphanCautionChips": [],
+      "emptyCitationAreas": 0,
       "loading": false,
       "adminControls": [],
       "requiredTop": null,
@@ -167,12 +177,16 @@
     },
     {
       "name": "home-375-dark-full.png",
-      "capturedAt": "2026-10-25T09:38:36.946Z",
+      "capturedAt": "2026-10-25T14:36:58.268Z",
       "width": 375,
       "height": 812,
       "fullHeight": 7700,
       "scrollY": 0,
       "overflow": false,
+      "cautionChips": 0,
+      "oldEmptyCopy": false,
+      "orphanCautionChips": [],
+      "emptyCitationAreas": 0,
       "loading": false,
       "adminControls": [],
       "requiredTop": null,
@@ -207,12 +221,12 @@
   ],
   "requests": [
     {
-      "path": "/api/candidates/run",
+      "path": "/api/korean-market/indices",
       "query": "",
       "status": 200
     },
     {
-      "path": "/api/korean-market/indices",
+      "path": "/api/candidates/run",
       "query": "",
       "status": 200
     },
@@ -305,10 +319,9 @@
     "requests": 16,
     "successes": 16
   },
-  "previousCapturedAt": "2026-10-25T09:13:42.345Z",
-  "refreshReason": "Date caution removed from response presentation; input identity and stored narrative preserved.",
+  "previousCapturedAt": "2026-10-25T10:02:37.487Z",
+  "refreshReason": "HEAD 51c42e8: caution citations match visible caution IDs; empty citation groups hidden. Capture-only refresh.",
   "updatedFiles": [
-    "poster-briefing-1440-dark.png",
     "poster-top5-1440-dark.png",
     "home-1440-dark-full.png",
     "home-375-dark-full.png"
@@ -340,11 +353,6 @@
       "status": 200
     },
     {
-      "path": "/api/korean-market/stock-chart",
-      "query": "?symbol=055550",
-      "status": 200
-    },
-    {
       "path": "/api/korean-market/quote",
       "query": "?symbol=055550",
       "status": 200
@@ -370,43 +378,8 @@
       "status": 200
     },
     {
-      "path": "/api/korean-market/next-session",
-      "query": "?baseDate=2026-10-23",
-      "status": 200
-    },
-    {
       "path": "/api/korean-market/stock-chart",
       "query": "?symbol=055550",
-      "status": 200
-    },
-    {
-      "path": "/api/korean-market/quote",
-      "query": "?symbol=055550",
-      "status": 200
-    },
-    {
-      "path": "/api/candidates",
-      "query": "",
-      "status": 200
-    },
-    {
-      "path": "/api/backend/status",
-      "query": "",
-      "status": 200
-    },
-    {
-      "path": "/api/stock-analysis",
-      "query": "?ticker=055550",
-      "status": 200
-    },
-    {
-      "path": "/api/performance",
-      "query": "?symbol=055550",
-      "status": 200
-    },
-    {
-      "path": "/api/stock-insight",
-      "query": "?code=055550",
       "status": 200
     },
     {

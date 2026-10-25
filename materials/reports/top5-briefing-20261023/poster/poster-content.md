@@ -1,6 +1,6 @@
 # 포스터 문안 초안
 
-이 문서는 제출용 편집 초안이다. 본문은 전개별로 짧게 사용하고 근거·주의는 그림 캡션과 하단 각주로 남긴다. 현재 실행은 기준일 2026-10-23, 대상 10/26(월) 정규장이다. TOP5는 신한지주·한국항공우주·한화오션·대한항공·롯데정밀화학이다([현재 검증](../verification-20261025.json)). PNG는 10/25 18:13 KST의 새 정보 구조·비관리자 다크 화면이며, 날짜 주의 제거 후 홈 전체 2장·브리핑·TOP5 컷은 18:38 KST에 갱신했다([촬영 기록](../screenshots/fe-check/poster-capture-metrics.json)). 수치는 각 자료의 기준 시각을 따르며 실시간 시세로 소개하지 않는다.
+이 문서는 제출용 편집 초안이다. 본문은 전개별로 짧게 사용하고 근거·주의는 그림 캡션과 하단 각주로 남긴다. 현재 실행은 기준일 2026-10-23, 대상 10/26(월) 정규장이다. TOP5는 신한지주·한국항공우주·한화오션·대한항공·롯데정밀화학이다([현재 검증](../verification-20261025.json)). PNG는 10/25 18:13 KST의 새 정보 구조·비관리자 다크 화면이며, 주의 0건 칩을 숨기고 빈 상태를 “표시할 주의점이 없습니다.”로 바꾼 뒤 홈 전체 2장·브리핑·TOP5 컷은 19:02 KST에 갱신했다. 주의 인용 정렬 변경 후 TOP5와 홈 전체 2장은 23:36 KST에 다시 촬영했다([촬영 기록](../screenshots/fe-check/poster-capture-metrics.json)). 수치는 각 자료의 기준 시각을 따르며 실시간 시세로 소개하지 않는다.
 
 ## 전체 제목
 
@@ -93,5 +93,5 @@ TOP5 구성에서는 공통 표본의 최근 60거래일 상관행렬과 공통 
 - [S5] [현재 실행 검증 요약](../verification-20261025.json). 기준일 `2026-10-23`, 대상 `2026-10-26`, 관측 열 추가 후 원본 점수 오차 0. [원본 순위 이전 검증](../kis-rank-verification.json)과 [이전 브리핑 스냅샷](../kis-briefing-ready.json)은 기준일 `2026-10-22` 기록으로 남긴다.
 - [S6] [현재 저장 원문 재검증·복원 출처](../verification-20261025.json). Gemini 추가 호출 없이 7개 필드 llm·fallbackReason null. [이전 Gemini 실호출 기록](../narrative-live-partial.json)의 9,199ms는 다른 실행의 동작 시간이며 현재 재검증 지연으로 쓰지 않는다.
 - [S7] [업종 오류 진단](../sector-diagnostic.json), [수급 설정 경계](../../../../README.md), [이번 검증 기록](../README.md). 비밀 설정 내용은 확인하지 않음.
-- [S8] [전일 코드 정리 보고서](../../final-code-cleanup-20261022/README.md), [현재 촬영 측정](../screenshots/fe-check/poster-capture-metrics.json), [이전 접근성 검사](../screenshots/fe-check/a11y-review.txt). 날짜 주의 제거 후 FE 전체 938건·typecheck·빌드 1회 통과, 4장 재촬영. 접근성 검사는 재실행하지 않음.
+- [S8] [전일 코드 정리 보고서](../../final-code-cleanup-20261022/README.md), [현재 촬영 측정](../screenshots/fe-check/poster-capture-metrics.json), [이전 접근성 검사](../screenshots/fe-check/a11y-review.txt). 직전 코드 검증은 FE 전체 938건·typecheck·빌드 1회 통과. 19:02에는 4장, 23:36에는 TOP5와 홈 전체 2장을 새로고침 후 재촬영했으며 이 캡처 작업에서 코드·빌드·테스트는 실행하지 않음.
 - 별도 팀 출처: 뉴스 상관 `0.053`은 **팀 내부 분석(출처: 팀 공유 자료)**. 저장소 재현 근거와 구분.
