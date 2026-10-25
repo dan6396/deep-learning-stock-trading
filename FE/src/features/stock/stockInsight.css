@@ -27,5 +27,5 @@
   .insight-scroll th, .insight-scroll td { padding: 8px; border-bottom: 1px solid var(--ds-line); }
   .insight-news-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
   .insight-news-chips a { color: var(--ds-fg); background: var(--ds-surface-2); padding: 4px 10px; border-radius: 8px; }
-  @media (max-width: 639px) { .insight-features { grid-template-columns: 1fr; } .insight-lookback-value { flex-direction: column; align-items: flex-end; gap: 0; } }
+  @media (max-width: 768px) { .insight-features { grid-template-columns: 1fr; } .insight-lookback-value { flex-direction: column; align-items: flex-end; gap: 0; } }
 }

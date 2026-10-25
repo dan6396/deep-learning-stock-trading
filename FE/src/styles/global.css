@@ -1,104 +1,36 @@
 /* Shared typography, design tokens and application status views. */
 :root {
   /* ---------------------------------------------------------------------
-     Design tokens. Components reference these; avoid raw hex/px elsewhere.
-     Breakpoints (CSS vars can't be used in @media): 640 / 768 / 1024 / 1280
+     Design tokens (legacy fallback). Active tokens live in theme.css (--ds-*).
+     Breakpoints (CSS vars can't be used in @media): 480 / 768 / 1024 / 1280
      ------------------------------------------------------------------- */
 
-  /* Brand & neutrals */
+  /* Brand & neutrals referenced in legacy rules */
   --color-canvas: #f3f0ee;
-  --color-lifted: #fcfbfa;
   --color-ink: #141413;
   --color-charcoal: #262627;
   --color-slate: #636363;
-  --color-muted: var(--color-slate);
   --color-signal: #cf4500;
-  /* Brand orange only passes 4.5:1 on pure white; use this for small text. */
-  --color-signal-text: #ad3a00;
-  --color-signal-strong: #9a3707;
-  --color-light-signal: #f37338;
   --color-white: #ffffff;
-  --color-neutral: #9aa0aa;
-  --color-neutral-text: #616773;
 
-  /* Market semantics (KR convention: red up / blue down). Kept distinct from
-     the brand orange so price direction never competes with brand chrome.
-     Both pass 4.5:1 as text on white, the canvas, their soft tints and the
-     grey selected-row surfaces (checked with axe-core). */
+  /* Market semantics */
   --color-up: #c41f2e;
-  --color-up-rgb: 196, 31, 46;
   --color-down: #1a5cd0;
-  --color-down-rgb: 26, 92, 208;
-  --color-up-soft: rgba(var(--color-up-rgb), 0.1);
-  --color-down-soft: rgba(var(--color-down-rgb), 0.1);
-  /* Lighter fills for charts/donuts where the mark isn't text. */
-  --color-up-fill: #ef7777;
-  --color-up-fill-soft: #f5a3a3;
-  --color-down-fill: #6f9fe8;
-  --news-sentiment-positive: var(--color-up-fill);
-  --news-sentiment-positive-soft: var(--color-up-fill-soft);
-  --news-sentiment-negative: var(--color-down-fill);
-
-  /* Status */
-  --color-success: #08746f;
-  --color-warning: #875114;
-  --color-danger: #b42318;
-  --color-info: #2d67bd;
-  --color-live: #2db9b0;
 
   /* Surfaces */
   --surface-page: #f7f6f4;
-  --surface-muted: #f1f3f6;
-  /* Neutral surfaces for data rows: selection/hover use a cool grey, not the
-     brand orange, to avoid clashing with red up-values. */
-  --surface-hover: rgba(20, 20, 19, 0.035);
-  --surface-selected: rgba(20, 20, 19, 0.06);
-  --border-subtle: rgba(20, 20, 19, 0.08);
 
   /* Typography */
   --font-main: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --type-xs: 12px;
   --type-sm: 13px;
-  --type-md: 14px;
   --type-base: 16px;
   --type-lg: 18px;
-  --type-xl: 20px;
   --type-2xl: 24px;
-  --type-3xl: 28px;
-  --type-4xl: 32px;
-  --type-5xl: 40px;
-
-  /* Spacing (4px grid) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
 
   /* Radius */
-  --corner-sm: 8px;
   --corner-md: 12px;
-  --corner-lg: 16px;
-  --corner-xl: 24px;
-  --corner-2xl: 32px;
   --corner-pill: 999px;
-
-  /* Elevation */
-  --elev-sm: 0 4px 24px rgba(0, 0, 0, 0.04);
-  --elev-md: 0 12px 30px rgba(0, 0, 0, 0.08);
-  --elev-lg: 0 24px 48px rgba(0, 0, 0, 0.08);
-  --elev-xl: 0 30px 80px rgba(0, 0, 0, 0.3);
-  --elev-cta: 0 14px 28px rgba(207, 69, 0, 0.28);
-  --elev-nav: var(--elev-sm);
-  --elev-card: var(--elev-lg);
-
-  --container: 1200px;
 }
 
 * {

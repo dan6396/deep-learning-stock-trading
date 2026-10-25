@@ -36,8 +36,8 @@
   .rank-help { margin-top:22px; }
   .rank-empty { padding:44px 12px; color:var(--ds-fg-2); line-height:1.8; text-align:center; }
   .rank-notice { border-radius:14px; background:var(--ds-warn-soft); padding:14px 18px; line-height:1.6; font-size:13px; }
-  @media(max-width:600px) { .rank-card { padding:20px 16px; }.rank-title-row { align-items:flex-start; }.rank-title-row h1 { font-size:28px; }.rank-controls { gap:12px; }.rank-search { width:100%; }.rank-section-heading { gap:8px; }.rank-table th,.rank-table td { padding:14px 10px; } }
-  @media(max-width:600px) {
+  @media (max-width: 768px) { .rank-card { padding:20px 16px; }.rank-title-row { align-items:flex-start; }.rank-title-row h1 { font-size:28px; }.rank-controls { gap:12px; }.rank-search { width:100%; }.rank-section-heading { gap:8px; }.rank-table th,.rank-table td { padding:14px 10px; } }
+  @media (max-width: 768px) {
     .rank-table-scroll { scroll-padding-inline-start: 174px; }
     .rank-table.rank-model-table { min-width: 0; }
     .rank-table th:first-child,.rank-table td:first-child { min-width: 154px; max-width: 154px; width: 154px; white-space: normal; }
@@ -55,7 +55,7 @@
  .rank-score-stock { display: flex; align-items: center; gap: 14px; }
  .rank-score-stock a { display: inline-flex; align-items: baseline; gap: 10px; color: var(--ds-fg); min-height: 36px; }
  .rank-score-stock small { color: var(--ds-fg-2); font-size: 12px; }
- .rank-score-stock .briefing-signal { font-size: 11px; }
+ .rank-score-stock .briefing-signal { font-size: var(--ds-text-xs); }
  .rank-score-scroll { scroll-padding-inline-start: 0; }
  .is-narrow-only { display: none; }
  .rank-info { color: var(--ds-fg-2); background: var(--ds-surface); padding: 12px; border-radius: 12px; }
@@ -65,7 +65,7 @@
  .is-compact-rank .rank-card h2 { font-size: 17px; }
  .is-compact-rank .rank-controls { margin: 10px 0 8px; }
  .is-compact-rank .rank-section-heading > p { font-size: 12px; }
- @media(max-width: 800px) {
+ @media (max-width: 768px) {
   .is-narrow-only { display: flex; }
   .rank-score-table th:first-child,.rank-score-table td:first-child { min-width: 64px; max-width: none; width: 64px; }
   .rank-score-stock { flex-wrap: wrap; gap: 4px; }
@@ -79,14 +79,14 @@
  .is-compact-rank .rank-section-heading { display: block; grid-column: 1; }
  .is-compact-rank .rank-controls { grid-column: 2; grid-row: 1; margin: 0; }
  .is-compact-rank .rank-table-scroll,.is-compact-rank .rank-pagination,.is-compact-rank .rank-help,.is-compact-rank .rank-scroll-hint { grid-column: 1 / -1; }
- @media(max-width: 800px) {
+ @media (max-width: 768px) {
   .is-compact-rank .rank-card { grid-template-columns: minmax(0,1fr); }
   .is-compact-rank .rank-controls { grid-column: 1; grid-row: auto; }
  }
 }
 @layer components {
  .is-compact-rank .rank-controls { flex-wrap: nowrap; }
- @media(max-width: 800px) { .is-compact-rank .rank-controls { flex-wrap: wrap; } }
+ @media (max-width: 768px) { .is-compact-rank .rank-controls { flex-wrap: wrap; } }
 }
 @layer components {
  /* Keep the absolute screen-reader caption inside the scrolling table region. */

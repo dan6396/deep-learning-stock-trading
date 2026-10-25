@@ -6,5 +6,5 @@
   .not-found-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; padding: 0 16px; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-fg); font-size: 14px; font-weight: 650; text-decoration: none; }
   .not-found-link:hover { text-decoration: underline; }
   .not-found-link:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
-  @media (max-width: 600px) { .not-found { margin: 20px 0; padding: 24px 20px; } .not-found h1 { font-size: 24px; } }
+  @media (max-width: 768px) { .not-found { margin: 20px 0; padding: 24px 20px; } .not-found h1 { font-size: 24px; } }
 }

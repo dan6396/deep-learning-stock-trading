@@ -15,6 +15,6 @@
 .about-card p, .about-note p { color: var(--ds-fg-2); overflow-wrap: anywhere; }
 .about-note { padding: 28px 4px 8px; margin-top: 20px; }
 .about-note a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ds-link); margin-top: 14px; }
-@media (max-width: 700px) { .about-grid { grid-template-columns: 1fr; } .about-hero { padding: 20px 0 30px; } .about-card { padding: 23px; } .about-page { font-size: 14px; } }
+@media (max-width: 768px) { .about-grid { grid-template-columns: 1fr; } .about-hero { padding: 20px 0 30px; } .about-card { padding: 23px; } .about-page { font-size: 14px; } }
 
 .about-card p,.about-note p { max-width: 72ch; }

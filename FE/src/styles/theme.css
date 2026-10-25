@@ -12,7 +12,7 @@
   --ds-bg: #17171c;
   --ds-surface: #202027;
   --ds-surface-2: #2c2c35;
-  --ds-line: #2a2a32;
+  --ds-line: #383842;
   --ds-fg: #e4e4e5;
   --ds-fg-2: #c3c3c6;
   --ds-subtle: #9e9ea4;
@@ -26,6 +26,24 @@
   --ds-warn: #ffb54c;
   --ds-warn-soft: rgba(255, 181, 76, 0.14);
   --ds-focus: #4c9aff;
+
+  /* Spacing scale */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-7: 32px;
+  --ds-space-8: 40px;
+
+  /* Typography scale */
+  --ds-text-xs: 12px;
+  --ds-text-sm: 13px;
+  --ds-text-base: 14px;
+  --ds-text-md: 16px;
+  --ds-text-lg: 18px;
+  --ds-text-xl: 22px;
 }
 
 [data-theme="light"] {
@@ -60,12 +78,6 @@
 /* Rebuilt routes only: keep navigation usable at narrow widths. */
 .ds-root { scroll-padding-top: 90px; }
 .ds-root .ds-header a:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; border-radius: 5px; }
-@media (max-width: 700px) {
-  .ds-root .ds-header { flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px 0; }
-  .ds-root .ds-header nav { order: 3; width: 100%; min-height: 42px; }
-  .ds-root .ds-header nav a { flex: 1; font-size: 13px; }
-  .ds-root .ds-main { padding: 20px 16px 36px; }
-}
 
 /* Expose the tokens as Tailwind colors: bg-surface, text-fg, text-rise, ... */
 @theme inline {
@@ -112,10 +124,11 @@ html:has(.ds-root),body:has(.ds-root),#root:has(.ds-root) { background: var(--ds
 .ds-footer p { margin: 6px 0 0; line-height: 1.65; }
 .ds-footer nav { display: flex; gap: 18px; flex-shrink: 0; }
 .ds-footer a { color: var(--ds-fg-2); display: inline-flex; align-items: center; min-height: 32px; }
-@media (max-width: 800px) {
+@media (max-width: 768px) {
   .ds-root .ds-header { flex-wrap: wrap; gap: 4px 12px; padding: 8px 16px 0; }
-  .ds-root .ds-header .ds-nav { order: 3; width: 100%; min-height: 44px; gap: 0; }
-  .ds-root .ds-header .ds-nav a { flex: 1; padding: 0 8px; font-size: 13px; }
+  .ds-root .ds-header .ds-nav, .ds-root .ds-header nav { order: 3; width: 100%; min-height: 44px; gap: 0; }
+  .ds-root .ds-header .ds-nav a, .ds-root .ds-header nav a { flex: 1; padding: 0 8px; font-size: var(--ds-text-sm); }
+  .ds-root .ds-main:not(.ds-main-briefing) { padding: 20px 16px 36px; }
   .ds-footer { flex-direction: column; align-items: flex-start; padding: 20px 16px 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
