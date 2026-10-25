@@ -1,10 +1,51 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { adaptCandidate } from "../../entities/candidate";
 import { pipelineRow } from "../../test/dataFixtures";
-import { modelTopFive, predictionPeriod, RelatedArticles } from "./ModelTopFiveTable";
-import { render, screen } from "@testing-library/react";
+import { ModelTopFiveList, modelTopFive, predictionPeriod, RelatedArticles } from "./ModelTopFiveTable";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { jsonResponse } from "../../test/dataFixtures";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("original model Top-5 selection", () => {
+  it("uses the visible fallback name in the accessible label when a name is missing", () => {
+    const client = new QueryClient(), row = { ...adaptCandidate(pipelineRow()).data, code: "005930", name: null, baseDate: null };
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({})));
+    const view = render(<QueryClientProvider client={client}><ModelTopFiveList rows={[row]} selectedCode={row.code} onSelect={vi.fn()} /></QueryClientProvider>);
+    expect(screen.getByRole("button", { name: "종목명 미확인 005930 상세 보기" })).toHaveTextContent("종목명 미확인");
+    expect(screen.queryByRole("button", { name: /null/ })).not.toBeInTheDocument();
+    view.unmount(); client.clear();
+  });
+  it("moves focus without selection or further requests, and activates only explicitly", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({})); vi.stubGlobal("fetch", fetcher);
+    const rows = ["005930", "000660", "035420"].map((code, index) => ({ ...adaptCandidate(pipelineRow()).data, code, name: `stock ${index}`, baseDate: null }));
+    const onSelect = vi.fn();
+    const view = render(<QueryClientProvider client={client}><ModelTopFiveList rows={rows} selectedCode="000660" onSelect={onSelect} /></QueryClientProvider>);
+    const buttons = rows.map(row => screen.getByRole("button", { name: `${row.name} ${row.code} 상세 보기` }));
+    expect(buttons.map(button => button.tabIndex)).toEqual([-1, 0, -1]);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
+    act(() => buttons[1].focus());
+    fireEvent.keyDown(buttons[1], { key: "ArrowDown" }); expect(buttons[2]).toHaveFocus();
+    fireEvent.keyDown(buttons[2], { key: "Home" }); expect(buttons[0]).toHaveFocus();
+    fireEvent.keyDown(buttons[0], { key: "ArrowUp" }); expect(buttons[0]).toHaveFocus();
+    fireEvent.keyDown(buttons[0], { key: "End" }); expect(buttons[2]).toHaveFocus();
+    fireEvent.keyDown(buttons[2], { key: "ArrowUp" }); expect(buttons[1]).toHaveFocus();
+    expect(buttons.filter(button => button.tabIndex === 0)).toHaveLength(1);
+    expect(onSelect).not.toHaveBeenCalled(); expect(fetcher).toHaveBeenCalledTimes(3);
+    fireEvent.keyDown(buttons[1], { key: "Enter" }); expect(onSelect).toHaveBeenLastCalledWith("000660", "keyboard");
+    fireEvent.keyDown(buttons[2], { key: " " }); expect(onSelect).toHaveBeenLastCalledWith("035420", "keyboard");
+    fireEvent.click(buttons[0], { detail: 1 }); expect(onSelect).toHaveBeenLastCalledWith("005930");
+    view.unmount(); client.clear();
+  });
+  it("uses the first selection tab stop when no row is selected", () => {
+    const client = new QueryClient(), rows = ["005930", "000660"].map(code => ({ ...adaptCandidate(pipelineRow()).data, code, baseDate: null }));
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({})));
+    const view = render(<QueryClientProvider client={client}><ModelTopFiveList rows={rows} selectedCode={null} onSelect={vi.fn()} /></QueryClientProvider>);
+    expect([...view.container.querySelectorAll<HTMLButtonElement>(".briefing-stock-button")].map(button => button.tabIndex)).toEqual([0, -1]);
+    view.unmount(); client.clear();
+  });
   it.each([null, "close_to_close"])("does not claim a target for %s", predictionTarget => {
     expect(predictionPeriod({ ...adaptCandidate(pipelineRow()).data, predictionTarget })).toBe("예측 기간 미확인");
   });

@@ -26,4 +26,7 @@ export function storeTheme(theme: Theme): void {
 
 export function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
+  const color = theme === "light" ? "#f2f4f6" : "#17171c";
+  document.documentElement.style.backgroundColor = color;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
 }

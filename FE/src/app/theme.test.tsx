@@ -3,9 +3,15 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppProviders } from "./providers";
 import { AppShell } from "./AppShell";
-import { THEME_STORAGE_KEY, resolveInitialTheme } from "./theme";
+import { applyTheme, THEME_STORAGE_KEY, resolveInitialTheme } from "./theme";
 
 describe("resolveInitialTheme", () => {
+  it("updates the browser theme color and page background along with the theme", () => {
+    const meta = document.createElement("meta"); meta.name = "theme-color"; document.head.append(meta);
+    applyTheme("light"); expect(meta.content).toBe("#f2f4f6"); expect(document.documentElement.style.backgroundColor).toBe("rgb(242, 244, 246)");
+    applyTheme("dark"); expect(meta.content).toBe("#17171c"); expect(document.documentElement.style.backgroundColor).toBe("rgb(23, 23, 28)");
+    meta.remove();
+  });
   it("defaults to dark when nothing valid is stored", () => {
     expect(resolveInitialTheme(null)).toBe("dark");
     expect(resolveInitialTheme("purple")).toBe("dark");

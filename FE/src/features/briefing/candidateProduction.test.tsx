@@ -60,7 +60,7 @@ describe("membership resolution for an authoritative empty candidate list", () =
 describe("briefing always uses model TOP5", () => {
   it.each(["not_produced", "available", "empty", "unknown"])("uses raw model ranks when candidate state is %s", async state => {
     const fetcher = backend([], { state }); mount(<BriefingPage />, "/next");
-    await screen.findByRole("button", { name: "검증종목001 100001 · 선택됨 상세 보기" });
+    await screen.findByRole("button", { name: "검증종목001 100001 상세 보기" });
     expect(document.querySelectorAll("[data-model-code]")).toHaveLength(5);
     expect(document.querySelector('[data-model-code="100001"] .briefing-top-rank')).toHaveTextContent("01");
     expect(fetcher.mock.calls.some(([url]) => String(url) === "/api/candidates")).toBe(false);

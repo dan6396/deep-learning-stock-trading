@@ -88,8 +88,11 @@ describe("briefing with raw model rank fixtures", () => {
     const a = await screen.findByRole("button", { name: /종목 A 005930.*상세 보기/ });
     fireEvent.click(a); await screen.findByRole("heading", { name: "종목 A" });
     expect(screen.getByTestId("location")).toHaveTextContent("code=005930");
-    fireEvent.keyDown(a, { key: "ArrowDown" }); await screen.findByRole("heading", { name: "종목 B" });
-    expect(screen.getByRole("button", { name: "종목 B 000660 · 선택됨 상세 보기" })).toHaveFocus();
+    fireEvent.keyDown(a, { key: "ArrowDown" });
+    const b = screen.getByRole("button", { name: "종목 B 000660 상세 보기" });
+    expect(b).toHaveFocus(); expect(screen.getByTestId("location")).toHaveTextContent("code=005930");
+    fireEvent.keyDown(b, { key: "Enter" }); await screen.findByRole("heading", { name: "종목 B" });
+    expect(b).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "테스트 뒤로" }));
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(/^\/next$/));
     expect(screen.getByRole("link", { name: "표로 돌아가기" })).toHaveAttribute("href", "#candidate-heading");

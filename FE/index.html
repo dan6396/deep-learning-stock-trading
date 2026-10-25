@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#17171c" />
+    <script>
+      (() => {
+        let theme = "dark";
+        try { if (localStorage.getItem("kospi-theme.v1") === "light") theme = "light"; } catch {}
+        document.documentElement.dataset.theme = theme;
+        const color = theme === "light" ? "#f2f4f6" : "#17171c";
+        document.documentElement.style.backgroundColor = color;
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <title>KOSPI AI Desk · 모델 예측과 근거</title>

@@ -32,6 +32,11 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
   }
 
   const { note, sectors, sectorSource, performance, commonCautions } = composition;
+  const sectorCodes = new Map<string, Set<string>>();
+  for (const { name, codes } of sectors ?? []) {
+    sectorCodes.set(name, new Set([...(sectorCodes.get(name) ?? []), ...codes]));
+  }
+  const sectorRows = [...sectorCodes].map(([name, codes]) => ({ name, codes: [...codes] }));
 
   return (
     <section
@@ -56,17 +61,17 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
       )}
 
       {/* 1. 업종별 구성 (sectors가 null이면 영역 전체 생략) */}
-      {sectors !== null && sectors.length > 0 && (
+      {sectorRows.length > 0 && (
         <div className="briefing-composition-sectors-block" data-testid="composition-sectors">
           <div className="briefing-composition-subheading-row">
             <h3 className="briefing-composition-subheading">업종별 구성</h3>
             {sectorSource && <span className="briefing-sector-source">출처: {sectorSource}</span>}
           </div>
           <div className="briefing-composition-sectors-list">
-            {sectors.map((sec, idx) => {
+            {sectorRows.map(sec => {
               const count = sec.codes.length;
               return (
-                <div key={`${sec.name}-${idx}`} className="briefing-sector-row" data-testid={`sector-${sec.name}`}>
+                <div key={sec.name} className="briefing-sector-row" data-testid={`sector-${sec.name}`}>
                   <div className="briefing-sector-info">
                     <div className="briefing-sector-meta">
                       <span className="briefing-sector-name">{sec.name}</span>
@@ -203,8 +208,8 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
         <div className="briefing-composition-cautions-block" data-testid="composition-cautions">
           <h3 className="briefing-composition-subheading is-caution">TOP5 공통 주의사항</h3>
           <ul className="briefing-composition-cautions-list">
-            {commonCautions.map((caution, idx) => (
-              <li key={idx} className="briefing-composition-caution-item">
+            {[...new Set(commonCautions)].map(caution => (
+              <li key={caution} className="briefing-composition-caution-item">
                 <AlertTriangle aria-hidden="true" size={13} className="briefing-caution-bullet-icon" />
                 <span>{caution}</span>
               </li>
