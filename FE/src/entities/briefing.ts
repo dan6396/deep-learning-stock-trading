@@ -199,9 +199,42 @@ export type BriefingPayload = {
   data_meta: BriefingDataMeta;
 };
 
-/** Repeated boilerplate belongs in the page disclaimer and model-table help. */
+const disclaimerNoun = String.raw`(?:(?:미래|실제|기대|예상|예측)\s*)?(?:수익률?|상승\s*확률|확률|성과|결과|예측)`;
+const disclaimerNouns = String.raw`${disclaimerNoun}(?:\s*(?:·|이나|나|과|와|/)\s*${disclaimerNoun})*`;
+const disclaimerSubject = String.raw`(?:(?:(?:모델(?:의)?\s*)?순위\s*점수|해당\s*점수|이\s*점수|과거\s*(?:성과|기록|통계|상관))(?:은|는|이|가|이며)?\s*)?`;
+const disclaimerEnd = String.raw`(?:아닙니다|아님|아니며|아니고|아니지만|(?:의미\s*하지|보장\s*하지(?:는)?)\s*(?:않습니다|않으며|않음))`;
+// Only closed, complete boilerplate clauses qualify. Unknown wording is retained.
+const financialDisclaimer = new RegExp(String.raw`^${disclaimerSubject}${disclaimerNouns}\s*(?:은|는|이|가|을|를)?\s*${disclaimerEnd}$`);
+const adviceDisclaimer = /^(?:(?:본|이)\s*(?:요약|브리핑|설명|정보)(?:은|는)?\s*)?(?:투자\s*권유|매수\s*[·/]?\s*매도\s*권유|매매\s*추천)(?:\s*(?:나|이나|·)\s*(?:투자\s*권유|매매\s*추천))*\s*(?:이|가)?\s*(?:아닙니다|아님|아니며|아니고)$/;
+const isDisclaimerClause = (value: string) => {
+  const clause = value.trim().replace(/[.!?。,]+$/, "");
+  return financialDisclaimer.test(clause) || adviceDisclaimer.test(clause)
+    || /^투자\s*판단과\s*책임은\s*(?:이용자|투자자)(?:에게)?\s*있습니다$/.test(clause);
+};
+function closeInformationClause(value: string): string | null {
+  const endings: [RegExp, string][] = [[/아니며$/, "아닙니다"], [/아니지만$/, "아닙니다"], [/였으나$/, "였습니다"], [/었으나$/, "었습니다"], [/(?:이며|이고|이지만)$/, "입니다"], [/하며$/, "합니다"], [/으며$/, "습니다"]];
+  for (const [ending, replacement] of endings) if (ending.test(value)) return `${value.replace(ending, replacement)}.`;
+  return /[.!?。]$/.test(value) ? value : null;
+}
+
+/** Remove recognized disclaimer clauses without discarding numbers or data limits. */
 export function withoutRankScoreDisclaimer(value: string): string {
-  return value.replace(/(?:모델(?:의)?\s*)?(?:순위\s*점수|해당\s*점수)는\s*(?:실제\s*)?(?:기대\s*수익률|상승\s*확률|수익률|확률)(?:\s*(?:·|이나|나|과|와|\/)\s*(?:기대\s*수익률|상승\s*확률|수익률|확률))*\s*(?:이|가|을|를)?\s*(?:아닙니다|아님|의미하지\s*않습니다)[.!。]?\s*/g, "").trim();
+  // A decimal point is part of a number, never a sentence boundary.
+  return (value.match(/[^.!?。\n]+(?:\.(?=\d)[^.!?。\n]+)*(?:[.!?。]+|\n+|$)/g) ?? [])
+    .map(raw => {
+      const sentence = raw.trim();
+      if (isDisclaimerClause(sentence)) return "";
+      const clauses = sentence.split(/(?<=(?:며|으나|지만|이고)),?\s+/);
+      const kept = clauses.filter(clause => !isDisclaimerClause(clause));
+      if (kept.length === clauses.length) return sentence;
+      if (!kept.length) return "";
+      if (kept[kept.length - 1] !== clauses[clauses.length - 1]) {
+        const closed = closeInformationClause(kept[kept.length - 1]);
+        if (!closed) return sentence;
+        kept[kept.length - 1] = closed;
+      }
+      return kept.join(" ");
+    }).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
 const VALID_MACRO_IDS: readonly MacroIndicatorId[] = ["KOSPI", "KOSDAQ", "NASDAQ", "SP500", "USDKRW", "UST10Y", "KOSPI200_NIGHT"];

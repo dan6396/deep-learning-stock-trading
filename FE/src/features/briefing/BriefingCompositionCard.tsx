@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { BriefingComposition } from "../../entities/briefing";
-import { formatKstTime } from "../../entities/briefing";
+import { formatKstTime, withoutRankScoreDisclaimer } from "../../entities/briefing";
 import { useAppPaths } from "../../app/paths";
 import { formatNumber } from "../../shared/lib/format";
 import { Layers, AlertTriangle, ArrowRight, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
@@ -32,11 +32,16 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
   }
 
   const { note, sectors, sectorSource, performance, commonCautions } = composition;
+  const visibleNote = withoutRankScoreDisclaimer(note ?? "");
+  const cautions = [...new Set(commonCautions ?? [])].map(withoutRankScoreDisclaimer).filter(text => text && !/업종.*(?:미확인|확인하지 못|확인할 수 없)/.test(text));
   const sectorCodes = new Map<string, Set<string>>();
   for (const { name, codes } of sectors ?? []) {
     sectorCodes.set(name, new Set([...(sectorCodes.get(name) ?? []), ...codes]));
   }
   const sectorRows = [...sectorCodes].map(([name, codes]) => ({ name, codes: [...codes] }));
+  const diversification = composition.diversification;
+  const hasDiversification = diversification && (diversification.status === "ready" && diversification.matrix.some(row => row.some(value => value !== null)) || diversification.nasdaqBetas.length > 0 || diversification.commonRisks.length > 0);
+  if (!sectorRows.length && !(performance && performance.measuredDays > 0) && !hasDiversification && !cautions.length) return null;
 
   return (
     <section
@@ -53,10 +58,10 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
       </div>
 
       {/* 상단 안내 문구 */}
-      {note && (
+      {visibleNote && (
         <p className="briefing-composition-note" data-testid="composition-note">
           <Info aria-hidden="true" size={14} className="briefing-note-icon" />
-          <span>{note}</span>
+          <span>{visibleNote}</span>
         </p>
       )}
 
@@ -109,21 +114,16 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
 
       <CompositionObservations data={composition.diversification} stocks={stocks} />
       {/* 2. 동일 비중 실측 기록 */}
-      <div className="briefing-composition-perf-block" data-testid="composition-performance">
+      {performance && performance.measuredDays > 0 && <div className="briefing-composition-perf-block" data-testid="composition-performance">
         <div className="briefing-composition-subheading-row">
           <h3 className="briefing-composition-subheading">동일 비중 실측 기록</h3>
-          {performance && performance.measuredDays > 0 && performance.asOf && (
+          {performance.asOf && (
             <span className="briefing-perf-as-of" data-testid="composition-perf-as-of">
               기준: {formatKstTime(performance.asOf)}
             </span>
           )}
         </div>
 
-        {!performance || performance.measuredDays === 0 ? (
-          <p className="briefing-empty-notice" data-testid="composition-no-perf">
-            아직 실측 기록이 없습니다
-          </p>
-        ) : (
           <div className="briefing-composition-perf-content">
             <div className="briefing-perf-summary-row">
               <div className="briefing-perf-metric">
@@ -199,16 +199,14 @@ export function BriefingCompositionCard({ composition, stocks, onSelectStock }: 
               </Link>
             </div>
           </div>
-        )}
-        <p className="briefing-muted briefing-perf-limit">과거 기록은 미래 수익을 보장하지 않으며 표본이 작습니다.</p>
-      </div>
+      </div>}
 
       {/* 3. 공통 주의사항 리스트 */}
-      {commonCautions && commonCautions.length > 0 && (
+      {cautions.length > 0 && (
         <div className="briefing-composition-cautions-block" data-testid="composition-cautions">
           <h3 className="briefing-composition-subheading is-caution">TOP5 공통 주의사항</h3>
           <ul className="briefing-composition-cautions-list">
-            {[...new Set(commonCautions)].map(caution => (
+            {cautions.map(caution => (
               <li key={caution} className="briefing-composition-caution-item">
                 <AlertTriangle aria-hidden="true" size={13} className="briefing-caution-bullet-icon" />
                 <span>{caution}</span>

@@ -32,12 +32,12 @@ describe("stock report using actual fetch fixtures", () => {
     Object.assign(row.input_row, { score_kind: "rank_zscore", rank_score: 1.601514, pred_rank: 1, pred_pool_size: 199 });
     backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path === "/api/backend/status" ? Promise.resolve(jsonResponse(backendStatusBody({ state: "not_produced" }))) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(row)) : undefined);
     mount(); await screen.findByRole("heading", { name: "순위 종목" });
-    await screen.findByText("뉴스 보정 미실행");
+    expect(screen.queryByText("뉴스 보정 미실행")).not.toBeInTheDocument();
     expect(screen.getByTestId("report-prediction")).toHaveTextContent("1.6015");
     expect(screen.getByRole("heading", { name: "모델 순위" })).toBeInTheDocument();
-    expect(document.querySelector('[data-report-signal=model]')).toHaveTextContent("모델 상위권");
+    await waitFor(() => expect(document.querySelector('[data-report-signal=model]')).toHaveTextContent("모델 상위권"));
     expect(document.querySelector('[data-report-signal=model] [data-signal]')).toHaveAttribute("data-signal", "neutral");
-    expect(document.querySelector('[data-candidate-production=unproduced]')).toHaveClass("report-info");
+    expect(document.querySelector('[data-candidate-production=unproduced]')).toBeNull();
     expect(document.querySelector('.stock-report')).not.toHaveTextContent(/모델 긍정|원본 예측/);
     expectReadableUserText(document.querySelector('.stock-report')!);
   });
@@ -126,13 +126,13 @@ describe("stock report using actual fetch fixtures", () => {
   });
   it("treats stock null as absent analysis without sample/model fabrication", async () => {
     backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(null)) : undefined); mount();
-    await screen.findByText("상세 분석 결과가 없습니다."); expect(document.body).toHaveTextContent("확인 가능한 분석 근거가 없습니다"); expect(screen.getByTestId("report-prediction")).toHaveTextContent("—");
+    await screen.findByText("상세 분석 결과가 없습니다."); expect(document.body).toHaveTextContent("분석 근거가 없습니다"); expect(screen.getByTestId("report-prediction")).toHaveTextContent("—");
   });
   it.each(["sample", "mismatch"])("rejects %s stock responses explicitly rather than rendering their report", async kind => {
     const row = reportRow(kind === "mismatch" ? "000660" : "005930", "허용되지 않은 분석");
     if (kind === "sample") Object.assign(row.data_meta, { source: "sample" });
     backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(row)) : undefined); mount();
-    await screen.findByText(kind === "sample" ? "예시 분석 응답은 제공하지 않습니다. 확인 가능한 후보 원본만 표시합니다." : "종목 코드가 일치하지 않아 분석 응답을 표시하지 않습니다.");
+    await screen.findByText(kind === "sample" ? "예시 분석 응답은 제공하지 않습니다. 후보 목록의 분석을 표시합니다." : "종목 코드가 일치하지 않아 분석 응답을 표시하지 않습니다.");
     expect(screen.queryByRole("heading", { name: "허용되지 않은 분석" })).not.toBeInTheDocument(); expect(screen.getByTestId("report-prediction")).toHaveTextContent("—");
   });
   it("keeps previous analysis/quote data with background failure warnings", async () => {

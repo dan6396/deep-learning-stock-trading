@@ -45,6 +45,7 @@ function SearchContent({ close, dialog }: { close: (restore?: boolean) => void; 
       : !rank.isPending && !rank.isError && <p className="stock-search-empty">{rank.data?.data.length ? "검색 조건에 맞는 종목이 없습니다." : "최신 전체 분석 결과가 비어 있습니다."}</p>}
       {rows.length > visible.length && <p className="search-count">처음 30종목을 표시합니다. 이름이나 코드를 더 입력해 좁혀 주세요.</p>}</div>
     <p className="search-footer">최종 후보 목록으로 검색 범위를 줄이지 않습니다. Esc로 닫기</p>
+    <p className="search-footer">순위는 투자 추천이 아닙니다.</p>
   </dialog>, document.body);
 }
 

@@ -11,7 +11,7 @@ export function marketAssessment(indices: DataResult<IndexData>[]): string {
 }
 export function MarketOverview({ indices, pending, error, previous }: { indices: DataResult<IndexData>[]; pending: boolean; error: boolean; previous: boolean }) {
   return <section className="briefing-market" aria-label="시장 지수">
-    <div className="briefing-market-heading"><span>시장 흐름</span><strong>{marketAssessment(indices)}</strong><small>지수 등락률 기반 단순 판단 · 투자 판단 지표 아님</small></div>
+    <div className="briefing-market-heading"><span>시장 흐름</span><strong>{marketAssessment(indices)}</strong><small>지수 등락률 기반 단순 판단</small></div>
     {error && <p className="briefing-notice" role="status">{previous ? "이전 조회 결과 · 지수 갱신 실패" : "지수 조회 실패 · 시장 흐름 판정 불가"}</p>}
     {pending && <p role="status">지수를 조회하고 있습니다.</p>}
     <div className="briefing-index-grid">{indices.map(index => <article className="briefing-index" key={index.data.symbol} data-index-symbol={index.data.symbol}>

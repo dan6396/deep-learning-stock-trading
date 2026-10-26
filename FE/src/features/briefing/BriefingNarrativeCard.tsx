@@ -82,12 +82,11 @@ export function BriefingNarrativeCard({
 
   const fallbackReasonInfo = formatFallbackReason(narrative.fallbackReason);
   const notices = [
-    ...(isLlm ? [{ key: "ai", text: "입력 자료만 요약하며 순위에 영향을 주지 않습니다", warning: false, priority: 10 }] : []),
-    ...(isPartialTemplate ? [{ key: "partial", text: "AI 문장과 자동 생성 문장을 함께 표시합니다", warning: false, priority: 80 }] : []),
     ...(isTemplate && fallbackReasonInfo ? [{ key: "fallback", text: fallbackReasonInfo.text, warning: !fallbackReasonInfo.isNeutral, priority: inProgress ? 100 : 70 }] : []),
     ...(isLlm && fallbackReasonInfo && !isPartialTemplate ? [{ key: "refresh", text: inProgress ? fallbackReasonInfo.text : `최신 지표로 갱신하지 못했습니다: ${fallbackReasonInfo.text}`, warning: !inProgress, priority: inProgress ? 100 : 90 }] : []),
     ...(isStale ? [{ key: "stale", text: "요약 작성 이후 시장 지표가 갱신되었습니다", warning: false, priority: recentlyGenerated ? 20 : 40 }] : []),
   ].sort((left, right) => right.priority - left.priority);
+  const supportingNotices = [...notices.slice(1), ...(isPartialTemplate ? [{ key: "partial", text: "AI 요약에 규칙 기반 문장이 포함되어 있습니다.", warning: false }] : [])];
   const overview = withoutRankScoreDisclaimer(narrative.overview);
   const marketNote = withoutRankScoreDisclaimer(narrative.marketNote);
   // 종합 카드 인용 근거: 시장 지표(M:)와 종목(R:)만 표시 (E/C/N 제외)
@@ -109,7 +108,7 @@ export function BriefingNarrativeCard({
               {isLlm ? (
                 <span className={`briefing-badge is-ai ${isPartialTemplate ? "is-partial" : ""}`} data-testid="narrative-badge-ai">
                   <Bot aria-hidden="true" size={13} />
-                  {isPartialTemplate ? "AI 요약 · 일부 자동 생성 문장 포함" : "AI 요약"} · {formatKstTime(narrative.generatedAt)}
+                  AI 요약 · {formatKstTime(narrative.generatedAt)}
                 </span>
               ) : (
                 <span className="briefing-badge is-rule" data-testid="narrative-badge-rule">
@@ -117,24 +116,15 @@ export function BriefingNarrativeCard({
                   자동 생성 요약
                 </span>
               )}
-              {isLlm && narrative.llmModel && <span className="briefing-badge" data-testid="narrative-model">사용 모델 {narrative.llmModel}</span>}
-              {narrative.macroAsOf && (
-                <span
-                  className="briefing-badge is-macro-as-of"
-                  data-testid="narrative-macro-as-of"
-                  title="지표별 기준 시각은 시장 지표 카드 참고"
-                >
-                  요약에 쓴 지표 시점 {formatKstTime(narrative.macroAsOf)}
-                </span>
-              )}
             </div>
           </div>
+          {narrative.macroAsOf && <p className="briefing-muted" data-testid="narrative-macro-as-of">지표 기준 {formatKstTime(narrative.macroAsOf)}</p>}
           {notices[0] && <p className={`briefing-narrative-fallback-reason ${notices[0].warning ? "is-warning" : "is-neutral"}`} role="status"
-            data-testid={notices[0].key === "partial" ? "narrative-partial-template-notice" : "narrative-status-notice"}>
+            data-testid="narrative-status-notice">
             {notices[0].warning ? <AlertCircle aria-hidden="true" size={13} /> : <Info aria-hidden="true" size={13} />}<span>{notices[0].text}</span>
           </p>}
-          {notices.length > 1 && <details className="briefing-status-details"><summary>상태 안내 자세히</summary>
-            <ul>{notices.slice(1).map(notice => <li key={notice.key} className={notice.warning ? "is-warning" : "is-neutral"}>{notice.text}</li>)}</ul>
+          {supportingNotices.length > 0 && <details className="briefing-status-details"><summary>상태 안내 자세히</summary>
+            <ul>{supportingNotices.map(notice => <li key={notice.key} data-testid={notice.key === "partial" ? "narrative-partial-template-notice" : undefined} className={notice.warning ? "is-warning" : "is-neutral"}>{notice.text}</li>)}</ul>
           </details>}
         </div>
 
@@ -189,11 +179,6 @@ export function BriefingNarrativeCard({
           <div className="briefing-narrative-block">
             <div className="briefing-narrative-subtitle-row">
               <h3 className="briefing-narrative-subtitle">시장 개황 및 흐름</h3>
-              {isPartialTemplate && narrative.fieldSources?.overview === "template" && (
-                <span className="briefing-field-source-tag" data-testid="field-source-overview">
-                  자동 생성
-                </span>
-              )}
             </div>
             <p className="briefing-narrative-text">{overview}</p>
           </div>
@@ -202,12 +187,7 @@ export function BriefingNarrativeCard({
         {marketNote && (
           <div className="briefing-narrative-block">
             <div className="briefing-narrative-subtitle-row">
-              <h3 className="briefing-narrative-subtitle">거시 지표 관찰</h3>
-              {isPartialTemplate && narrative.fieldSources?.marketNote === "template" && (
-                <span className="briefing-field-source-tag" data-testid="field-source-market-note">
-                  자동 생성
-                </span>
-              )}
+              <h3 className="briefing-narrative-subtitle">시장 지표 요약</h3>
             </div>
             <p className="briefing-narrative-text">{marketNote}</p>
           </div>

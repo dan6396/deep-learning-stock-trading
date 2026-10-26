@@ -231,7 +231,7 @@ describe("model TOP5 briefing", () => {
     const result = buildBriefingInput(data, marker, macro, now);
     expect(result.stocks.map(row => row.rank)).toEqual([1, 2, 3, 4, 5]); expect(data).toEqual(original);
     expect(result.stocks[0].rankScore).toBe(6); expect(result.stocks[0].topPercent).toBeCloseTo(100 / 6);
-    expect(result.stocks[0].evidence[0]).toMatchObject({ id: "E:000001:1", kind: "model", text: "전체 6개 중 1위(상위 16.67%)입니다." });
+    expect(result.stocks[0].evidence[0]).toMatchObject({ id: "E:000001:1", kind: "model", text: "전체 6개 중 1위(상위 16.7%)입니다." });
     expect(result.stocks[0].cautions.map(row => row.kind)).toEqual(["model", "news", "data"]);
     expect(result.macro.context).toMatchObject({ usSessionDate: "2026-10-22" });
     expect(result.macro.context?.targetSessionNote).toContain("2026-10-23 한국 정규장");

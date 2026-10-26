@@ -1,5 +1,6 @@
 ﻿import { useState } from "react";
 import type { MacroReference, ReferenceRow } from "../../entities/briefing";
+import { withoutRankScoreDisclaimer } from "../../entities/briefing";
 import { ChevronDown, BarChart2 } from "lucide-react";
 export type BriefingMacroReferenceProps = { reference: MacroReference | null | undefined };
 const definitionLabel = (row: ReferenceRow) => row.definition === "close_to_close" ? "전일 종가→종가" : "시가→종가";
@@ -59,7 +60,7 @@ export function BriefingMacroReference({ reference }: BriefingMacroReferenceProp
   if (!reference?.rows.length) return null;
   const upC2c = reference.rows.find(row => row.condition === "nasdaq_up" && row.definition === "close_to_close");
   const upO2c = reference.rows.find(row => row.condition === "nasdaq_up" && row.definition === "open_to_close");
-  const summary = reference.note || (upC2c && upO2c
+  const summary = withoutRankScoreDisclaimer(reference.note) || (upC2c && upO2c
     ? `나스닥 상승 다음 날 코스피 상승 비율 — 종가 기준 ${upC2c.ratioPct.toFixed(1)}% (기준선 ${upC2c.baselinePct.toFixed(1)}%) · 시가→종가 ${upO2c.ratioPct.toFixed(1)}% (기준선 ${upO2c.baselinePct.toFixed(1)}%)`
     : "직전 미국장 방향과 코스피의 과거 조건부 통계입니다.");
   return <article className="briefing-macro-reference-card" data-testid="briefing-macro-reference-card" aria-labelledby="macro-reference-heading">

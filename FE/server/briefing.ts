@@ -7,7 +7,7 @@ import { unavailableNight } from "./kisBriefing";
 import { nextKrxSession } from "./krxCalendar";
 import { formatSupplyWon } from "./briefingValidation";
 import { showBriefingSupply } from "./supplyVisibility";
-import { modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
+import { formatModelPercent, modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
 export { formatSupplyWon } from "./briefingValidation";
 import { createNarrativeStore, briefingInputHash, templateNarrative, isTargetSessionCaution, targetSessionCautionText, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
@@ -40,7 +40,6 @@ const numeric = (value: unknown) => typeof value === "number" && Number.isFinite
   : typeof value === "string" && value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
 const validDate = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-const format = (value: number) => String(Number(value.toFixed(2)));
 
 function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string, showSupply: boolean): BriefingStock {
   const input = row.input_row, code = String(input.ticker), rank = numeric(input.pred_rank)!, poolSize = numeric(input.pred_pool_size)!;
@@ -48,7 +47,7 @@ function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string, s
   const evidence: BriefingStock["evidence"] = [], cautions: BriefingFact[] = [];
   const addEvidence = (kind: "model" | "supply" | "news", text: string) => evidence.push({ id: `E:${code}:${evidence.length + 1}`, kind, text });
   const caution = (kind: BriefingFact["kind"], text: string) => cautions.push({ id: `C:${code}:${cautions.length + 1}`, kind, text });
-  addEvidence("model", `전체 ${poolSize}개 중 ${rank}위(상위 ${format(topPercent)}%)입니다.`);
+  addEvidence("model", `전체 ${poolSize}개 중 ${rank}위(상위 ${formatModelPercent(topPercent)})입니다.`);
   caution("model", "순위 점수는 수익률·확률이 아닙니다.");
   const supplyStatus = input.supply_status;
   if (showSupply && (supplyStatus === "ok" || supplyStatus === "insufficient_data")) {
@@ -64,7 +63,7 @@ function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string, s
       addEvidence("supply", `최근 ${days}거래일 ${measured("외국인", foreign, input.foreign_positive_days)}, ${measured("기관", institution, input.inst_positive_days)}입니다.`);
     }
     if (supplyStatus === "insufficient_data" && days !== null && window !== null) caution("supply", `수급 확인 기간 ${window}거래일 중 ${days}거래일만 확보했습니다.`);
-  } else if (showSupply) caution("supply", "확인 가능한 수급 자료가 없습니다.");
+  } else if (showSupply) caution("supply", "수급 자료가 없습니다.");
   const status = row.data_meta?.newsStatus === "collected" ? "collected" : row.data_meta?.newsStatus === "collection_failed" ? "collection_failed" : "not_collected";
   const articles = status === "collected" ? (row.news ?? []).filter(article => article && typeof article.title === "string" && safeArticleUrl(article.url))
     .slice(0, 3).map((article, index) => ({ id: `N:${code}:${index + 1}`, title: article.title, url: safeArticleUrl(article.url)!,

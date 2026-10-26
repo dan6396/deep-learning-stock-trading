@@ -71,6 +71,11 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
     const formattedValue = formatMacroValue(ind);
     const asOfText = ind.status === "ok" ? formatMacroAsOf(ind.id, ind.asOf ?? macro.asOf) : null;
     const sourceText = formatMacroSource(ind.source);
+    const sessionDate = isUsMarket && ind.session === "closed" ? context?.usSessionDate?.slice(5).replace("-", "/") : null;
+    const sessionText = ind.session === "open" ? (isNightMarket ? "야간 거래 중" : "장중") : ind.session === "closed" ? (isNightMarket ? "야간 종가" : "종가") : "";
+    const metaText = ind.session === "closed" && !sessionDate
+      ? asOfText?.endsWith("종가") ? asOfText : `${isUsMarket ? "미국장 종가" : sessionText} · 기준 ${asOfText}`
+      : [sessionDate ?? asOfText, sessionText].filter(Boolean).join(" ");
     const cardDomId = citationDomId(`M:${ind.id}`);
 
     return (
@@ -86,26 +91,6 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
         <div className="briefing-macro-card-top">
           <div className="briefing-macro-name-row">
             <span className="briefing-macro-name">{ind.name}</span>
-            {isNightMarket && (
-              <>
-                <span className="briefing-macro-group-tag is-night">야간</span>
-                {ind.session === "open" ? (
-                  <span className="briefing-macro-session-tag is-open">야간 거래 중</span>
-                ) : ind.session === "closed" ? (
-                  <span className="briefing-macro-session-tag is-closed">야간 종가</span>
-                ) : null}
-              </>
-            )}
-            {isUsMarket &&
-              (ind.session === "open" ? (
-                <span className="briefing-macro-session-tag is-open">미국 장중</span>
-              ) : (
-                <span className="briefing-macro-group-tag">
-                  {context?.usSessionDate
-                    ? `${context.usSessionDate.slice(5).replace("-", "/")} 미국장 종가`
-                    : "전일 미국장"}
-                </span>
-              ))}
           </div>
         </div>
 
@@ -136,13 +121,14 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
 
         <div className="briefing-macro-card-bottom">
           <span className="briefing-macro-as-of">
-            {asOfText ? `기준: ${asOfText}` : "기준: —"}
+            {metaText || "시각 미확인"} · {sourceText}
           </span>
-          <span className="briefing-macro-source-tag">{sourceText}</span>
         </div>
       </article>
     );
   };
+
+  if (!sortedIndicators.length && !macro.reference) return null;
 
   return (
     <section className="briefing-macro-section" aria-labelledby="macro-section-heading">
@@ -154,12 +140,11 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
         {context?.usSessionDate && (
           <p className="briefing-macro-context-note" role="note">
             <Globe aria-hidden="true" size={14} />
-            <span>미국장 관측일 {context.usSessionDate} · 지표별 기준 시각 참고</span>
+            <span>미국장 {context.usSessionDate} 기준</span>
           </p>
         )}
       </div>
 
-      {!sortedIndicators.length && <p className="briefing-muted" role="status">시장 지표를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.</p>}
       <div className="briefing-macro-groups" aria-label="주요 시장 지표 그리드">
         {domesticIndicators.length > 0 && (
           <div className="briefing-macro-group is-domestic">

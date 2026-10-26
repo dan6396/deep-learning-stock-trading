@@ -44,7 +44,7 @@ export function parseNasdaqReference(value: any): MacroReference | null {
       return distinct.length ? `${label}에서는 ${distinct.map(row => `나스닥 ${row.condition === "nasdaq_up" ? "상승" : "하락"} 조건의 관측 비율이 같은 기간 기준선보다 ${row.ratioPct > row.baselinePct ? "높게" : "낮게"}`).join(", ")} 관찰됐습니다.`
         : `${label}에서는 같은 기간 기준선과 뚜렷한 차이가 관찰되지 않았습니다.`;
     };
-    const note = `${describe("close_to_close", "시가 갭을 포함한 전일 종가→종가 구간")} ${describe("open_to_close", "모델 예측 구간인 시가→종가 구간")} 과거 통계이며 예측을 보장하지 않습니다.`;
+    const note = `${describe("close_to_close", "시가 갭을 포함한 전일 종가→종가 구간")} ${describe("open_to_close", "모델 예측 구간인 시가→종가 구간")}`;
     return { title: "직전 미국장(나스닥) 방향과 코스피", periodStart: period.start, periodEnd: period.end, lastObservedDate: aligned.last_kospi_date,
       rows, note, source: "Yahoo Finance 일봉, 팀 재검증(2026-10-23)" };
   } catch { return null; }

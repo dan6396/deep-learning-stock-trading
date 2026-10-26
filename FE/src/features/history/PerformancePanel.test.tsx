@@ -20,7 +20,8 @@ it("shows the missing-result reason and posts collection only after the user cli
 });
 it("shows frozen predictions joined to exact-day actual prices", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ ...payload, runs: [{ runId: "fixture-run-id", kind: "adhoc", officialEligible: false, mode: "model_only", baseDate: "2026-10-07", targetDate: "2026-10-08", selectedCount: 1, measuredCount: 1, predictedReturn: .02, actualReturn: .1, reason: "수시 실행 · 공식 집계 제외", measurements: [{ code: "005930", name: "삼성전자", predictedReturn: .02, date: "2026-10-08", open: 100, close: 110, actualReturn: .1 }] }] })));
-  mount(); await screen.findByText("실행 기록 fixture-");
+  mount(); await screen.findByText("fixture-run-id");
+  expect(screen.getByText("fixture-run-id")).not.toBeVisible();
   fireEvent.click(screen.getByText("종목별 예측·실제 가격 1종목"));
   expect(screen.getByText(/KIS 시가 100원 → 종가 110원/)).toHaveTextContent("+10.00%");
   expect(screen.getByText("수시 · 공식 집계 제외")).toBeInTheDocument();

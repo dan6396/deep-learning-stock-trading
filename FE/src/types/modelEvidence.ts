@@ -12,6 +12,11 @@ export type ModelEvidence = {
   agreement: "일치" | "부분 일치" | "불일치" | null; features: FeatureObservation[]; note: string;
 };
 
+/** Shared display policy for rank and feature percentages, including nonzero tails. */
+export function formatModelPercent(value: number): string {
+  return value > 0 && value < 0.1 ? "0.1% 미만" : `${Number(value.toFixed(1))}%`;
+}
+
 export function modelEvidence(row: Record<string, unknown>): ModelEvidence | null {
   const num = (value: unknown) => typeof value === "number" ? Number.isFinite(value) ? value : null : typeof value === "string" && value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
   const rank = num(row.pred_rank), poolSize = num(row.pred_pool_size), rankScore = num(row.rank_score);
@@ -26,7 +31,7 @@ export function modelEvidence(row: Record<string, unknown>): ModelEvidence | nul
     const percentile = num(row[`feat_pct_${key}`]);
     if (percentile === null || percentile <= 0 || percentile > 100) return [];
     const side = percentile >= 50 ? "upper" : "lower", tailPercent = Math.min(100, side === "upper" ? 100 + 100 / poolSize - percentile : percentile);
-    return [{ key, label, percentile, side, tailPercent, text: `${label} 관측값이 ${poolSize}종목 중 ${side === "upper" ? "상위" : "하위"} ${tailPercent.toFixed(2)}%입니다.` }];
+    return [{ key, label, percentile, side, tailPercent, text: `${label} ${side === "upper" ? "상위" : "하위"} ${formatModelPercent(tailPercent)}` }];
   }).sort((a, b) => a.tailPercent - b.tailPercent || a.key.localeCompare(b.key)).slice(0, 3);
   return { rank, poolSize, topPercent: rank / poolSize * 100, rankScore, lookbacks, agreement, features,
     note: "입력 특징의 상대적 위치이며 모델 기여도나 순위의 원인을 뜻하지 않습니다. 가격·거래량 특징은 서로 겹칠 수 있습니다." };

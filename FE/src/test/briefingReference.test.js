@@ -18,6 +18,7 @@ describe("static Nasdaq/KOSPI reference", () => {
     expect(result).toMatchObject({ periodStart: "2025-10-22", periodEnd: "2026-10-22", lastObservedDate: "2026-10-20" });
     expect(result.rows).toHaveLength(4); expect(result.rows[0]).toMatchObject({ definition: "close_to_close", condition: "nasdaq_up", count: 6, total: 10, ratioPct: 60, baselinePct: 60, ciLowPct: 30 });
     expect(result.note).toContain("모델 예측 구간");
+    expect(result.note).not.toContain("예측을 보장하지 않습니다");
     expect(result.source).toBe("Yahoo Finance 일봉, 팀 재검증(2026-10-23)");
   });
   it("rejects malformed data, inconsistent ratios, invalid CI and non-year periods", () => {

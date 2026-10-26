@@ -132,12 +132,13 @@ describe("briefing narrative guard", () => {
     const value = content(); value.stocks[0].summary = sentence;
     expect(validateNarrative(value, input())).toBeNull();
   });
-  it("self-validates every disclaimer example actually included in the Gemini system instruction", async () => {
+  it("prohibits boilerplate in new summaries while validating legacy disclaimer examples", async () => {
     const transport = vi.fn(async () => response());
     await createNarrativeStore({ transport }).resolve(input(), true, env);
     const instruction = JSON.parse(transport.mock.calls[0][1].body).systemInstruction.parts[0].text;
+    expect(instruction).toContain("종목 summary와 종합 overview/marketNote에는 면책·투자 유의·단서 문장을 쓰지 마세요");
     for (const sentence of BRIEFING_DISCLAIMER_EXAMPLES) {
-      expect(instruction).toContain(sentence);
+      expect(instruction).not.toContain(sentence);
       expect(forbiddenNarrative(sentence)).toBe(false);
       expect(forbiddenCausality(sentence)).toBe(false);
       const value = content(); value.marketNote = sentence;

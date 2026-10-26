@@ -120,7 +120,7 @@ describe("DetailPanel", () => {
     expect(container.querySelector(".briefing-detail-rank")).toBeNull();
     const summary = container.querySelector(".briefing-template-summary");
     expect(summary).not.toBeNull();
-    expect(summary).toHaveTextContent("확인 가능한 분석 근거가 없습니다.");
+    expect(summary).toHaveTextContent("분석 근거가 없습니다.");
   });
 
   describe("mergeCandidateDetail", () => {

@@ -30,10 +30,10 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
       </span>
       <span className="briefing-execution-divider">·</span>
       <span className="briefing-execution-item">
-        {previousReason === "running" ? "새 분석 진행 중 · 이전 결과 표시" : previousReason === "failed" ? "새 분석 실패 · 이전 결과 표시" : completed ? "최신 완료 결과" : "저장된 분석 결과"}
+        {previousReason === "running" ? "새 분석 진행 중 · 이전 결과 표시" : previousReason === "failed" ? "새 분석 실패 · 이전 결과 표시" : "마지막 분석"}
       </span>
       {briefing.data && briefing.data.kind !== "official" && <span className="briefing-execution-item briefing-execution-error">
-        {briefing.data.kind === "adhoc" ? "수시 분석 결과 · 공식 기록 아님" : "공식 여부 확인 불가"}
+        {briefing.data.kind === "adhoc" ? "수시 분석" : "분류 미확인"}
       </span>}
       {(backend.isError || analysis.isError) && (
         <>
@@ -58,7 +58,7 @@ export function BriefingSummary({ indices, pending, error, count, rows, rankPend
       <small>당일 지수 등락 기반 단순 판단{error && indices.length > 0 ? " · 이전 조회 결과" : ""}</small>
     </article>
     <article className="briefing-summary-prediction" aria-label="TOP5 예측 요약"><p className="briefing-eyebrow">TOP5 예측 요약</p><strong className="briefing-summary-value">{prediction.range}</strong>
-      <p>{prediction.count}</p><small>{prediction.period}</small><small>{rows[0]?.scoreKind === "rank_zscore" ? "원본 모델 순위" : "원본 모델 예측"} · 실제 성과 아님{rankSource === "sample" ? " · 예시 데이터" : ""}</small>
+      <p>{prediction.count}</p><small>{prediction.period}</small>{rankSource === "sample" && <small>예시 데이터</small>}
     </article>
     <article className="briefing-summary-data" aria-label="분석 및 데이터"><p className="briefing-eyebrow">분석 · 데이터</p><strong className="briefing-summary-value">{finishedAt ? formatDate(finishedAt, true) : "—"}</strong>
       <p>{formatNumber(count ?? status?.results.rank.count)}종목 · {formatDuration(savedRunDuration(status, analysis.data?.data))}</p><small>{running ? "분석 진행 중" : completed ? "최신 완료 결과" : "완료 결과 확인 필요"}</small>

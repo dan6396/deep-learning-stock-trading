@@ -1,10 +1,11 @@
 import type { CandidateData } from "../../entities/candidate";
-import { useEffect, useState, type ReactNode } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { queries } from "../../shared/api/queries";
-import { formatDate, formatSessionDate, formatWon } from "../../shared/lib/format";
+import { queries, queryKeys } from "../../shared/api/queries";
+import { formatDate, formatPercent, formatSessionDate, formatWon } from "../../shared/lib/format";
 import { PredictionDirection } from "./PredictionDirection";
+import { TopFiveSparkline } from "./TopFiveSparkline";
 import { safeArticleUrl } from "../stock/reportData";
 import { isRelatedArticle } from "../../shared/lib/relatedArticles";
 import { WatchToggle } from "../watchlist/WatchToggle";
@@ -96,15 +97,85 @@ export function RelatedArticles({ candidate }: { candidate: CandidateData }) {
 }
 
 export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence }: { rows: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void; renderEvidence?: (code: string) => ReactNode }) {
+  const queryClient = useQueryClient();
   const [focusedCode, setFocusedCode] = useState(selectedCode);
   useEffect(() => setFocusedCode(selectedCode), [selectedCode]);
   const entryCode = rows.some(row => row.code === selectedCode) ? selectedCode : rows[0]?.code;
   const tabCode = rows.some(row => row.code === focusedCode) ? focusedCode : entryCode;
   const sessionBase = rows[0]?.baseDate ?? null, nextSession = useNextSession(sessionBase).data;
   const quotes = useQueries({ queries: rows.map(row => ({ ...queries.quote(row.code), retry: false, staleTime: 30_000, refetchOnMount: false })) });
+
+  // 차트 활성화 우선순위: 선택 종목 최우선, 나머지 순위 순
+  const priorityCodes = useMemo(() => {
+    if (!rows.length) return [];
+    const primary = rows.find(r => r.code === selectedCode)?.code ?? rows[0]?.code;
+    return [primary, ...rows.map(r => r.code).filter(c => c !== primary)].filter(Boolean) as string[];
+  }, [rows, selectedCode]);
+
+  // 완료 여부 판정: 데이터가 있거나 에러로 끝났으면 완료
+  const isQueryDone = (code: string) => {
+    const state = queryClient.getQueryState(queryKeys.chart(code, "1M"));
+    return state?.data !== undefined || state?.status === "error" || state?.status === "success";
+  };
+
+  // 완료되지 않은 첫 번째 종목만 enabled 후보로 도출 (포인터/이벤트 없이 매 렌더마다 상태에서 도출)
+  let activeCandidateCode: string | null = null;
+  for (const code of priorityCodes) {
+    if (!isQueryDone(code)) {
+      activeCandidateCode = code;
+      break;
+    }
+  }
+
+  // useQueries로 1M 차트 쿼리를 반응형으로 구독하여 캐시 유입/상태 변경 시 리렌더링 보장
+  const chartQueries = useQueries({
+    queries: rows.map(row => {
+      const hasData = queryClient.getQueryData(queryKeys.chart(row.code, "1M")) !== undefined;
+      const isEnabled = hasData || row.code === activeCandidateCode;
+      return {
+        ...queries.chart(row.code, "1M"),
+        enabled: isEnabled,
+        notifyOnChangeProps: "all" as const,
+        retry: false,
+        staleTime: 30_000,
+      };
+    }),
+  });
+
+  const validScores = rows
+    .map(r => r.rankScore)
+    .filter((s): s is number => typeof s === "number" && Number.isFinite(s));
+  const minScore = validScores.length ? Math.min(...validScores) : 0;
+  const maxScore = validScores.length ? Math.max(...validScores) : 0;
+
   return <ol className="briefing-top-five" aria-label="모델 순위 TOP5" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedCode(entryCode ?? null); }}>{rows.map((row, index) => {
     const quote = quotes[index], price = quote.isError || quote.data?.source === "sample" ? null : quote.data?.data;
     const evidence = renderEvidence?.(row.code) ?? null;
+
+    const scorePercent =
+      row.rankScore != null && Number.isFinite(row.rankScore)
+        ? maxScore > minScore
+          ? Math.round(((row.rankScore - minScore) / (maxScore - minScore)) * 100)
+          : 100
+        : null;
+
+    const score2Decimals =
+      row.rankScore != null && Number.isFinite(row.rankScore)
+        ? (Object.is(row.rankScore, -0) ? "0.00" : row.rankScore.toFixed(2))
+        : "—";
+
+    const roundedChangeRate = price?.changeRate != null ? Number(price.changeRate.toFixed(2)) : null;
+    const hasChangeRate = roundedChangeRate != null && Number.isFinite(roundedChangeRate);
+    const changeDir =
+      roundedChangeRate == null || Object.is(roundedChangeRate, 0) || Object.is(roundedChangeRate, -0)
+        ? "flat"
+        : roundedChangeRate > 0
+        ? "rise"
+        : "fall";
+
+    const hasChartData = queryClient.getQueryData(queryKeys.chart(row.code, "1M")) !== undefined;
+    const isSparklineEnabled = hasChartData || row.code === activeCandidateCode;
+
     return <li key={row.code} data-model-code={row.code} data-selected={row.code === selectedCode ? "true" : undefined}>
       <div className="briefing-top-stock"><span className="briefing-top-rank">{String(row.rank).padStart(2, "0")}</span>
         <button type="button" className="briefing-stock-button" tabIndex={row.code === tabCode ? 0 : -1} onFocus={() => setFocusedCode(row.code)} aria-label={(row.name ?? "종목명 미확인") + " " + row.code + " 상세 보기"} aria-pressed={row.code === selectedCode} onClick={() => onSelect(row.code)} onKeyDown={event => {
@@ -116,8 +187,50 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence 
           event.currentTarget.closest("ol")?.querySelector<HTMLButtonElement>('[data-model-code="' + next.code + '"] .briefing-stock-button')?.focus();
         }}><strong>{row.name ?? "종목명 미확인"}</strong>{" "}<small>{row.code}</small></button><WatchToggle code={row.code} name={row.name} />
       </div>
-      <div className="briefing-top-prediction"><span>{row.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측"}</span><strong><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></strong><small>{predictionPeriod(row, row.baseDate === sessionBase ? nextSession : null)} · 기준일 {formatDate(row.baseDate)}</small>{row.predictedReturn === null && row.rankScore == null && <small>{row.scoreKind === "rank_zscore" ? "순위 점수 없음" : "원본 예측값 없음"}</small>}</div>
-      <div className="briefing-top-price"><span>현재가</span><strong>{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small></div>
+
+      <div className="briefing-top-price">
+        <span>현재가</span>
+        <div className="briefing-top-price-row">
+          <strong className="briefing-top-price-value">{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong>
+          {hasChangeRate && (
+            <span className={`briefing-top-change is-${changeDir}`}>
+              {formatPercent(roundedChangeRate, "percent", 2)}
+            </span>
+          )}
+        </div>
+        <small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small>
+      </div>
+
+      <div className="briefing-top-sparkline-cell">
+        <TopFiveSparkline
+          code={row.code}
+          enabled={isSparklineEnabled}
+          query={chartQueries[index]}
+        />
+      </div>
+
+      <div className="briefing-top-prediction">
+        <span>{row.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측"}</span>
+        {row.scoreKind === "rank_zscore" ? (
+          <div className="briefing-top-score-row">
+            <strong className="briefing-top-score-value">
+              <span className="prediction-direction" data-direction="relative" title="비교 종목 내 상대 순위 점수">
+                {score2Decimals}
+              </span>
+            </strong>
+            {scorePercent != null && (
+              <span className="briefing-top-score-bar" role="presentation" title={`TOP5 내 상대 순위 점수 위치 (${scorePercent}%)`}>
+                <span className="briefing-top-score-bar-fill" style={{ width: `${Math.max(6, scorePercent)}%` }} />
+              </span>
+            )}
+          </div>
+        ) : (
+          <strong><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></strong>
+        )}
+        <small>{predictionPeriod(row, row.baseDate === sessionBase ? nextSession : null)} · 기준일 {formatDate(row.baseDate)}</small>
+        {row.predictedReturn === null && row.rankScore == null && <small>{row.scoreKind === "rank_zscore" ? "순위 점수 없음" : "원본 예측값 없음"}</small>}
+      </div>
+
       {evidence ?? <RelatedArticles candidate={row} />}
     </li>;
   })}</ol>;

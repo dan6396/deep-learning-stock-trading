@@ -225,7 +225,7 @@ describe("BriefingMacroGrid", () => {
     render(<BriefingMacroGrid macro={mockBriefingData.macro} />);
 
     // Context note
-    expect(screen.getByText("미국장 관측일 2026-10-22 · 지표별 기준 시각 참고")).toBeInTheDocument();
+    expect(screen.getByText("미국장 2026-10-22 기준")).toBeInTheDocument();
     expect(screen.queryByText(mockBriefingData.macro.context!.targetSessionNote)).not.toBeInTheDocument();
 
     // KOSPI
@@ -241,8 +241,8 @@ describe("BriefingMacroGrid", () => {
     expect(screen.getByTestId("macro-change-USDKRW")).toHaveTextContent("하락 4.50원 (-0.32%)");
 
     // 권장 4: session === "closed"이고 context.usSessionDate가 있으면 "10/22 미국장 종가", session === "open"이면 "미국 장중"
-    expect(screen.getByText("10/22 미국장 종가")).toBeInTheDocument();
-    expect(screen.getByText("미국 장중")).toBeInTheDocument();
+    expect(screen.getByTestId("macro-card-NASDAQ")).toHaveTextContent("10/22 종가 · Yahoo");
+    expect(screen.getByTestId("macro-card-SP500")).toHaveTextContent("장중 · Yahoo");
   });
 
   it("handles unavailable indicators without displaying asOf time", () => {
@@ -265,7 +265,19 @@ describe("BriefingMacroGrid", () => {
 
     render(<BriefingMacroGrid macro={unavailableMacro} />);
     expect(screen.queryByTestId("macro-card-UST10Y")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("시장 지표를 불러오지 못했습니다");
+    expect(screen.queryByRole("heading", { name: "시장 지표" })).not.toBeInTheDocument();
+  });
+  it("separates the US closing value from its KST reference timestamp when its session date is unknown", () => {
+    const macro = structuredClone(mockBriefingData.macro);
+    macro.context = { usSessionDate: null, targetSessionNote: "" };
+    const nasdaq = macro.indicators.find(indicator => indicator.id === "NASDAQ")!;
+    nasdaq.session = "closed";
+    nasdaq.asOf = "2026-10-22T20:15:00Z";
+    render(<BriefingMacroGrid macro={macro} />);
+    const card = screen.getByTestId("macro-card-NASDAQ");
+    expect(card).toHaveTextContent("미국장 종가 · 기준 10/23 05:15 KST · Yahoo");
+    expect(card).not.toHaveTextContent("05:15 KST 종가");
+    expect(screen.getByTestId("macro-card-KOSPI")).not.toHaveTextContent("종가 · 기준");
   });
 });
 
@@ -287,9 +299,9 @@ describe("BriefingNarrativeCard", () => {
 
     // AI Badge
     expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약");
-    expect(screen.getByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다")).toBeInTheDocument();
-    expect(screen.getByTestId("narrative-macro-as-of")).toHaveTextContent("요약에 쓴 지표 시점 10/23 15:30 KST");
-    expect(screen.getByTestId("narrative-macro-as-of")).toHaveAttribute("title", "지표별 기준 시각은 시장 지표 카드 참고");
+    expect(screen.queryByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다")).not.toBeInTheDocument();
+    expect(screen.getByTestId("narrative-macro-as-of")).toHaveTextContent("지표 기준 10/23 15:30 KST");
+    expect(screen.getByTestId("narrative-macro-as-of")).toHaveClass("briefing-muted");
     expect(screen.getByTestId("narrative-macro-as-of")).not.toHaveTextContent("지표별 기준 시각은 시장 지표 카드 참고");
 
     // Fresh LLM button is disabled "생성됨"
@@ -626,8 +638,8 @@ describe("TOP5 integrated evidence", () => {
     const row = container.querySelector('[data-model-code="005930"]')!;
     const evidence = screen.getByTestId("stock-card-005930");
     expect(row.contains(evidence)).toBe(true);
-    expect(within(evidence).getByText(/20일·120일 모델 일치/)).toBeVisible();
-    expect(within(evidence).getByText(/상대강도 지표 관측값이 199종목 중 하위 2.01%입니다/)).toBeVisible();
+    expect(within(evidence).getByText(/두 모델 일치/)).toBeVisible();
+    expect(within(evidence).getByText(/상대강도 지표 하위 2%/)).toBeVisible();
     expect(within(evidence).getByText(mockBriefingData.narrative.stocks[0].summary)).toBeVisible();
     expect(screen.getByTestId("stock-chip-evidence-005930")).toBeVisible();
     expect(screen.getByTestId("stock-chip-caution-005930")).toBeVisible();
@@ -918,8 +930,8 @@ describe("KOSPI200_NIGHT & 7 Indicators Layout", () => {
     // KOSPI200_NIGHT 카드 및 배지 확인
     expect(screen.getByTestId("macro-card-KOSPI200_NIGHT")).toBeInTheDocument();
     expect(screen.getByText("코스피200 야간선물")).toBeInTheDocument();
-    expect(screen.getByText("야간 거래 중")).toBeInTheDocument();
-    expect(screen.getByText("야간")).toBeInTheDocument();
+    expect(screen.getByTestId("macro-card-KOSPI200_NIGHT")).toHaveTextContent("야간 거래 중");
+    expect(screen.queryByText("야간")).not.toBeInTheDocument();
     expect(screen.getByTestId("macro-value-KOSPI200_NIGHT")).toHaveTextContent("362.40pt");
     expect(screen.getByTestId("macro-change-KOSPI200_NIGHT")).toHaveTextContent("상승 1.15pt (+0.32%)");
     expect(screen.getByTestId("macro-change-KOSPI200_NIGHT")).not.toHaveTextContent("▲");
@@ -932,7 +944,7 @@ describe("KOSPI200_NIGHT & 7 Indicators Layout", () => {
       ),
     };
     rerender(<BriefingMacroGrid macro={closedMacro} />);
-    expect(screen.getByText("야간 종가")).toBeInTheDocument();
+    expect(screen.getByTestId("macro-card-KOSPI200_NIGHT")).toHaveTextContent("야간 종가");
   });
 
   it("omits an unavailable night indicator while preserving other measured indicators", () => {
@@ -957,6 +969,8 @@ describe("macro.reference (참고 통계) Component", () => {
     const summary = screen.getByTestId("macro-reference-summary");
     expect(summary).toBeInTheDocument();
     expect(summary.textContent).toContain("전날 나스닥 방향과 코스피의 관계는 시가 갭을 포함한 구간에서");
+    expect(summary).toHaveTextContent("시가 이후(모델 예측 구간) 방향과는 뚜렷한 관계가 관찰되지 않았습니다.");
+    expect(summary).not.toHaveTextContent("예측을 보장하지 않습니다");
 
     // 초기 상태: 차트 미노출
     expect(screen.queryByTestId("macro-reference-chart")).not.toBeInTheDocument();
@@ -1062,7 +1076,7 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
     // 3. 동일 비중 실측 기록 (measuredDays > 0)
     expect(screen.getByText("동일 비중 실측 기록")).toBeInTheDocument();
     expect(screen.getByText("동일 비중 참고")).toBeInTheDocument();
-    expect(screen.getByTestId("composition-performance")).toHaveTextContent("과거 기록은 미래 수익을 보장하지 않으며 표본이 작습니다");
+    expect(screen.getByTestId("composition-performance")).not.toHaveTextContent("미래 수익을 보장하지");
     expect(screen.getByTestId("composition-perf-as-of")).toHaveTextContent("기준: 10/23 15:30 KST");
     expect(screen.getByText("측정 45일")).toBeInTheDocument();
     expect(screen.getByText(/동일 비중·시가→종가·공식 실측 기록/)).toBeInTheDocument();
@@ -1153,7 +1167,7 @@ describe("briefing.composition (TOP5 후보 구성 카드)", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId("composition-no-perf")).toHaveTextContent("아직 실측 기록이 없습니다");
+    expect(screen.queryByTestId("composition-performance")).not.toBeInTheDocument();
     expect(screen.queryByTestId("composition-perf-as-of")).not.toBeInTheDocument();
   });
 
@@ -1373,22 +1387,21 @@ describe("Narrative fieldSources & partial_template (서버 계약 optional 추�
     );
 
     // 1. partial_template 배지 확인
-    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약 · 일부 자동 생성 문장 포함");
-    expect(screen.getByTestId("narrative-model")).toHaveTextContent("gemini-2.5-flash");
+    expect(screen.getByTestId("narrative-badge-ai")).toHaveTextContent("AI 요약");
+    expect(screen.getByTestId("narrative-badge-ai").parentElement?.children).toHaveLength(1);
+    expect(screen.queryByTestId("narrative-model")).not.toBeInTheDocument();
 
     // 2. 안내 문구 확인
-    expect(screen.getByTestId("narrative-partial-template-notice")).toHaveTextContent(
-      "AI 문장과 자동 생성 문장을 함께 표시합니다"
-    );
+    expect(screen.getByTestId("narrative-partial-template-notice")).toHaveTextContent("AI 요약에 규칙 기반 문장이 포함되어 있습니다.");
 
     // 3. overview 필드 '규칙 기반' 태그 확인
-    expect(screen.getByTestId("field-source-overview")).toHaveTextContent("자동 생성");
+    expect(screen.queryByTestId("field-source-overview")).not.toBeInTheDocument();
     // marketNote는 llm이므로 태그 없음
     expect(screen.queryByTestId("field-source-market-note")).not.toBeInTheDocument();
 
     // 4. 종목 요약 '규칙 기반' 태그 확인
     expect(screen.getByTestId("stock-source-005930")).toHaveTextContent("자동 생성");
-    expect(screen.getByTestId("narrative-partial-template-notice")).not.toHaveClass("is-warning");
+    expect(screen.getByTestId("narrative-partial-template-notice")).not.toBeVisible();
   });
 
   it("handles missing optional fieldSources and stock.source gracefully", () => {
@@ -1483,13 +1496,12 @@ describe("narrative regeneration policy", () => {
   it("shows only the priority status and moves supporting information into disclosure", () => {
     render(<BriefingNarrativeCard narrative={{ ...mockBriefingData.narrative, fallbackReason: "partial_template", macroStale: true }} stocks={mockBriefingData.stocks} isGenerating={false} generateError={null} onGenerate={vi.fn()} onCitationClick={vi.fn()} />);
     expect(screen.getAllByRole("status")).toHaveLength(1);
-    expect(screen.getByTestId("narrative-partial-template-notice")).toBeVisible();
-    const supporting = screen.getByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다");
-    expect(supporting.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("narrative-status-notice")).toHaveTextContent("요약 작성 이후 시장 지표가 갱신되었습니다");
+    expect(screen.queryByText("입력 자료만 요약하며 순위에 영향을 주지 않습니다")).not.toBeInTheDocument();
   });
   it.each([
-    { side: "lower", percentile: 2.01, text: "199종목 중 하위 2.01%" },
-    { side: "upper", percentile: 82.16, text: "199종목 중 상위 18.34%" },
+    { side: "lower", percentile: 2.01, text: "하위 2%" },
+    { side: "upper", percentile: 82.16, text: "상위 18.3%" },
   ])("keeps $side observations alongside links without a redundant rank line", ({ percentile, text }) => {
     const stock = { ...mockBriefingData.stocks[0], poolSize: 199, topPercent: 2 / 199 * 100,
       modelEvidence: modelEvidence({ score_kind: "rank_zscore", prediction_status: "ok", pred_rank: 1, pred_pool_size: 199, rank_score: 2.34, feat_pct_f_rsi: percentile }) };
@@ -1509,7 +1521,7 @@ describe("narrative regeneration policy", () => {
     const raw = structuredClone(mockBriefingData);
     raw.stocks[0].news.articles.push({ ...raw.stocks[0].news.articles[0], id: "N:005930:2", url: "" });
     raw.stocks[0].cautions.push({ id: "C:005930:2", kind: "model", text: "순위 점수는 수익률·확률이 아닙니다." });
-    raw.narrative.stocks[0].summary = "상위 0.5%입니다. 순위 점수는 수익률·확률이 아닙니다.";
+    raw.narrative.stocks[0].summary = "상위 0.5%입니다. 순위 점수는 수익률이나 상승 확률을 보장하지 않습니다.";
     const data = adaptBriefing(raw);
     render(<MemoryRouter><StockEvidenceList stocks={data.stocks} narrative={data.narrative} /></MemoryRouter>);
     expect(screen.getByTestId("stock-chip-news-005930")).toHaveTextContent("기사 1건");

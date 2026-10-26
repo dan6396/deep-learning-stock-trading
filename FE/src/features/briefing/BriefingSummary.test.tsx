@@ -65,8 +65,8 @@ describe("briefing summary status", () => {
     if (kind === undefined) delete briefing.kind; else briefing.kind = kind;
     client.setQueryData(queries.briefing().queryKey, briefing);
     render(<QueryClientProvider client={client}><BriefingExecutionBar pool={199} /></QueryClientProvider>);
-    const notice = screen.queryByText("수시 분석 결과 · 공식 기록 아님");
-    const unknown = screen.queryByText("공식 여부 확인 불가");
+    const notice = screen.queryByText("수시 분석");
+    const unknown = screen.queryByText("분류 미확인");
     if (kind === "adhoc") expect(notice).toHaveClass("briefing-execution-error"); else expect(notice).not.toBeInTheDocument();
     if (kind === "unknown" || kind === undefined) expect(unknown).toHaveClass("briefing-execution-error"); else expect(unknown).not.toBeInTheDocument();
   });

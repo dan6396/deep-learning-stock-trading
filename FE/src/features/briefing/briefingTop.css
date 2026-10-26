@@ -628,19 +628,23 @@
     display: inline-flex;
     align-items: center;
     font-size: var(--ds-text-xs);
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--ds-line);
-    background: var(--ds-surface);
+    font-weight: 500;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: var(--ds-fg-2);
-    cursor: pointer;
-    transition: all 0.15s ease;
+    cursor: default;
+    transition: color 0.15s ease;
+  }
+
+  .briefing-stock-meta-chip:not(:last-child)::after {
+    content: "·";
+    margin-left: 6px;
+    color: var(--ds-subtle);
   }
 
   .briefing-stock-meta-chip:hover {
     color: var(--ds-fg);
-    border-color: var(--ds-link);
   }
 
   .briefing-stock-expanded-content {
@@ -653,9 +657,10 @@
   }
 
   .briefing-stock-summary-box {
-    background: var(--ds-surface-2);
-    border-radius: 10px;
-    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 4px 0;
   }
 
   .briefing-stock-summary-text {
@@ -1119,9 +1124,10 @@
     font-size: 12.5px;
     line-height: 1.55;
     color: var(--ds-fg);
-    background: var(--ds-surface-2);
-    border-radius: 8px;
-    padding: 8px 12px;
+    background: transparent;
+    border-left: 2px solid var(--ds-line);
+    border-radius: 0;
+    padding: 4px 10px;
     margin: 0;
     display: flex;
     align-items: baseline;

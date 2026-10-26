@@ -204,6 +204,33 @@ describe("missing briefing facts", () => {
     expect(withoutRankScoreDisclaimer("해당 점수는 기대수익률이나 상승 확률을 의미하지 않습니다.")).toBe("");
     expect(withoutRankScoreDisclaimer("수익률 자료는 없습니다. 순위 점수는 1.01입니다.")).toBe("수익률 자료는 없습니다. 순위 점수는 1.01입니다.");
   });
+  it("strips cached disclaimer tails as whole sentences while retaining measured facts and data limits", () => {
+    expect(withoutRankScoreDisclaimer("상대강도 하위 2.01%입니다. 순위 점수는 수익률이나 상승 확률을 보장하지 않습니다. 기사 본문은 수집하지 않았습니다."))
+      .toBe("상대강도 하위 2.01%입니다. 기사 본문은 수집하지 않았습니다.");
+    expect(withoutRankScoreDisclaimer("수익률은 -1.25%였습니다. 과거 성과는 미래 수익을 보장하지 않습니다. 표본은 12일입니다."))
+      .toBe("수익률은 -1.25%였습니다. 표본은 12일입니다.");
+    expect(withoutRankScoreDisclaimer("동일 비중(각 20%) 참고 구성입니다. 투자 권유가 아닙니다."))
+      .toBe("동일 비중(각 20%) 참고 구성입니다.");
+    expect(withoutRankScoreDisclaimer("모델 순위는 1위입니다.\n매수·매도 권유가 아닙니다.\n수급 자료가 없습니다."))
+      .toBe("모델 순위는 1위입니다. 수급 자료가 없습니다.");
+    expect(withoutRankScoreDisclaimer("이 특징은 개별 예측의 원인이 아닙니다. 기사 본문은 수집하지 않았습니다."))
+      .toBe("이 특징은 개별 예측의 원인이 아닙니다. 기사 본문은 수집하지 않았습니다.");
+  });
+  it.each([
+    ["최근 1년 표본에 한정된 관측이며 미래 결과를 보장하지 않습니다.", "최근 1년 표본에 한정된 관측입니다."],
+    ["순위 점수는 1.01이며 수익률 자료는 수집 대상이 아닙니다.", "순위 점수는 1.01이며 수익률 자료는 수집 대상이 아닙니다."],
+    ["순위 점수는 수익률이 아니며 같은 기준일 199종목 중 1위입니다.", "같은 기준일 199종목 중 1위입니다."],
+    ["과거 12일 수익률은 -1.25%였으나 미래 수익을 보장하지 않습니다.", "과거 12일 수익률은 -1.25%였습니다."],
+    ["투자 권유가 아니며 기사 본문은 수집하지 않았습니다.", "기사 본문은 수집하지 않았습니다."],
+    ["순위 점수는 1.01이며 미래 수익을 보장하지 않습니다.", "순위 점수는 1.01입니다."],
+    ["특별한 기준으로 분석했다며 미래 수익을 보장하지 않습니다.", "특별한 기준으로 분석했다며 미래 수익을 보장하지 않습니다."],
+  ])("preserves information clauses when stripping boilerplate: %s", (value, expected) => {
+    expect(withoutRankScoreDisclaimer(value)).toBe(expected);
+  });
+  it.each(["순위 점수는 수익률·확률이 아닙니다.", "해당 점수는 기대수익률이나 상승 확률을 의미하지 않습니다.",
+    "순위 점수는 수익률이나 상승 확률을 보장하지 않습니다.", "투자 권유가 아닙니다.", "과거 통계이며 예측을 보장하지 않습니다."])("removes standalone boilerplate: %s", value => {
+    expect(withoutRankScoreDisclaimer(value)).toBe("");
+  });
   it("excludes missing stock/article/narrative identities and preserves absent numeric facts as null", () => {
     const adapted = adaptBriefing({ stocks: [
       { code: "005930", name: "삼성전자", rank: 1, news: { articles: [

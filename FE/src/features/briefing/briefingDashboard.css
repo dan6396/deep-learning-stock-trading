@@ -1,15 +1,21 @@
 @layer components {
-  .briefing-top-five { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+  .briefing-top-five { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
   .briefing-top-five > li {
     display: grid;
-    grid-template-columns: minmax(160px, 1fr) minmax(210px, 1.3fr) minmax(110px, .8fr);
-    gap: 4px;
-    padding: 4px 8px;
+    grid-template-columns: minmax(180px, 1.3fr) minmax(140px, 1.1fr) 124px minmax(140px, 1fr);
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
     border: 1px solid var(--ds-line);
-    border-radius: 10px;
+    border-radius: 12px;
+    background: var(--ds-surface);
     min-width: 0;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .briefing-top-five > li[data-selected="true"] { border-color: var(--ds-link); }
+  .briefing-top-five > li[data-selected="true"] {
+    border-color: var(--ds-link);
+    box-shadow: 0 0 0 1px var(--ds-link);
+  }
   .briefing-stock-evidence {
     grid-column: 1 / -1;
     display: flex;
@@ -39,23 +45,159 @@
     .briefing-stock-evidence .briefing-stock-details-grid { grid-template-columns: minmax(0, 1fr); }
   }
   .briefing-top-stock { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .briefing-top-rank { font-size: 20px; font-weight: 700; color: var(--ds-fg-2); }
+  .briefing-top-rank { font-size: 18px; font-weight: 700; color: var(--ds-fg-2); font-variant-numeric: tabular-nums; }
   .briefing-top-stock .briefing-stock-button { flex: 1; min-width: 0; min-height: 44px; text-align: left; overflow-wrap: anywhere; }
-  .briefing-top-stock .briefing-stock-button strong { display: block; font-size: 16px; }
-  .briefing-top-prediction, .briefing-top-price { display: flex; flex-direction: column; gap: 4px; }
+  .briefing-top-stock .briefing-stock-button strong { display: block; font-size: var(--ds-text-md); font-weight: 700; color: var(--ds-fg); }
+  .briefing-top-stock .briefing-stock-button small { color: var(--ds-subtle); font-size: var(--ds-text-xs); }
+
+  /* 현재가 & 오늘 등락률 (가장 강조) */
+  .briefing-top-price { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .briefing-top-price > span { color: var(--ds-subtle); font-size: var(--ds-text-xs); }
+  .briefing-top-price-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .briefing-top-price-value {
+    font-size: var(--ds-text-lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ds-fg);
+    letter-spacing: -0.4px;
+  }
+  .briefing-top-change {
+    font-size: var(--ds-text-sm);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .briefing-top-change.is-rise { color: var(--ds-rise); }
+  .briefing-top-change.is-fall { color: var(--ds-fall); }
+  .briefing-top-change.is-flat { color: var(--ds-fg-2); }
+  .briefing-top-price small { color: var(--ds-subtle); font-size: var(--ds-text-xs); }
+
+  /* 작은 추세선 (Sparkline) */
+  .briefing-top-sparkline-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    height: 36px;
+  }
+  .briefing-top-sparkline-cell:empty {
+    display: none;
+  }
+  .briefing-stock-source-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ds-text-xs);
+    color: var(--ds-subtle);
+    margin-bottom: var(--ds-space-2);
+  }
+  .briefing-sparkline-wrap {
+    width: 120px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .briefing-sparkline {
+    width: 120px;
+    height: 32px;
+    overflow: visible;
+  }
+  .briefing-sparkline-placeholder {
+    width: 120px;
+    height: 32px;
+    border-radius: 4px;
+    background: transparent;
+  }
+
+  /* 순위 점수 (비중 축소, 중립 막대) */
+  .briefing-top-prediction { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .briefing-top-prediction > span { color: var(--ds-subtle); font-size: var(--ds-text-xs); }
+  .briefing-top-score-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .briefing-top-score-value {
+    font-size: var(--ds-text-sm);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ds-fg-2);
+  }
   .briefing-top-prediction > strong {
-    font-size: 20px;
-    letter-spacing: -.5px;
+    font-size: var(--ds-text-sm);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ds-fg-2);
   }
-  .briefing-top-price > strong {
-    font-size: 15px;
+  .briefing-top-score-bar {
+    display: inline-block;
+    width: 44px;
+    height: 3px;
+    background: var(--ds-line);
+    border-radius: 2px;
+    overflow: hidden;
+    vertical-align: middle;
   }
-  .briefing-top-five small, .briefing-top-five .briefing-top-price > span, .briefing-top-five .briefing-top-prediction > span { color: var(--ds-fg-2); font-size: 12px; }
+  .briefing-top-score-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--ds-subtle);
+    border-radius: 2px;
+  }
+  .briefing-top-prediction small { color: var(--ds-subtle); font-size: var(--ds-text-xs); }
+
+  /* 근거 상자 테두리/배경 축소 (카드 중첩 제거) */
+  .briefing-stock-summary-box {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--ds-space-1) 0;
+  }
+  .briefing-stock-summary-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .briefing-stock-summary-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ds-fg);
+    margin: 0;
+  }
+
+  /* 칩을 테두리 없는 라벨/텍스트 링크 형태로 단순화 */
+  .briefing-stock-summary-meta-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .briefing-stock-meta-chip {
+    font: inherit;
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--ds-text-xs);
+    font-weight: 500;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--ds-fg-2);
+    cursor: default;
+  }
+  .briefing-stock-meta-chip:not(:last-child)::after {
+    content: "·";
+    margin-left: 6px;
+    color: var(--ds-subtle);
+  }
+  .briefing-stock-meta-chip:hover {
+    color: var(--ds-fg);
+  }
+
+  .briefing-top-five small { color: var(--ds-subtle); font-size: var(--ds-text-xs); }
   .briefing-related-news { grid-column: 1 / -1; min-width: 0; border-top: 1px solid var(--ds-line); padding-top: 3px; }
   .briefing-related-news h3 { font-size: 12px; margin: 0 0 3px; }
   .briefing-related-news ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
   .briefing-dashboard .briefing-related-news a { color: var(--ds-link); overflow-wrap: anywhere; line-height: 1.5; min-height: 24px; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .briefing-related-news small { display: block; margin-left: 0; margin-top: 2px; color: var(--ds-fg-2); font-size: var(--ds-text-xs); }
+  .briefing-related-news small { display: block; margin-left: 0; margin-top: 2px; color: var(--ds-subtle); font-size: var(--ds-text-xs); }
   .briefing-related-news p { margin: 0; font-size: 12px; }
   .briefing-related-news details { margin-top: 4px; }
   .briefing-related-news summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 32px; font-size: 12px; color: var(--ds-fg-2); cursor: pointer; user-select: none; }
@@ -67,8 +209,32 @@
   @media (prefers-reduced-motion: reduce) {
     .briefing-related-news summary svg { transition: none; }
   }
-  @media (max-width: 1280px) { .briefing-top-five > li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .briefing-top-stock { grid-column: 1 / -1; } }
-  @media (max-width: 480px) { .briefing-top-five > li { padding: 12px; gap: 12px 8px; } .briefing-top-prediction > strong { font-size: 24px; } }
+
+  /* 반응형 분기점 (데스크톱 1440px -> 1280px -> 768px -> 480px / 375px 모바일) */
+  @media (max-width: 1280px) {
+    .briefing-top-five > li {
+      grid-template-columns: minmax(180px, 1.2fr) minmax(140px, 1fr) 124px;
+    }
+    .briefing-top-prediction { grid-column: 1 / -1; }
+  }
+  @media (max-width: 768px) {
+    .briefing-top-five > li {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px 8px;
+    }
+    .briefing-top-stock { grid-column: 1 / -1; }
+    .briefing-top-sparkline-cell { grid-column: 1 / -1; justify-content: flex-start; height: auto; min-height: 0; }
+    .briefing-top-sparkline-cell:empty { display: none; margin: 0; height: 0; }
+  }
+  @media (max-width: 480px) {
+    .briefing-top-five > li {
+      grid-template-columns: 1fr;
+      padding: 10px 12px;
+      gap: 10px;
+    }
+    .briefing-top-prediction > strong { font-size: var(--ds-text-sm); }
+  }
+
   .ds-main-briefing .connection-notice { margin-bottom: 10px; border-radius: 10px; padding: 0 12px; }
   .ds-main-briefing .connection-notice-heading { min-height: 32px; }
   .briefing-dashboard { font-size: 13px; line-height: 1.5; }
@@ -84,6 +250,34 @@
     padding: 10px 12px;
   }
   .briefing-dashboard h2 { font-size: 18px; line-height: 1.35; }
+
+  /* 툴팁 말풍선 스타일: 375px 화면 밖 탈출 방지(right: 0, min(280px, calc(100vw - 32px))) */
+  .briefing-dashboard .briefing-section-heading > span {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .briefing-dashboard .briefing-section-heading #rank-score-help[role="tooltip"] {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: auto;
+    z-index: 20;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 32px));
+    padding: 8px 12px;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    font-size: var(--ds-text-xs);
+    line-height: 1.5;
+    color: var(--ds-fg);
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
   .briefing-summary-strip { display: grid; grid-template-columns: 1.12fr 1fr 1fr; background: var(--ds-surface); border-radius: 16px; padding: 14px 0; }
   .briefing-summary-strip > article { min-width: 0; padding: 0 14px; }
   .briefing-summary-strip > article + article { border-left: 1px solid var(--ds-line); }

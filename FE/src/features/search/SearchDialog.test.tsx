@@ -31,6 +31,7 @@ describe("global whole-rank search", () => {
     expect(screen.getByText(/1위 · 순위 점수 1.6015/)).toBeInTheDocument();
     expect(screen.getByText(/순위 없음/)).toBeInTheDocument();
     expect(screen.queryByText(/모델 예측 —/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole("dialog")).getByText("순위는 투자 추천이 아닙니다.")).toBeVisible();
     expectReadableUserText(screen.getByRole("dialog"));
   });
   it("opens a labelled modal with focused input, searches all 199 instead of candidates", async () => {

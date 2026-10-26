@@ -64,6 +64,19 @@ function mount(entries = ["/next"], index = entries.length - 1) {
 }
 
 describe("briefing with raw model rank fixtures", () => {
+  it("opens score help with keyboard focus and closes it with Escape or blur", async () => {
+    mockBackend(); mount();
+    await screen.findByRole("heading", { name: "종목 A" });
+    const help = screen.getByRole("button", { name: "순위 점수 도움말" });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    fireEvent.focus(help);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("순위 점수는 수익률·상승 확률이 아닙니다");
+    expect(help).toHaveAttribute("aria-describedby", screen.getByRole("tooltip").id);
+    fireEvent.keyDown(help, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    fireEvent.focus(help); fireEvent.blur(help);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
   it("uses a neutral model-position badge in the detail panel", async () => {
     mockBackend(); mount();
     await screen.findByRole("heading", { name: "종목 A" });
@@ -361,7 +374,7 @@ describe("BriefingPage comprehensive briefing integration", () => {
     });
 
     mount();
-    await screen.findByText("미국장 관측일 2026-10-06 · 지표별 기준 시각 참고");
+    await screen.findByText("미국장 2026-10-06 기준");
     expect(screen.getByText("시장 개황 통합 테스트 내용")).toBeInTheDocument();
     expect(screen.getByText("통합 면책 조항")).toBeInTheDocument();
   });

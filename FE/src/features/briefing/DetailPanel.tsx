@@ -40,7 +40,7 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
     {detail?.rank != null && detail.poolSize != null ? (
       <div className="briefing-detail-rank"><span>모델 순위 {formatNumber(detail.rank)}위 / {formatNumber(detail.poolSize)}</span></div>
     ) : (
-      <p className="briefing-template-summary">{detail ? evidenceSummary(detail) : "확인 가능한 분석 근거가 없습니다."}</p>
+      <p className="briefing-template-summary">{detail ? evidenceSummary(detail) : "분석 근거가 없습니다."}</p>
     )}
     <div className="briefing-detail-actions"><WatchToggle code={code} name={detail?.name} showLabel /><Link to={paths.stock(code)}>전체 리포트 열기<ArrowUpRight aria-hidden="true" size={14} /></Link></div>
     <BriefingChart code={code} />
@@ -53,6 +53,5 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
     {modelOnly && detail && <><p className="briefing-footnote">{predictionPeriod(detail, nextSession)} · 분석 기준일 {formatDate(detail.baseDate)}</p><RelatedArticles candidate={detail} /></>}
     {!modelOnly && <><h3>대표 기사</h3>{detail?.news.length ? <ul className="briefing-news">{detail.news.slice(0, 3).map((news, index) => { const url = safeArticleUrl(news.url); return <li key={`${news.title}-${index}`}><strong>{url ? <a href={url} target="_blank" rel="noopener noreferrer">{news.title ?? "제목 미확인"}</a> : news.title ?? "제목 미확인"}</strong><small>{news.source ?? "출처 미확인"} · {formatDate(news.publishedAt)}</small></li>; })}</ul> : <p className="briefing-muted briefing-footnote">{detail?.newsCollected ? "수집된 기사 0건" : "뉴스 수집 여부 미확인"}</p>}</>}
     {analysisMeta && <SourceMeta source={analysisMeta.source} asOf={analysisMeta.asOf} label="분석 저장 시각" />}
-    <p className="briefing-muted briefing-footnote">예측과 가격 이력은 실제 투자 성과가 아닙니다.</p>
   </aside>;
 }
