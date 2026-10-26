@@ -14,6 +14,8 @@ export type BriefingNarrativeCardProps = {
   generateError: string | null;
   onGenerate: () => void;
   onCitationClick: (citationId: string) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 };
 
 export function BriefingNarrativeCard({
@@ -25,7 +27,15 @@ export function BriefingNarrativeCard({
   generateError,
   onGenerate,
   onCitationClick,
+  isExpanded: controlledExpanded,
+  onToggleExpand,
 }: BriefingNarrativeCardProps) {
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const toggleExpand = () => {
+    if (onToggleExpand) onToggleExpand();
+    else setInternalExpanded(v => !v);
+  };
   const admin = useAdminAccess();
   const analysisReasonId = useId();
   const isLlm = narrative.status === "llm";
@@ -99,7 +109,7 @@ export function BriefingNarrativeCard({
   );
 
   return (
-    <article className="briefing-narrative-card" aria-labelledby="narrative-heading">
+    <article id="cite-narrative" className={`briefing-narrative-card ${isExpanded ? "is-expanded" : "is-collapsed"}`} aria-labelledby="narrative-heading">
       <div className="briefing-narrative-header">
         <div className="briefing-narrative-title-group">
           <div className="briefing-narrative-title-row">
@@ -176,22 +186,24 @@ export function BriefingNarrativeCard({
 
       <div className="briefing-narrative-content">
         {overview && (
-          <div className="briefing-narrative-block">
+          <div className="briefing-narrative-block" id="cite-overview">
             <div className="briefing-narrative-subtitle-row">
               <h3 className="briefing-narrative-subtitle">시장 개황 및 흐름</h3>
             </div>
-            <p className="briefing-narrative-text">{overview}</p>
+            <p className={`briefing-narrative-text ${!isExpanded ? "is-clamped" : ""}`}>{overview}</p>
           </div>
         )}
 
-        {marketNote && (
-          <div className="briefing-narrative-block">
-            <div className="briefing-narrative-subtitle-row">
-              <h3 className="briefing-narrative-subtitle">시장 지표 요약</h3>
+        <div className="briefing-narrative-collapsible" hidden={!isExpanded}>
+          {marketNote && (
+            <div className="briefing-narrative-block">
+              <div className="briefing-narrative-subtitle-row">
+                <h3 className="briefing-narrative-subtitle">시장 지표 요약</h3>
+              </div>
+              <p className="briefing-narrative-text">{marketNote}</p>
             </div>
-            <p className="briefing-narrative-text">{marketNote}</p>
-          </div>
-        )}
+          )}
+        </div>
 
         {validCitations.length > 0 && (
           <div className="briefing-narrative-citations" aria-label="브리핑 인용 근거">
@@ -227,6 +239,18 @@ export function BriefingNarrativeCard({
             </div>
           </div>
         )}
+
+        <div className="briefing-narrative-toggle-row">
+          <button
+            type="button"
+            className="briefing-narrative-toggle-btn"
+            onClick={toggleExpand}
+            aria-expanded={isExpanded}
+            data-testid="narrative-toggle-btn"
+          >
+            {isExpanded ? "요약 접기" : "요약 더 보기"}
+          </button>
+        </div>
       </div>
     </article>
   );

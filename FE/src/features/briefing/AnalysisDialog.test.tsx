@@ -26,6 +26,12 @@ function mount(running = false, status = running ? "running" : "idle", initialEn
   return fetcher;
 }
 describe("header analysis dialog", () => {
+  it.each(["idle", "running"] as const)("keeps an accessible trigger name when its mobile text is hidden (%s)", async status => {
+    mount(false, status);
+    const trigger = await screen.findByRole("button", { name: status === "running" ? "분석 진행 중" : "AI 분석 실행" });
+    trigger.querySelector("span")!.style.display = "none";
+    expect(trigger).toHaveAccessibleName(status === "running" ? "분석 진행 중" : "AI 분석 실행");
+  });
   it("automatically refreshes briefing and rank on the focused original rank tab after the dialog closes", async () => {
     let completed = false;
     const fetcher = vi.fn<typeof fetch>(async path => {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
-import { BriefingPage, INTRO_STORAGE_KEY, useBriefingGenerationPolling } from "./BriefingPage";
+import { BriefingPage, INTRO_STORAGE_KEY, useBriefingGenerationPolling, formatShortSessionDate } from "./BriefingPage";
 import { queryKeys } from "../../shared/api/queries";
 import { invalidateAnalysisResults } from "../../shared/api/analysis";
 import { backendStatusBody, deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
@@ -14,6 +14,15 @@ import { BRAND_NAME } from "../../shared/lib/brand";
 import { chartBundle } from "../../test/fixtures/reportFixtures";
 
 const clients: QueryClient[] = [];
+it("formats Korean session weekdays independently of browser timezone and rejects invalid days", () => {
+  const localDay = vi.spyOn(Date.prototype, "getDay").mockReturnValue(0);
+  try {
+    expect(formatShortSessionDate("2026-10-26")).toBe("10/26(월)");
+    expect(formatShortSessionDate("2026-10-27")).toBe("10/27(화)");
+    expect(formatShortSessionDate("2026-02-30")).toBeNull();
+    expect(localDay).not.toHaveBeenCalled();
+  } finally { localDay.mockRestore(); }
+});
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
 function row(code: string, name: string, prediction: unknown = 0.01) {
   const value = pipelineRow({ ticker: code, ensemble_pred_return: prediction, pred_rank: code === "005930" ? 1 : 2 });
@@ -64,6 +73,17 @@ function mount(entries = ["/next"], index = entries.length - 1) {
 }
 
 describe("briefing with raw model rank fixtures", () => {
+  it("does not infer a shared target session from mixed candidate dates without model metadata", async () => {
+    const mixedRows = rows();
+    Object.assign(mixedRows[0].input_row, { prediction_base_date: "2026-10-07" });
+    Object.assign(mixedRows[1].input_row, { prediction_base_date: "2026-10-08" });
+    mockBackend(path => path === "/api/rank" || path === "/api/candidates" ? Promise.resolve(jsonResponse(mixedRows))
+      : path === "/api/briefing" ? Promise.resolve(jsonResponse({ version: 1, status: "ready", model: null, macro: { asOf: null, indicators: [] }, stocks: [], narrative: { status: "template", overview: "혼합 기준일", stocks: [], citations: [] }, data_meta: { source: "cache", asOf: null } }))
+      : path.includes("next-session") ? Promise.resolve(jsonResponse({ nextSession: "2026-10-09" })) : undefined);
+    mount(); await screen.findByRole("heading", { name: "종목 A" });
+    expect(screen.getByRole("heading", { name: "오늘의 브리핑" })).toBeInTheDocument();
+    expect(screen.queryByTestId("briefing-title-meta")).not.toBeInTheDocument();
+  });
   it("opens score help with keyboard focus and closes it with Escape or blur", async () => {
     mockBackend(); mount();
     await screen.findByRole("heading", { name: "종목 A" });
@@ -520,6 +540,18 @@ describe("BriefingPage comprehensive briefing integration", () => {
         }));
       }
     }).not.toThrow();
+  });
+
+  it("displays target session in title and shows asOf metadata", async () => {
+    mockBackend(path => {
+      if (path.includes("/api/korean-market/next-session")) {
+        return Promise.resolve(jsonResponse({ baseDate: "2026-10-07", nextSession: "2026-10-08" }));
+      }
+      return undefined;
+    });
+    mount();
+    await screen.findByRole("heading", { name: /10\/08\(목\) 대상 브리핑/ });
+    expect(screen.getByTestId("briefing-title-meta")).toHaveTextContent("기준일 10/07 · 대상 10/08(목)");
   });
 });
 

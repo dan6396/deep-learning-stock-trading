@@ -77,14 +77,15 @@ export function HistoryPage() {
     && resultTime >= Date.parse(marker.startedAt ?? "") && resultTime <= Date.parse(marker.finishedAt ?? "");
   const pending = analysis.isFetching || candidates.isFetching;
   async function refresh() { await Promise.all([analysis.refetch(), candidates.refetch(), backend.refetch()]); }
+  const isSimpleStatus = run?.status === "idle" || (!run && !analysis.isPending && !analysis.isError);
   return <div className="history-page">
     <div className="history-title"><div><p className="history-eyebrow">분석과 성과</p><h1>분석 기록</h1><p>최근 분석과 실제 가격으로 계산한 성과를 확인하세요.</p></div><button type="button" onClick={() => void refresh()} disabled={pending}><RefreshCw aria-hidden="true" size={16} />{pending ? "조회 중" : "다시 조회"}</button></div>
     <section className="history-summary" aria-labelledby="history-summary-heading"><ShieldCheck aria-hidden="true" size={25} /><div><h2 id="history-summary-heading">실제 가격으로 계산한 성과</h2><p>분석 당시의 종목과 다음 거래일 가격을 비교합니다. 공식 기록은 분석 시각과 가격 자료를 검증한 뒤 집계합니다.</p></div></section>
     <div className="history-grid">
-      <section className="history-card" aria-labelledby="latest-run-heading"><div className="history-section-title"><Clock3 aria-hidden="true" size={20} /><h2 id="latest-run-heading">최신 실행 상태</h2></div>
+      <section className={`history-card ${isSimpleStatus ? "is-compact-status" : ""}`} aria-labelledby="latest-run-heading"><div className="history-section-title"><Clock3 aria-hidden="true" size={20} /><h2 id="latest-run-heading">최신 실행 상태</h2>{isSimpleStatus && <span className="history-status-divider" aria-hidden="true">·</span>}{isSimpleStatus && <strong className="history-status" data-testid="history-status">{run ? statusLabels[run.status] : "상태 미확인"}</strong>}</div>
         {analysis.isPending && <p role="status">실행 상태를 조회하고 있습니다.</p>}
         {analysis.isError && <p role="status" className="history-notice">{run ? "이전 조회 상태 · 최신 상태 갱신 실패" : "실행 상태 조회 실패 · 다시 조회해 주세요."}</p>}
-        <strong className="history-status" data-testid="history-status">{run ? modelOnlyRun ? "모델 실행 완료" : statusLabels[run.status] : "상태 미확인"}</strong>
+        {!isSimpleStatus && <strong className="history-status" data-testid="history-status">{run ? modelOnlyRun ? "모델 실행 완료" : statusLabels[run.status] : "상태 미확인"}</strong>}
         {run?.status === "running" && <p role="status">진행 중인 동안 5초마다 상태를 확인합니다.</p>}
         {run?.status === "failed" && <p className="history-notice">실행이 완료되지 않았습니다. 현재 저장된 분석 결과와 별개로 확인하세요.</p>}
         <p className="history-muted">{runMeta(run?.kind, analysis.data?.asOf)}</p>

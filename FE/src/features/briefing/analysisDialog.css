@@ -7,5 +7,5 @@
   .analysis-dialog .analysis-control { margin: 0; border: 0; padding: 0; }
   .analysis-dialog .analysis-control-main { flex-direction: column; align-items: stretch; gap: 12px; }
   .analysis-dialog .analysis-start-button { align-self: flex-end; }
-  @media (max-width: 768px) { .ds-root .ds-brand { font-size: 13px; gap: 6px; }.ds-root .ds-header { gap: 4px 6px; }.ds-root .ds-header-actions { gap: 4px; }.ds-root .ds-theme-button { width: 32px; height: 36px; }.ds-analysis-trigger { padding: 8px; gap: 4px; font-size: 12px; }.analysis-dialog { padding: 18px 16px; } }
+  @media (max-width: 768px) { .ds-root .ds-brand { font-size: 13px; gap: 6px; }.ds-root .ds-header { gap: 4px 6px; }.ds-root .ds-header-actions { gap: 4px; }.ds-analysis-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; justify-content: center; border-radius: 12px; font-size: 12px; }.ds-analysis-trigger > span { display: none; }.analysis-dialog { padding: 18px 16px; } }
 }

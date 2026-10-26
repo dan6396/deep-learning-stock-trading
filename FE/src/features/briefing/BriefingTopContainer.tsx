@@ -52,6 +52,7 @@ export function BriefingTopContainer({
   onGenerateNarrative,
   renderTopFive,
 }: BriefingTopContainerProps) {
+  const [isNarrativeExpanded, setIsNarrativeExpanded] = useState(false);
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(
     () => new Set()
   );
@@ -75,6 +76,11 @@ export function BriefingTopContainer({
         return next;
       });
     }
+    const targetId = citationDomId(citationId);
+    const targetEl = document.getElementById(targetId);
+    if (citationId === "narrative" || citationId === "overview" || targetEl?.closest(".briefing-narrative-card")) {
+      setIsNarrativeExpanded(true);
+    }
     // Allow React to re-render the expanded section before scrolling
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -95,6 +101,8 @@ export function BriefingTopContainer({
         generateError={generateError}
         onGenerate={onGenerateNarrative}
         onCitationClick={handleCitationClick}
+        isExpanded={isNarrativeExpanded}
+        onToggleExpand={() => setIsNarrativeExpanded(v => !v)}
       />
 
       {/* 2. TOP5 행 안에 종목별 근거를 함께 렌더링 */}

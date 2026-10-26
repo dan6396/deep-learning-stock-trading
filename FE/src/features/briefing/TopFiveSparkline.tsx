@@ -107,6 +107,10 @@ export function TopFiveSparkline({
       className="briefing-sparkline-wrap"
       title={`최근 1개월 종가 추세${note}: 시작 대비 ${changeRateLabel}`}
     >
+      <div className="briefing-sparkline-meta" aria-hidden="true">
+        <span className="briefing-sparkline-label">1개월</span>
+        <span className={`briefing-sparkline-change is-${trendDir}`}>{changeRateLabel}</span>
+      </div>
       <svg
         className={`briefing-sparkline is-${trendDir}`}
         width={width}

@@ -187,4 +187,21 @@ describe("TopFiveSparkline", () => {
     expect(moveCount).toBeGreaterThanOrEqual(2);
     client.clear();
   });
+
+  it("renders 1-month label and rate of change beside sparkline", async () => {
+    const client = new QueryClient();
+    const bundle = chartBundle("005930", "live");
+    setChartPrices(bundle, [50000, 52000, 55000]);
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(bundle)));
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <TopFiveSparkline code="005930" />
+      </QueryClientProvider>
+    );
+
+    await screen.findByRole("img", { name: /최근 1개월 종가 추세/ });
+    expect(container.querySelector(".briefing-sparkline-label")).toHaveTextContent("1개월");
+    expect(container.querySelector(".briefing-sparkline-change")).toHaveTextContent("+10.0%");
+    client.clear();
+  });
 });

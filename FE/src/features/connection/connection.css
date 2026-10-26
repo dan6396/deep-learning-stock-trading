@@ -1,4 +1,4 @@
-﻿@layer components {
+@layer components {
   .connection-notice { margin-bottom: 16px; border: 1px solid var(--ds-line); border-radius: 14px; background: var(--ds-surface); color: var(--ds-fg-2); padding: 0 16px; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
   .connection-notice-heading { display: flex; align-items: center; gap: 8px; color: var(--ds-fg); }
   .connection-notice-body button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 10px; margin-bottom: 8px; border-radius: 9px; border: 1px solid var(--ds-line); color: var(--ds-fg); background: var(--ds-surface); cursor: pointer; }
@@ -27,5 +27,11 @@
   .connection-notice-body { position: absolute; z-index: 50; right: 0; top: 46px; width: min(420px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--ds-line); border-radius: 12px; background: var(--ds-surface); box-shadow: 0 12px 36px #0003; }
   .connection-notice-body > strong { display: block; margin-bottom: 12px; color: var(--ds-fg); }
   .connection-notice-body button { margin-top: 8px; }
-  @media (max-width: 480px) { .connection-notice { padding: 0; } .connection-notice .connection-notice-heading { padding: 4px; } .connection-notice-body { position: fixed; top: 68px; right: 16px; } }
+  @media (max-width: 768px) {
+    .connection-notice { width: 44px; height: 44px; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
+    .connection-notice .connection-notice-heading { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; border-radius: 12px; }
+    .connection-notice-heading > span:not(.connection-dot) { display: none; }
+    .connection-notice-heading .connection-dot { width: 10px; height: 10px; }
+  }
+  @media (max-width: 480px) { .connection-notice { padding: 0; } .connection-notice-body { position: fixed; top: 68px; right: 16px; } }
 }

@@ -33,7 +33,8 @@ describe("stock report using actual fetch fixtures", () => {
     backend(path => path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : path === "/api/backend/status" ? Promise.resolve(jsonResponse(backendStatusBody({ state: "not_produced" }))) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(row)) : undefined);
     mount(); await screen.findByRole("heading", { name: "순위 종목" });
     expect(screen.queryByText("뉴스 보정 미실행")).not.toBeInTheDocument();
-    expect(screen.getByTestId("report-prediction")).toHaveTextContent("1.6015");
+    expect(screen.getByTestId("report-prediction")).toHaveTextContent("1.60");
+    expect(screen.getByTestId("report-prediction")).toHaveAttribute("title", "1.601514");
     expect(screen.getByRole("heading", { name: "모델 순위" })).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[data-report-signal=model]')).toHaveTextContent("모델 상위권"));
     expect(document.querySelector('[data-report-signal=model] [data-signal]')).toHaveAttribute("data-signal", "neutral");
@@ -138,5 +139,22 @@ describe("stock report using actual fetch fixtures", () => {
   it("keeps previous analysis/quote data with background failure warnings", async () => {
     let failure = false; backend(path => failure && (path.includes("stock-analysis") || path.includes("quote")) ? Promise.resolve(new Response("error", { status: 502 })) : undefined); mount(); await screen.findByRole("heading", { name: "종목 A" }); await waitFor(() => expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원"));
     failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" })); await screen.findByText("이전 조회 결과 · 분석 갱신 실패"); await screen.findByText("이전 조회 결과 · 시세 갱신 실패"); expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원");
+  });
+  it("displays previous close change prefix and follows the required report section order", async () => {
+    backend(); mount();
+    await screen.findByRole("heading", { name: "종목 A" });
+    expect(screen.getByText(/전일 대비/)).toBeInTheDocument();
+
+    const report = document.querySelector(".stock-report")!;
+    const priceCard = report.querySelector(".report-price-card")!;
+    const chart = report.querySelector(".report-chart")!;
+    const modelCard = report.querySelector(".report-model-card")!;
+    const evidenceGroup = report.querySelector(".report-evidence-group")!;
+    const disclaimer = report.querySelector(".report-disclaimer")!;
+
+    expect(priceCard.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(chart.compareDocumentPosition(modelCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(modelCard.compareDocumentPosition(evidenceGroup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(evidenceGroup.compareDocumentPosition(disclaimer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

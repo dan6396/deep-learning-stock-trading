@@ -194,6 +194,7 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence 
           <strong className="briefing-top-price-value">{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong>
           {hasChangeRate && (
             <span className={`briefing-top-change is-${changeDir}`}>
+              <small className="briefing-top-change-prefix">전일 대비 </small>
               {formatPercent(roundedChangeRate, "percent", 2)}
             </span>
           )}

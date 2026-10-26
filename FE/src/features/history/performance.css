@@ -6,7 +6,7 @@
 .performance-summaries { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 20px; }
 .performance-summaries article { padding: 16px; border: 1px solid var(--ds-line); border-radius: 14px; background: var(--ds-surface-2); }
 .performance-summaries h3 { font-size: 14px; font-weight: 600; }
-.performance-summaries strong { display: block; font-size: 27px; margin: 10px 0 6px; font-variant-numeric: tabular-nums; }
+.performance-summaries strong { display: block; font-size: 30px; font-weight: 800; margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
 .performance-summaries span, .performance-summaries p { display: block; font-size: 12px; color: var(--ds-fg-2); }
 .performance-card .performance-summaries p { margin-top: var(--ds-space-2); }
 .performance-card .performance-reason { padding: 12px 14px; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-fg-2); font-size: var(--ds-text-sm); margin-top: var(--ds-space-3); overflow-wrap: anywhere; }

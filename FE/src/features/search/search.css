@@ -25,5 +25,5 @@
   .search-notice { border-radius:12px; padding:12px; background:var(--ds-warn-soft); font-size:13px; line-height:1.7; margin:0; }
   .search-retry { background:var(--ds-surface-2); color:var(--ds-fg); border:1px solid var(--ds-line); border-radius:8px; min-height:32px; margin-left:8px; cursor:pointer; }
   @media (max-width: 768px) { .search-trigger-group > kbd { display:none; }.search-dialog { padding:20px 16px; }.stock-search-results a { padding:4px; } }
-  @media (max-width: 768px) { .search-trigger-group { width:32px; }.search-trigger { padding:6px; }.search-trigger > span { display:none; } }
+  @media (max-width: 768px) { .search-trigger-group { width:44px; height:44px; min-width:44px; min-height:44px; justify-content:center; border:0; background:var(--ds-surface-2); border-radius:12px; padding:0; } .search-trigger { width:44px; height:44px; min-width:44px; min-height:44px; padding:0; justify-content:center; border-radius:12px; } .search-trigger > span { display:none; } }
 }

@@ -27,5 +27,21 @@
   .insight-scroll th, .insight-scroll td { padding: 8px; border-bottom: 1px solid var(--ds-line); }
   .insight-news-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
   .insight-news-chips a { color: var(--ds-fg); background: var(--ds-surface-2); padding: 4px 10px; border-radius: 8px; }
+
+  /* Collapsible long text for evidence explanations */
+  .insight-expandable-note { margin-top: 8px; }
+  .insight-details { margin-top: 4px; }
+  .insight-details summary {
+    cursor: pointer;
+    color: var(--ds-link);
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+  .insight-details summary:hover { text-decoration: underline; }
+  .insight-details[open] summary { margin-bottom: 4px; }
+
   @media (max-width: 768px) { .insight-features { grid-template-columns: 1fr; } .insight-lookback-value { flex-direction: column; align-items: flex-end; gap: 0; } }
 }

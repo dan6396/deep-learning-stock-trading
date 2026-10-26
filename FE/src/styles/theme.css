@@ -125,9 +125,13 @@ html:has(.ds-root),body:has(.ds-root),#root:has(.ds-root) { background: var(--ds
 .ds-footer nav { display: flex; gap: 18px; flex-shrink: 0; }
 .ds-footer a { color: var(--ds-fg-2); display: inline-flex; align-items: center; min-height: 32px; }
 @media (max-width: 768px) {
-  .ds-root .ds-header { flex-wrap: wrap; gap: 4px 12px; padding: 8px 16px 0; }
-  .ds-root .ds-header .ds-nav, .ds-root .ds-header nav { order: 3; width: 100%; min-height: 44px; gap: 0; }
-  .ds-root .ds-header .ds-nav a, .ds-root .ds-header nav a { flex: 1; padding: 0 8px; font-size: var(--ds-text-sm); }
+  .ds-root .ds-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0; min-height: auto; padding: 6px 12px 0; }
+  .ds-root .ds-header .ds-brand { order: 1; font-size: 13px; gap: 6px; min-height: 44px; max-width: calc(100% - 192px); overflow: hidden; }
+  .ds-root .ds-header .ds-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ds-root .ds-header .ds-header-actions { order: 1; margin-left: auto; gap: 4px; }
+  .ds-root .ds-header .ds-theme-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .ds-root .ds-header .ds-nav, .ds-root .ds-header nav { order: 2; width: 100%; min-height: 44px; gap: 0; border-top: 1px solid var(--ds-line); margin-top: 4px; }
+  .ds-root .ds-header .ds-nav a, .ds-root .ds-header nav a { flex: 1; min-height: 44px; padding: 0 4px; font-size: var(--ds-text-sm); justify-content: center; }
   .ds-root .ds-main:not(.ds-main-briefing) { padding: 20px 16px 36px; }
   .ds-footer { flex-direction: column; align-items: flex-start; padding: 20px 16px 28px; }
 }

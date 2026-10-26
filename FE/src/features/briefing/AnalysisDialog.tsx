@@ -64,5 +64,5 @@ export function AnalysisDialog() {
   function close(restore = true) { setOpen(false); if (restore) trigger.current?.focus(); }
   useEffect(() => { if (previousRoute.current !== route) { previousRoute.current = route; if (open) close(false); } }, [route, open]);
   if (!admin) return null;
-  return <><button ref={trigger} type="button" className="ds-analysis-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{running ? <LoaderCircle className="analysis-spinner" aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}<span>{running ? "분석 진행 중" : "AI 분석 실행"}</span></button>{open && <DialogContent close={close} running={running} />}</>;
+  return <><button ref={trigger} type="button" className="ds-analysis-trigger" aria-label={running ? "분석 진행 중" : "AI 분석 실행"} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{running ? <LoaderCircle className="analysis-spinner" aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}<span>{running ? "분석 진행 중" : "AI 분석 실행"}</span></button>{open && <DialogContent close={close} running={running} />}</>;
 }
