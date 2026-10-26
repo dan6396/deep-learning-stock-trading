@@ -1,6 +1,6 @@
 import type { PipelineOutputRow } from "../src/types/trading";
 import { safeArticleUrl } from "../src/shared/lib/articleUrl";
-import { readCompletedRank, validateModelRows } from "./pipelineResults";
+import { readCompletedRank, readPendingRank, validateModelRows } from "./pipelineResults";
 import { readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshness";
 import { getMarketMacro, MACRO_UNIVERSE, usMarketDate, type MarketMacro } from "./marketMacro";
 import { unavailableNight } from "./kisBriefing";
@@ -116,8 +116,9 @@ type BriefingDependencies = {
   composition?: typeof getBriefingComposition;
   snapshots?: ReturnType<typeof createCompletedResultsStore>;
 };
-type CaptureControl = { deadline: number; cancelled: boolean; marker: PipelineRunMarker | null };
+type CaptureControl = { deadline: number; cancelled: boolean; marker: PipelineRunMarker | null; staged?: PipelineRunMarker; rows?: PipelineOutputRow[] };
 export const COMPLETED_PREPARATION_TIMEOUT_MS = 1500;
+export const AUTO_NARRATIVE_TIMEOUT_MS = 30_000;
 
 function unavailableMarket(): MarketMacro {
   return { asOf: null, indicators: [...MACRO_UNIVERSE.map(row => ({ id: row.id, name: row.name, unit: row.unit,
@@ -141,7 +142,7 @@ export function createBriefingService({ rank = readCompletedRank, marker = readP
     const deadline = capture?.deadline ?? (generate ? Date.now() + 45_000 : Infinity);
     const preparationDeadline = generate ? Math.min(deadline, Date.now() + 9_000) : deadline;
     const kisDeadline = Date.now() + 1500;
-    const kisOptions = () => ({ backgroundKis: !generate, kisWaitMs: Math.max(0, kisDeadline - Date.now()) });
+    const kisOptions = () => ({ backgroundKis: !generate || Boolean(capture?.staged), kisWaitMs: Math.max(0, kisDeadline - Date.now()) });
     const environmentKey = completedResultsKey(env);
     const previous = (run: PipelineRunMarker | null): BriefingPayload | null => {
       // Capture runs before Python and must inspect the completed disk run, independent of the next run's memory state.
@@ -151,27 +152,27 @@ export function createBriefingService({ rank = readCompletedRank, marker = readP
     };
     const emptyMarket = (): MarketMacro => markets.get(environmentKey) ?? unavailableMarket();
     const within = <T>(promise: Promise<T>, budget: number, fallback: () => T) => generate || capture ? bounded(Promise.resolve(promise), budget, fallback) : Promise.resolve(promise).catch(fallback);
-    const before = await within(marker(env), preparationDeadline, () => null);
+    const before = capture?.staged ?? await within(marker(env), preparationDeadline, () => null);
     if (capture) {
       capture.marker = before;
       const saved = snapshots.get(env);
-      if (saved && sameCompletedRun(saved.marker, before)) return saved.briefing;
+      if (!capture.staged && saved && sameCompletedRun(saved.marker, before)) return saved.briefing;
       if (before?.status !== "completed" || before.mode !== "model_only") return saved?.briefing ?? emptyBriefing(env);
     }
     const retained = previous(before);
     if (retained) return retained;
-    const marketRequest = (capture ? Promise.resolve(emptyMarket()) : Promise.resolve().then(() => macro(env, kisOptions()))).then(value => { markets.set(environmentKey, value); return value; });
-    const [rows, market] = await Promise.all([within(Promise.resolve().then(() => rank(env)), preparationDeadline, () => []), within(marketRequest, preparationDeadline, emptyMarket)]);
-    const after = await within(marker(env), preparationDeadline, () => null);
+    const marketRequest = (capture && !capture.staged ? Promise.resolve(emptyMarket()) : Promise.resolve().then(() => macro(env, kisOptions()))).then(value => { markets.set(environmentKey, value); return value; });
+    const [rows, market] = await Promise.all([within(Promise.resolve().then(() => capture?.staged ? readPendingRank(capture.staged, env) : rank(env)), preparationDeadline, () => []), within(marketRequest, preparationDeadline, emptyMarket)]);
+    const after = capture?.staged ?? await within(marker(env), preparationDeadline, () => null);
     const concurrent = previous(after);
     if (concurrent) return concurrent;
     const unchanged = before && after && before.startedAt === after.startedAt && before.finishedAt === after.finishedAt && before.status === after.status && before.mode === after.mode
       && before.runId === after.runId && before.kind === after.kind;
     const input = buildBriefingInput(rows, unchanged ? after : null, market, now(), env);
     const compositionKey = briefingInputHash(input);
-    const compositionRequest = (capture ? Promise.resolve(buildBriefingComposition(input)) : Promise.resolve().then(() => composition(input, env, kisOptions()))).then(value => { compositions.set(environmentKey, { hash: compositionKey, value }); return value; });
+    const compositionRequest = (capture && !capture.staged ? Promise.resolve(buildBriefingComposition(input)) : Promise.resolve().then(() => composition(input, env, kisOptions()))).then(value => { compositions.set(environmentKey, { hash: compositionKey, value }); return value; });
     const [narrative, candidateComposition] = await Promise.all([
-      within(Promise.resolve().then(() => narratives.resolve(input, generate && input.model !== null, env, generate ? deadline - 50 : undefined)), deadline,
+      within(Promise.resolve().then(() => narratives.resolve(input, generate && input.model !== null, env, generate ? deadline - 50 : undefined, Boolean(capture?.staged))), deadline,
         () => templateNarrative(input, "generation_timeout", now())),
       within(compositionRequest, deadline, () => compositions.get(environmentKey)?.hash === compositionKey ? compositions.get(environmentKey)!.value : buildBriefingComposition(input)),
     ]);
@@ -189,6 +190,10 @@ export function createBriefingService({ rank = readCompletedRank, marker = readP
       disclaimer: "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
       data_meta: { source: "cache", asOf: input.model?.runStartedAt ?? market.asOf } };
     // Composition and narrative can finish after a new run begins. Do not publish that race.
+    if (capture?.staged) {
+      capture.rows = rows;
+      return payload;
+    }
     const finalMarker = await within(marker(env), deadline, () => null);
     const finalPrevious = previous(finalMarker);
     if (finalPrevious) return finalPrevious;
@@ -232,6 +237,14 @@ export const getBriefing = (env = process.env) => {
   return pending ? pending.then(result => ({ ...result.briefing, ...(result.previousRun ? { previousRun: result.previousRun } : {}) })) : defaultService()(false, env);
 };
 export const generateBriefingNarrative = (env = process.env) => defaultService()(true, env);
+
+/** Assemble privately while disk and public state remain running; the runner owns publication. */
+export async function prepareRunBriefing(marker: PipelineRunMarker, env = process.env) {
+  const control: CaptureControl = { deadline: Date.now() + AUTO_NARRATIVE_TIMEOUT_MS, cancelled: false, marker: null, staged: marker };
+  const briefing = await defaultService()(true, env, control);
+  if (briefing.narrative.fallbackReason) console.warn("[briefing] Automatic narrative fallback", { reason: briefing.narrative.fallbackReason });
+  return { rank: control.rows ?? [], briefing };
+}
 
 /** Refresh completed disk inputs without provider calls. Expired work can never publish later. */
 export function prepareCompletedResults(env = process.env): Promise<void> {

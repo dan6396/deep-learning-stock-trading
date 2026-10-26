@@ -525,9 +525,9 @@ describe("Gemini narrative generation and cache", () => {
     const failed = await store.resolve(data, true, env);
     expect(failed).toMatchObject({ status: "llm", macroStale: true, fallbackReason: "generation_failed", generatedAt: first.generatedAt });
     expect(await store.resolve(data, false, env)).toEqual(failed);
-    expect(await store.resolve(data, true, env)).toEqual(failed); expect(transport).toHaveBeenCalledTimes(2);
+    expect(await store.resolve(data, true, env)).toEqual({ ...failed, fallbackReason: "cooldown" }); expect(transport).toHaveBeenCalledTimes(2);
     const restarted = createNarrativeStore({ transport, now: () => now });
-    expect(await restarted.resolve(data, true, env)).toEqual(failed); expect(transport).toHaveBeenCalledTimes(2);
+    expect(await restarted.resolve(data, true, env)).toEqual({ ...failed, fallbackReason: "cooldown" }); expect(transport).toHaveBeenCalledTimes(2);
   });
   it("coalesces concurrent same-run requests and blocks a different run while generation is active", async () => {
     let release;
@@ -548,6 +548,30 @@ describe("Gemini narrative generation and cache", () => {
     await createNarrativeStore({ transport, now: () => now }).resolve(input(), true, env);
     expect(transport).toHaveBeenCalledOnce(); now += 60_000;
     await store.resolve(input(), true, env); expect(transport).toHaveBeenCalledTimes(2);
+  });
+  it("persists an automatic cooldown for its hash without extending the original failure deadline", async () => {
+    let now = Date.parse("2026-10-23T01:00:00Z");
+    const transport = vi.fn(async () => response()).mockRejectedValueOnce(new Error("fixture failure"));
+    const store = createNarrativeStore({ transport, now: () => now });
+    await store.resolve(input(), true, env);
+    now += 20_000;
+    const changed = input(); changed.model.runStartedAt = new Date(now).toISOString();
+    expect(await store.resolve(changed, true, env, undefined, true)).toMatchObject({ status: "template", fallbackReason: "cooldown" });
+    const restarted = createNarrativeStore({ transport, now: () => now });
+    expect(await restarted.resolve(changed, false, env)).toMatchObject({ status: "template", fallbackReason: "cooldown" });
+    expect(transport).toHaveBeenCalledOnce();
+    now += 40_000;
+    expect((await restarted.resolve(changed, true, env)).status).toBe("llm");
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
+  it("persists auto_disabled across restart and still allows manual generation", async () => {
+    const transport = vi.fn(async () => response()), disabled = { ...env, BRIEFING_AUTO_NARRATIVE: "0" };
+    await createNarrativeStore({ transport }).resolve(input(), true, disabled, undefined, true);
+    const restarted = createNarrativeStore({ transport });
+    expect(await restarted.resolve(input(), false, disabled)).toMatchObject({ status: "template", fallbackReason: "auto_disabled" });
+    expect(transport).not.toHaveBeenCalled();
+    expect((await restarted.resolve(input(), true, disabled)).status).toBe("llm");
+    expect(transport).toHaveBeenCalledOnce();
   });
   it("replaces a corrupted persisted stock field while retaining independently validated fields", async () => {
     const transport = vi.fn(async () => response()); await createNarrativeStore({ transport }).resolve(input(), true, env);

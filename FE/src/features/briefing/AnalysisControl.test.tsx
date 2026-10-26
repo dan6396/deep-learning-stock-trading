@@ -31,6 +31,12 @@ function setup(options: { mode?: "model_only" | "full" | "unknown"; newsReady?: 
 }
 
 describe("analysis launch control", () => {
+  it("shows the final narrative stage while keeping execution disabled", async () => {
+    setup({ run: { status: "running", progress: { stage: "AI 요약 생성", stageIndex: 7, stageCount: 8, progressPercent: 99, message: "AI 요약 생성 중 · 현재 결과는 그대로 표시합니다." } } });
+    expect(await screen.findByText("AI 요약 생성 · 8/8단계")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "분석 진행 중" })).toBeDisabled();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("value", "99");
+  });
   it("always sends adhoc and does not offer official execution", async () => {
     const test = setup();
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());

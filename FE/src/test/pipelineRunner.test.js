@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 vi.mock("../../server/runLedger", () => ({ beginRun: vi.fn(async () => ({})), completeRun: vi.fn(async () => ({ finishedAt: new Date().toISOString() })), failRun: vi.fn(async () => ({})) }));
 vi.mock("../../server/relatedNews", () => ({ collectTopFiveArticles: vi.fn(async () => ({})) }));
-vi.mock("../../server/briefing", () => ({ getBriefing: vi.fn(async () => ({})), prepareCompletedResults: vi.fn(async () => ({})), generateBriefingNarrative: vi.fn() }));
+vi.mock("../../server/briefing", () => ({ getBriefing: vi.fn(async () => ({})), prepareCompletedResults: vi.fn(async () => ({})), prepareRunBriefing: vi.fn(async () => ({ rank: [], briefing: { status: "no_run" } })), generateBriefingNarrative: vi.fn() }));
 const mock = vi.hoisted(() => ({ spawned: [], validationError: false, oldFile: false }));
 vi.mock("node:child_process", () => { const mocks = { spawn: vi.fn((command, args, options) => {
   mock.spawned.push({ command, args, options });
@@ -18,7 +18,7 @@ import { runCandidateAnalysis, startCandidateAnalysis, getCandidateAnalysisSnaps
 import { createRoutes } from "../../server/routes";
 import { collectTopFiveArticles } from "../../server/relatedNews";
 import { writePipelineRunMarker } from "../../server/pipelineFreshness";
-import { prepareCompletedResults } from "../../server/briefing";
+import { prepareCompletedResults, prepareRunBriefing } from "../../server/briefing";
 import { validateModelOnlyOutputs, refreshDashboardAiFieldsFromPipelineOutput } from "../../server/pipelineResults";
 beforeEach(() => { vi.clearAllMocks(); mock.spawned.length = 0; mock.validationError = false; mock.oldFile = false; });
 describe("model-only process safety (mock child; never executes Python)", () => {
@@ -107,7 +107,7 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(collectTopFiveArticles).toHaveBeenCalledOnce();
     expect(getCandidateAnalysisStatus().result).toMatchObject({ mode: "model_only", newsRows: 0 });
     expect(stages).toEqual([3, 4]);
-    expect(getCandidateAnalysisStatus().progress.stageIndex).toBe(6);
+    expect(getCandidateAnalysisStatus().progress.stageIndex).toBe(7);
   });
   it.each(["adhoc", "official"])("accepts a new run of the other kind with HTTP 200 after %s fails", async kind => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});

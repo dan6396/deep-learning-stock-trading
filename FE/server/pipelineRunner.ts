@@ -3,8 +3,8 @@ import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
 import { validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
-import { prepareCompletedResults } from "./briefing";
-import { failResultRun, setResultRunState } from "./completedResults";
+import { prepareCompletedResults, prepareRunBriefing } from "./briefing";
+import { completedResults, failResultRun, setResultRunState } from "./completedResults";
 import { collectTopFiveArticles } from "./relatedNews";
 import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
@@ -51,6 +51,7 @@ const CANDIDATE_PROGRESS_STAGES = [
   "뉴스 크롤링",
   "관련 기사 정리",
   "결과 파일 검증",
+  "AI 요약 생성",
 ] as const;
 
 let activeRun: Promise<CandidateAnalysisRunResult> | null = null;
@@ -386,12 +387,22 @@ async function executeCandidateAnalysis(env = process.env, startedAt = Date.now(
     await prepareCompletedResults(env).catch(() => {});
     await beginRun(identity.runId, identity.kind, analysisMode(env), startedAt, env);
     const result = await executeCandidatePipeline(env, startedAt, identity);
+    updateCandidateAnalysisProgress(progressSnapshot(7, 99, "AI 요약 생성 중 · 현재 결과는 그대로 표시합니다."));
+    const stagedMarker = { status: "completed" as const, mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.now(), rows: result.rows, newsRows: result.newsRows };
+    // The execution lock stays held through this single attempt, including timeout/cooldown fallbacks.
+    const prepared = await prepareRunBriefing(stagedMarker, env).catch(() => {
+      console.warn("[briefing] Automatic narrative fallback", { reason: "preparation_failed" });
+      return null;
+    });
     const record = await completeRun(identity.runId, startedAt, env);
-    await writePipelineRunMarker({ status: "completed", mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.parse(record.finishedAt!), rows: result.rows, newsRows: result.newsRows }, env);
+    const marker = { ...stagedMarker, finishedAt: Date.parse(record.finishedAt!) };
+    await writePipelineRunMarker(marker, env);
+    const published = prepared && completedResults.publish({ ...prepared, marker, briefing: { ...prepared.briefing,
+      model: prepared.briefing.model ? { ...prepared.briefing.model, finishedAt: record.finishedAt!, elapsedMs: marker.finishedAt - startedAt } : null } }, env);
     setResultRunState(env, { status: "completed", startedAt, runId: identity.runId });
-    // Register publication now, without delaying completion or retaining the execution lock.
-    void Promise.resolve().then(() => prepareCompletedResults(env)).catch(() => {});
-    return { ...result, ...identity };
+    // Retain the bounded 1.5s recovery path when disk preparation could not produce a valid pair.
+    if (!published) void Promise.resolve().then(() => prepareCompletedResults(env)).catch(() => {});
+    return { ...result, elapsedMs: Date.now() - startedAt, ...identity };
   } catch (error) {
     setResultRunState(env, { status: "failed", startedAt, runId: identity.runId });
     await failRun(identity.runId, publicCandidateAnalysisError(error), env);
@@ -584,8 +595,8 @@ export function startCandidateAnalysis(env = process.env): CandidateAnalysisStat
       .then((result) => {
         const progress =
           runState.status === "running"
-            ? progressSnapshot(6, 100, "분석이 완료되었습니다.", runState.progress)
-            : progressSnapshot(6, 100, "분석이 완료되었습니다.");
+            ? progressSnapshot(7, 100, "분석이 완료되었습니다.", runState.progress)
+            : progressSnapshot(7, 100, "분석이 완료되었습니다.");
         runState = { status: "completed", startedAt, finishedAt: Date.now(), progress, result };
       })
       .catch((error: unknown) => {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fake = vi.hoisted(() => ({ files: new Map(), blockComposition: null, entered: null, begin: null,
-  rankGate: null, rankEntered: null, allowProcess: false, writeOutput: null, onCompleted: null }));
+  rankGate: null, rankEntered: null, allowProcess: false, writeOutput: null, onCompleted: null, transport: null }));
 vi.mock("node:fs/promises", () => {
   const item = path => {
     const file = fake.files.get(String(path).replace(/\\/g, "/").split("/").pop());
@@ -15,12 +15,12 @@ vi.mock("node:fs/promises", () => {
     return file.text;
   }), access: vi.fn(async path => { if (!fake.allowProcess) item(path); }),
     stat: vi.fn(async path => ({ isFile: () => true, mtimeMs: item(path).mtime })), mkdir: vi.fn(), writeFile: vi.fn(async (path, text) => {
+      fake.files.set(name(path), { text, mtime: Date.now() });
       if (name(path) === ".candidate-analysis-run.json") {
-        fake.files.set(name(path), { text, mtime: Date.now() });
         const marker = JSON.parse(text);
         if (marker.status === "completed") fake.onCompleted?.(marker);
       }
-    }) };
+    }), rename: vi.fn(async (from, to) => { fake.files.set(name(to), item(from)); fake.files.delete(name(from)); }) };
   return { ...mocks, default: mocks };
 });
 vi.mock("../../server/runLedger", () => ({ beginRun: vi.fn(() => fake.begin), completeRun: vi.fn(async () => ({ finishedAt: new Date().toISOString() })), failRun: vi.fn(async () => {}) }));
@@ -46,10 +46,18 @@ vi.mock("../../server/briefingComposition", async importOriginal => {
 });
 vi.mock("../../server/briefingNarrative", async importOriginal => {
   const actual = await importOriginal();
-  return { ...actual, createNarrativeStore: () => ({ resolve: async input => actual.templateNarrative(input, null) }) };
+  return { ...actual, createNarrativeStore: () => {
+    const stores = new Map();
+    return { resolve: (...args) => {
+      if (!fake.transport) return Promise.resolve(actual.templateNarrative(args[0], null));
+      const key = args[2].PIPELINE_OUTPUT_DIR;
+      if (!stores.has(key)) stores.set(key, actual.createNarrativeStore({ transport: (...request) => fake.transport(...request) }));
+      return stores.get(key).resolve(...args);
+    } };
+  } };
 });
 
-import { getBriefing, prepareCompletedResults, COMPLETED_PREPARATION_TIMEOUT_MS } from "../../server/briefing";
+import { getBriefing, generateBriefingNarrative, prepareRunBriefing, prepareCompletedResults, COMPLETED_PREPARATION_TIMEOUT_MS, AUTO_NARRATIVE_TIMEOUT_MS } from "../../server/briefing";
 import { getRankPayload } from "../../server/pipelineResults";
 import { startCandidateAnalysis, runCandidateAnalysis, getCandidateAnalysisStatus } from "../../server/pipelineRunner";
 import { getMarketMacro } from "../../server/marketMacro";
@@ -69,6 +77,7 @@ afterEach(() => vi.useRealTimers());
 beforeEach(() => {
   fake.files.clear(); fake.blockComposition = null; fake.entered = null; fake.begin = null; vi.clearAllMocks();
   fake.rankGate = null; fake.rankEntered = null; fake.allowProcess = false; fake.writeOutput = null; fake.onCompleted = null;
+  fake.transport = null;
   env = { PIPELINE_OUTPUT_DIR: `snapshot-integration-${++counter}` };
   marker(first); set("step2_all_transformer_rank.csv", csv("Run A"));
 });
@@ -78,6 +87,109 @@ async function request(routes, path) {
   await routes[path]({ method: "GET", url: path }, { statusCode: 0, setHeader: () => {}, end: text => { body = JSON.parse(text); } });
   return body;
 }
+
+function geminiResponse(request) {
+  const input = JSON.parse(JSON.parse(request.body).contents[0].parts[0].text);
+  return { ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify({
+    overview: "모델 순위와 기사를 확인했습니다. 입력 순서를 유지합니다.", marketNote: "시장 관측 자료를 참고합니다.",
+    stocks: input.stocks.map(stock => ({ code: stock.code, summary: "모델 순위를 유지합니다.", citations: [`R:${stock.code}`] })),
+    citations: input.stocks.map(stock => `R:${stock.code}`),
+  }) }] } }] }) };
+}
+
+describe("automatic narrative before atomic publication (mock Gemini and Python)", () => {
+  it("keeps both APIs and status on the previous run until one shared automatic attempt finishes", async () => {
+    const saved = await getBriefing(env), gate = deferred(), entered = deferred();
+    env.GEMINI_API_KEY = "fixture-gemini-key";
+    fake.transport = vi.fn(async (_url, options) => { entered.resolve(); await gate.promise; return geminiResponse(options); });
+    fake.allowProcess = true;
+    fake.writeOutput = () => set("step2_all_transformer_rank.csv", csv("New run"), Date.now());
+    const run = startCandidateAnalysis(env);
+    await entered.promise;
+    expect(getCandidateAnalysisStatus()).toMatchObject({ status: "running", progress: { stage: "AI 요약 생성", stageIndex: 7, stageCount: 8 } });
+    expect(JSON.parse(fake.files.get(".candidate-analysis-run.json").text).status).toBe("running");
+    const routes = createRoutes(undefined, env);
+    expect(await request(routes, "/api/briefing")).toEqual({ ...saved, previousRun: { reason: "running" } });
+    expect((await request(routes, "/api/rank"))[0]).toMatchObject({ result: { company_name: "Run A" }, data_meta: { previousRun: { reason: "running" } } });
+    expect(startCandidateAnalysis(env)).toMatchObject({ runId: run.runId, status: "running" });
+    expect(() => startCandidateAnalysis({ ...env, PIPELINE_RUN_KIND: "official" })).toThrow("다른 종류");
+    const attached = runCandidateAnalysis(env);
+    gate.resolve();
+    await attached;
+    await vi.waitFor(() => expect(getCandidateAnalysisStatus().status).toBe("completed"));
+    const snapshot = completedResults.get(env);
+    expect(snapshot).toMatchObject({ marker: { runId: run.runId }, briefing: { stocks: [{ name: "New run" }], narrative: { status: "llm" } } });
+    expect(snapshot.briefing.model.finishedAt).toBe(new Date(snapshot.marker.finishedAt).toISOString());
+    expect(snapshot.briefing.model.elapsedMs).toBe(snapshot.marker.finishedAt - snapshot.marker.startedAt);
+    expect(fake.transport).toHaveBeenCalledOnce(); expect(spawn).toHaveBeenCalledOnce();
+    expect((await getBriefing(env)).narrative.status).toBe("llm");
+  });
+
+  it.each(["failure", "timeout", "invalid", "missing_key", "disabled"])("publishes template and completes on %s", async mode => {
+    await getBriefing(env);
+    const entered = deferred(), late = deferred();
+    env.GEMINI_API_KEY = mode === "missing_key" ? "" : "fixture-gemini-key";
+    if (mode === "disabled") env.BRIEFING_AUTO_NARRATIVE = "0";
+    fake.transport = vi.fn(async (_url, options) => {
+      entered.resolve();
+      if (mode === "failure") throw new Error("fixture provider failure");
+      if (mode === "timeout") { await late.promise; return geminiResponse(options); }
+      if (mode === "invalid") return { ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: "{}" }] } }] }) };
+      return geminiResponse(options);
+    });
+    fake.allowProcess = true;
+    fake.writeOutput = () => set("step2_all_transformer_rank.csv", csv("New run"), Date.now());
+    if (mode === "timeout") vi.useFakeTimers();
+    const pending = runCandidateAnalysis(env);
+    if (mode === "timeout") { await vi.advanceTimersByTimeAsync(0); await entered.promise; await vi.advanceTimersByTimeAsync(AUTO_NARRATIVE_TIMEOUT_MS); }
+    const result = await pending;
+    expect(result.status).toBe("completed");
+    const expected = { failure: "generation_failed", timeout: "generation_timeout", invalid: "invalid_schema", missing_key: "missing_api_key", disabled: "auto_disabled" }[mode];
+    expect(completedResults.get(env)).toMatchObject({ marker: { status: "completed", runId: result.runId }, briefing: { narrative: { status: "template", fallbackReason: expected }, stocks: [{ name: "New run" }] } });
+    expect(fake.transport).toHaveBeenCalledTimes(["missing_key", "disabled"].includes(mode) ? 0 : 1);
+    expect((await getBriefing(env)).narrative).toMatchObject({ status: "template", fallbackReason: expected });
+    if (mode === "timeout") {
+      expect(fake.transport.mock.calls[0][1].signal.aborted).toBe(true);
+      const cached = fake.files.get("briefing-narrative.json").text, snapshot = completedResults.get(env);
+      late.resolve(); await vi.advanceTimersByTimeAsync(0);
+      expect(fake.files.get("briefing-narrative.json").text).toBe(cached);
+      expect(JSON.parse(cached).narrative).toMatchObject({ status: "template", fallbackReason: "generation_timeout" });
+      expect(completedResults.get(env)).toEqual(snapshot);
+      expect((await getBriefing(env)).narrative).toMatchObject({ status: "template", fallbackReason: "generation_timeout" });
+    }
+    if (["failure", "timeout", "invalid"].includes(mode)) {
+      fake.transport.mockClear();
+      expect((await generateBriefingNarrative(env)).narrative).toMatchObject({ status: "template", fallbackReason: "cooldown" });
+      expect(fake.transport).not.toHaveBeenCalled();
+    }
+  });
+
+  it("reuses a matching input hash without Gemini even when macro cache is stale", async () => {
+    fake.transport = vi.fn(async (_url, options) => geminiResponse(options));
+    env.GEMINI_API_KEY = "fixture-gemini-key";
+    const staged = { ...first, runId: "same-run", kind: "adhoc" };
+    marker({ ...staged, status: "running", finishedAt: undefined });
+    const initial = await prepareRunBriefing(staged, env);
+    expect(initial.briefing.narrative.status).toBe("llm");
+    fake.transport.mockClear();
+    vi.useFakeTimers(); vi.setSystemTime(Date.now() + 660_000);
+    getMarketMacro.mockResolvedValueOnce({ asOf: new Date().toISOString(), indicators: [] });
+    expect((await prepareRunBriefing(staged, env)).briefing.narrative).toMatchObject({ status: "llm", macroStale: true });
+    expect(fake.transport).not.toHaveBeenCalled();
+  });
+
+  it("completes a subsequent run during failure cooldown without another Gemini call", async () => {
+    fake.transport = vi.fn(async () => { throw new Error("fixture provider failure"); });
+    env.GEMINI_API_KEY = "fixture-gemini-key"; fake.allowProcess = true;
+    fake.writeOutput = () => set("step2_all_transformer_rank.csv", csv("First failure"), Date.now());
+    await runCandidateAnalysis(env);
+    fake.writeOutput = () => set("step2_all_transformer_rank.csv", csv("Cooldown run"), Date.now());
+    expect((await runCandidateAnalysis(env)).status).toBe("completed");
+    expect(completedResults.get(env).briefing).toMatchObject({ stocks: [{ name: "Cooldown run" }], narrative: { status: "template", fallbackReason: "cooldown" } });
+    expect(fake.transport).toHaveBeenCalledOnce();
+    expect((await getBriefing(env)).narrative).toMatchObject({ status: "template", fallbackReason: "cooldown" });
+  });
+});
 
 describe("atomic completed results through the real APIs", () => {
   it("publishes a completed run without any briefing or rank GET", async () => {
@@ -89,31 +201,28 @@ describe("atomic completed results through the real APIs", () => {
     await vi.waitFor(() => expect(completedResults.get(env).marker.runId).toBe(result.runId));
     expect(completedResults.get(env).briefing.stocks[0].name).toBe("Run 2");
     expect(completedResults.get(env).rank[0].result.company_name).toBe("Run 2");
-    expect(getMarketMacro).toHaveBeenCalledOnce(); expect(getBriefingComposition).toHaveBeenCalledOnce();
+    expect(getMarketMacro).toHaveBeenCalledTimes(2); expect(getBriefingComposition).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps run-2 after run-1 was viewed, run-2 completed unqueried, and run-3 starts before publication finishes", async () => {
+  it("publishes run-2 before releasing the lock and retains it when run-3 starts", async () => {
     await getBriefing(env);
-    const capture = deferred(), entered = deferred();
+    const composition = { basis: "equal_weight_reference", note: "fixture full composition",
+      sectors: [{ name: "반도체", codes: ["100001"] }], sectorSource: "kis",
+      performance: { asOf: "2026-10-08", measuredDays: 1, averageReturnPct: 1, positiveDays: 1, recent: [{ date: "2026-10-08", returnPct: 1 }] },
+      diversification: { status: "ready", commonRisks: [] }, commonCautions: [] };
+    getBriefingComposition.mockResolvedValueOnce(composition);
     fake.allowProcess = true;
     fake.writeOutput = () => set("step2_all_transformer_rank.csv", csv("Run 2"), Date.now());
-    fake.onCompleted = () => { fake.rankGate = capture.promise; fake.rankEntered = entered.resolve; };
     const second = await runCandidateAnalysis(env);
-    await entered.promise;
-    // Completion returned and released the lock while capture is deliberately blocked.
-    expect(completedResults.get(env).marker.runId).toBe("run-a");
+    expect(completedResults.get(env).marker.runId).toBe(second.runId);
+    expect(completedResults.get(env).briefing.composition).toEqual(composition);
     const thirdGate = deferred(); fake.begin = thirdGate.promise;
     const third = startCandidateAnalysis(env);
     expect(third.status).toBe("running"); expect(third.runId).not.toBe(second.runId);
     const routes = createRoutes(undefined, env);
-    let rankReturned = false, briefingReturned = false;
-    const rank = request(routes, "/api/rank").then(value => { rankReturned = true; return value; });
-    const briefing = request(routes, "/api/briefing").then(value => { briefingReturned = true; return value; });
-    await new Promise(resolve => setTimeout(resolve, 0));
-    expect(rankReturned).toBe(false); expect(briefingReturned).toBe(false);
-    capture.resolve();
+    const rank = request(routes, "/api/rank"), briefing = request(routes, "/api/briefing");
     expect((await rank)[0]).toMatchObject({ result: { company_name: "Run 2" }, data_meta: { previousRun: { reason: "running" } } });
-    expect(await briefing).toMatchObject({ stocks: [{ name: "Run 2" }], previousRun: { reason: "running" } });
+    expect(await briefing).toMatchObject({ stocks: [{ name: "Run 2" }], previousRun: { reason: "running" }, composition });
     expect(completedResults.get(env).marker.runId).toBe(second.runId);
     expect(spawn).toHaveBeenCalledOnce(); // Run 3 has not reached the mocked child.
     thirdGate.reject(new Error("fixture run-3 failure"));

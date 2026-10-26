@@ -246,7 +246,7 @@ function nonNegativeInteger(value: string | undefined): number | null {
  * parser and freshness rule as the other outputs, and only if the run marker is unchanged across the read.
  * Duplicate tickers are ambiguous and dropped.
  */
-async function loadModelOnlySupply(marker: PipelineRunMarker, env = process.env): Promise<Map<string, Record<string, string>>> {
+async function loadModelOnlySupply(marker: PipelineRunMarker, env = process.env, observed = marker): Promise<Map<string, Record<string, string>>> {
   const found = new Map<string, Record<string, string>>();
   if (marker.status !== "completed") return found;
   let latest: { mtimeMs: number; records: Record<string, string>[] } | null = null;
@@ -260,7 +260,7 @@ async function loadModelOnlySupply(marker: PipelineRunMarker, env = process.env)
   }
   if (!latest || !isFreshForRun(latest.mtimeMs, marker)) return found;
   const after = await readPipelineRunMarker(env);
-  if (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode) return found;
+  if (!sameObservedRun(after, observed)) return found;
   const duplicates = new Set<string>();
   for (const record of latest.records) {
     const ticker = record.ticker ?? "";
@@ -347,6 +347,24 @@ export async function getRankSnapshot(env = process.env): Promise<{ rows: Pipeli
 export async function readCompletedRank(env = process.env): Promise<PipelineOutputRow[]> {
   const marker = await readPipelineRunMarker(env);
   if ((!marker && env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && (marker.status !== "completed" || marker.mode !== "model_only"))) return [];
+  return readRankForMarker(marker, marker, env);
+}
+
+function sameObservedRun(actual: PipelineRunMarker | null, expected: PipelineRunMarker): boolean {
+  return Boolean(actual && actual.status === expected.status && actual.startedAt === expected.startedAt
+    && actual.finishedAt === expected.finishedAt && actual.mode === expected.mode && actual.runId === expected.runId && actual.kind === expected.kind);
+}
+
+/** Runner-only staging read. Public reads still require a published completed snapshot. */
+export async function readPendingRank(completed: PipelineRunMarker, env = process.env): Promise<PipelineOutputRow[]> {
+  const observed = await readPipelineRunMarker(env);
+  if (completed.status !== "completed" || completed.mode !== "model_only" || !completed.runId || !observed
+    || observed.status !== "running" || observed.runId !== completed.runId || observed.startedAt !== completed.startedAt
+    || observed.mode !== completed.mode || observed.kind !== completed.kind) return [];
+  return readRankForMarker(completed, observed, env);
+}
+
+async function readRankForMarker(marker: PipelineRunMarker | null, observed: PipelineRunMarker | null, env = process.env): Promise<PipelineOutputRow[]> {
   const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false, env);
   if (!rank || !markerAllowsLoadedFile(marker, rank.mtimeMs, env)) return [];
   try {
@@ -362,9 +380,9 @@ export async function readCompletedRank(env = process.env): Promise<PipelineOutp
     } catch { /* no current article cache */ }
   }
   // Model rank remains exactly as written by the verified STEP2 run.
-  const supply = showBriefingSupply(env) && marker?.mode === "model_only" ? await loadModelOnlySupply(marker, env) : new Map<string, Record<string, string>>();
+  const supply = showBriefingSupply(env) && marker?.mode === "model_only" ? await loadModelOnlySupply(marker, env, observed ?? marker) : new Map<string, Record<string, string>>();
   const after = await readPipelineRunMarker(env);
-  if (marker && (!after || after.status !== marker.status || after.startedAt !== marker.startedAt || after.finishedAt !== marker.finishedAt || after.mode !== marker.mode)) return [];
+  if (observed && !sameObservedRun(after, observed)) return [];
   const rows = rank.rows.map(row => applyModelSupply(marker?.mode === "model_only" ? { ...row,
     data_meta: { ...row.data_meta, rawFinalPrediction: null, rawFinalRank: null },
     input_row: { ...row.input_row, final_pred_return: null, news_adjustment: null, news_applied: false } } : row, supply.get(tickerFromRow(row))));

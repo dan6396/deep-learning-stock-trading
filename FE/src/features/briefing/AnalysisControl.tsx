@@ -12,6 +12,7 @@ const analysisLabels: Record<string, string> = {
   "OHLCV 수집·앙상블 예측": "종목 가격 수집·모델 예측",
   "KOSPI200 후보 풀 로드": "코스피200 분석 대상 불러오기",
   "모델·수급 결과 확인": "모델 분석 결과 확인",
+  "AI 요약 생성": "AI 요약 생성",
   "파이프라인 파일과 실행 환경을 확인하는 중입니다.": "분석에 필요한 자료와 실행 환경을 확인하고 있습니다.",
   "integrated_pipeline.py 실행을 시작했습니다.": "종목 분석을 시작했습니다.",
   "파이프라인 실행 로그": "분석 실행 기록",
@@ -72,7 +73,7 @@ export function AnalysisControl({ onShowTopFive, onRequestStart, labelledBy }: {
     <div className="analysis-control-main">
       <div className="analysis-control-copy">
         {!labelledBy && <><p className="briefing-eyebrow">분석 실행</p><h2 id="analysis-control-heading" ref={heading} tabIndex={-1}>새 분석 실행</h2></>}
-        <p id="analysis-mode-description" className="analysis-control-description">모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집합니다.</p>
+        <p id="analysis-mode-description" className="analysis-control-description">모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집하고 AI 요약을 생성합니다.</p>
         <p className="analysis-control-caption">최근 실행은 약 40초가 걸렸으며 상황에 따라 더 걸릴 수 있습니다. 실행 중에도 현재 결과는 그대로 보입니다.</p>
         <p className="analysis-control-caption">관리자 실행은 수시 기록입니다. 공식 기록은 장 마감 후 예약 작업에서 생성합니다.</p>
       </div>

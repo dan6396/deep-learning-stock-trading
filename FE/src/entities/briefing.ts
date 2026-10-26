@@ -688,6 +688,8 @@ export function formatFallbackReason(code: string | null | undefined): { text: s
   switch (code) {
     case "not_generated":
       return { text: "아직 AI 요약을 생성하지 않았습니다", isNeutral: true };
+    case "auto_disabled":
+      return { text: "자동 요약 생성이 꺼져 있습니다", isNeutral: true };
     case "generation_in_progress":
       return { text: "AI 요약이 현재 생성 중입니다", isNeutral: true };
     case "missing_api_key":

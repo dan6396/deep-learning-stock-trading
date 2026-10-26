@@ -271,7 +271,7 @@ JSON에는 overview, marketNote, stocks[{code,summary,citations}], citations만 
 type CacheRecord = { version: 1; input: BriefingInput; inputHash: string; narrative: BriefingNarrative; rawFields?: RawFields; rawModel?: string;
   lastAttemptAt: number; lastFailureAt: number | null };
 const failureReasons = new Set(["missing_api_key", "invalid_model", "sensitive_output", "invalid_schema", "invalid_citation",
-  "forbidden_content", "ungrounded_number", "generation_timeout", "generation_failed", "partial_template"]);
+  "forbidden_content", "ungrounded_number", "generation_timeout", "generation_failed", "partial_template", "cooldown", "auto_disabled"]);
 type Options = { transport?: typeof fetch; now?: () => number };
 export function createNarrativeStore({ transport = (...args) => fetch(...args), now = Date.now }: Options = {}) {
   const memory = new Map<string, CacheRecord>();
@@ -382,13 +382,22 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
     } catch { return fallback(controller.signal.aborted ? "generation_timeout" : "generation_failed"); }
     finally { if (timer !== undefined) clearTimeout(timer); }
   }
-  return { async resolve(input: BriefingInput, requested: boolean, env = process.env, deadline?: number): Promise<BriefingNarrative> {
+  return { async resolve(input: BriefingInput, requested: boolean, env = process.env, deadline?: number, automatic = false): Promise<BriefingNarrative> {
     const hash = briefingInputHash(input), path = pathFor(env);
     if (!input.model) return templateNarrative(input, "no_run", now());
     const cached = await read(path);
+    const previousFailure = Math.max(cached?.lastFailureAt ?? -Infinity, lastFailureAt);
+    const saveSkipped = async (reason: "cooldown" | "auto_disabled") => {
+      const narrative = templateNarrative(input, reason, now());
+      // Skipping generation is not a new failure: retain the original cooldown deadline.
+      await save(path, { version: 1, input, inputHash: hash, narrative,
+        lastAttemptAt: cached?.lastAttemptAt ?? now(), lastFailureAt: Number.isFinite(previousFailure) ? previousFailure : null });
+      return narrative;
+    };
+    if (automatic && env.BRIEFING_AUTO_NARRATIVE === "0") return saveSkipped("auto_disabled");
     const successful = cached?.inputHash === hash && cached.narrative.status === "llm" ? cached : null;
     const reused = successful ? withMacroState(successful.narrative, successful.input, input) : null;
-    if (reused && (!requested || !reused.macroStale || now() - Date.parse(reused.generatedAt) < 600_000)) return reused;
+    if (reused && (automatic || !requested || !reused.macroStale || now() - Date.parse(reused.generatedAt) < 600_000)) return reused;
     if (!requested) return cached?.inputHash === hash && cached.narrative.status === "template"
       ? templateNarrative(input, cached.narrative.fallbackReason, now()) : templateNarrative(input, "not_generated", now());
     if (active) {
@@ -398,8 +407,10 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
       return completed?.inputHash === hash && completed.narrative.status === "llm" ? withMacroState(completed.narrative, completed.input, input)
         : templateNarrative(input, completed?.narrative.fallbackReason ?? "generation_failed", now());
     }
-    const previousFailure = cached?.lastFailureAt ?? -Infinity;
-    if (now() - Math.max(previousFailure, lastFailureAt) < 60_000) return reused ?? templateNarrative(input, cached?.inputHash === hash ? cached.narrative.fallbackReason : "cooldown", now());
+    if (now() - previousFailure < 60_000) {
+      if (reused) return { ...reused, fallbackReason: "cooldown" };
+      return automatic ? saveSkipped("cooldown") : templateNarrative(input, "cooldown", now());
+    }
     const promise = (async () => {
       let rawFields: RawFields | undefined;
       let rawModel: string | undefined;

@@ -346,6 +346,7 @@ describe("formatFallbackReason", () => {
   it("maps server fallback reason codes to human readable Korean", () => {
     expect(formatFallbackReason("not_generated")?.text).toBe("아직 AI 요약을 생성하지 않았습니다");
     expect(formatFallbackReason("not_generated")?.isNeutral).toBe(true);
+    expect(formatFallbackReason("auto_disabled")).toEqual({ text: "자동 요약 생성이 꺼져 있습니다", isNeutral: true });
 
     expect(formatFallbackReason("generation_in_progress")?.text).toBe("AI 요약이 현재 생성 중입니다");
     expect(formatFallbackReason("generation_in_progress")?.isNeutral).toBe(true);
