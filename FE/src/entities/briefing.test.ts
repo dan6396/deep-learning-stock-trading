@@ -18,6 +18,15 @@ import {
 } from "./briefing";
 
 describe("adaptBriefing", () => {
+  it("preserves the completed snapshot's public finishedAt and elapsedMs metadata", () => {
+    const model = { modelId: "fixture", baseDate: "2026-10-22", poolSize: 199,
+      runStartedAt: "2026-10-22T07:00:00Z", finishedAt: "2026-10-22T07:00:38Z", elapsedMs: 38000 };
+    expect(adaptBriefing({ status: "ready", previousRun: { reason: "running" }, model }).model).toMatchObject(model);
+  });
+  it.each([undefined, { finishedAt: "invalid", elapsedMs: -1 }, { finishedAt: 42, elapsedMs: "38000" }, { elapsedMs: Infinity }])(
+    "keeps absent or invalid completion metadata unknown (%j)", metadata => {
+      expect(adaptBriefing({ model: { modelId: "fixture", baseDate: "2026-10-22", ...metadata } }).model).toMatchObject({ finishedAt: null, elapsedMs: null });
+    });
   it.each(["official", "adhoc", "unknown", undefined, "invalid"])("normalizes run kind metadata (%s)", kind => {
     const model = { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-22", predictionTarget: "next_session_open_to_close", poolSize: 199, runStartedAt: "2026-10-22T07:00:00Z" };
     expect(adaptBriefing({ status: "ready", model, kind }).kind).toBe(kind === "official" || kind === "adhoc" ? kind : "unknown");

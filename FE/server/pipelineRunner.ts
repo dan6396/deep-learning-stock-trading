@@ -3,6 +3,8 @@ import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
 import { validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
+import { prepareCompletedResults } from "./briefing";
+import { failResultRun, setResultRunState } from "./completedResults";
 import { collectTopFiveArticles } from "./relatedNews";
 import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
@@ -378,13 +380,20 @@ function runProcess(
 }
 
 async function executeCandidateAnalysis(env = process.env, startedAt = Date.now(), identity = { runId: randomUUID(), kind: runKind(env) }): Promise<CandidateAnalysisRunResult> {
-  await beginRun(identity.runId, identity.kind, analysisMode(env), startedAt, env);
+  setResultRunState(env, { status: "running", startedAt, runId: identity.runId });
   try {
+    // Capture the actual last completed disk run before Python can overwrite it.
+    await prepareCompletedResults(env).catch(() => {});
+    await beginRun(identity.runId, identity.kind, analysisMode(env), startedAt, env);
     const result = await executeCandidatePipeline(env, startedAt, identity);
     const record = await completeRun(identity.runId, startedAt, env);
     await writePipelineRunMarker({ status: "completed", mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.parse(record.finishedAt!), rows: result.rows, newsRows: result.newsRows }, env);
+    setResultRunState(env, { status: "completed", startedAt, runId: identity.runId });
+    // Register publication now, without delaying completion or retaining the execution lock.
+    void Promise.resolve().then(() => prepareCompletedResults(env)).catch(() => {});
     return { ...result, ...identity };
   } catch (error) {
+    setResultRunState(env, { status: "failed", startedAt, runId: identity.runId });
     await failRun(identity.runId, publicCandidateAnalysisError(error), env);
     await writePipelineRunMarker({ status: "failed", mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.now(), error: publicCandidateAnalysisError(error) }, env);
     throw error;
@@ -497,6 +506,7 @@ function failStaleCandidateRunIfNeeded(): void {
   }
 
   const failedAt = Date.now();
+  if (runIdentity) failResultRun(runIdentity.runId);
   const startedAt = runState.startedAt;
   const error = "AI 후보 분석 진행 로그가 오래 갱신되지 않았습니다. 파이프라인 상태를 확인한 뒤 다시 실행하세요.";
   runState = {

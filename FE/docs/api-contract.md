@@ -58,11 +58,11 @@ $run | Select-Object runId, kind, status
 
 HTTP 200은 실행 접수·동일 종류 실행 공유를 뜻하며 완료 보장이 아닙니다. GET `/api/candidates/run`을 폴링해 접수한 runId와 kind=official, status=completed를 확인하고 실패·다른 runId·시간 초과를 경보로 처리합니다. HTTP 409 본문은 `{error, runId, kind, retry}`이며 runId·kind는 진행 중인 실행입니다. 수시 실행이 끝났다고 공식 기록이 자동 생성되지는 않습니다.
 
-`GET /api/briefing`과 narrative POST는 결과 실행 메타에서 판단한 최상위 `kind: official | adhoc | unknown`을 제공합니다. 완료된 결과와 메타가 일치할 때만 분류하고, 누락되거나 조회 중 바뀌면 unknown입니다. 공개 실행 정보 영역은 adhoc일 때 ‘수시 분석 결과 · 공식 기록 아님’을 표시하며 unknown은 별도 표시하지 않습니다.
+`GET /api/briefing`과 narrative POST는 결과 실행 메타에서 판단한 최상위 `kind: official | adhoc | unknown`을 제공합니다. 완료된 결과와 메타가 일치할 때만 분류하고, 보관된 결과는 당시 kind를 유지합니다. 확인 가능한 메타가 없으면 unknown입니다. 공개 실행 정보 영역은 adhoc일 때 ‘수시 분석 결과 · 공식 기록 아님’, unknown일 때 ‘공식 여부 확인 불가’를 표시합니다.
 
 ## 엔드포인트
 
-- `GET /api/rank`: 최종 모델의 전체 유효 종목 순위. 실행 미완료·오래된 결과·다른 모델 결과는 제공하지 않습니다.
+- `GET /api/rank`: 최종 모델의 전체 유효 종목 순위. 실행 중·실패 시 마지막 완료 순위를 반환합니다. 보관된 완료 결과가 없거나 오래된 결과·다른 모델 결과이면 빈 배열입니다.
 - `GET /api/stock-analysis?ticker=005930`: 같은 전체 순위에서 해당 종목과 관련 기사를 반환합니다.
 - `GET /api/candidates`: 별도 뉴스 보정 최종 목록을 생성하지 않아 빈 배열을 반환합니다. 화면 TOP5는 원본 모델 순위 1~5위입니다.
 - `POST /api/candidates/run?mode=model_only&kind=adhoc`: 관리자 Bearer 인증으로 최종 모델 추론과 RSS 기사 수집을 시작합니다. 관리자 수동 실행은 항상 adhoc이며 official 요청은 403입니다. `kind=official`은 장 마감 후 외부 예약 작업의 CRON_SECRET Bearer 요청만 허용합니다.
@@ -72,6 +72,22 @@ HTTP 200은 실행 접수·동일 종류 실행 공유를 뜻하며 완료 보�
 - `POST /api/briefing/narrative`: 별도 Gemini 설명 생성. 모델 추론·순위는 변경하지 않습니다.
 - `GET /api/performance`: 저장 실행과 실제 가격 성과. 선정 종목 시가·종가가 모두 있어야 계산합니다.
 - `/api/korean-market/*`: 지수·시세·차트·거래일 달력.
+
+### 진행 중·실패 시 완료 결과 보관
+
+서버 프로세스는 완료 마커 식별자(runId·startedAt 등), 검증된 비어 있지 않은 전체 순위(관련 기사·공개 수급 포함), ready 브리핑 페이로드(시장 지표·구성·설명 포함)를 하나의 메모리 스냅샷으로 복사합니다. 새 브리핑 조립이 끝나고 마커가 여전히 같을 때 순위와 브리핑을 함께 교체합니다. 빈 순위·오래된 CSV·검증 실패·조립 중 실행 변경은 기존 스냅샷을 덮어쓰지 않습니다. 출력 경로와 수급 공개 정책별로 분리하며 `kind`는 반환하는 결과의 공식/수시 구분을 유지합니다.
+
+시작 응답을 반환하기 전 같은 프로세스의 활성 실행 상태를 running으로 기록해, 디스크 마커가 아직 completed여도 두 API가 즉시 `previousRun.reason="running"`을 반환합니다. 실행 완료 처리에서도 조회 유무와 무관하게 백그라운드 스냅샷 발행을 시작하며, 완료 응답과 실행 잠금 해제를 기다리게 하지 않습니다. 다음 Python 시작 전에는 디스크의 직전 완료 실행과 저장된 스냅샷의 식별자를 비교합니다. 같은 완료 실행일 때만 재사용하고, 다르면 메모리의 새 running 상태를 무시하고 직전 완료 파일·저장된 설명으로 새 스냅샷을 조립합니다.
+
+완료 발행 및 실행 전 capture는 시장 지표·구성 공급자를 호출하지 않으며 제한 시간은 1.5초입니다. capture 진행 중이면 이전 스냅샷이 있어도 두 API가 같은 준비 작업을 기다립니다. 실패·시간 초과에서는 이전 스냅샷으로 응답하고, 이전 스냅샷도 없으면 no_run·빈 순위를 반환합니다. 시간 초과된 작업은 늦게 끝나도 발행할 수 없습니다. 후속 조회도 같은 제한 시간을 적용해 재시도합니다. GET 조립의 하위 실패는 캐시 또는 결정적 기본값으로 처리하며, 검증 가능한 새 결과가 없으면 기존 스냅샷을 유지합니다.
+
+`GET /api/briefing` 및 narrative POST는 보관 결과일 때 최상위 `previousRun: { reason: "running" | "failed" }`를 추가합니다. `/api/rank`는 배열 계약을 유지하고 각 행의 `data_meta.previousRun`에 같은 플래그를 붙입니다. 플래그 외의 저장된 데이터는 그대로입니다. 실행 표시줄은 ‘새 분석 진행 중 · 이전 결과 표시’ 또는 ‘새 분석 실패 · 이전 결과 표시’를 보여줍니다. 브라우저는 서버의 `no_run`을 임의로 ready로 바꾸지 않습니다.
+
+FE 순위 어댑터는 행의 플래그를 `CandidateData.previousRun`으로 보존합니다. 실행 표시줄은 표시 중인 브리핑의 `model.finishedAt`(ISO 완료 시각), `model.elapsedMs`(밀리초), `model.poolSize`를 우선 사용합니다. 완료 시각과 소요 시간은 해당 완료 스냅샷 마커의 `finishedAt`, `finishedAt-startedAt`에서 계산하며, 과거 마커에 완료 시각이 없으면 둘 다 null입니다. 이전 결과 표시 중에는 현재 실행의 메타로 대체하지 않습니다. 이 두 메타는 설명 생성 입력·해시에 추가하지 않습니다. failed 플래그가 있으면 AI 요약 생성 버튼을 비활성화하고 분석 완료 후 재생성하도록 안내합니다.
+
+재시작 후 완료 마커와 일치하는 디스크 결과는 첫 조회 또는 실행 전 확보 시 읽습니다. 별도 스냅샷 파일은 만들지 않습니다. 재시작 시 running·failed 마커만 있으면 덮어쓴 입력의 안전성을 보장할 수 없어 `/api/briefing`은 no_run, `/api/rank`는 빈 배열을 반환합니다. 이 서버 실행기를 거치지 않은 외부 파일 덮어쓰기는 사전 보관을 보장하지 않습니다.
+
+`/api/backend/status`의 `localWriteAllowed`는 개발 서버이며 ADMIN_API_TOKEN과 CRON_SECRET이 모두 공백/미설정일 때만 true입니다. 값이나 개별 설정 여부는 추가 공개하지 않습니다. UI는 DEV·loopback hostname·이 boolean이 모두 참일 때만 토큰 없는 쓰기를 표시하고, 조회 전에는 허용하지 않습니다. 실제 요청은 계속 socket loopback·Host·Origin·전달 헤더를 검사합니다.
 
 ## 모델 행
 
@@ -122,10 +138,12 @@ type Briefing = {
   version: 1;
   status: "ready" | "no_run";
   kind: "official" | "adhoc" | "unknown";
+  previousRun?: { reason: "running" | "failed" };
   model: {
     modelId: string; scoreKind: "rank_zscore"; baseDate: string;
     predictionTarget: "next_session_open_to_close"; poolSize: number;
     runStartedAt: string | null;
+    finishedAt: string | null; elapsedMs: number | null;
   } | null;
   macro: {
     asOf: string | null;
@@ -183,7 +201,7 @@ type Briefing = {
 };
 ```
 
-유효한 `completed`·`model_only` 실행과 일관된 원본 순위가 없으면 `status="no_run"`, `model=null`, `stocks=[]`입니다. 진행 중 실행으로 마커가 바뀌어도 이전 결과를 브리핑에 섞지 않습니다. 기존 `validateModelRows`를 재사용하며 요청 환경을 순위 파일·마커·수급 조회에 전달합니다. `stocks`는 원본 `pred_rank` 순서의 최대 5개이며 `topPercent=rank/poolSize*100`입니다. 근거·주의는 서버의 결정적 규칙으로 생성합니다. 수급 공개를 활성화한 경우에만 측정된 기간·원 단위 순매수 합계·양수 일수만 설명하고 조건 통과/미통과로 표현하지 않습니다. 원 단위는 `integrated_pipeline.py`의 `_kis_million_to_won` 변환을 따릅니다. 기사 실패·성공 0건·미수집을 구분하며 종목당 최대 3건을 제공합니다.
+유효한 `completed`·`model_only` 실행과 일관된 원본 순위가 없으면 `status="no_run"`, `model=null`, `stocks=[]`입니다. 단, running·failed 상태에서 보관된 마지막 완료 브리핑이 있으면 페이로드 전체를 `previousRun` 플래그와 함께 반환합니다. 현재 실행의 부분 파일과 보관된 결과를 조합하지 않습니다. 기존 `validateModelRows`를 재사용하며 요청 환경을 순위 파일·마커·수급 조회에 전달합니다. `stocks`는 원본 `pred_rank` 순서의 최대 5개이며 `topPercent=rank/poolSize*100`입니다. 근거·주의는 서버의 결정적 규칙으로 생성합니다. 수급 공개를 활성화한 경우에만 측정된 기간·원 단위 순매수 합계·양수 일수만 설명하고 조건 통과/미통과로 표현하지 않습니다. 원 단위는 `integrated_pipeline.py`의 `_kis_million_to_won` 변환을 따릅니다. 기사 실패·성공 0건·미수집을 구분하며 종목당 최대 3건을 제공합니다.
 
 매크로는 Yahoo chart v8의 `^KS11`, `^KQ11`, `^IXIC`, `^GSPC`, `KRW=X`, `^TNX`를 사용합니다. `value=regularMarketPrice`, `change=value-(chartPreviousClose ?? previousClose)`, `changePct=change/previousClose*100`이며 `^TNX` 값은 추가 배율 없이 `%`입니다. 개별 `asOf`는 `regularMarketTime`의 UTC ISO 문자열이며 서버 수집 시각과 다릅니다. `macro.asOf`는 확보한 관측 시각 중 가장 이른 시각입니다. 지표별 8초 제한(본문 포함)과 실패 격리를 적용하고 실패한 값·등락·시각은 null입니다. 기본 캐시는 10분이며 `BRIEFING_MACRO_CACHE_TTL_MS`로 조정합니다.
 

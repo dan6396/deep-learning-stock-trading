@@ -6,7 +6,7 @@ import { nextKrxSession } from "./krxCalendar";
 import { getPerformancePayload, startPerformanceCollection, runPerformanceCollection } from "./performance";
 import { getBriefing, generateBriefingNarrative } from "./briefing";
 import { getStockInsight } from "./stockInsight";
-import { authorizeWrite, bearerRole, clientIp, createWriteLimiter, HttpError, isLocalDevelopmentRequest, tokenMatches } from "./writeSecurity";
+import { authorizeWrite, bearerRole, clientIp, createWriteLimiter, HttpError, isLocalDevelopmentRequest, localWriteAllowed, tokenMatches } from "./writeSecurity";
 
 declare const process: { env: Record<string, string | undefined> };
 export type ApiRequest = {
@@ -73,7 +73,7 @@ export function createRoutes(deps: RouteProviders = providers, env = process.env
   const ticker = (request: ApiRequest) => required(query(request, "ticker") ?? query(request, "code"), "ticker");
   const routes: Record<string, RouteHandler> = {
     "/api/backend/status": route(["GET"], async () => {
-      try { return await deps.getBackendStatus(env); }
+      try { return { ...await deps.getBackendStatus(env), localWriteAllowed: localWriteAllowed(env, options.development) }; }
       catch { throw new Error("Backend status unavailable."); }
     }),
     "/api/korean-market/dashboard": route(["GET"], request => query(request, "fresh") === "1" ? deps.buildFreshKisDashboard() : deps.buildKisDashboard()),

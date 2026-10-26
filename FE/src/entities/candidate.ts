@@ -10,6 +10,7 @@ export type CandidateNews = {
   reason?: string | null; description?: string | null;
 };
 export type CandidateData = {
+  previousRun?: { reason: "running" | "failed" };
   code: string; name: string | null; isFinalCandidate: boolean;
   rankScore?: number | null; scoreKind?: string | null;
   predictedReturn: number | null; finalPredictedReturn: number | null;
@@ -77,6 +78,8 @@ export function adaptCandidate(value: unknown, isFinalCandidate = false): DataRe
   return {
     ...resultMeta(row, { source: "cache" }),
     data: {
+      ...((record(meta.previousRun).reason === "running" || record(meta.previousRun).reason === "failed")
+        ? { previousRun: { reason: record(meta.previousRun).reason as "running" | "failed" } } : {}),
       code, name: textValue(result.company_name ?? input.company_name), isFinalCandidate,
       rankScore: input.score_kind === "rank_zscore" ? finiteNumber(input.rank_score) : null,
       scoreKind: textValue(input.score_kind),

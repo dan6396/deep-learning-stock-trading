@@ -7,7 +7,7 @@ import { useAppPaths } from "./paths";
 import { SearchDialog } from "../features/search/SearchDialog";
 import { ConnectionNotice } from "../features/connection/ConnectionNotice";
 import { AnalysisDialog } from "../features/briefing/AnalysisDialog";
-import { setAdminToken, useAdminAccess } from "../shared/api/adminAccess";
+import { setAdminToken, useAdminAccess, useLocalWriteAllowed, useStoredAdminToken } from "../shared/api/adminAccess";
 import "./adminDialog.css";
 
 export const NEXT_BASE = "/next";
@@ -15,7 +15,7 @@ export const NEXT_BASE = "/next";
 function AdminTokenDialog({ close }: { close: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null), input = useRef<HTMLInputElement>(null);
   const [token, setToken] = useState(""), [error, setError] = useState("");
-  const admin = useAdminAccess();
+  const storedToken = useStoredAdminToken(), local = useLocalWriteAllowed();
   useEffect(() => {
     const node = dialog.current;
     if (node?.showModal) node.showModal(); else node?.setAttribute("open", "");
@@ -29,6 +29,7 @@ function AdminTokenDialog({ close }: { close: () => void }) {
   return <dialog ref={dialog} className="ds-root admin-token-dialog" aria-labelledby="admin-title" aria-describedby="admin-description" onCancel={event => { event.preventDefault(); close(); }}>
     <form onSubmit={event => { event.preventDefault(); if (token.trim()) save(token); }}>
       <h2 id="admin-title">관리자 모드</h2><p id="admin-description">토큰은 현재 탭의 세션 저장소에만 저장합니다. 인증은 실행 요청 때 확인합니다.</p>
+      {local && <p>로컬 개발 모드 · 토큰 없이 실행할 수 있습니다.</p>}
       <div className="admin-token-field">
         <label htmlFor="admin-token">관리자 API 토큰</label>
         <input ref={input} id="admin-token" type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} />
@@ -36,7 +37,7 @@ function AdminTokenDialog({ close }: { close: () => void }) {
       {error && <p role="alert">{error}</p>}
       <div className="admin-token-actions">
         <button type="submit" className="admin-token-save" disabled={!token.trim()}>저장</button>
-        <button type="button" disabled={!admin} onClick={() => save("")}>해제</button>
+        <button type="button" disabled={!storedToken} onClick={() => save("")}>해제</button>
         <button type="button" onClick={close}>닫기</button>
       </div>
     </form>

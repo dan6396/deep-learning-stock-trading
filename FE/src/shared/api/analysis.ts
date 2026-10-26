@@ -1,8 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { apiClient, type ApiClient } from "./client";
-import { adaptAnalysisStatus, createQueries, queryKeys } from "./queries";
+import { adaptAnalysisStatus, createQueries, queryKeys, type AnalysisStatus } from "./queries";
 import type { RunKind } from "../../types/performance";
+import type { BriefingPayload } from "../../entities/briefing";
+import type { CandidateData } from "../../entities/candidate";
+import type { DataResult } from "../../entities/source";
+import type { BackendStatus } from "../../types/backendStatus";
 
 const launchVersions = new WeakMap<QueryClient, number>();
 export type AnalysisMode = "model_only" | "full";
@@ -14,9 +18,65 @@ export function isAnalysisRunning(client: QueryClient): boolean {
 }
 
 export async function invalidateAnalysisResults(client: QueryClient): Promise<void> {
+  await refreshResultQueries(client, resultPrefixes);
+}
+async function refreshResultQueries(client: QueryClient, prefixes: readonly (readonly string[])[]): Promise<void> {
   // Cancel pre-completion reads before invalidation so a slow prior snapshot cannot win.
-  await Promise.all(resultPrefixes.map(queryKey => client.cancelQueries({ queryKey })));
-  await Promise.all(resultPrefixes.map(queryKey => client.invalidateQueries({ queryKey })));
+  await Promise.all(prefixes.map(queryKey => client.cancelQueries({ queryKey })));
+  await Promise.all(prefixes.map(queryKey => client.invalidateQueries({ queryKey })));
+}
+
+function isTerminal(status?: AnalysisStatus): status is AnalysisStatus {
+  return status?.status === "completed" || status?.status === "failed";
+}
+const pendingResultRefreshes = new WeakMap<QueryClient, Promise<void>>();
+const resultStateKeys = ["briefing", "rank", "backend-status"];
+
+/** Compare the displayed snapshot to the terminal run, without an observation history. */
+function staleResultPrefixes(client: QueryClient): string[] {
+  const status = client.getQueryData<DataResult<AnalysisStatus>>(queryKeys.analysisRun())?.data;
+  if (!isTerminal(status)) return [];
+  const backend = client.getQueryData<BackendStatus>(queryKeys.backendStatus());
+  const briefing = client.getQueryData<BriefingPayload>(queryKeys.briefing());
+  // Inactive invalidated queries will fetch on their next mount; do not schedule twice.
+  const ranks = client.getQueriesData<DataResult<CandidateData[]>>({ queryKey: ["rank"] })
+    .filter(([key, value]) => value !== undefined && Array.isArray(value.data) && !client.getQueryState(key)?.isInvalidated).map(([, value]) => value!);
+  const reason = (value: { previousRun?: { reason: string } }) => value.previousRun?.reason;
+  const needed: string[] = [], running = backend?.runtime.state === "running";
+  if (running && !client.getQueryState(queryKeys.backendStatus())?.isInvalidated) needed.push("backend-status");
+  if (briefing && !client.getQueryState(queryKeys.briefing())?.isInvalidated) {
+    const matches = status.startedAt !== undefined && Date.parse(briefing.model?.runStartedAt ?? "") === status.startedAt;
+    const stale = status.status === "failed" ? briefing.status === "ready" && reason(briefing) !== "failed"
+      : Boolean(briefing.previousRun) || ((status.startedAt !== undefined || running) && !matches);
+    if (stale) needed.push("briefing");
+  }
+  if (ranks.some(rank => {
+    if (status.status === "failed") return rank.data.some(row => reason(row) !== "failed");
+    const olderOrUnknown = status.startedAt !== undefined && (rank.asOf === null || Date.parse(rank.asOf) < status.startedAt);
+    return rank.data.some(row => row.previousRun) || olderOrUnknown || (running && status.startedAt === undefined);
+  })) needed.push("rank");
+  return needed;
+}
+export function analysisResultsNeedRefresh(client: QueryClient): boolean { return staleResultPrefixes(client).length > 0; }
+function resultsFetching(client: QueryClient): boolean {
+  return client.getQueryCache().findAll().some(query => resultStateKeys.includes(String(query.queryKey[0])) && query.state.fetchStatus !== "idle");
+}
+
+/** At most one in-flight pass; settled work leaves no per-run records behind. */
+export function reconcileAnalysisResults(client: QueryClient): Promise<void> {
+  const pending = pendingResultRefreshes.get(client);
+  if (pending) return pending;
+  if (!analysisResultsNeedRefresh(client)) return Promise.resolve();
+  // Let existing reads settle, then compare their response in the success listener.
+  if (resultsFetching(client)) return Promise.resolve();
+  // Defer execution until the shared promise is installed, before cache notifications.
+  const refresh = Promise.resolve().then(() => {
+    const stale = staleResultPrefixes(client);
+    if (!resultsFetching(client) && stale.length) return refreshResultQueries(client,
+      resultPrefixes.filter(([key]) => !resultStateKeys.includes(key) || stale.includes(key)));
+  }).finally(() => pendingResultRefreshes.delete(client));
+  pendingResultRefreshes.set(client, refresh);
+  return refresh;
 }
 
 export function analysisMutationOptions(client: QueryClient, transport: ApiClient = apiClient) {
@@ -38,9 +98,9 @@ export function analysisMutationOptions(client: QueryClient, transport: ApiClien
           if (result.data.status === "running") {
             // A pre-launch idle snapshot must not keep runtime polling asleep.
             await client.cancelQueries({ queryKey: queryKeys.backendStatus() });
-            await client.invalidateQueries({ queryKey: queryKeys.backendStatus() });
+            await Promise.all([client.invalidateQueries({ queryKey: queryKeys.backendStatus() }), client.invalidateQueries({ queryKey: queryKeys.briefing() })]);
           }
-          if (result.data.status === "completed") await invalidateAnalysisResults(client);
+          await reconcileAnalysisResults(client);
         }
       }
       return result;
@@ -48,20 +108,19 @@ export function analysisMutationOptions(client: QueryClient, transport: ApiClien
   };
 }
 
-/** M2 can mount this observer; it polls only running jobs and handles reattachment. */
+/** Reconcile current cache state on mount and whenever relevant responses arrive. */
 export function useAnalysisRun(transport: ApiClient = apiClient) {
   const client = useQueryClient();
   const query = useQuery(createQueries(transport).analysisRun());
-  const seenCompletion = useRef<string | null>(null);
-  const status = query.data?.data;
   useEffect(() => {
-    if (status?.status === "running") seenCompletion.current = null;
-    if (status?.status !== "completed") return;
-    const identity = JSON.stringify([status.elapsedMs, status.progress?.updatedAt, status.result]);
-    if (seenCompletion.current === identity) return;
-    seenCompletion.current = identity;
-    void invalidateAnalysisResults(client);
-  }, [client, status]);
+    const reconcile = () => { void reconcileAnalysisResults(client); };
+    const unsubscribe = client.getQueryCache().subscribe(event => {
+      if (event.type === "updated" && event.action.type === "success"
+        && [queryKeys.analysisRun()[0], ...resultStateKeys].includes(String(event.query.queryKey[0]))) reconcile();
+    });
+    reconcile();
+    return unsubscribe;
+  }, [client]);
   return query;
 }
 

@@ -26,6 +26,8 @@ const mockBriefingData: BriefingPayload = {
     predictionTarget: "next_session_open_to_close",
     poolSize: 200,
     runStartedAt: "2026-10-23T08:30:00Z",
+    finishedAt: "2026-10-23T08:30:38Z",
+    elapsedMs: 38000,
   },
   macro: {
     asOf: "2026-10-23T06:30:00Z", // 15:30 KST

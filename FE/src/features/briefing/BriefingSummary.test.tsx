@@ -6,6 +6,7 @@ import { adaptAnalysisStatus, adaptBackendStatus, queries } from "../../shared/a
 import { adaptBriefing } from "../../entities/briefing";
 import { backendStatusBody, jsonResponse, pipelineRow } from "../../test/dataFixtures";
 import { adaptCandidate } from "../../entities/candidate";
+import { formatDate } from "../../shared/lib/format";
 
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
@@ -16,6 +17,45 @@ function mount(pending: boolean) {
   render(<QueryClientProvider client={client}><BriefingSummary indices={[]} pending={pending} error={false} count={199} rows={rows} rankPending={false} rankError={false} rankSource="cache" /></QueryClientProvider>); return fetcher;
 }
 describe("briefing summary status", () => {
+  it.each(["running", "failed"] as const)("shows the previous completed snapshot's time, duration and pool instead of current-run metadata (%s)", reason => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(queries.backendStatus().queryKey, adaptBackendStatus(backendStatusBody(undefined, { marker: {
+      state: "completed", startedAt: "2026-10-09T08:00:00Z", finishedAt: "2026-10-09T08:00:40Z",
+    } })));
+    client.setQueryData(queries.analysisRun().queryKey, { data: adaptAnalysisStatus({ status: "idle" }), source: "live", asOf: null });
+    client.setQueryData(queries.briefing().queryKey, adaptBriefing({ version: 1, status: "ready", previousRun: { reason }, stocks: [],
+      model: { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-08", poolSize: 6,
+        runStartedAt: "2026-10-08T08:00:00Z", finishedAt: "2026-10-08T08:00:35Z", elapsedMs: 35000 } }));
+    render(<QueryClientProvider client={client}><BriefingExecutionBar pool={999} /></QueryClientProvider>);
+    const bar = screen.getByRole("status", { name: "분석 실행 상태" });
+    expect(bar).toHaveTextContent(`분석 완료 ${formatDate("2026-10-08T08:00:35Z", true)}`);
+    expect(bar).toHaveTextContent("모집단 6종목 (소요 0분 35초)");
+    expect(bar).not.toHaveTextContent("199종목"); expect(bar).not.toHaveTextContent("40초");
+    expect(bar).not.toHaveTextContent("999종목");
+    expect(bar).toHaveTextContent(reason === "running" ? "새 분석 진행 중 · 이전 결과 표시" : "새 분석 실패 · 이전 결과 표시");
+  });
+  it("does not invent missing snapshot times from a newer completed marker", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(queries.backendStatus().queryKey, adaptBackendStatus(backendStatusBody(undefined, { marker: {
+      state: "completed", startedAt: "2026-10-09T08:00:00Z", finishedAt: "2026-10-09T08:00:40Z",
+    } })));
+    client.setQueryData(queries.analysisRun().queryKey, { data: adaptAnalysisStatus({ status: "idle" }), source: "live", asOf: null });
+    client.setQueryData(queries.briefing().queryKey, adaptBriefing({ version: 1, status: "ready", previousRun: { reason: "running" },
+      model: { modelId: "fixture", baseDate: "2026-10-08", poolSize: 6 }, stocks: [] }));
+    render(<QueryClientProvider client={client}><BriefingExecutionBar pool={null} /></QueryClientProvider>);
+    const bar = screen.getByRole("status", { name: "분석 실행 상태" });
+    expect(bar).toHaveTextContent("분석 완료 —"); expect(bar).toHaveTextContent("모집단 6종목 (—)");
+    expect(bar).not.toHaveTextContent("40초");
+  });
+  it.each(["running", "failed"] as const)("shows the server snapshot flag once in the execution bar (%s)", reason => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(queries.backendStatus().queryKey, adaptBackendStatus(backendStatusBody()));
+    client.setQueryData(queries.analysisRun().queryKey, { data: adaptAnalysisStatus({ status: "idle" }), source: "live", asOf: null });
+    client.setQueryData(queries.briefing().queryKey, adaptBriefing({ version: 1, status: "ready", previousRun: { reason }, stocks: [] }));
+    render(<QueryClientProvider client={client}><BriefingExecutionBar pool={199} /></QueryClientProvider>);
+    expect(screen.getByRole("status", { name: "분석 실행 상태" })).toHaveTextContent(reason === "running" ? "새 분석 진행 중 · 이전 결과 표시" : "새 분석 실패 · 이전 결과 표시");
+    expect(screen.queryByText("최신 완료 결과")).not.toBeInTheDocument();
+  });
   it.each(["adhoc", "official", "unknown", undefined] as const)("warns about adhoc or unverified result metadata, leaving official results unlabelled (%s)", kind => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } }); clients.push(client);
     // A newer official job must not relabel the adhoc result currently displayed.
@@ -59,7 +99,8 @@ describe("briefing summary status", () => {
       </QueryClientProvider>
     );
     if (status === "running") {
-      expect(screen.getAllByText("새 분석 진행 중 · 현재 결과 유지")).toHaveLength(2);
+      expect(screen.getAllByText("새 분석 진행 중 · 이전 결과 표시")).toHaveLength(1);
+      expect(screen.getByText("분석 진행 중")).toBeInTheDocument();
       expect(screen.queryByText("최신 완료 결과")).not.toBeInTheDocument();
     } else expect(screen.getAllByText("최신 완료 결과").length).toBeGreaterThanOrEqual(1);
   });

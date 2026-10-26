@@ -51,6 +51,7 @@ export type PipelineOutputRow = {
   news: PipelineNewsItem[];
   /** Additive provenance; legacy consumers can ignore this field. */
   data_meta?: {
+    previousRun?: { reason: "running" | "failed" };
     source?: "live" | "cache" | "sample" | "unknown";
     asOf?: string | null;
     newsCollected?: boolean;

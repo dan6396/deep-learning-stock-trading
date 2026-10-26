@@ -9,6 +9,7 @@ export type PipelineAvailability = {
   asOf: string | null;
 };
 export type BackendStatus = {
+  localWriteAllowed: boolean;
   version: 1;
   analysisMode: "full" | "model_only" | "unknown";
   checkedAt: string;

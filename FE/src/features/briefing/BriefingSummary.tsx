@@ -14,7 +14,11 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
   const backend = useQuery(queries.backendStatus()), analysis = useAnalysisRun(), status = backend.data;
   const briefing = useQuery(queries.briefing());
   const running = analysis.data?.data.status === "running" || status?.runtime.state === "running";
-  const completed = status?.marker.state === "completed", finishedAt = completed ? status.marker.finishedAt ?? status.marker.asOf : null;
+  const previousReason = running ? "running" : briefing.data?.previousRun?.reason;
+  const completed = status?.marker.state === "completed";
+  const finishedAt = briefing.data?.model?.finishedAt ?? (completed && !previousReason ? status.marker.finishedAt ?? status.marker.asOf : null);
+  const duration = briefing.data?.model?.elapsedMs ?? (!previousReason ? savedRunDuration(status, analysis.data?.data) : null);
+  const resultPool = briefing.data?.model?.poolSize ?? pool ?? (!previousReason ? status?.results.rank.count : null);
   return (
     <div className="briefing-execution-bar" role="status" aria-label="분석 실행 상태">
       <span className="briefing-execution-item">
@@ -22,11 +26,11 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
       </span>
       <span className="briefing-execution-divider">·</span>
       <span className="briefing-execution-item">
-        모집단 <strong>{formatNumber(pool ?? status?.results.rank.count)}종목</strong> ({formatDuration(savedRunDuration(status, analysis.data?.data))})
+        모집단 <strong>{formatNumber(resultPool)}종목</strong> ({formatDuration(duration)})
       </span>
       <span className="briefing-execution-divider">·</span>
       <span className="briefing-execution-item">
-        {running ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최신 완료 결과" : "저장된 분석 결과"}
+        {previousReason === "running" ? "새 분석 진행 중 · 이전 결과 표시" : previousReason === "failed" ? "새 분석 실패 · 이전 결과 표시" : completed ? "최신 완료 결과" : "저장된 분석 결과"}
       </span>
       {briefing.data && briefing.data.kind !== "official" && <span className="briefing-execution-item briefing-execution-error">
         {briefing.data.kind === "adhoc" ? "수시 분석 결과 · 공식 기록 아님" : "공식 여부 확인 불가"}
@@ -57,7 +61,7 @@ export function BriefingSummary({ indices, pending, error, count, rows, rankPend
       <p>{prediction.count}</p><small>{prediction.period}</small><small>{rows[0]?.scoreKind === "rank_zscore" ? "원본 모델 순위" : "원본 모델 예측"} · 실제 성과 아님{rankSource === "sample" ? " · 예시 데이터" : ""}</small>
     </article>
     <article className="briefing-summary-data" aria-label="분석 및 데이터"><p className="briefing-eyebrow">분석 · 데이터</p><strong className="briefing-summary-value">{finishedAt ? formatDate(finishedAt, true) : "—"}</strong>
-      <p>{formatNumber(count ?? status?.results.rank.count)}종목 · {formatDuration(savedRunDuration(status, analysis.data?.data))}</p><small>{running ? "새 분석 진행 중 · 현재 결과 유지" : completed ? "최신 완료 결과" : "저장된 분석 결과"}</small>
+      <p>{formatNumber(count ?? status?.results.rank.count)}종목 · {formatDuration(savedRunDuration(status, analysis.data?.data))}</p><small>{running ? "분석 진행 중" : completed ? "최신 완료 결과" : "완료 결과 확인 필요"}</small>
       {(backend.isError || analysis.isError) && <small role="status">실행 상태 갱신 실패</small>}
     </article>
   </section>;

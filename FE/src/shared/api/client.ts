@@ -1,6 +1,6 @@
 import { aggregateSource, dataSource, resultMeta, type DataResult, type DataSource } from "../../entities/source";
 import { record } from "../../entities/value";
-import { ApiRequestError, getAdminToken } from "./adminAccess";
+import { ApiRequestError, getAdminToken } from "./adminSession";
 
 const DEFAULT_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 export type ApiClient = ReturnType<typeof createApiClient>;

@@ -35,7 +35,7 @@ export async function getBackendStatus(env = process.env, deps = defaults): Prom
   try { results = await deps.availability(); } catch { /* Never return raw errors or filesystem paths. */ }
   let runtime: BackendStatus["runtime"] = { state: "unknown", startedAt: null, finishedAt: null };
   try { const snapshot = deps.runtime(); runtime = { runId: snapshot.runId ?? null, kind: snapshot.kind ?? null, state: snapshot.status, startedAt: time(snapshot.startedAt), finishedAt: time(snapshot.finishedAt) }; } catch { /* Read-only status unavailable. */ }
-  return { version: 1, analysisMode: !env.PIPELINE_ANALYSIS_MODE || env.PIPELINE_ANALYSIS_MODE === "model_only" ? "model_only" : "unknown", checkedAt: new Date().toISOString(), source: "unknown", asOf: null,
+  return { version: 1, localWriteAllowed: false, analysisMode: !env.PIPELINE_ANALYSIS_MODE || env.PIPELINE_ANALYSIS_MODE === "model_only" ? "model_only" : "unknown", checkedAt: new Date().toISOString(), source: "unknown", asOf: null,
     market: { configuration: present(key) && present(secret) ? "configured" : "not_configured", verification: "unverified" },
     news: { configuration: present(env.GEMINI_API_KEY) ? "configured" : "not_configured",
       collectionConfiguration: present(env.NAVER_CLIENT_ID) && present(env.NAVER_CLIENT_SECRET) ? "configured" : "not_configured", verification: "unverified" },

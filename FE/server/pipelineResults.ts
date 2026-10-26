@@ -6,11 +6,12 @@ import type { PipelineAvailability } from "../src/types/backendStatus";
 import { attachRelatedNews, RELATED_NEWS_FILE, type RelatedNewsSnapshot } from "./relatedNews";
 import { showBriefingSupply, withoutSupplyFields } from "./supplyVisibility";
 import { FEATURE_LABELS } from "../src/types/modelEvidence";
+import { completedResults, previousRunReason, sameCompletedRun, type PreviousRun } from "./completedResults";
 
 declare const process: { cwd: () => string; env: Record<string, string | undefined> };
 const FULL_RANK_CSV_RESULT_FILES = ["step2_all_transformer_rank.csv"];
 const MODEL_ID = "plain_20_120_rank_mean_v1";
-type LoadedRows = { mtimeMs: number; rows: PipelineOutputRow[] };
+type LoadedRows = { mtimeMs: number; rows: PipelineOutputRow[]; records: Record<string, string>[] };
 
 function candidatePaths(fileNames: string[], includeOverride = true, env = process.env): string[] {
   const override = env.PIPELINE_RESULT_PATH;
@@ -194,13 +195,14 @@ async function loadCsvRows(
 
     try {
       const text = await readFile(path, "utf8");
-      const rows = parseCsv(text)
+      const records = parseCsv(text);
+      const rows = records
         .map(record => ensembleCsvToPipelineRow(record, showBriefingSupply(env)))
         .filter((row): row is PipelineOutputRow => row !== null);
       if (rows.length > 0 || /^\s*(?:\uFEFF)?[^\r\n]*ticker[^\r\n]*/.test(text)) {
         const mtimeMs = (await stat(path)).mtimeMs;
         if (!latest || mtimeMs > latest.mtimeMs) {
-          latest = { mtimeMs, rows: rows.map(row => withFileMeta(row, mtimeMs)) };
+          latest = { mtimeMs, rows: rows.map(row => withFileMeta(row, mtimeMs)), records };
         }
       }
     } catch (error) {
@@ -313,10 +315,45 @@ export async function getStockAnalysisPayload(ticker: string, env = process.env)
 }
 
 export async function getRankPayload(env = process.env): Promise<PipelineOutputRow[]> {
+  const { rows, previousRun } = await getRankSnapshot(env);
+  return previousRun ? rows.map(row => ({ ...row, data_meta: { ...row.data_meta, previousRun } })) : rows;
+}
+
+/** Only the shared pair can be published; rank never updates independently. */
+export async function getRankSnapshot(env = process.env): Promise<{ rows: PipelineOutputRow[]; previousRun?: PreviousRun }> {
+  const { getBriefing, prepareCompletedResults, waitForCompletedPreparation } = await import("./briefing");
+  const pending = waitForCompletedPreparation(env);
+  if (pending) return pending;
+  let marker = await readPipelineRunMarker(env);
+  const startedDuringRead = waitForCompletedPreparation(env);
+  if (startedDuringRead) return startedDuringRead;
+  let saved = completedResults.get(env);
+  if (!saved && previousRunReason(marker, env)?.reason === "running") {
+    await getBriefing(env);
+    marker = await readPipelineRunMarker(env);
+    saved = completedResults.get(env);
+  }
+  if (!previousRunReason(marker, env) && marker?.status === "completed" && marker.mode === "model_only"
+    && !sameCompletedRun(saved?.marker ?? null, marker)) {
+    if (saved) await getBriefing(env);
+    else await prepareCompletedResults(env);
+    marker = await readPipelineRunMarker(env);
+    saved = completedResults.get(env);
+  }
+  const startedDuringRefresh = waitForCompletedPreparation(env);
+  return startedDuringRefresh ?? { rows: saved?.rank ?? [], ...(saved ? { previousRun: previousRunReason(marker, env) } : {}) };
+}
+
+export async function readCompletedRank(env = process.env): Promise<PipelineOutputRow[]> {
   const marker = await readPipelineRunMarker(env);
   if ((!marker && env.PIPELINE_ALLOW_UNMARKED_RESULTS !== "true") || (marker && (marker.status !== "completed" || marker.mode !== "model_only"))) return [];
   const rank = await loadCsvRows(FULL_RANK_CSV_RESULT_FILES, false, env);
   if (!rank || !markerAllowsLoadedFile(marker, rank.mtimeMs, env)) return [];
+  try {
+    const validated = validateModelRows(rank.records), sorted = [...validated.ok].sort((left, right) => left.rank - right.rank);
+    if (!sorted.length || sorted.length !== validated.poolSize || sorted.some((row, index) => row.rank !== index + 1
+      || index > 0 && row.prediction > sorted[index - 1].prediction)) return [];
+  } catch { return []; }
   let related: RelatedNewsSnapshot | null = null;
   for (const path of candidatePaths([RELATED_NEWS_FILE], false, env)) {
     try {

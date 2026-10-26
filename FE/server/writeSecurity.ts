@@ -48,7 +48,7 @@ export function isLocalDevelopmentRequest(request: ApiRequest): boolean {
 export function authorizeWrite(request: ApiRequest, env: Record<string, string | undefined>, development = false): "admin" | "cron" | "local" {
   const role = bearerRole(request, env);
   if (role) return role;
-  if (development && !env.ADMIN_API_TOKEN?.trim() && !env.CRON_SECRET?.trim()
+  if (localWriteAllowed(env, development)
     && isLocalDevelopmentRequest(request)) return "local";
   throw new HttpError(401, "관리자 인증이 필요합니다. ?admin에서 유효한 토큰을 저장한 뒤 다시 시도해 주세요.");
 }
@@ -61,6 +61,10 @@ export function clientIp(request: ApiRequest, trustProxy: string | undefined): s
     if (selected && isIP(selected)) return selected;
   }
   return request.socket?.remoteAddress ?? "unknown";
+}
+
+export function localWriteAllowed(env: Record<string, string | undefined>, development = false): boolean {
+  return development && !env.ADMIN_API_TOKEN?.trim() && !env.CRON_SECRET?.trim();
 }
 
 /** One bounded, process-local fixed window shared by all write routes. */

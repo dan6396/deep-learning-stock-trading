@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { AnalysisControl } from "./AnalysisControl";
-import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
+import { backendStatusBody, deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
+import { adaptCandidate } from "../../entities/candidate";
+import { adaptBriefing } from "../../entities/briefing";
 import { queryKeys } from "../../shared/api/queries";
 
 const clients: QueryClient[] = [];
@@ -45,7 +47,7 @@ describe("analysis launch control", () => {
     expect(screen.getByText(/모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "전체 순위 보기" })).toHaveAttribute("href", "/next/rank");
   });
-  it("keeps existing rank and briefing data in cache when a new run starts", async () => {
+  it("keeps existing data while requesting the server briefing refresh flag on launch", async () => {
     const test = setup(), rank = [{ code: "005930", rankScore: 1.2 }], briefing = { status: "ready", stocks: rank };
     test.client.setQueryData(["rank"], rank); test.client.setQueryData(["briefing"], briefing);
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
@@ -54,7 +56,7 @@ describe("analysis launch control", () => {
     expect(test.client.getQueryData(["rank"])).toEqual(rank);
     expect(test.client.getQueryData(["briefing"])).toEqual(briefing);
     expect(test.client.getQueryState(["rank"])?.isInvalidated).toBe(false);
-    expect(test.client.getQueryState(["briefing"])?.isInvalidated).toBe(false);
+    expect(test.client.getQueryState(["briefing"])?.isInvalidated).toBe(true);
   });
   it("guards rapid clicks while a request is pending and attaches to the running job", async () => {
     const pending = deferred<Response>(), test = setup({ post: () => pending.promise });
@@ -120,8 +122,8 @@ describe("analysis launch control", () => {
     expect(screen.getByRole("progressbar")).not.toHaveAttribute("value");
   });
   it("refreshes existing result queries on completion and explains model-only candidates", async () => {
-    const test = setup({ post: async () => jsonResponse({ status: "completed", result: { mode: "model_only", rows: 0 } }) });
-    test.client.setQueryData(queryKeys.rank(), { data: ["old result"] });
+    const test = setup({ post: async () => jsonResponse({ status: "completed", startedAt: Date.parse("2026-10-26T04:00:00Z"), result: { mode: "model_only", rows: 0 } }) });
+    test.client.setQueryData(queryKeys.rank(), { data: [adaptCandidate(pipelineRow()).data], source: "cache", asOf: "2026-10-23T04:00:00Z" });
     test.client.setQueryData(queryKeys.candidates(), { data: [] });
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "분석 시작" }));
@@ -131,16 +133,21 @@ describe("analysis launch control", () => {
   });
   it("refreshes active briefing and rank when a polled running job completes", async () => {
     let revision = "old";
+    const startedAt = Date.parse("2026-10-26T04:00:00Z"), resultTime = () => new Date(startedAt + (revision === "old" ? -60000 : 1000)).toISOString();
     const test = setup({ run: { status: "running" } });
-    const rank = new QueryObserver(test.client, { queryKey: queryKeys.rank(), queryFn: async () => revision });
-    const briefing = new QueryObserver(test.client, { queryKey: queryKeys.briefing(), queryFn: async () => revision });
+    const rank = new QueryObserver(test.client, { queryKey: queryKeys.rank(), queryFn: async () => {
+      const row = pipelineRow(); row.result.company_name = revision;
+      return { data: [adaptCandidate(row).data], source: "cache" as const, asOf: resultTime() };
+    } });
+    const briefing = new QueryObserver(test.client, { queryKey: queryKeys.briefing(), queryFn: async () => adaptBriefing({ status: "ready",
+      model: { modelId: "fixture", baseDate: "2026-10-23", runStartedAt: revision === "old" ? resultTime() : new Date(startedAt).toISOString() }, narrative: { overview: revision } }) });
     const stopRank = rank.subscribe(() => {}), stopBriefing = briefing.subscribe(() => {});
     try {
       await screen.findByRole("progressbar");
-      await waitFor(() => expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["old", "old"]));
-      revision = "new"; test.setRun({ status: "completed", elapsedMs: 42000, result: { runId: "new-run" } });
+      await waitFor(() => expect([rank.getCurrentResult().data?.data[0]?.name, briefing.getCurrentResult().data?.narrative.overview]).toEqual(["old", "old"]));
+      revision = "new"; test.setRun({ status: "completed", startedAt, elapsedMs: 42000, result: { runId: "new-run" } });
       await test.client.refetchQueries({ queryKey: queryKeys.analysisRun() });
-      await waitFor(() => expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["new", "new"]));
+      await waitFor(() => expect([rank.getCurrentResult().data?.data[0]?.name, briefing.getCurrentResult().data?.narrative.overview]).toEqual(["new", "new"]));
       expect(test.posts()).toHaveLength(0);
     } finally { stopRank(); stopBriefing(); }
   });

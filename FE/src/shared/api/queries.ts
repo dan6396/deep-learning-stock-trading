@@ -37,11 +37,6 @@ async function candidateList(client: ApiClient, path: string, final: boolean, si
   return { data: rows.map(row => row.data), source, asOf: response.asOf ?? rows.map(row => row.asOf).filter((time): time is string => time !== null).sort()[0] ?? null };
 }
 
-/** A partial run may temporarily have no completed snapshot. Keep the last ready result. */
-export function preserveReadyBriefing(previous: BriefingPayload | undefined, incoming: BriefingPayload): BriefingPayload {
-  return previous?.status === "ready" && incoming.status === "no_run" ? previous : incoming;
-}
-
 export function createQueries(client: ApiClient = apiClient) {
   return {
     performance: (code?: string) => queryOptions({ queryKey: ["performance", code ?? "all"], staleTime: 30000, retry: false, queryFn: async ({ signal }) => {
@@ -116,19 +111,22 @@ export function createQueries(client: ApiClient = apiClient) {
     briefing: () => queryOptions({
       queryKey: queryKeys.briefing(),
       staleTime: 30000,
-      queryFn: async ({ signal, client: cache }) => {
+      queryFn: async ({ signal }) => {
         const response = await client.request("/api/briefing", { signal, fallbackSource: "cache" });
-        return preserveReadyBriefing(cache.getQueryData<BriefingPayload>(queryKeys.briefing()), adaptBriefing(response.data));
+        return adaptBriefing(response.data);
       },
     }),
   };
 }
 
-export type AnalysisStatus = { runId?: string; kind?: "official" | "adhoc"; mode?: "model_only" | "full"; status: "idle" | "running" | "completed" | "failed"; elapsedMs: number | null; progress: Record<string, unknown> | null; error: string | null; result: Record<string, unknown> | null };
+export type AnalysisStatus = { runId?: string; startedAt?: number; finishedAt?: number; kind?: "official" | "adhoc"; mode?: "model_only" | "full"; status: "idle" | "running" | "completed" | "failed"; elapsedMs: number | null; progress: Record<string, unknown> | null; error: string | null; result: Record<string, unknown> | null };
 export function adaptAnalysisStatus(value: unknown): AnalysisStatus {
   const object = record(value), status = object.status;
   if (status !== "idle" && status !== "running" && status !== "completed" && status !== "failed") throw new Error("분석 실행 상태가 올바르지 않습니다.");
-  return { status, ...(typeof object.runId === "string" ? { runId: object.runId } : {}), ...(object.kind === "official" || object.kind === "adhoc" ? { kind: object.kind } : {}), ...(object.mode === "model_only" || object.mode === "full" ? { mode: object.mode } : {}), elapsedMs: typeof object.elapsedMs === "number" && Number.isFinite(object.elapsedMs) ? object.elapsedMs : null,
+  return { status, ...(typeof object.runId === "string" ? { runId: object.runId } : {}),
+    ...(typeof object.startedAt === "number" && Number.isFinite(object.startedAt) && object.startedAt > 0 ? { startedAt: object.startedAt } : {}),
+    ...(typeof object.finishedAt === "number" && Number.isFinite(object.finishedAt) && object.finishedAt > 0 ? { finishedAt: object.finishedAt } : {}),
+    ...(object.kind === "official" || object.kind === "adhoc" ? { kind: object.kind } : {}), ...(object.mode === "model_only" || object.mode === "full" ? { mode: object.mode } : {}), elapsedMs: typeof object.elapsedMs === "number" && Number.isFinite(object.elapsedMs) ? object.elapsedMs : null,
     progress: object.progress && typeof object.progress === "object" ? record(object.progress) : null,
     error: typeof object.error === "string" ? object.error : null,
     result: object.result && typeof object.result === "object" ? record(object.result) : null };
@@ -160,7 +158,7 @@ export function adaptBackendStatus(value: unknown): BackendStatus {
     return { state, count, source: enumValue(row.source, ["cache", "sample", "unknown"] as const), asOf: date(row.asOf) };
   };
   if (root.version !== 1 || root.source !== "unknown" || root.asOf !== null || !date(root.checkedAt) || market.verification !== "unverified" || news.verification !== "unverified") throw new Error("연결 상태 응답을 확인하지 못했습니다.");
-  return { version: 1, analysisMode: mode(root.analysisMode), checkedAt: date(root.checkedAt)!, source: "unknown", asOf: null,
+  return { version: 1, localWriteAllowed: root.localWriteAllowed === true, analysisMode: mode(root.analysisMode), checkedAt: date(root.checkedAt)!, source: "unknown", asOf: null,
     market: { configuration: configuration(market.configuration), verification: "unverified" },
     news: { configuration: configuration(news.configuration), collectionConfiguration: configuration(news.collectionConfiguration), verification: "unverified" },
     runtime: { runId: typeof runtime.runId === "string" ? runtime.runId : null, kind: runtime.kind === "official" || runtime.kind === "adhoc" ? runtime.kind : null, state: enumValue(runtime.state, ["idle", "running", "completed", "failed", "unknown"] as const), startedAt: date(runtime.startedAt), finishedAt: date(runtime.finishedAt) },

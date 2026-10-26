@@ -91,6 +91,7 @@ export function BriefingTopContainer({
         stocks={briefing.stocks}
         isGenerating={isGenerating}
         analysisRunning={analysisRunning}
+        analysisFailed={briefing.previousRun?.reason === "failed"}
         generateError={generateError}
         onGenerate={onGenerateNarrative}
         onCitationClick={handleCitationClick}

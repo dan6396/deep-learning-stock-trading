@@ -1,6 +1,6 @@
 import type { PipelineOutputRow } from "../src/types/trading";
 import { safeArticleUrl } from "../src/shared/lib/articleUrl";
-import { getRankPayload, validateModelRows } from "./pipelineResults";
+import { readCompletedRank, validateModelRows } from "./pipelineResults";
 import { readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshness";
 import { getMarketMacro, MACRO_UNIVERSE, usMarketDate, type MarketMacro } from "./marketMacro";
 import { unavailableNight } from "./kisBriefing";
@@ -11,6 +11,7 @@ import { modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
 export { formatSupplyWon } from "./briefingValidation";
 import { createNarrativeStore, briefingInputHash, templateNarrative, isTargetSessionCaution, targetSessionCautionText, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
+import { completedResultsKey, completedResults, createCompletedResultsStore, previousRunReason, sameCompletedRun, type PreviousRun } from "./completedResults";
 
 declare const process: { env: Record<string, string | undefined> };
 export type BriefingFact = { id: string; kind: "model" | "supply" | "news" | "macro" | "data"; text: string };
@@ -25,7 +26,9 @@ export type BriefingInput = {
   model: { modelId: string; scoreKind: "rank_zscore"; baseDate: string; predictionTarget: string; poolSize: number; runStartedAt: string | null } | null;
   macro: MarketMacro; stocks: BriefingStock[];
 };
-export type BriefingPayload = BriefingInput & {
+export type BriefingPayload = Omit<BriefingInput, "model"> & {
+  model: (NonNullable<BriefingInput["model"]> & { finishedAt: string | null; elapsedMs: number | null }) | null;
+  previousRun?: PreviousRun;
   kind: "official" | "adhoc" | "unknown";
   version: 1; status: "ready" | "no_run"; narrative: BriefingNarrative; disclaimer: string;
   composition: BriefingComposition;
@@ -108,37 +111,67 @@ export function buildBriefingInput(rows: PipelineOutputRow[], marker: PipelineRu
 }
 
 type BriefingDependencies = {
-  rank?: typeof getRankPayload; marker?: typeof readPipelineRunMarker; macro?: typeof getMarketMacro;
+  rank?: typeof readCompletedRank; marker?: typeof readPipelineRunMarker; macro?: typeof getMarketMacro;
   narratives?: ReturnType<typeof createNarrativeStore>; now?: () => number;
   composition?: typeof getBriefingComposition;
+  snapshots?: ReturnType<typeof createCompletedResultsStore>;
 };
-export function createBriefingService({ rank = getRankPayload, marker = readPipelineRunMarker, macro = getMarketMacro,
-  narratives = createNarrativeStore(), now = Date.now, composition = getBriefingComposition }: BriefingDependencies = {}) {
+type CaptureControl = { deadline: number; cancelled: boolean; marker: PipelineRunMarker | null };
+export const COMPLETED_PREPARATION_TIMEOUT_MS = 1500;
+
+function unavailableMarket(): MarketMacro {
+  return { asOf: null, indicators: [...MACRO_UNIVERSE.map(row => ({ id: row.id, name: row.name, unit: row.unit,
+    value: null, change: null, changePct: null, asOf: null, source: "yahoo" as const, status: "unavailable" as const })), unavailableNight()], reference: null };
+}
+function emptyBriefing(env: Record<string, string | undefined>): BriefingPayload {
+  const input = buildBriefingInput([], null, unavailableMarket(), Date.now(), env);
+  return { version: 1, kind: "unknown", status: "no_run", ...input, model: null, narrative: templateNarrative(input, "no_run"),
+    composition: buildBriefingComposition(input), disclaimer: "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
+    data_meta: { source: "cache", asOf: null } };
+}
+export function createBriefingService({ rank = readCompletedRank, marker = readPipelineRunMarker, macro = getMarketMacro,
+  narratives = createNarrativeStore(), now = Date.now, composition = getBriefingComposition, snapshots = createCompletedResultsStore() }: BriefingDependencies = {}) {
   const markets = new Map<string, MarketMacro>(), compositions = new Map<string, { hash: string; value: BriefingComposition }>();
   async function bounded<T>(promise: Promise<T>, deadline: number, fallback: () => T): Promise<T> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try { return await Promise.race([promise.catch(fallback), new Promise<T>(resolve => { timer = setTimeout(() => resolve(fallback()), Math.max(0, deadline - Date.now())); })]); }
     finally { if (timer !== undefined) clearTimeout(timer); }
   }
-  return async (generate = false, env = process.env): Promise<BriefingPayload> => {
-    const deadline = generate ? Date.now() + 45_000 : Infinity, preparationDeadline = generate ? Math.min(deadline, Date.now() + 9_000) : Infinity;
+  async function resolve(generate = false, env = process.env, capture?: CaptureControl): Promise<BriefingPayload> {
+    const deadline = capture?.deadline ?? (generate ? Date.now() + 45_000 : Infinity);
+    const preparationDeadline = generate ? Math.min(deadline, Date.now() + 9_000) : deadline;
     const kisDeadline = Date.now() + 1500;
     const kisOptions = () => ({ backgroundKis: !generate, kisWaitMs: Math.max(0, kisDeadline - Date.now()) });
-    const environmentKey = env.PIPELINE_OUTPUT_DIR ?? "default";
-    const emptyMarket = (): MarketMacro => markets.get(environmentKey) ?? { asOf: null, indicators: [
-      ...MACRO_UNIVERSE.map(row => ({ id: row.id, name: row.name, unit: row.unit, value: null, change: null, changePct: null, asOf: null, source: "yahoo" as const, status: "unavailable" as const })), unavailableNight()], reference: null };
-    const within = <T>(promise: Promise<T>, budget: number, fallback: () => T) => generate ? bounded(promise, budget, fallback) : promise;
+    const environmentKey = completedResultsKey(env);
+    const previous = (run: PipelineRunMarker | null): BriefingPayload | null => {
+      // Capture runs before Python and must inspect the completed disk run, independent of the next run's memory state.
+      if (capture) return null;
+      const saved = snapshots.get(env), reason = previousRunReason(run, env);
+      return saved && reason ? { ...saved.briefing, previousRun: reason } : null;
+    };
+    const emptyMarket = (): MarketMacro => markets.get(environmentKey) ?? unavailableMarket();
+    const within = <T>(promise: Promise<T>, budget: number, fallback: () => T) => generate || capture ? bounded(Promise.resolve(promise), budget, fallback) : Promise.resolve(promise).catch(fallback);
     const before = await within(marker(env), preparationDeadline, () => null);
-    const marketRequest = macro(env, kisOptions()).then(value => { markets.set(environmentKey, value); return value; });
-    const [rows, market] = await Promise.all([within(rank(env), preparationDeadline, () => []), within(marketRequest, preparationDeadline, emptyMarket)]);
+    if (capture) {
+      capture.marker = before;
+      const saved = snapshots.get(env);
+      if (saved && sameCompletedRun(saved.marker, before)) return saved.briefing;
+      if (before?.status !== "completed" || before.mode !== "model_only") return saved?.briefing ?? emptyBriefing(env);
+    }
+    const retained = previous(before);
+    if (retained) return retained;
+    const marketRequest = (capture ? Promise.resolve(emptyMarket()) : Promise.resolve().then(() => macro(env, kisOptions()))).then(value => { markets.set(environmentKey, value); return value; });
+    const [rows, market] = await Promise.all([within(Promise.resolve().then(() => rank(env)), preparationDeadline, () => []), within(marketRequest, preparationDeadline, emptyMarket)]);
     const after = await within(marker(env), preparationDeadline, () => null);
+    const concurrent = previous(after);
+    if (concurrent) return concurrent;
     const unchanged = before && after && before.startedAt === after.startedAt && before.finishedAt === after.finishedAt && before.status === after.status && before.mode === after.mode
       && before.runId === after.runId && before.kind === after.kind;
     const input = buildBriefingInput(rows, unchanged ? after : null, market, now(), env);
     const compositionKey = briefingInputHash(input);
-    const compositionRequest = composition(input, env, kisOptions()).then(value => { compositions.set(environmentKey, { hash: compositionKey, value }); return value; });
+    const compositionRequest = (capture ? Promise.resolve(buildBriefingComposition(input)) : Promise.resolve().then(() => composition(input, env, kisOptions()))).then(value => { compositions.set(environmentKey, { hash: compositionKey, value }); return value; });
     const [narrative, candidateComposition] = await Promise.all([
-      within(narratives.resolve(input, generate && input.model !== null, env, generate ? deadline - 50 : undefined), deadline,
+      within(Promise.resolve().then(() => narratives.resolve(input, generate && input.model !== null, env, generate ? deadline - 50 : undefined)), deadline,
         () => templateNarrative(input, "generation_timeout", now())),
       within(compositionRequest, deadline, () => compositions.get(environmentKey)?.hash === compositionKey ? compositions.get(environmentKey)!.value : buildBriefingComposition(input)),
     ]);
@@ -150,12 +183,94 @@ export function createBriefingService({ rank = getRankPayload, marker = readPipe
     const stocks = input.stocks.map(stock => ({ ...stock, cautions: stock.cautions.filter(fact => !hiddenDateCaution(fact)) }));
     const visibleNarrative = { ...narrative, citations: visibleCitations(narrative.citations),
       stocks: narrative.stocks.map(stock => ({ ...stock, citations: visibleCitations(stock.citations) })) };
-    return { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, stocks, narrative: visibleNarrative, composition: candidateComposition,
+    const payload: BriefingPayload = { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, stocks, narrative: visibleNarrative, composition: candidateComposition,
+      model: input.model ? { ...input.model, finishedAt: after?.finishedAt !== undefined ? new Date(after.finishedAt).toISOString() : null,
+        elapsedMs: after?.finishedAt !== undefined ? after.finishedAt - after.startedAt : null } : null,
       disclaimer: "모델 순위와 시장·기사 요약은 정보 제공용입니다. 순위 점수는 수익률이나 확률이 아니며 투자 판단과 책임은 이용자에게 있습니다.",
       data_meta: { source: "cache", asOf: input.model?.runStartedAt ?? market.asOf } };
+    // Composition and narrative can finish after a new run begins. Do not publish that race.
+    const finalMarker = await within(marker(env), deadline, () => null);
+    const finalPrevious = previous(finalMarker);
+    if (finalPrevious) return finalPrevious;
+    if (payload.status === "ready" && sameCompletedRun(finalMarker, after)
+      && (capture ? !capture.cancelled && Date.now() < capture.deadline : !previousRunReason(finalMarker, env))
+      && snapshots.publish({ marker: finalMarker!, rank: rows, briefing: payload }, env)) {
+      return payload;
+    }
+    const saved = snapshots.get(env);
+    if (saved && finalMarker?.status === "completed") return saved.briefing;
+    if (payload.status === "ready") {
+      const empty = buildBriefingInput([], null, market, now(), env);
+      return { ...payload, ...empty, model: null, status: "no_run", kind: "unknown", narrative: templateNarrative(empty, "no_run", now()),
+        composition: buildBriefingComposition(empty), data_meta: { source: "cache", asOf: market.asOf } };
+    }
+    return payload;
+  }
+  const inFlight = new Map<string, Promise<BriefingPayload>>();
+  const service = (generate = false, env = process.env, capture?: CaptureControl): Promise<BriefingPayload> => {
+    const key = completedResultsKey(env);
+    const active = previousRunReason(null, env), saved = snapshots.get(env);
+    if (!capture && saved && active?.reason === "running") return Promise.resolve({ ...saved.briefing, previousRun: active });
+    // Both endpoints share assembly before publishing a new pair.
+    if (!generate && !capture) {
+      const pending = inFlight.get(key);
+      if (pending) return pending;
+      const request = resolve(false, env).finally(() => { if (inFlight.get(key) === request) inFlight.delete(key); });
+      inFlight.set(key, request);
+      return request;
+    }
+    return resolve(generate, env, capture);
   };
+  return service;
 }
 let service: ReturnType<typeof createBriefingService> | undefined;
-function defaultService() { return service ??= createBriefingService(); }
-export const getBriefing = (env = process.env) => defaultService()(false, env);
+type Preparation = { promise: Promise<void>; control: CaptureControl; settled: boolean };
+const preparations = new Map<string, Preparation>();
+function defaultService() { return service ??= createBriefingService({ snapshots: completedResults }); }
+export const getBriefing = (env = process.env) => {
+  const pending = waitForCompletedPreparation(env);
+  return pending ? pending.then(result => ({ ...result.briefing, ...(result.previousRun ? { previousRun: result.previousRun } : {}) })) : defaultService()(false, env);
+};
 export const generateBriefingNarrative = (env = process.env) => defaultService()(true, env);
+
+/** Refresh completed disk inputs without provider calls. Expired work can never publish later. */
+export function prepareCompletedResults(env = process.env): Promise<void> {
+  const key = completedResultsKey(env), existing = preparations.get(key);
+  if (existing && !existing.settled) return existing.promise;
+  const control: CaptureControl = { deadline: Date.now() + COMPLETED_PREPARATION_TIMEOUT_MS, cancelled: false, marker: null };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const work = defaultService()(false, env, control).then(() => {}, () => {});
+  const request = Promise.race([work, new Promise<void>(resolve => {
+    timer = setTimeout(() => { control.cancelled = true; resolve(); }, COMPLETED_PREPARATION_TIMEOUT_MS);
+  })]).finally(() => {
+    const published = !control.cancelled && Date.now() < control.deadline
+      && sameCompletedRun(completedResults.get(env)?.marker ?? null, control.marker);
+    control.cancelled = true;
+    if (timer !== undefined) clearTimeout(timer);
+    const current = preparations.get(key);
+    if (current?.promise === request) {
+      current.settled = true;
+      // Failed captures keep a retry barrier so subsequent GETs cannot retry through an unbounded read.
+      if (published) preparations.delete(key);
+    }
+  });
+  preparations.set(key, { promise: request, control, settled: false });
+  return request;
+}
+
+/** Both endpoints wait for the same bounded barrier even when an older snapshot exists. */
+export function waitForCompletedPreparation(env = process.env) {
+  const key = completedResultsKey(env);
+  let pending = preparations.get(key);
+  if (!pending) return null;
+  if (pending.settled) {
+    void prepareCompletedResults(env);
+    pending = preparations.get(key)!;
+  }
+  const observed = pending;
+  return pending.promise.then(() => {
+    const saved = completedResults.get(env);
+    return { rows: saved?.rank ?? [], briefing: saved?.briefing ?? emptyBriefing(env),
+      previousRun: saved ? previousRunReason(observed.control.marker, env) : undefined };
+  });
+}

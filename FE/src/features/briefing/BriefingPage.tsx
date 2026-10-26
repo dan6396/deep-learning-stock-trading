@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { Info, X, RefreshCw, ArrowRight } from "lucide-react";
 import { useAppPaths } from "../../app/paths";
-import { queries, queryKeys, requestBriefingNarrative, preserveReadyBriefing } from "../../shared/api/queries";
+import { queries, queryKeys, requestBriefingNarrative } from "../../shared/api/queries";
+import { ApiRequestError } from "../../shared/api/adminAccess";
 import { isAnalysisRunning, useAnalysisRun } from "../../shared/api/analysis";
 import type { BriefingPayload } from "../../entities/briefing";
 import { formatDate, formatNumber } from "../../shared/lib/format";
@@ -46,15 +47,17 @@ export function BriefingPage() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const narrativeMutation = useMutation({
     onMutate: () => setGenerateError(null),
-    mutationFn: async () => isAnalysisRunning(client) ? null : requestBriefingNarrative(),
+    mutationFn: async () => isAnalysisRunning(client) || client.getQueryData<BriefingPayload>(queryKeys.briefing())?.previousRun?.reason === "failed" ? null : requestBriefingNarrative(),
     onSuccess: async data => {
       if (!data || isAnalysisRunning(client)) return;
       setGenerateError(null);
       await client.cancelQueries({ queryKey: queryKeys.briefing() });
       if (isAnalysisRunning(client)) return;
-      client.setQueryData<BriefingPayload>(queryKeys.briefing(), previous => preserveReadyBriefing(previous, data));
+      client.setQueryData<BriefingPayload>(queryKeys.briefing(), data);
     },
-    onError: () => setGenerateError("AI 요약 생성 요청이 실패했습니다. 잠시 후 다시 시도하세요"),
+    onError: error => setGenerateError(error instanceof ApiRequestError
+      ? `${error.message}${error.status === 401 ? " ?admin에서 유효한 토큰을 저장한 뒤 다시 시도해 주세요." : ""}`
+      : "AI 요약 생성 요청이 실패했습니다. 잠시 후 다시 시도하세요"),
     onSettled: async (_data, error) => {
       if (error) {
         await client.invalidateQueries({ queryKey: queryKeys.briefing() });
@@ -119,7 +122,7 @@ export function BriefingPage() {
             isGenerating={narrativeMutation.isPending}
             analysisRunning={analysisRunning}
             generateError={generateError}
-            onGenerateNarrative={() => { if (!isAnalysisRunning(client)) narrativeMutation.mutate(); }}
+            onGenerateNarrative={() => { if (!isAnalysisRunning(client) && client.getQueryData<BriefingPayload>(queryKeys.briefing())?.previousRun?.reason !== "failed") narrativeMutation.mutate(); }}
             renderTopFive={renderTopFive}
           />
         </>

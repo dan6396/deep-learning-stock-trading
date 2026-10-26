@@ -10,6 +10,7 @@ export type BriefingNarrativeCardProps = {
   stocks: BriefingStock[];
   isGenerating: boolean;
   analysisRunning?: boolean;
+  analysisFailed?: boolean;
   generateError: string | null;
   onGenerate: () => void;
   onCitationClick: (citationId: string) => void;
@@ -20,6 +21,7 @@ export function BriefingNarrativeCard({
   stocks,
   isGenerating,
   analysisRunning = false,
+  analysisFailed = false,
   generateError,
   onGenerate,
   onCitationClick,
@@ -42,7 +44,7 @@ export function BriefingNarrativeCard({
   }, [isLlm, generated]);
   // Template timestamps are render times, not successful generation times.
   const recentlyGenerated = isLlm && Number.isFinite(generated) && clock < generated + 600_000;
-  const isButtonDisabled = analysisRunning || isGenerating || inProgress || isLlm && (recentlyGenerated || !isStale);
+  const isButtonDisabled = analysisRunning || analysisFailed || isGenerating || inProgress || isLlm && (recentlyGenerated || !isStale);
 
   let buttonText = "AI 요약 생성";
   if (isGenerating || inProgress) {
@@ -143,7 +145,7 @@ export function BriefingNarrativeCard({
             disabled={isButtonDisabled}
             onClick={onGenerate}
             aria-busy={isGenerating || inProgress}
-            aria-describedby={analysisRunning ? analysisReasonId : undefined}
+            aria-describedby={analysisRunning || analysisFailed ? analysisReasonId : undefined}
             data-testid="narrative-generate-btn"
           >
             {isGenerating ? (
@@ -154,6 +156,7 @@ export function BriefingNarrativeCard({
             <span>{buttonText}</span>
           </button>
           {analysisRunning && <span id={analysisReasonId} className="briefing-partial-policy-hint">분석 진행 중에는 요약을 다시 만들 수 없습니다.</span>}
+          {!analysisRunning && analysisFailed && <span id={analysisReasonId} className="briefing-partial-policy-hint">새 분석이 실패해 이전 결과를 표시 중입니다. 분석을 완료한 뒤 요약을 다시 생성해 주세요.</span>}
           {isGenerating && !analysisRunning && (
             <span
               className="briefing-narrative-generating-hint"
@@ -163,7 +166,7 @@ export function BriefingNarrativeCard({
               최대 1분 정도 걸릴 수 있습니다
             </span>
           )}
-          {!analysisRunning && isLlm && (recentlyGenerated || !isStale) && (
+          {!analysisRunning && !analysisFailed && isLlm && (recentlyGenerated || !isStale) && (
             <span
               className="briefing-partial-policy-hint"
               data-testid="partial-template-policy-hint"

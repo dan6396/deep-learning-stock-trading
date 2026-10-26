@@ -1,24 +1,95 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { AppProviders } from "../app/providers";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { PropsWithChildren } from "react";
 import { AppShell } from "../app/AppShell";
 import { AnalysisControl } from "../features/briefing/AnalysisControl";
 import { BriefingNarrativeCard } from "../features/briefing/BriefingNarrativeCard";
 import { adaptBriefing } from "../entities/briefing";
 import { createApiClient } from "../shared/api/client";
-import { getAdminToken, setAdminToken } from "../shared/api/adminAccess";
+import { getAdminToken, setAdminToken, useAdminAccess } from "../shared/api/adminAccess";
 import { backendStatusBody, jsonResponse } from "./dataFixtures";
+import { adaptBackendStatus, queryKeys } from "../shared/api/queries";
 
 vi.mock("../features/search/SearchDialog", () => ({ SearchDialog: () => null }));
 vi.mock("../features/connection/ConnectionNotice", () => ({ ConnectionNotice: () => null }));
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+const originalLocationDescriptor = Object.getOwnPropertyDescriptor(window, "location");
+function stubHostname(hostname: string) {
+  Object.defineProperty(window, "location", { configurable: true, value: { hostname } as Location });
+}
+afterEach(() => {
+  if (originalLocationDescriptor) Object.defineProperty(window, "location", originalLocationDescriptor);
+  vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); setAdminToken("");
+});
 function Reopen() { const navigate = useNavigate(), location = useLocation(); return <><button onClick={() => navigate("/?admin")}>관리자 설정 열기</button><output>{location.search}</output></>; }
 function mount(entry = "/?admin") {
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async url => jsonResponse(String(url).includes("backend/status") ? backendStatusBody() : { status: "idle" })));
   return render(<MemoryRouter initialEntries={[entry]}><AppProviders><Reopen /><AppShell /></AppProviders></MemoryRouter>);
 }
+function accessWrapper(allowed?: boolean) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } });
+  if (allowed !== undefined) client.setQueryData(queryKeys.backendStatus(), { ...adaptBackendStatus(backendStatusBody()), localWriteAllowed: allowed });
+  return ({ children }: PropsWithChildren) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+describe("useAdminAccess local development access", () => {
+  beforeEach(() => setAdminToken(""));
+
+  it.each(["localhost", "127.0.0.1", "[::1]", "::1"])("allows confirmed local write access on %s in development", hostname => {
+    vi.stubEnv("DEV", true); stubHostname(hostname);
+    expect(renderHook(() => useAdminAccess(), { wrapper: accessWrapper(true) }).result.current).toBe(true);
+  });
+  it("denies local access until the backend confirms permission", async () => {
+    vi.stubEnv("DEV", true); stubHostname("localhost");
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => jsonResponse({ ...backendStatusBody(), localWriteAllowed: true })));
+    const hook = renderHook(() => useAdminAccess(), { wrapper: accessWrapper() });
+    expect(hook.result.current).toBe(false);
+    await waitFor(() => expect(hook.result.current).toBe(true));
+  });
+  it("denies confirmed false local write access", () => {
+    vi.stubEnv("DEV", true); stubHostname("localhost");
+    expect(renderHook(() => useAdminAccess(), { wrapper: accessWrapper(false) }).result.current).toBe(false);
+  });
+  it("hides controls when the local server disallows writes", () => {
+    vi.stubEnv("DEV", true); stubHostname("localhost");
+    const Wrapper = accessWrapper(false);
+    render(<MemoryRouter><Wrapper><AnalysisControl /></Wrapper></MemoryRouter>);
+    expect(screen.queryByRole("button", { name: "분석 시작" })).not.toBeInTheDocument();
+  });
+
+  it("denies tokenless access on a LAN host in development", () => {
+    vi.stubEnv("DEV", true); stubHostname("192.168.0.10");
+    expect(renderHook(() => useAdminAccess(), { wrapper: accessWrapper(true) }).result.current).toBe(false);
+  });
+
+  it("denies tokenless access on localhost outside development", () => {
+    vi.stubEnv("DEV", false); stubHostname("localhost");
+    expect(renderHook(() => useAdminAccess(), { wrapper: accessWrapper(true) }).result.current).toBe(false);
+  });
+
+  it("allows access with a token regardless of hostname", () => {
+    vi.stubEnv("DEV", false); stubHostname("192.168.0.10"); setAdminToken("fixture-admin");
+    expect(renderHook(() => useAdminAccess()).result.current).toBe(true);
+  });
+});
 describe("admin session controls", () => {
+  beforeEach(() => vi.stubEnv("DEV", false));
+
+  it("explains local mode and disables revoke without a stored token", async () => {
+    vi.stubEnv("DEV", true); stubHostname("localhost");
+    const Wrapper = accessWrapper(true);
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => jsonResponse({ status: "idle" })));
+    render(<MemoryRouter initialEntries={["/?admin"]}><AppProviders><Wrapper><AppShell /></Wrapper></AppProviders></MemoryRouter>);
+    expect(screen.getByText("로컬 개발 모드 · 토큰 없이 실행할 수 있습니다.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "해제" })).toBeDisabled();
+    act(() => setAdminToken("fixture-admin"));
+    expect(screen.getByRole("button", { name: "해제" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "해제" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "AI 분석 실행" })).toBeInTheDocument();
+  });
+
   it("leaves public headers free of analysis controls and permission notices", () => {
     mount("/");
     expect(screen.queryByRole("button", { name: "AI 분석 실행" })).not.toBeInTheDocument();
@@ -69,6 +140,15 @@ describe("admin session controls", () => {
     expect(fetcher.mock.calls[1][1]?.headers).toHaveProperty("Authorization", "Bearer fixture-admin");
     setAdminToken(""); await client.request("/api/briefing/narrative", { method: "POST" });
     expect(fetcher.mock.calls[2][1]?.headers).not.toHaveProperty("Authorization");
+  });
+  it("never sends the local-dev UI state as Authorization", async () => {
+    vi.stubEnv("DEV", true); stubHostname("127.0.0.1");
+    const hook = renderHook(() => useAdminAccess(), { wrapper: accessWrapper(true) });
+    expect(hook.result.current).toBe(true);
+    const fetcher = vi.fn<typeof fetch>(async () => jsonResponse({}));
+    await createApiClient("", fetcher).request("/api/candidates/run", { method: "POST" });
+    expect(getAdminToken()).toBe("");
+    expect(fetcher.mock.calls[0][1]?.headers).not.toHaveProperty("Authorization");
   });
   it.each([401, 403, 429])("shows recovery guidance for HTTP %s", async status => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status, headers: { "Retry-After": "42" } }));

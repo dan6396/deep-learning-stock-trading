@@ -15,11 +15,11 @@ const sentinels = { KIS_MOCK_APP_KEY: "SENTINEL-KIS-KEY", KIS_MOCK_APP_SECRET: "
   OPENAI_API_KEY: "SENTINEL-OPENAI", SNAPSHOT_REFRESH_KEY: "SENTINEL-REFRESH", CRON_SECRET: "SENTINEL-CRON", PIPELINE_OUTPUT_DIR: "C:/Users/SENTINEL-PATH/outputs", PIPELINE_PROJECT_ROOT: "/home/SENTINEL-ROOT",
   PYTHON_EXECUTABLE: "C:/SENTINEL-PYTHON/python.exe" };
 const noRows = { state: "empty", count: 0, source: "cache", asOf: null };
-function call(env, method = "GET") {
+function call(env, method = "GET", development = false) {
   const headers = {}, result = { status: 0, text: "" };
   const res = { get statusCode() { return result.status; }, set statusCode(value) { result.status = value; }, setHeader: (key, value) => { headers[key] = value; }, end: text => { result.text = text; } };
   const providers = { getBackendStatus };
-  return createRoutes(providers, env)["/api/backend/status"]({ method, url: "/api/backend/status" }, res).then(() => ({ ...result, headers }));
+  return createRoutes(providers, env, { development })["/api/backend/status"]({ method, url: "/api/backend/status" }, res).then(() => ({ ...result, headers }));
 }
 let fetcher;
 beforeEach(() => {
@@ -29,6 +29,15 @@ beforeEach(() => {
 });
 
 describe("GET /api/backend/status is read-only and leak-free", () => {
+  it.each([
+    [false, {}, false], [true, {}, true], [true, { ADMIN_API_TOKEN: " " , CRON_SECRET: " " }, true],
+    [true, { ADMIN_API_TOKEN: "fixture" }, false], [true, { CRON_SECRET: "fixture" }, false],
+    [true, { ADMIN_API_TOKEN: "fixture", CRON_SECRET: "fixture" }, false],
+  ])("publishes only the local write boolean (development=%s env=%j)", async (development, env, expected) => {
+    const result = JSON.parse((await call(env, "GET", development)).text);
+    expect(result.localWriteAllowed).toBe(expected);
+    expect(result).not.toHaveProperty("ADMIN_API_TOKEN"); expect(result).not.toHaveProperty("CRON_SECRET");
+  });
   it("never echoes keys, secrets, paths or raw configuration and never reaches a provider", async () => {
     const result = await call({ ...sentinels, PIPELINE_ANALYSIS_MODE: "model_only" });
     expect(result.status).toBe(200); expect(result.headers["Cache-Control"]).toBe("no-store");
@@ -39,7 +48,7 @@ describe("GET /api/backend/status is read-only and leak-free", () => {
       market: { configuration: "configured", verification: "unverified" },
       news: { configuration: "configured", collectionConfiguration: "configured", verification: "unverified" },
       results: { candidates: { state: "not_produced", count: null }, rank: { state: "available", count: 199 } } });
-    expect(Object.keys(body).sort()).toEqual(["analysisMode", "asOf", "checkedAt", "marker", "market", "news", "results", "runtime", "source", "version"]);
+    expect(Object.keys(body).sort()).toEqual(["analysisMode", "asOf", "checkedAt", "localWriteAllowed", "marker", "market", "news", "results", "runtime", "source", "version"]);
     expect(fetcher).not.toHaveBeenCalled();
   });
   it("reports configuration absence as not configured, never as verified", async () => {

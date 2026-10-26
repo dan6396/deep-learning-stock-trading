@@ -29,19 +29,21 @@ export function analysisMessage(status: BackendStatus): string {
 }
 export function ConnectionNotice() {
   const query = useQuery(queries.backendStatus()), status = query.data;
+  const running = status?.runtime.state === "running";
   const storedResults = status?.results.rank.state === "available" && (status.results.candidates.state === "available" || status.results.candidates.state === "empty"
     || ((status.analysisMode === "model_only" || (status.marker.state === "completed" && status.marker.mode === "model_only")) && status.results.candidates.state === "not_produced"));
   const needsAttention = query.isError || Boolean(status && (
     status.runtime.state === "failed" || status.runtime.state === "unknown" || status.marker.state === "failed" || status.marker.state === "invalid"
     || status.analysisMode === "unknown" || (!storedResults && status.runtime.state !== "running")
-    || [status.results.rank.state, status.results.candidates.state].some(state => ["stale", "invalid", "blocked"].includes(state))));
+    || [status.results.rank.state, status.results.candidates.state].some(state => ["stale", "invalid"].includes(state) || (state === "blocked" && !running))));
+  const label = needsAttention ? "주의" : !status ? "확인 중" : running ? "분석 진행 중" : "정상";
   const [expanded, setExpanded] = useState(false);
   useEffect(() => { setExpanded(needsAttention); }, [needsAttention]);
   return <aside className="connection-notice" aria-label="데이터 연결 상태" data-connection-state={query.isError ? "error" : query.isPending ? "pending" : "ready"}>
     <details className="connection-disclosure" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary className="connection-notice-heading" aria-label={`데이터 연결 상태: ${needsAttention ? "주의" : !status ? "확인 중" : "정상"}`}>
+      <summary className="connection-notice-heading" aria-label={`데이터 연결 상태: ${label}`}>
         <span className={`connection-dot${needsAttention ? " connection-attention" : ""}`} aria-hidden="true" />
-        <span>{needsAttention ? "주의" : !status ? "확인 중" : "정상"}</span>
+        <span>{label}</span>
       </summary>
       <div className="connection-notice-body">
       <strong>데이터 출처·연결 상태</strong>

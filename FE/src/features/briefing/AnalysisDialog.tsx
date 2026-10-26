@@ -5,6 +5,7 @@ import { useAppPaths } from "../../app/paths";
 import { useQuery } from "@tanstack/react-query";
 import { Play, LoaderCircle, X } from "lucide-react";
 import { queries } from "../../shared/api/queries";
+import { useAnalysisRun } from "../../shared/api/analysis";
 import { AnalysisControl } from "./AnalysisControl";
 import { useAdminAccess } from "../../shared/api/adminAccess";
 import "./briefing.css";
@@ -57,7 +58,8 @@ export function AnalysisDialog() {
   const admin = useAdminAccess();
   const [open, setOpen] = useState(false), trigger = useRef<HTMLButtonElement>(null), location = useLocation();
   const route = `${location.pathname}${location.search}`, previousRoute = useRef(route);
-  const run = useQuery(queries.analysisRun()), backend = useQuery(queries.backendStatus());
+  // Keep completion invalidation alive on /rank even after the dialog closes.
+  const run = useAnalysisRun(), backend = useQuery(queries.backendStatus());
   const running = run.data?.data.status === "running" || backend.data?.runtime.state === "running";
   function close(restore = true) { setOpen(false); if (restore) trigger.current?.focus(); }
   useEffect(() => { if (previousRoute.current !== route) { previousRoute.current = route; if (open) close(false); } }, [route, open]);

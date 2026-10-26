@@ -16,6 +16,25 @@ function mount(response: () => Promise<Response> = async () => jsonResponse(back
   return client;
 }
 describe("compact connection status", () => {
+  it("keeps running blocked results neutral and collapsed", async () => {
+    const body = backendStatusBody({ state: "blocked" }, { runtime: { state: "running" }, marker: { state: "running" } });
+    body.results.rank = { state: "blocked", count: null, source: "cache", asOf: null };
+    mount(async () => jsonResponse(body));
+    const heading = await screen.findByLabelText("데이터 연결 상태: 분석 진행 중");
+    expect(heading).not.toHaveTextContent("주의");
+    expect(heading.querySelector(".connection-attention")).toBeNull();
+    expect(document.querySelector(".connection-disclosure")).not.toHaveAttribute("open");
+  });
+  it("still opens a real connection error while analysis is running", async () => {
+    let failed = false;
+    const client = mount(async () => failed ? new Response("{}", { status: 502 }) : jsonResponse(backendStatusBody(undefined, { runtime: { state: "running" } })));
+    await screen.findByLabelText("데이터 연결 상태: 분석 진행 중");
+    failed = true;
+    await client.refetchQueries({ queryKey: queryKeys.backendStatus() });
+    await screen.findByLabelText("데이터 연결 상태: 주의");
+    await waitFor(() => expect(document.querySelector(".connection-disclosure")).toHaveAttribute("open"));
+    expect(document.querySelector(".connection-attention")).toBeInTheDocument();
+  });
   it("starts collapsed without claiming that configuration verifies a quote, and can be expanded", async () => {
     mount();
     await screen.findByText(/모델 결과 저장됨 · 저장 시각/);

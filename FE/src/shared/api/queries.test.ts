@@ -2,25 +2,44 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { createApiClient } from "./client";
-import { createQueries, queryKeys, requestBriefingNarrative } from "./queries";
+import { adaptAnalysisStatus, createQueries, queryKeys, requestBriefingNarrative } from "./queries";
 import { analysisMutationOptions, invalidateAnalysisResults } from "./analysis";
 import { backendStatusBody, deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
 import { chartBundle } from "../../test/fixtures/reportFixtures";
 import { adaptDashboard, adaptIndex, adaptQuote } from "../../entities/market";
+import { adaptCandidate } from "../../entities/candidate";
+import { adaptBriefing } from "../../entities/briefing";
 
 const clients: QueryClient[] = [];
 function client() { const c = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); clients.push(c); return c; }
 afterEach(() => clients.splice(0).forEach(c => c.clear()));
 
 describe("query contracts and race boundaries", () => {
-  it.each(["idle", "running"])("keeps ready briefing across a temporary no_run and accepts the next ready result (%s)", async status => {
+  it("preserves public run timestamps for comparing displayed result snapshots", () => {
+    expect(adaptAnalysisStatus({ status: "completed", startedAt: 1792987200000, finishedAt: 1792987238000 }))
+      .toMatchObject({ startedAt: 1792987200000, finishedAt: 1792987238000 });
+    const invalid = adaptAnalysisStatus({ status: "completed", startedAt: "invalid", finishedAt: -1 });
+    expect(invalid).not.toHaveProperty("startedAt"); expect(invalid).not.toHaveProperty("finishedAt");
+  });
+  it.each(["running", "failed"])("keeps rank rows returned by the completed server snapshot (%s)", async reason => {
+    const saved = pipelineRow({ pred_rank: 1, rank_score: 1.2, score_kind: "rank_zscore" });
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse([saved]))
+      .mockResolvedValueOnce(jsonResponse([{ ...saved, data_meta: { ...saved.data_meta, previousRun: { reason } } }]));
+    const cache = client(), options = { ...createQueries(createApiClient("", fetcher)).rank(), staleTime: 0 };
+    const first = await cache.fetchQuery(options), retained = await cache.fetchQuery(options);
+    expect(first.data[0].previousRun).toBeUndefined();
+    expect(retained.data).toEqual(first.data.map(row => ({ ...row, previousRun: { reason } })));
+    expect(retained.data[0].previousRun?.reason).toBe(reason);
+  });
+  it.each(["idle", "running"])("accepts authoritative server no_run and the next ready result (%s)", async status => {
     const snapshot = (status: string, overview: string) => ({ version: 1, status, model: null, stocks: [], narrative: { status: "template", overview } });
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(snapshot("ready", "이전 요약"))).mockResolvedValueOnce(jsonResponse(snapshot("no_run", ""))).mockResolvedValueOnce(jsonResponse(snapshot("ready", "새 요약")));
     const cache = client(), options = { ...createQueries(createApiClient("", fetcher)).briefing(), staleTime: 0 };
     cache.setQueryData(queryKeys.analysisRun(), { data: { status } });
     expect((await cache.fetchQuery(options)).narrative.overview).toBe("이전 요약");
     const preserved = await cache.fetchQuery(options);
-    expect(preserved.status).toBe("ready"); expect(preserved.narrative.overview).toBe("이전 요약");
+    expect(preserved.status).toBe("no_run"); expect(preserved.narrative.overview).toBe("");
     expect((await cache.fetchQuery(options)).narrative.overview).toBe("새 요약");
   });
   it("refreshes the idle backend snapshot after launch so runtime polling starts", async () => {
@@ -42,13 +61,18 @@ describe("query contracts and race boundaries", () => {
   });
   it("refreshes active briefing and rank snapshots after an immediately completed launch", async () => {
     let revision = "old";
-    const cache = client(), rank = new QueryObserver(cache, { queryKey: queryKeys.rank(), queryFn: async () => revision }), briefing = new QueryObserver(cache, { queryKey: queryKeys.briefing(), queryFn: async () => revision });
+    const startedAt = Date.parse("2026-10-26T04:00:00Z"), resultTime = () => new Date(startedAt + (revision === "old" ? -60000 : 1000)).toISOString();
+    const cache = client(), rank = new QueryObserver(cache, { queryKey: queryKeys.rank(), queryFn: async () => {
+      const row = pipelineRow(); row.result.company_name = revision;
+      return { data: [adaptCandidate(row).data], source: "cache" as const, asOf: resultTime() };
+    } }), briefing = new QueryObserver(cache, { queryKey: queryKeys.briefing(), queryFn: async () => adaptBriefing({ status: "ready",
+      model: { modelId: "fixture", baseDate: "2026-10-23", runStartedAt: revision === "old" ? resultTime() : new Date(startedAt).toISOString() }, narrative: { overview: revision } }) });
     const stopRank = rank.subscribe(() => {}), stopBriefing = briefing.subscribe(() => {});
     try {
-      await waitFor(() => expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["old", "old"]));
-      const fetcher = vi.fn<typeof fetch>(async () => { revision = "new"; return jsonResponse({ status: "completed" }); });
+      await waitFor(() => expect([rank.getCurrentResult().data?.data[0]?.name, briefing.getCurrentResult().data?.narrative.overview]).toEqual(["old", "old"]));
+      const fetcher = vi.fn<typeof fetch>(async () => { revision = "new"; return jsonResponse({ status: "completed", startedAt }); });
       await analysisMutationOptions(cache, createApiClient("", fetcher)).mutationFn();
-      expect([rank.getCurrentResult().data, briefing.getCurrentResult().data]).toEqual(["new", "new"]);
+      expect([rank.getCurrentResult().data?.data[0]?.name, briefing.getCurrentResult().data?.narrative.overview]).toEqual(["new", "new"]);
     } finally { stopRank(); stopBriefing(); }
   });
   it("hydrates every supplied chart range from one bundle and uses thirty-minute retention", async () => {

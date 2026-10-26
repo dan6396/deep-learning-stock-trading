@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { focusManager, QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { AnalysisDialog, dialogTabStops } from "./AnalysisDialog";
-import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
+import { AppShell } from "../../app/AppShell";
+import { AppProviders } from "../../app/providers";
+import { backendStatusBody, deferred, jsonResponse, pipelineRow } from "../../test/dataFixtures";
+import { queries } from "../../shared/api/queries";
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
@@ -13,7 +16,7 @@ beforeEach(() => {
   vi.spyOn(HTMLDialogElement.prototype, "showModal").mockImplementation(function(this: HTMLDialogElement) { this.setAttribute("open", ""); });
   vi.spyOn(HTMLDialogElement.prototype, "close").mockImplementation(function(this: HTMLDialogElement) { this.removeAttribute("open"); });
 });
-afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.useRealTimers(); focusManager.setFocused(undefined); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function RouteProbe() { const navigate = useNavigate(), location = useLocation(); return <><button onClick={() => navigate("/rank")}>경로 이동</button><output data-testid="route">{location.pathname + location.search}</output></>; }
 function mount(running = false, status = running ? "running" : "idle", initialEntries = ["/"], post?: () => Promise<Response>) {
   const fetcher = vi.fn<typeof fetch>(async (path, request) => request?.method === "POST" && post ? post() : jsonResponse(String(path) === "/api/backend/status" ? backendStatusBody({ state: "not_produced" }) : { status, mode: "model_only" }));
@@ -23,6 +26,50 @@ function mount(running = false, status = running ? "running" : "idle", initialEn
   return fetcher;
 }
 describe("header analysis dialog", () => {
+  it("automatically refreshes briefing and rank on the focused original rank tab after the dialog closes", async () => {
+    let completed = false;
+    const fetcher = vi.fn<typeof fetch>(async path => {
+      const revision = completed ? "new result" : "old result";
+      if (String(path) === "/api/backend/status") return jsonResponse(backendStatusBody({ state: "not_produced" }, { runtime: { state: completed ? "completed" : "running" } }));
+      if (String(path) === "/api/briefing") return jsonResponse({ version: 1, status: "ready", narrative: { overview: revision }, stocks: [] });
+      if (String(path) === "/api/rank") {
+        const row = pipelineRow({ company_name: revision });
+        return jsonResponse([{ ...row, result: { ...row.result, company_name: revision } }]);
+      }
+      return jsonResponse({ status: completed ? "completed" : "running", runId: "observed-run", elapsedMs: completed ? 38000 : 1000 });
+    });
+    vi.stubGlobal("fetch", fetcher); focusManager.setFocused(true);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: Infinity } } }); clients.push(client);
+    const rank = new QueryObserver(client, queries.rank()), briefing = new QueryObserver(client, queries.briefing());
+    const stopRank = rank.subscribe(() => {}), stopBriefing = briefing.subscribe(() => {});
+    try {
+      render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/rank"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AnalysisDialog /></MemoryRouter></QueryClientProvider>);
+      fireEvent.click(await screen.findByRole("button", { name: "분석 진행 중" }));
+      fireEvent.click(screen.getByRole("button", { name: "분석 실행 대화상자 닫기" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => expect([rank.getCurrentResult().data?.data[0]?.name, briefing.getCurrentResult().data?.narrative.overview]).toEqual(["old result", "old result"]));
+      vi.useFakeTimers();
+      // Re-arm the running observer's actual five-second poll under the fake clock.
+      act(() => client.setQueryData(queries.analysisRun().queryKey, { data: { status: "running", runId: "observed-run", elapsedMs: 2000, progress: null, error: null, result: null }, source: "live", asOf: null }));
+      completed = true;
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); await vi.advanceTimersByTimeAsync(100); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+      expect([rank.getCurrentResult().data?.data[0]?.name, briefing.getCurrentResult().data?.narrative.overview]).toEqual(["new result", "new result"]);
+      expect(screen.getByRole("button", { name: "AI 분석 실행" })).toBeInTheDocument();
+      expect(fetcher.mock.calls.every(([, options]) => options?.method !== "POST")).toBe(true);
+    } finally { stopRank(); stopBriefing(); }
+  });
+  it("mounts local tokenless analysis controls without updating AppShell during render", async () => {
+    window.sessionStorage.clear();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async path => jsonResponse(String(path) === "/api/backend/status"
+      ? { ...backendStatusBody({ state: "not_produced" }), localWriteAllowed: true } : { status: "idle" })));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); clients.push(client);
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AppProviders><QueryClientProvider client={client}><AppShell /></QueryClientProvider></AppProviders></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: "AI 분석 실행" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());
+    expect(consoleError.mock.calls.filter(args => args.some(value => String(value).includes("Cannot update a component")))).toEqual([]);
+  });
   it("moves focus to close before disabling the focused launch button and keeps run details in the trap", async () => {
     const pending = deferred<Response>(); mount(false, "idle", ["/"], () => pending.promise);
     fireEvent.click(screen.getByRole("button", { name: "AI 분석 실행" }));

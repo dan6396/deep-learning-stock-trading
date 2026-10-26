@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 vi.mock("../../server/runLedger", () => ({ beginRun: vi.fn(async () => ({})), completeRun: vi.fn(async () => ({ finishedAt: new Date().toISOString() })), failRun: vi.fn(async () => ({})) }));
 vi.mock("../../server/relatedNews", () => ({ collectTopFiveArticles: vi.fn(async () => ({})) }));
+vi.mock("../../server/briefing", () => ({ getBriefing: vi.fn(async () => ({})), prepareCompletedResults: vi.fn(async () => ({})), generateBriefingNarrative: vi.fn() }));
 const mock = vi.hoisted(() => ({ spawned: [], validationError: false, oldFile: false }));
 vi.mock("node:child_process", () => { const mocks = { spawn: vi.fn((command, args, options) => {
   mock.spawned.push({ command, args, options });
@@ -17,9 +18,20 @@ import { runCandidateAnalysis, startCandidateAnalysis, getCandidateAnalysisSnaps
 import { createRoutes } from "../../server/routes";
 import { collectTopFiveArticles } from "../../server/relatedNews";
 import { writePipelineRunMarker } from "../../server/pipelineFreshness";
+import { prepareCompletedResults } from "../../server/briefing";
 import { validateModelOnlyOutputs, refreshDashboardAiFieldsFromPipelineOutput } from "../../server/pipelineResults";
 beforeEach(() => { vi.clearAllMocks(); mock.spawned.length = 0; mock.validationError = false; mock.oldFile = false; });
 describe("model-only process safety (mock child; never executes Python)", () => {
+  it.each(["rejects", "throws"])("keeps completion successful when background publication %s", async failure => {
+    prepareCompletedResults.mockResolvedValueOnce(undefined).mockImplementationOnce(() => {
+      if (failure === "throws") throw new Error("fixture capture construction failed");
+      return Promise.reject(new Error("fixture capture rejected"));
+    });
+    expect((await runCandidateAnalysis({})).status).toBe("completed");
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(prepareCompletedResults).toHaveBeenCalledTimes(2);
+    expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "completed"]);
+  });
   it("omits news flag and removes every inherited news/LLM key without mutating parent env", async () => {
     const env = { PIPELINE_ANALYSIS_MODE: "model_only", GEMINI_API_KEY: "fixture-gemini", NAVER_CLIENT_ID: "fixture-id", NAVER_CLIENT_SECRET: "fixture-secret", OPENAI_API_KEY: "fixture-openai", OPEN_AI: "fixture-alias", KIS_MOCK_APP_KEY: "fixture-kis", KIS_MOCK_APP_SECRET: "fixture-kis-secret" };
     const result = await runCandidateAnalysis(env), child = mock.spawned[0];
@@ -30,6 +42,7 @@ describe("model-only process safety (mock child; never executes Python)", () => 
     expect(validateModelOnlyOutputs).toHaveBeenCalledOnce(); expect(collectTopFiveArticles).toHaveBeenCalledOnce();
     expect(validateModelOnlyOutputs.mock.invocationCallOrder[0]).toBeLessThan(collectTopFiveArticles.mock.invocationCallOrder[0]); expect(refreshDashboardAiFieldsFromPipelineOutput).not.toHaveBeenCalled();
     expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running", "completed"]);
+    expect(prepareCompletedResults.mock.invocationCallOrder[0]).toBeLessThan(writePipelineRunMarker.mock.invocationCallOrder[0]);
     expect(writePipelineRunMarker.mock.calls[1][0]).toMatchObject({ mode: "model_only", newsRows: 0 });
     expect(validateModelOnlyOutputs.mock.invocationCallOrder[0]).toBeLessThan(writePipelineRunMarker.mock.invocationCallOrder[1]);
   });

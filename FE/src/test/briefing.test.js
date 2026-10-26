@@ -23,6 +23,86 @@ function rows() {
   }));
 }
 describe("model TOP5 briefing", () => {
+  it.each(["running", "failed"])("keeps finishedAt and elapsedMs from the completed snapshot during %s", async status => {
+    const finishedAt = marker.startedAt + 38000;
+    let currentMarker = { ...marker, runId: "old-run", finishedAt };
+    const narratives = { resolve: vi.fn(async input => templateNarrative(input, null, now)) };
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => currentMarker, macro: async () => macro,
+      composition: async input => buildBriefingComposition(input), narratives, now: () => now });
+    const saved = await service(false, {});
+    expect(saved.model).toMatchObject({ finishedAt: new Date(finishedAt).toISOString(), elapsedMs: 38000, poolSize: 6 });
+    // Presentation-only completion fields must not change narrative facts or cache identity.
+    const facts = narratives.resolve.mock.calls[0][0];
+    expect(facts.model).not.toHaveProperty("finishedAt"); expect(facts.model).not.toHaveProperty("elapsedMs");
+    expect(saved.narrative.inputHash).toBe(briefingInputHash(facts));
+    currentMarker = { ...marker, runId: "new-run", status, startedAt: finishedAt + 1000, finishedAt: finishedAt + 9000 };
+    expect(await service(false, {})).toEqual({ ...saved, previousRun: { reason: status } });
+  });
+  it("returns null completion metadata when the historical completed marker has no finishedAt", async () => {
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => marker, macro: async () => macro,
+      composition: async input => buildBriefingComposition(input), narratives: { resolve: async input => templateNarrative(input, null, now) } });
+    expect((await service(false, {})).model).toMatchObject({ finishedAt: null, elapsedMs: null });
+  });
+  it("returns a coherent no_run if a cold read races a new run during composition", async () => {
+    let currentMarker = marker, release, entered;
+    const assembling = new Promise(resolve => { entered = resolve; });
+    const pendingComposition = new Promise(resolve => { release = resolve; });
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => currentMarker, macro: async () => macro,
+      composition: async () => { entered(); return pendingComposition; },
+      narratives: { resolve: async input => templateNarrative(input, null, now) }, now: () => now });
+    const pending = service(false, {});
+    await assembling;
+    currentMarker = { ...marker, status: "running" };
+    release(buildBriefingComposition(buildBriefingInput(rows(), marker, macro, now)));
+    const result = await pending;
+    expect(result).toMatchObject({ status: "no_run", kind: "unknown", model: null, stocks: [], narrative: { fallbackReason: "no_run", stocks: [] } });
+    expect(result.previousRun).toBeUndefined();
+  });
+  it("returns the saved payload when a new run starts while composition is being assembled", async () => {
+    let currentMarker = { ...marker, kind: "official" }, wait = false, release, entered;
+    const assembling = new Promise(resolve => { entered = resolve; });
+    const pendingComposition = new Promise(resolve => { release = resolve; });
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => currentMarker, macro: async () => macro,
+      composition: async input => { if (wait) { entered(); return pendingComposition; } return buildBriefingComposition(input); },
+      narratives: { resolve: async input => templateNarrative(input, null, now) }, now: () => now });
+    const first = await service(false, {});
+    wait = true;
+    const pending = service(false, {});
+    await assembling;
+    currentMarker = { ...marker, kind: "adhoc", status: "running", startedAt: marker.startedAt + 1000 };
+    release({ ...first.composition, note: "Partial next result must not appear" });
+    expect(await pending).toEqual({ ...first, previousRun: { reason: "running" } });
+  });
+  it("retains the entire completed briefing through running and failure, then replaces it on completion", async () => {
+    let currentMarker = { ...marker, kind: "official" }, data = rows();
+    const rank = vi.fn(async () => data), market = vi.fn(async () => macro);
+    const service = createBriefingService({ rank, marker: async () => currentMarker, macro: market,
+      composition: async input => buildBriefingComposition(input), now: () => now,
+      narratives: { resolve: async input => templateNarrative(input, null, now) } });
+    const first = await service(false, {});
+    expect(first.status).toBe("ready");
+    for (const status of ["running", "failed"]) {
+      currentMarker = { ...marker, status, kind: "adhoc", startedAt: marker.startedAt + 1000 };
+      data = [];
+      expect(await service(false, {})).toEqual({ ...first, previousRun: { reason: status } });
+      expect(await service(true, {})).toEqual({ ...first, previousRun: { reason: status } });
+    }
+    expect(rank).toHaveBeenCalledOnce(); expect(market).toHaveBeenCalledOnce();
+    currentMarker = { ...marker, kind: "adhoc", startedAt: marker.startedAt + 1000 };
+    data = rows(); data[0].result.company_name = "New result";
+    const next = await service(false, {});
+    expect(next.kind).toBe("adhoc"); expect(next.stocks[0].name).toBe("New result"); expect(next.previousRun).toBeUndefined();
+  });
+  it.each(["running", "failed"])("returns no_run for cold %s and never reuses another output root or supply policy", async status => {
+    let currentMarker = marker;
+    const service = createBriefingService({ rank: async () => rows(), marker: async () => currentMarker, macro: async () => macro,
+      composition: async input => buildBriefingComposition(input), narratives: { resolve: async input => templateNarrative(input, null, now) } });
+    await service(false, { PIPELINE_OUTPUT_DIR: "fixture-a" });
+    currentMarker = { ...marker, status };
+    for (const env of [{ PIPELINE_OUTPUT_DIR: "fixture-b" }, { PIPELINE_OUTPUT_DIR: "fixture-a", BRIEFING_SHOW_SUPPLY: "true" }]) {
+      expect(await service(false, env)).toMatchObject({ status: "no_run", kind: "unknown", model: null, stocks: [] });
+    }
+  });
   it("shares the exact historical date-caution bytes between generation and classification", () => {
     const oldText = "모델 기준일은 2026-10-22이며 오늘 날짜와 다릅니다.";
     expect(Buffer.from(targetSessionCautionText("2026-10-22"), "utf8")).toEqual(Buffer.from(oldText, "utf8"));
@@ -186,7 +266,7 @@ describe("model TOP5 briefing", () => {
     const service = createBriefingService({ rank: async () => rows(), marker: markerFn, macro: async () => macro, narratives: { resolve }, now: () => now });
     expect((await service(false, {})).status).toBe("ready"); expect(resolve.mock.calls[0][1]).toBe(false);
     markerFn.mockResolvedValueOnce(marker).mockResolvedValueOnce({ ...marker, startedAt: marker.startedAt + 100 });
-    expect((await service(true, {})).status).toBe("no_run"); expect(resolve.mock.calls[1][1]).toBe(false);
+    expect((await service(true, {})).status).toBe("ready"); expect(resolve.mock.calls[1][1]).toBe(false);
     expect((await service(true, {})).status).toBe("ready"); expect(resolve.mock.calls[2][1]).toBe(true);
   });
   it("never presents supply flags as a ranking filter and describes measured days in KRW", () => {

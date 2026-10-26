@@ -13,6 +13,8 @@ export type BriefingModelMeta = {
   predictionTarget: string | null;
   poolSize: number;
   runStartedAt: string | null;
+  finishedAt: string | null;
+  elapsedMs: number | null;
 };
 
 export type MacroIndicatorId = "KOSPI" | "KOSDAQ" | "NASDAQ" | "SP500" | "USDKRW" | "UST10Y" | "KOSPI200_NIGHT";
@@ -184,6 +186,7 @@ export type BriefingComposition = {
 };
 
 export type BriefingPayload = {
+  previousRun?: { reason: "running" | "failed" };
   version: 1;
   status: BriefingStatus;
   kind?: "official" | "adhoc" | "unknown";
@@ -485,6 +488,8 @@ export function adaptBriefingModel(raw: unknown): BriefingModelMeta | null {
     predictionTarget: textValue(obj.predictionTarget),
     poolSize: nonnegativeInteger(obj.poolSize) ?? 0,
     runStartedAt: textValue(obj.runStartedAt),
+    finishedAt: typeof obj.finishedAt === "string" && Number.isFinite(Date.parse(obj.finishedAt)) ? obj.finishedAt : null,
+    elapsedMs: typeof obj.elapsedMs === "number" && Number.isFinite(obj.elapsedMs) && obj.elapsedMs >= 0 ? obj.elapsedMs : null,
   };
 }
 
@@ -582,6 +587,8 @@ export function adaptBriefing(value: unknown): BriefingPayload {
     version: 1,
     status,
     kind: status === "ready" && model && (root.kind === "official" || root.kind === "adhoc") ? root.kind : "unknown",
+    ...(status === "ready" && (record(root.previousRun).reason === "running" || record(root.previousRun).reason === "failed")
+      ? { previousRun: { reason: record(root.previousRun).reason as "running" | "failed" } } : {}),
     model,
     macro,
     stocks,
