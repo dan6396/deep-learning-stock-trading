@@ -20,6 +20,7 @@ import { inFlightKey, shareInFlight } from "./inFlight";
 import { createMarketDataCache } from "./marketDataCache";
 import { marketCacheExpiry, marketClock } from "./marketCachePolicy";
 import { marketHistorySessions } from "./marketHistoryCalendar";
+import { normalizeRawPrices, mergeDailyRawPrices, sliceDailyRawPrices, normalizeDailyChartRange, normalizeStockChartBundle, uniqueSortedCandles } from "./chartNormalization";
 
 declare const process: {
   cwd: () => string;
@@ -125,11 +126,11 @@ const stockChartCache = createMarketDataCache<StockChartBundle>("chart", (value)
   return !!bundle?.chartData && /^\d{6}$/.test(bundle.chartData.code) && bundle.sourceStock?.code === bundle.chartData.code && !!bundle.summary
     && typeof bundle.asOf === "string" && Number.isFinite(Date.parse(bundle.asOf))
     && TIME_RANGES.every(range => validCacheRange(bundle.chartData.ranges?.[range]));
-});
+}, undefined, undefined, normalizeStockChartBundle);
 const dailyChartCache = createMarketDataCache<RangeData>("daily", (value): value is RangeData => {
   return validCacheRange(value) && value.candles.length > 0 && Array.isArray(value.rawPrices)
     && value.candles.every(row => /^\d{4}-\d{2}-\d{2}$/.test(row.time));
-});
+}, undefined, undefined, normalizeDailyChartRange);
 const indexSeriesCache = new Map<string, { builtAt: number; values: number[] }>();
 const DEFAULT_STOCK_CHART_CACHE_TTL_MS = 60_000;
 const DEFAULT_INTRADAY_PAGE_COUNT = 14;
@@ -1051,15 +1052,6 @@ function outputRows(body: Record<string, unknown>): KisOutput[] {
   return [];
 }
 
-function uniqueSortedCandles(candles: CandlePoint[]): CandlePoint[] {
-  const byTime = new Map<string, CandlePoint>();
-  candles.forEach((candle) => {
-    byTime.set(candle.time, candle);
-  });
-
-  return Array.from(byTime.values()).sort((left, right) => left.time.localeCompare(right.time));
-}
-
 function latestSessionCandles(candles: CandlePoint[]): CandlePoint[] {
   const sorted = uniqueSortedCandles(candles);
   const latestDate = sorted
@@ -1260,7 +1252,7 @@ async function fetchDailyChartRange(
     if (seen.has(date)) return false;
     seen.add(date); return true;
   });
-  rawPrices?.push(...rows.map(row => ({ date: rawCandleTime(row.stck_bsop_date ?? row.bsop_date), price: pickNullableNumber(row, ["stck_clpr", "stck_prpr"]) })));
+  rawPrices?.push(...normalizeRawPrices(rows.map(row => ({ date: rawCandleTime(row.stck_bsop_date ?? row.bsop_date), price: pickNullableNumber(row, ["stck_clpr", "stck_prpr"]) }))));
   return uniqueSortedCandles(rows.map(dailyRowToCandle).filter((candle): candle is CandlePoint => candle !== null));
 }
 
@@ -1408,9 +1400,8 @@ async function fetchRangeChart(
       const cutoff = isoDateDaysAgo(RANGE_LOOKBACK_DAYS[range]);
       const refreshedDates = new Set(rawPrices.map(row => row.date).filter((date): date is string => date !== null));
       candles = uniqueSortedCandles([...cached.data.candles.filter(row => !refreshedDates.has(row.time)), ...candles]).filter(row => row.time >= cutoff);
-      const merged = new Map<string, { date: string | null; price: number | null }>();
-      for (const row of [...(cached.data.rawPrices ?? []), ...rawPrices]) if (row.date === null || row.date >= cutoff) merged.set(row.date ?? `missing-${merged.size}`, row);
-      rawPrices.splice(0, rawPrices.length, ...merged.values());
+      const merged = mergeDailyRawPrices(cached.data.rawPrices ?? [], rawPrices, startDate ?? cutoff, cutoff);
+      rawPrices.splice(0, rawPrices.length, ...merged);
     }
 
     const data = {
@@ -1540,7 +1531,7 @@ function fillMissingRanges(ranges: StockChartData["ranges"]): void {
     const cutoff = isoDateDaysAgo(RANGE_LOOKBACK_DAYS[target]);
     const candles = source.candles.filter((candle) => candle.time >= cutoff);
     if (candles.length > 0) {
-      const rawPrices = source.rawPrices?.filter(point => point.date === null || point.date >= cutoff);
+      const rawPrices = source.rawPrices && sliceDailyRawPrices(source.rawPrices, cutoff);
       ranges[target] = { candles, prices: candlesToPrices(candles), rawPrices,
         coverage: chartCoverage(target, source.coverage?.sourceRange ?? sourceRange, method, rawPrices ?? []) };
     }
