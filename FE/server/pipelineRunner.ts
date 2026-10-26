@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
-import { validateModelOnlyOutputs, parseCsv } from "./pipelineResults";
+import { validateModelOnlyOutputs, parseCsv, readPendingRank } from "./pipelineResults";
 import { prepareCompletedResults, prepareRunBriefing } from "./briefing";
 import { completedResults, failResultRun, setResultRunState } from "./completedResults";
 import { collectTopFiveArticles } from "./relatedNews";
@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
 import type { RunKind } from "../src/types/performance";
 import { HttpError } from "./writeSecurity";
+import { warmCompletedQuotes, refreshCompletedTopFive } from "./refreshAhead";
 
 declare const process: {
   cwd: () => string;
@@ -394,12 +395,20 @@ async function executeCandidateAnalysis(env = process.env, startedAt = Date.now(
       console.warn("[briefing] Automatic narrative fallback", { reason: "preparation_failed" });
       return null;
     });
+    // Still inside activeRun: at most six seconds, including cache/auth/limiter waits.
+    const warmRows = await warmCompletedQuotes(prepared?.rank.length ? prepared.rank : () => readPendingRank(stagedMarker, env), env).catch(() => {
+      console.warn("[refresh-ahead]", { reason: "quote_preparation_failed" });
+      return prepared?.rank ?? [];
+    });
     const record = await completeRun(identity.runId, startedAt, env);
     const marker = { ...stagedMarker, finishedAt: Date.parse(record.finishedAt!) };
     await writePipelineRunMarker(marker, env);
     const published = prepared && completedResults.publish({ ...prepared, marker, briefing: { ...prepared.briefing,
       model: prepared.briefing.model ? { ...prepared.briefing.model, finishedAt: record.finishedAt!, elapsedMs: marker.finishedAt - startedAt } : null } }, env);
     setResultRunState(env, { status: "completed", startedAt, runId: identity.runId });
+    // Publication has committed; slow history must never hold the execution lock.
+    try { refreshCompletedTopFive(warmRows, env); }
+    catch { console.warn("[refresh-ahead]", { reason: "completed_warmup_failed" }); }
     // Retain the bounded 1.5s recovery path when disk preparation could not produce a valid pair.
     if (!published) void Promise.resolve().then(() => prepareCompletedResults(env)).catch(() => {});
     return { ...result, elapsedMs: Date.now() - startedAt, ...identity };

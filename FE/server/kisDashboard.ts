@@ -51,6 +51,7 @@ const pricePending = new Map<string, Promise<KisOutput>>();
 const indicesPending = new Map<string, Promise<MarketIndexSnapshot[]>>();
 const chartPending = new Map<string, Promise<StockChartBundle>>();
 const snapshotPending = new Map<string, Promise<MarketDashboardData>>();
+const calendarPending = new Map<string, Promise<string | null>>();
 const kisScope = (config: KisConfig) => inFlightKey([config.env, config.baseUrl, config.appKey, config.appSecret]);
 
 const KIS_BASE_URLS: Record<KisEnv, string> = {
@@ -1157,6 +1158,9 @@ export async function fetchKisTargetSession(baseDate: string, env = process.env)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(baseDate) || !Number.isFinite(Date.parse(baseDate))) throw new Error("Invalid calendar query.");
   const config = getKisConfig(env);
   if (config.env !== "real") throw new Error("Settlement requires the real KIS calendar.");
+  return shareInFlight(calendarPending, inFlightKey([kisScope(config), pipelineOutputDir(env), baseDate]), () => loadKisTargetSession(baseDate, env, config));
+}
+async function loadKisTargetSession(baseDate: string, env: Record<string, string | undefined>, config: KisConfig): Promise<string | null> {
   const path = join(pipelineOutputDir(env), ".performance-calendar.json"), today = todayKisDate();
   let cache = calendarMemory.get(path) ?? null;
   if (!cache) { try { cache = JSON.parse(await readFile(path, "utf8")) as TradingCalendarCache; } catch { cache = null; } }
@@ -1269,18 +1273,18 @@ export type DailyHistory = {
 };
 
 /** Read-only public daily OHLC history. Missing sessions are never filled or inferred as halts. */
-export async function getDailyHistory(code: string, opts: { start?: string; end?: string; allowNetwork?: boolean } = {}): Promise<DailyHistory | null> {
+export async function getDailyHistory(code: string, opts: { start?: string; end?: string; allowNetwork?: boolean } = {}, env = process.env): Promise<DailyHistory | null> {
   if (!/^\d{6}$/.test(code)) throw new Error("A valid 6-digit ticker is required.");
   for (const value of [opts.start, opts.end]) if (value !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) throw new Error("Invalid history date.");
   if (opts.start && opts.end && opts.start > opts.end) throw new Error("Invalid history interval.");
   let config: KisConfig;
-  try { config = getKisConfig({ ...process.env, KIS_REQUEST_PRIORITY: "background" }); } catch { return null; }
+  try { config = getKisConfig({ ...env, KIS_REQUEST_PRIORITY: "background" }); } catch { return null; }
   config.priorityKey = `${kisScope(config)}:${code}:ALL`;
   const key = inFlightKey([kisScope(config), code, "1Y"]);
   let cached = await dailyChartCache.read(key, true), source: "cache" | "live" = "cache";
   if (opts.allowNetwork && (!cached || Date.now() >= marketCacheExpiry(cached.builtAt, 600_000, true))) {
     try {
-      await fetchRangeChart(config, await getAccessToken(config), code, "1Y", process.env);
+      await fetchRangeChart(config, await getAccessToken(config), code, "1Y", env);
       cached = await dailyChartCache.read(key, true); source = "live";
     } catch { /* A failed optional refresh still exposes the last observation as cache. */ }
   }

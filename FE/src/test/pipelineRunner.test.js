@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 vi.mock("../../server/runLedger", () => ({ beginRun: vi.fn(async () => ({})), completeRun: vi.fn(async () => ({ finishedAt: new Date().toISOString() })), failRun: vi.fn(async () => ({})) }));
 vi.mock("../../server/relatedNews", () => ({ collectTopFiveArticles: vi.fn(async () => ({})) }));
+vi.mock("../../server/refreshAhead", () => ({ warmCompletedQuotes: vi.fn(async rows => typeof rows === "function" ? rows() : rows), refreshCompletedTopFive: vi.fn() }));
 vi.mock("../../server/briefing", () => ({ getBriefing: vi.fn(async () => ({})), prepareCompletedResults: vi.fn(async () => ({})), prepareRunBriefing: vi.fn(async () => ({ rank: [], briefing: { status: "no_run" } })), generateBriefingNarrative: vi.fn() }));
 const mock = vi.hoisted(() => ({ spawned: [], validationError: false, oldFile: false }));
 vi.mock("node:child_process", () => { const mocks = { spawn: vi.fn((command, args, options) => {
@@ -12,16 +13,61 @@ vi.mock("node:child_process", () => { const mocks = { spawn: vi.fn((command, arg
 vi.mock("node:fs/promises", () => { const mocks = { access: vi.fn(async () => {}), mkdir: vi.fn(async () => {}),
   readFile: vi.fn(async () => '{"005930":{}}'), stat: vi.fn(async () => ({ mtimeMs: mock.oldFile ? 0 : Date.now(), isFile: () => true })) }; return { ...mocks, default: mocks }; });
 vi.mock("../../server/pipelineFreshness", () => ({ pipelineProjectRoot: () => "fixture-root", pipelineOutputDir: () => "fixture-output", writePipelineRunMarker: vi.fn(async () => {}) }));
-vi.mock("../../server/pipelineResults", () => ({ inspectPipelineResultAvailability: vi.fn(async () => ({})), getRankPayload: vi.fn(async () => []), getStockAnalysisPayload: vi.fn(async () => null), parseCsv: vi.fn(() => []), getCandidatesPayload: vi.fn(async () => [{}]), refreshDashboardAiFieldsFromPipelineOutput: vi.fn(async () => true),
+vi.mock("../../server/pipelineResults", () => ({ readPendingRank: vi.fn(async () => []), inspectPipelineResultAvailability: vi.fn(async () => ({})), getRankPayload: vi.fn(async () => []), getStockAnalysisPayload: vi.fn(async () => null), parseCsv: vi.fn(() => []), getCandidatesPayload: vi.fn(async () => [{}]), refreshDashboardAiFieldsFromPipelineOutput: vi.fn(async () => true),
   validateModelOnlyOutputs: vi.fn(async () => { if (mock.validationError) throw new Error("Invalid model output schema."); return { rows: 199, modelSelectionRows: 10 }; }) }));
 import { runCandidateAnalysis, startCandidateAnalysis, getCandidateAnalysisSnapshot, getCandidateAnalysisStatus } from "../../server/pipelineRunner";
 import { createRoutes } from "../../server/routes";
 import { collectTopFiveArticles } from "../../server/relatedNews";
 import { writePipelineRunMarker } from "../../server/pipelineFreshness";
 import { prepareCompletedResults, prepareRunBriefing } from "../../server/briefing";
+import { warmCompletedQuotes, refreshCompletedTopFive } from "../../server/refreshAhead";
 import { validateModelOnlyOutputs, refreshDashboardAiFieldsFromPipelineOutput } from "../../server/pipelineResults";
 beforeEach(() => { vi.clearAllMocks(); mock.spawned.length = 0; mock.validationError = false; mock.oldFile = false; });
 describe("model-only process safety (mock child; never executes Python)", () => {
+  it("publishes at the six-second quote deadline even when all five KIS jobs remain pending", async () => {
+    const { createRefreshAhead } = await vi.importActual("../../server/refreshAhead");
+    vi.useFakeTimers();
+    try {
+      const quote = vi.fn(() => new Promise(() => {}));
+      const worker = createRefreshAhead({ symbols: async () => [], quote, chart: async () => {}, indices: async () => {} });
+      const codes = ["005930", "000660", "035420", "035720", "051910"];
+      warmCompletedQuotes.mockImplementationOnce(async () => { await worker.warmQuotes(codes); return []; });
+      const running = runCandidateAnalysis({});
+      await vi.advanceTimersByTimeAsync(5999);
+      expect(quote).toHaveBeenCalledTimes(5);
+      expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running"]);
+      expect(() => startCandidateAnalysis({ PIPELINE_RUN_KIND: "official" })).toThrow(/다른 종류/);
+      await vi.advanceTimersByTimeAsync(1);
+      expect((await running).status).toBe("completed");
+      expect(writePipelineRunMarker.mock.calls.at(-1)[0].status).toBe("completed");
+      expect(refreshCompletedTopFive).toHaveBeenCalledOnce();
+    } finally { vi.useRealTimers(); }
+  });
+  it("holds the run lock through quote preparation, then publishes before starting history", async () => {
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const rows = [{ result: { ticker: "035420" }, input_row: { pred_rank: 1 } }];
+    prepareRunBriefing.mockResolvedValueOnce({ rank: rows, briefing: { status: "no_run" } });
+    warmCompletedQuotes.mockReturnValueOnce(gate);
+    const running = runCandidateAnalysis({});
+    await vi.waitFor(() => expect(warmCompletedQuotes).toHaveBeenCalledOnce());
+    expect(writePipelineRunMarker.mock.calls.map(([marker]) => marker.status)).toEqual(["running"]);
+    const attached = runCandidateAnalysis({});
+    expect(mock.spawned).toHaveLength(1);
+    expect(() => startCandidateAnalysis({ PIPELINE_RUN_KIND: "official" })).toThrow(/다른 종류/);
+    expect(refreshCompletedTopFive).not.toHaveBeenCalled();
+    release(rows); await Promise.all([running, attached]);
+    expect(warmCompletedQuotes).toHaveBeenCalledWith(rows, {});
+    expect(writePipelineRunMarker.mock.calls.at(-1)[0].status).toBe("completed");
+    expect(refreshCompletedTopFive).toHaveBeenCalledWith(rows, {});
+    expect(writePipelineRunMarker.mock.invocationCallOrder.at(-1)).toBeLessThan(refreshCompletedTopFive.mock.invocationCallOrder[0]);
+  });
+  it("publishes even if quote preparation or the completed warmup fails", async () => {
+    warmCompletedQuotes.mockRejectedValueOnce(new Error("fixture failure"));
+    refreshCompletedTopFive.mockImplementationOnce(() => { throw new Error("fixture failure"); });
+    expect((await runCandidateAnalysis({})).status).toBe("completed");
+    expect(writePipelineRunMarker.mock.calls.at(-1)[0].status).toBe("completed");
+  });
   it.each(["rejects", "throws"])("keeps completion successful when background publication %s", async failure => {
     prepareCompletedResults.mockResolvedValueOnce(undefined).mockImplementationOnce(() => {
       if (failure === "throws") throw new Error("fixture capture construction failed");

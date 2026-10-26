@@ -32,6 +32,14 @@ it("resolves weekends and holidays from a contiguous KIS calendar and caches it"
   expect(await api.fetchKisTargetSession("2026-10-08", env)).toBe("2026-10-12");
   expect(requests).toHaveLength(1);
 });
+it("shares a completed-result calendar warmup with a concurrent screen request", async () => {
+  backend(() => ({ rt_cd: "0", output: [8, 9, 10, 11, 12].map(day => ({ bass_dt: `202610${day.toString().padStart(2, "0")}`, opnd_yn: [8, 12].includes(day) ? "Y" : "N", tr_day_yn: [8, 12].includes(day) ? "Y" : "N" })) }));
+  const [warm, screen] = await Promise.all([
+    api.fetchKisTargetSession("2026-10-08", { ...env, KIS_REQUEST_PRIORITY: "background" }),
+    api.fetchKisTargetSession("2026-10-08", env),
+  ]);
+  expect([warm, screen]).toEqual(["2026-10-12", "2026-10-12"]); expect(requests).toHaveLength(1);
+});
 it("supports quote-only keys using actual KOSPI sessions and attempts the account calendar once a day", async () => {
   backend(url => url.pathname.includes("chk-holiday") ? { rt_cd: "1", msg1: "fixture calendar permission denied" }
     : { rt_cd: "0", output2: [{ stck_bsop_date: "20261007", bstp_nmix_prpr: "3000" }, { stck_bsop_date: "20261008", bstp_nmix_prpr: "3100" }] });

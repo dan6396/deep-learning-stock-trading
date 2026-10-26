@@ -36,6 +36,22 @@ beforeEach(async () => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("persistent chart bundles and real daily history", () => {
+  it("skips fresh completed TOP5 caches and refreshes expired ones using the same provider keys", async () => {
+    const { createRefreshAhead } = await import("../../server/refreshAhead");
+    await api.buildKisStockQuote("005930", env, true);
+    await api.buildKisStockChart("005930", env, true);
+    const worker = createRefreshAhead({ symbols: async () => ["005930"],
+      quote: code => api.buildKisStockQuote(code, { ...env, KIS_REQUEST_PRIORITY: "background" }, true),
+      urgentQuote: code => api.buildKisStockQuote(code, env, true),
+      chart: code => api.buildKisStockChart(code, { ...env, KIS_REQUEST_PRIORITY: "background" }, true),
+      history: code => api.getDailyHistory(code, { allowNetwork: true }, env), indices: async () => {}, now: () => now });
+    const count = requests.length;
+    await worker.warmQuotes(["005930"]); worker.setTargets(["005930"]); await worker.tick(); await worker.idle();
+    expect(requests).toHaveLength(count);
+    now = Date.parse("2026-10-23T07:00:00Z");
+    await worker.warmQuotes(["005930"]); await worker.tick(); await worker.idle();
+    expect(requests.length).toBeGreaterThan(count); worker.stop();
+  });
   it("uses KIS index trading dates before the built-in calendar year and exposes missing sessions", async () => {
     await api.getDailyHistory("005930", { allowNetwork: true });
     const { pipelineProjectRoot } = await import("../../server/pipelineFreshness");

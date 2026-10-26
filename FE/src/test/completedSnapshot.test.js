@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fake = vi.hoisted(() => ({ files: new Map(), blockComposition: null, entered: null, begin: null,
   rankGate: null, rankEntered: null, allowProcess: false, writeOutput: null, onCompleted: null, transport: null }));
+vi.mock("../../server/refreshAhead", () => ({ warmCompletedQuotes: vi.fn(async rows => typeof rows === "function" ? rows() : rows), refreshCompletedTopFive: vi.fn() }));
 vi.mock("node:fs/promises", () => {
   const item = path => {
     const file = fake.files.get(String(path).replace(/\\/g, "/").split("/").pop());
