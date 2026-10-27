@@ -1,41 +1,71 @@
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../../shared/api/client";
 import { adaptStockInsight } from "../../entities/stockInsight";
 import { withoutRankScoreDisclaimer } from "../../entities/briefing";
 import { formatModelPercent } from "../../entities/modelEvidence";
-import { formatReportRankScore } from "./reportData";
+import { formatRankScore } from "../../shared/lib/format";
 import { PastObservationTag } from "../briefing/PastObservationTag";
 import "./stockInsight.css";
 
-function CollapsibleNote({ text }: { text?: string | null }) {
-  if (!text) return null;
-  if (text.length <= 100) {
-    return <p className="report-muted">{text}</p>;
-  }
-  let splitIndex = -1;
-  const match = text.match(/^(?:[^.!?]+[.!?]+){1,2}/);
-  if (match && match[0].length >= 30 && match[0].length < text.length) {
-    splitIndex = match[0].length;
-  }
-  if (splitIndex === -1 && text.length > 100) {
-    const space = text.indexOf(" ", 80);
-    if (space !== -1 && space < text.length - 15) {
-      splitIndex = space;
+export function CollapsibleNote({ text }: { text?: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  const [canToggle, setCanToggle] = useState(false);
+  const noteRef = useRef<HTMLParagraphElement>(null);
+  const contentId = useId();
+
+  // Reset expanded state whenever text changes
+  useEffect(() => {
+    setExpanded(false);
+  }, [text]);
+
+  const measure = useCallback(() => {
+    const el = noteRef.current;
+    if (!el || !text) return;
+    if (el.clientHeight > 0) {
+      setCanToggle(el.scrollHeight > el.clientHeight);
+    } else if (text.length > 80) {
+      // Fallback for non-rendered environments when dimensions are not mocked
+      setCanToggle(true);
+    } else {
+      setCanToggle(false);
     }
-  }
-  if (splitIndex === -1) {
-    return <p className="report-muted">{text}</p>;
-  }
-  const preview = text.slice(0, splitIndex).trim();
-  const rest = text.slice(splitIndex).trim();
+  }, [text]);
+
+  // Always measure while clamped (!expanded); preserve canToggle when expanded
+  useLayoutEffect(() => {
+    if (expanded) return;
+    measure();
+    const el = noteRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      measure();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, expanded, measure]);
+
+  if (!text) return null;
+
   return (
     <div className="insight-expandable-note">
-      <p className="report-muted">{preview}</p>
-      {rest && (
-        <details className="insight-details">
-          <summary>자세히</summary>
-          <p className="report-muted">{rest}</p>
-        </details>
+      <p
+        ref={noteRef}
+        id={contentId}
+        className={`report-muted ${!expanded ? "insight-note-clamped" : ""}`}
+      >
+        {text}
+      </p>
+      {canToggle && (
+        <button
+          type="button"
+          className="insight-note-toggle"
+          onClick={() => setExpanded(prev => !prev)}
+          aria-expanded={expanded}
+          aria-controls={contentId}
+        >
+          {expanded ? "접기" : "자세히"}
+        </button>
       )}
     </div>
   );
@@ -53,7 +83,7 @@ export function StockInsightSection({ code }: { code: string }) {
     <h2 id="stock-input-observations-heading">모델 순위와 주요 지표</h2>
     <p className="report-muted">모델 순위와 입력 특징을 함께 확인합니다. 특징의 위치가 개별 예측의 원인을 설명하지는 않습니다.</p>
     {model ? <>
-      <p className="insight-rank">{model.poolSize.toLocaleString("ko-KR")}종목 중 <strong>{model.rank}위</strong> · 상위 {formatModelPercent(model.topPercent)} · 순위 점수 <span title={model.rankScore != null ? String(model.rankScore) : undefined}>{formatReportRankScore(model.rankScore)}</span></p>
+      <p className="insight-rank">{model.poolSize.toLocaleString("ko-KR")}종목 중 <strong>{model.rank}위</strong> · 상위 {formatModelPercent(model.topPercent)} · 순위 점수 <span title={model.rankScore != null ? String(model.rankScore) : undefined}>{formatRankScore(model.rankScore, 2)}</span></p>
       {model.lookbacks.length === 2 && <div className="insight-block"><h3 className="insight-comparison-heading">20일·120일 모델 비교{model.agreement && <span className="insight-agreement" title="모델 일치도">{model.agreement}</span>}</h3>
         <div className="insight-lookbacks">{model.lookbacks.map(lb => {
           const topPercent = formatModelPercent(lb.rank / model.poolSize * 100);

@@ -16,7 +16,7 @@ import { SourceMeta } from "./SourceMeta";
 import { WatchlistNotice } from "../watchlist/WatchToggle";
 import { BriefingTopContainer, type RenderStockEvidence } from "./BriefingTopContainer";
 import { AnalysisControl } from "./AnalysisControl";
-import { ExpiredSessionNotice, targetSessionEnd } from "./ExpiredSessionNotice";
+import { useTargetSession } from "./ExpiredSessionNotice";
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -91,25 +91,8 @@ export function BriefingPage() {
   const baseDate = dates.length === 1 ? formatDate(dates[0]) : dates.length > 1 ? "종목별 상이" : "—";
   const pools = [...new Set(rows.map(row => row.poolSize).filter((size): size is number => size !== null && size >= 1))], pool = pools.length === 1 ? pools[0] : null;
   const rawBaseDate = briefing.data?.model?.baseDate ?? (dates.length === 1 ? dates[0] : null);
-  const nextSessionQuery = useNextSession(rawBaseDate);
-  const targetSession = nextSessionQuery.data;
-  const sessionEnd = targetSessionEnd(targetSession);
-  const [clock, setClock] = useState(Date.now);
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const update = () => {
-      const current = Date.now();
-      setClock(current);
-      if (sessionEnd !== null && sessionEnd > current) {
-        timer = setTimeout(update, Math.min(sessionEnd - current, 2_147_483_647));
-      }
-    };
-    update();
-    return () => { if (timer !== undefined) clearTimeout(timer); };
-  }, [sessionEnd]);
-
-  const isSessionEnded = sessionEnd !== null && clock >= sessionEnd;
+  const { target: targetSession, isSessionEnded } = useTargetSession(rawBaseDate);
+  const isLoadingTitle = (briefing.isPending || rank.isPending) && !rawBaseDate && !targetSession;
   const shortBaseDate = formatShortDate(rawBaseDate);
   const shortTargetSession = formatShortSessionDate(targetSession);
   const briefingTitle = shortTargetSession
@@ -151,14 +134,27 @@ export function BriefingPage() {
     <div className="briefing-title-row">
       <div className="briefing-title-group">
         <div className="briefing-title-main">
-          <h1>{briefingTitle}</h1>
+          <h1>
+            {isLoadingTitle ? (
+              <span className="briefing-title-skeleton">
+                <span className="watch-sr-only">브리핑 불러오는 중</span>
+              </span>
+            ) : (
+              briefingTitle
+            )}
+          </h1>
           {isSessionEnded && (
             <span className="briefing-target-ended-tag" data-testid="briefing-target-ended">
               예측 대상 종료
             </span>
           )}
         </div>
-        {(shortBaseDate || shortTargetSession) && (
+        {isSessionEnded && (
+          <p className="briefing-target-ended-hint" data-testid="briefing-target-ended-hint">
+            다음 거래일 순위는 새 분석 후 표시됩니다. <Link to={`${paths.about}#analysis-guide`}>분석 실행 안내</Link>
+          </p>
+        )}
+        {!isLoadingTitle && (shortBaseDate || shortTargetSession) && (
           <p className="briefing-title-meta" data-testid="briefing-title-meta">
             기준일 {shortBaseDate ?? "—"} · 대상 {shortTargetSession ?? "다음 거래일"}
           </p>
@@ -166,9 +162,8 @@ export function BriefingPage() {
       </div>
       <button type="button" className="briefing-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={14} />다시 조회</button>
     </div>
-    {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>모델 순위와 요약은 투자 권유가 아닙니다. 이용 방법은 <Link to={paths.about}>서비스 소개</Link>에서 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
+    {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>투자 권유가 아닙니다. <Link to={paths.about}>서비스 소개</Link>와 이용 방법을 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
     <WatchlistNotice />
-    {briefing.data?.status === "ready" && <ExpiredSessionNotice baseDate={briefing.data.model?.baseDate} />}
     <div className="briefing-columns"><div className="briefing-primary">
       {briefing.isPending && <div className="briefing-skeleton-card" role="status" aria-label="브리핑 로딩 중"><div className="briefing-skeleton-line" style={{ width: "40%" }} /><div className="briefing-skeleton-line" style={{ width: "100%", height: 60 }} /><div className="briefing-skeleton-line" style={{ width: "80%" }} /></div>}
       {briefing.isError && !briefing.data && <p className="briefing-notice" role="status">종합 브리핑 조회 실패 · 분석 결과를 가져오지 못했습니다.</p>}

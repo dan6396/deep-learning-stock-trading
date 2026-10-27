@@ -106,7 +106,7 @@ describe("header analysis dialog", () => {
     expect(within(dialog).getByRole("heading")).toHaveTextContent("AI 분석 실행");
     expect(within(dialog).getByRole("region", { name: "AI 분석 실행" })).toBeInTheDocument();
     expect(within(dialog).queryByText("새 분석 실행")).not.toBeInTheDocument();
-    expect(dialog).toHaveTextContent("약 40초");
+    expect(dialog).toHaveTextContent("보통 1분 안팎이 걸리며");
     expect(dialog).toHaveTextContent("실행 중에도 현재 결과는 그대로 보입니다.");
     expect(close).toHaveFocus(); await screen.findByRole("button", { name: "분석 시작" });
     await waitFor(() => expect(screen.getByRole("button", { name: "분석 시작" })).toBeEnabled());

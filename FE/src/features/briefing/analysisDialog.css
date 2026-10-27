@@ -3,6 +3,7 @@
   .analysis-dialog { position: fixed; inset: 0; margin: auto; width: min(740px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 20px; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-surface); color: var(--ds-fg); overflow: auto; }
   .analysis-dialog::backdrop { background: rgb(0 0 0 / .65); }
   .analysis-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .analysis-dialog-heading .briefing-icon-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
   .analysis-dialog .analysis-dialog-running { color: var(--ds-fg-2); font-size: var(--ds-text-sm); margin-bottom: var(--ds-space-3); }
   .analysis-dialog .analysis-control { margin: 0; border: 0; padding: 0; }
   .analysis-dialog .analysis-control-main { flex-direction: column; align-items: stretch; gap: 12px; }

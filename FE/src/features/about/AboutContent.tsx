@@ -52,7 +52,8 @@ export function AboutContent({ briefing = "/", rank = "/rank", history = "/histo
       <h2 id="about-limits">{ABOUT_SECTIONS[2].title}</h2>
       <div className="about-section-body">
         <p>{ABOUT_SECTIONS[2].text}</p>
-        <p>가격 기반 성과는 거래 비용을 차감하지 않은 계산이며 실제 주문 손익이 아닙니다. 미래 수익을 보장하지 않으며 투자 판단과 책임은 이용자에게 있습니다.</p>
+        <p>매수·매도 지시나 자동 주문을 제공하지 않습니다. 가격 기반 성과는 거래 비용을 차감하지 않은 계산이며 실제 주문 손익이 아닙니다. 미래 수익을 보장하지 않으며 투자 판단과 책임은 이용자에게 있습니다.</p>
+        <p>관심 목록은 이 기기에만 저장됩니다.</p>
       </div>
     </section>
   </article>;

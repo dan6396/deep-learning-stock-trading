@@ -34,6 +34,8 @@ it("distinguishes model inputs, prices, verified performance and missing news", 
   expect(document.body).toHaveTextContent("뉴스 미수집은 수집 결과 0건과 다릅니다");
   expect(document.body).toHaveTextContent("예시·보간 데이터는 실제 관측값과 구분해 읽으세요");
   expect(document.body).toHaveTextContent("실제 주문 손익이 아닙니다");
+  expect(document.body).toHaveTextContent("매수·매도 지시나 자동 주문을 제공하지 않습니다");
+  expect(document.body).toHaveTextContent("관심 목록은 이 기기에만 저장됩니다");
   expect(document.body).not.toHaveTextContent(/약 40초|최신 실행 상태만|성과는 확인되지|공개 예정/);
 });
 

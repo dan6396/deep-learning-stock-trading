@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, RefreshCw, Info } from "lucide-react";
 import { queries, queryKeys } from "../../shared/api/queries";
-import { formatDate, formatNumber, formatPercent, formatSessionDate, formatWon } from "../../shared/lib/format";
+import { formatDate, formatNumber, formatPercent, formatRankScore, formatSessionDate, formatWon } from "../../shared/lib/format";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { PerformancePanel } from "../history/PerformancePanel";
 import { SIGNAL_DESCRIPTIONS, SIGNAL_RULE_VERSION } from "../../entities/signals";
@@ -15,7 +15,7 @@ import { PastObservationTag } from "../briefing/PastObservationTag";
 import { SignalView } from "../briefing/SignalView";
 import { ReportChart } from "./ReportChart";
 import { StockInsightSection } from "./StockInsightSection";
-import { safeArticleUrl, formatReportRankScore } from "./reportData";
+import { safeArticleUrl } from "./reportData";
 import { useAppPaths } from "../../app/paths";
 import { WatchToggle, WatchlistNotice } from "../watchlist/WatchToggle";
 import "../briefing/briefing.css";
@@ -103,9 +103,6 @@ function StockReport({ code }: { code: string }) {
         {detail?.poolSize != null && detail?.rank != null
           ? `${formatNumber(detail.poolSize)}종목 중 ${formatNumber(detail.rank)}위`
           : "순위 정보 없음"}
-        {showFinal && detail?.finalRank != null && ` · 최종 보정 ${formatNumber(detail.finalRank)}위`}
-        {detail?.baseDate && ` · 분석 기준일 ${formatDate(detail.baseDate)}`}
-        {nextSessionLabel && ` · 다음 거래일 ${nextSessionLabel}`}
       </p>
       <dl className="report-predictions">
         <div>
@@ -115,7 +112,7 @@ function StockReport({ code }: { code: string }) {
             data-testid="report-prediction"
             title={detail?.rankScore != null ? String(detail.rankScore) : undefined}
           >
-            {detail?.scoreKind === "rank_zscore" ? formatReportRankScore(detail.rankScore) : formatPercent(detail?.predictedReturn)}
+            {detail?.scoreKind === "rank_zscore" ? formatRankScore(detail.rankScore, 2) : formatPercent(detail?.predictedReturn)}
           </dd>
         </div>
         {showFinal && (
@@ -128,7 +125,6 @@ function StockReport({ code }: { code: string }) {
         )}
       </dl>
       <dl className="report-stats">
-        {detail?.rank != null && detail.poolSize != null && <div><dt>모델 순위 / 모집단</dt><dd>{formatNumber(detail.rank)} / {formatNumber(detail.poolSize)}</dd></div>}
         {showFinal && detail?.finalRank != null && <div><dt>최종 보정 순위</dt><dd data-testid="report-final-rank">{formatNumber(detail.finalRank)}위</dd></div>}
         {detail?.baseDate && <div><dt>분석 기준일</dt><dd>{formatDate(detail.baseDate)}</dd></div>}
         {detail?.predictionTarget === "next_session_open_to_close" && <div><dt>예측 대상</dt><dd>다음 거래일 시가→종가</dd></div>}

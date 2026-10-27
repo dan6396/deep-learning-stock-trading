@@ -218,3 +218,21 @@ it("does not show zero candidates when the current result could not be retrieved
   mount(); await screen.findByText("현재 결과 조회 실패");
   expect(screen.getByTestId("history-candidate-count")).toHaveTextContent(/^—$/);
 });
+
+it("renders compact status layout when run status is idle (isSimpleStatus)", async () => {
+  backend(() => ({ status: "idle" }));
+  mount();
+  await screen.findByText("실행 중인 분석 없음");
+  const section = screen.getByRole("region", { name: "최신 실행 상태" });
+  expect(section).toHaveClass("is-compact-status");
+  expect(section.querySelector(".history-status-divider")).toBeInTheDocument();
+});
+
+it("does not render compact status layout when run status is running or failed", async () => {
+  backend(() => ({ status: "running", elapsedMs: 5000, progress: { message: "진행 중" } }));
+  mount();
+  await screen.findByText("분석 진행 중");
+  const section = screen.getByRole("region", { name: "최신 실행 상태" });
+  expect(section).not.toHaveClass("is-compact-status");
+  expect(section.querySelector(".history-status-divider")).toBeNull();
+});

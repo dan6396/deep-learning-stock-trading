@@ -44,7 +44,10 @@ function ChartView({ data, mode = "area", label, interval = "5m", compact = fals
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure); observer.observe(element); return () => observer.disconnect();
   }, [hasPoints]);
-  if (!hasPoints) return <p className="report-empty">{mode === "candle" ? "원본 시각·시가·고가·저가·종가를 확인할 수 없어 캔들 차트를 제공하지 않습니다. 가격 선에서 확인하세요." : "유효한 관측 시각과 가격이 없습니다."}</p>;
+  if (!hasPoints) {
+    if (mode === "candle" && view.candles.length > 0) return <p className="report-empty">정규 거래 세션(09:00~15:30) 밖 분봉만 있어 캔들 차트를 표시할 수 없습니다.</p>;
+    return <p className="report-empty">{mode === "candle" ? "원본 시각·시가·고가·저가·종가를 확인할 수 없어 캔들 차트를 제공하지 않습니다. 가격 선에서 확인하세요." : "유효한 관측 시각과 가격이 없습니다."}</p>;
+  }
 
   const w = Math.max(280, width), h = width < 500 ? 280 : 310;
   const left = width < 500 ? 70 : 86, right = w - (width < 500 ? 80 : 100), yTop = 40, yBottom = h - 43;
@@ -79,6 +82,8 @@ function ChartView({ data, mode = "area", label, interval = "5m", compact = fals
     start = Math.min(start, Date.parse(`${firstDay}T09:00:00+09:00`));
     end = Math.max(end, Date.parse(`${lastDay}T15:30:00+09:00`));
   }
+  // A solid label leader across an unfinished session looks like future prices.
+  const showLastPriceConnector = !(data.range === "1D" && lastVisible.timestamp < end && Date.now() < end);
   const slotWidth = availableWidth / visibleCount;
   const x = (time: number) => mode === "candle"
     ? left + (Math.max(0, visiblePoints.findIndex(point => point.timestamp === time)) + .5) * slotWidth
@@ -146,6 +151,7 @@ function ChartView({ data, mode = "area", label, interval = "5m", compact = fals
       <button type="button" aria-label="차트 초기화" onClick={reset}><RotateCcw size={16} aria-hidden="true" /><span>초기화</span></button>
     </div>}
     <div className="price-chart-interactive" tabIndex={0} role="group" aria-label="가격 탐색 · 좌우 화살표로 관측 이동, Home·End로 처음·마지막 관측" onKeyDown={event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (!["ArrowRight", "ArrowLeft", "Home", "End", ...(!compact ? ["ArrowUp", "ArrowDown", "PageUp", "PageDown"] : [])].includes(event.key)) return;
       event.preventDefault();
       if (event.key === "Home") select(0); else if (event.key === "End") select(points.length - 1);
@@ -169,7 +175,7 @@ function ChartView({ data, mode = "area", label, interval = "5m", compact = fals
         <line x1={x(selected.timestamp)} x2={x(selected.timestamp)} y1={yTop} y2={yBottom} stroke="var(--ds-fg-2)" strokeDasharray="3 3" data-price-crosshair />
         <line x1={left} x2={right} y1={y(selected.close)} y2={y(selected.close)} stroke="var(--ds-fg-2)" strokeDasharray="3 3" />
         <circle cx={x(selected.timestamp)} cy={y(selected.close)} r="4" fill="var(--ds-fg)" />
-        <line x1={x(lastVisible.timestamp)} x2={right + 5} y1={y(lastVisible.close)} y2={y(lastVisible.close)} stroke={visibleColor} />
+        {showLastPriceConnector && <line x1={x(lastVisible.timestamp)} x2={right + 5} y1={y(lastVisible.close)} y2={y(lastVisible.close)} stroke={visibleColor} data-price-last-connector />}
         <text x={right + 8} y={y(lastVisible.close) + 4} fill={visibleColor} data-price-last-label>{visibleSymbol} {won(lastVisible.close)}</text>
       </svg>
     </div>

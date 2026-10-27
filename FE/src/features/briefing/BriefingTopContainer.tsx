@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import type { BriefingPayload } from "../../entities/briefing";
 import { citationDomId, parseCitation } from "../../entities/briefing";
 import { BriefingMacroGrid } from "./BriefingMacroGrid";
@@ -8,6 +8,28 @@ import { BriefingStockEvidence } from "./BriefingStockSection";
 import "./briefingTop.css";
 
 export type RenderStockEvidence = (code: string) => React.ReactNode;
+
+export function useIsMobile(query = "(max-width: 768px)"): boolean {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    if (mql.addEventListener) {
+      mql.addEventListener("change", handler);
+      return () => mql.removeEventListener("change", handler);
+    }
+    mql.addListener(handler);
+    return () => mql.removeListener(handler);
+  }, [query]);
+
+  return isMobile;
+}
 
 export type BriefingTopContainerProps = {
   briefing: BriefingPayload;
@@ -89,36 +111,56 @@ export function BriefingTopContainer({
     });
   }, []);
 
+  const isMobile = useIsMobile();
+
+  const narrativeNode = (
+    <BriefingNarrativeCard
+      key="narrative"
+      narrative={briefing.narrative}
+      stocks={briefing.stocks}
+      isGenerating={isGenerating}
+      analysisRunning={analysisRunning}
+      analysisFailed={briefing.previousRun?.reason === "failed"}
+      generateError={generateError}
+      onGenerate={onGenerateNarrative}
+      onCitationClick={handleCitationClick}
+      isExpanded={isNarrativeExpanded}
+      onToggleExpand={() => setIsNarrativeExpanded(v => !v)}
+    />
+  );
+
+  const renderedTopFive = renderTopFive(code => {
+    const stock = briefing.stocks.find(item => item.code === code);
+    return stock ? (
+      <BriefingStockEvidence
+        key={code}
+        stock={stock}
+        stocks={briefing.stocks}
+        narrative={briefing.narrative}
+        isExpanded={expandedCodes.has(code)}
+        onToggleExpand={toggleExpand}
+        onCitationClick={handleCitationClick}
+      />
+    ) : null;
+  });
+
+  const topFiveNode = React.isValidElement(renderedTopFive)
+    ? React.cloneElement(renderedTopFive, { key: "top-five" })
+    : <React.Fragment key="top-five">{renderedTopFive}</React.Fragment>;
+
   return (
     <div className="briefing-top-container" data-testid="briefing-top-container">
-      {/* 1. 종합 브리핑(요약) 카드 */}
-      <BriefingNarrativeCard
-        narrative={briefing.narrative}
-        stocks={briefing.stocks}
-        isGenerating={isGenerating}
-        analysisRunning={analysisRunning}
-        analysisFailed={briefing.previousRun?.reason === "failed"}
-        generateError={generateError}
-        onGenerate={onGenerateNarrative}
-        onCitationClick={handleCitationClick}
-        isExpanded={isNarrativeExpanded}
-        onToggleExpand={() => setIsNarrativeExpanded(v => !v)}
-      />
-
-      {/* 2. TOP5 행 안에 종목별 근거를 함께 렌더링 */}
-      {renderTopFive(code => {
-        const stock = briefing.stocks.find(item => item.code === code);
-        return stock ? (
-          <BriefingStockEvidence
-            stock={stock}
-            stocks={briefing.stocks}
-            narrative={briefing.narrative}
-            isExpanded={expandedCodes.has(code)}
-            onToggleExpand={toggleExpand}
-            onCitationClick={handleCitationClick}
-          />
-        ) : null;
-      })}
+      {isMobile ? (
+        <>
+          {topFiveNode}
+          {narrativeNode}
+        </>
+      ) : (
+        <>
+          {narrativeNode}
+          {topFiveNode}
+        </>
+      )}
 
       {/* 3. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
       <BriefingMacroGrid macro={briefing.macro} />

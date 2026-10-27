@@ -1529,6 +1529,152 @@ describe("narrative regeneration policy", () => {
     expect(screen.getByTestId("stock-card-005930")).toHaveTextContent("1건 중 상위 1건");
     expect(screen.getByTestId("stock-card-005930")).not.toHaveTextContent("순위 점수는 수익률");
   });
+
+  it("toggles narrative expand/collapse and controls citations visibility for mobile", () => {
+    const longOverview = "한국 증시는 오늘 외국인 순매수와 반도체 업종 모멘텀에 힘입어 전반적으로 상승세를 유지하고 있습니다. 금리 변동성에 대한 경계감은 여전히 상존하나 주요 기업들의 호실적 전망이 지수를 지지하고 있습니다.".repeat(2);
+    const narrativeWithCitations = {
+      ...mockBriefingData.narrative,
+      overview: longOverview,
+      citations: ["R:005930", "M:KOSPI"],
+    };
+    const { container } = render(
+      <BriefingNarrativeCard
+        narrative={narrativeWithCitations}
+        stocks={mockBriefingData.stocks}
+        isGenerating={false}
+        generateError={null}
+        onGenerate={vi.fn()}
+        onCitationClick={vi.fn()}
+      />
+    );
+
+    const card = container.querySelector(".briefing-narrative-card")!;
+    expect(card).toHaveClass("is-collapsed");
+    const toggleBtn = screen.getByTestId("narrative-toggle-btn");
+    expect(toggleBtn).toHaveTextContent("요약 더 보기");
+    expect(toggleBtn).toHaveAttribute("aria-expanded", "false");
+
+    const citations = card.querySelector(".briefing-narrative-citations");
+    expect(citations).toHaveClass("is-collapsed-mobile");
+
+    fireEvent.click(toggleBtn);
+    expect(card).toHaveClass("is-expanded");
+    expect(toggleBtn).toHaveTextContent("요약 접기");
+    expect(toggleBtn).toHaveAttribute("aria-expanded", "true");
+    expect(citations).not.toHaveClass("is-collapsed-mobile");
+
+    fireEvent.click(toggleBtn);
+    expect(card).toHaveClass("is-collapsed");
+    expect(toggleBtn).toHaveTextContent("요약 더 보기");
+    expect(toggleBtn).toHaveAttribute("aria-expanded", "false");
+    expect(citations).toHaveClass("is-collapsed-mobile");
+  });
+
+  it("hides expand button and keeps citations visible when narrative overview is short and marketNote is absent", () => {
+    const shortOverview = "간단한 요약 텍스트입니다.";
+    const narrative = {
+      ...mockBriefingData.narrative,
+      overview: shortOverview,
+      marketNote: "",
+      citations: ["R:005930", "M:KOSPI"],
+    };
+    const { container } = render(
+      <BriefingNarrativeCard
+        narrative={narrative}
+        stocks={mockBriefingData.stocks}
+        isGenerating={false}
+        generateError={null}
+        onGenerate={vi.fn()}
+        onCitationClick={vi.fn()}
+      />
+    );
+
+    // canExpand is false: toggle button is absent
+    expect(screen.queryByTestId("narrative-toggle-btn")).not.toBeInTheDocument();
+    // Citations must not have is-collapsed-mobile so they remain permanently accessible
+    const citations = container.querySelector(".briefing-narrative-citations");
+    expect(citations).not.toBeNull();
+    expect(citations).not.toHaveClass("is-collapsed-mobile");
+  });
+
+  it("enforces mobile-only rules (citations collapse) to stay strictly inside @media (max-width: 768px) and eliminates CSS order:-1", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const cssPath = path.resolve(__dirname, "briefingTop.css");
+    const cssContent = fs.readFileSync(cssPath, "utf-8");
+
+    // CSS order:-1 must be completely removed in favor of DOM reordering
+    expect(cssContent).not.toContain("order: -1");
+    expect(cssContent).not.toContain(".briefing-top-container > .briefing-comparison-card");
+    expect(cssContent).toContain(".briefing-narrative-citations.is-collapsed-mobile");
+
+    const lines = cssContent.split("\n");
+    let currentMediaQuery: string | null = null;
+    let braceDepth = 0;
+
+    const citationCollapseMedia: string[] = [];
+
+    for (const line of lines) {
+      const mediaMatch = line.match(/@media\s*\(([^)]+)\)/);
+      if (mediaMatch) {
+        currentMediaQuery = mediaMatch[1].trim();
+      }
+      if (line.includes(".briefing-narrative-citations.is-collapsed-mobile")) {
+        citationCollapseMedia.push(currentMediaQuery ?? "global");
+      }
+      const openBraces = (line.match(/\{/g) || []).length;
+      const closeBraces = (line.match(/\}/g) || []).length;
+      braceDepth += openBraces - closeBraces;
+      if (braceDepth <= 1) {
+        currentMediaQuery = null;
+      }
+    }
+
+    expect(citationCollapseMedia.length).toBeGreaterThan(0);
+    expect(citationCollapseMedia.every(m => m.includes("max-width: 768px"))).toBe(true);
+  });
+
+  it("renders TOP5 before narrative in DOM when viewport matches mobile (max-width: 768px)", () => {
+    const origMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("max-width: 768px"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    try {
+      const { container } = render(
+        <MemoryRouter>
+          <BriefingTopContainer
+            renderTopFive={renderTestTopFive}
+            briefing={mockExtendedBriefingData}
+            onSelectStock={vi.fn()}
+            isGenerating={false}
+            generateError={null}
+            onGenerateNarrative={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const narrative = container.querySelector(".briefing-narrative-card")!;
+      const top5Table = container.querySelector("[data-testid='mock-top5-table']")!;
+      expect(narrative).not.toBeNull();
+      expect(top5Table).not.toBeNull();
+
+      const isFollowing = (a: Node, b: Node) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+      // On mobile, TOP5 comes BEFORE narrative in actual DOM tree
+      expect(isFollowing(top5Table, narrative)).toBe(true);
+    } finally {
+      window.matchMedia = origMatchMedia;
+    }
+  });
 });
 
 beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));

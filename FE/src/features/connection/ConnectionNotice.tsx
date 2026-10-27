@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RotateCw } from "lucide-react";
+import { RotateCw, AlertCircle, Check, Loader2 } from "lucide-react";
 import { queries } from "../../shared/api/queries";
 import { formatDate } from "../../shared/lib/format";
 import type { BackendStatus, PipelineAvailability } from "../../types/backendStatus";
@@ -37,13 +37,16 @@ export function ConnectionNotice() {
     || status.analysisMode === "unknown" || (!storedResults && status.runtime.state !== "running")
     || [status.results.rank.state, status.results.candidates.state].some(state => ["stale", "invalid"].includes(state) || (state === "blocked" && !running))));
   const label = needsAttention ? "주의" : !status ? "확인 중" : running ? "분석 진행 중" : "정상";
+  const StatusIcon = needsAttention ? AlertCircle : !status ? Loader2 : running ? RotateCw : Check;
   const [expanded, setExpanded] = useState(false);
   useEffect(() => { setExpanded(needsAttention); }, [needsAttention]);
   return <aside className="connection-notice" aria-label="데이터 연결 상태" data-connection-state={query.isError ? "error" : query.isPending ? "pending" : "ready"}>
     <details className="connection-disclosure" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
       <summary className="connection-notice-heading" aria-label={`데이터 연결 상태: ${label}`}>
-        <span className={`connection-dot${needsAttention ? " connection-attention" : ""}`} aria-hidden="true" />
-        <span>{label}</span>
+        <span className={`connection-dot${needsAttention ? " connection-attention" : ""}`} aria-hidden="true">
+          <StatusIcon size={12} className="connection-status-icon" aria-hidden="true" />
+        </span>
+        <span className="connection-status-text">{label}</span>
       </summary>
       <div className="connection-notice-body">
       <strong>데이터 출처·연결 상태</strong>

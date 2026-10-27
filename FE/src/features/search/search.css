@@ -9,7 +9,7 @@
   .search-dialog-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .search-dialog-heading p { color:var(--ds-fg-2); margin:0 0 5px; font-size:12px; }
   .search-dialog-heading h2 { margin:0; font-size:24px; letter-spacing:-.04em; }
-  .search-close { display:inline-flex; align-items:center; justify-content:center; min-width:38px; min-height:38px; border:0; border-radius:11px; background:var(--ds-surface-2); color:var(--ds-fg); cursor:pointer; }
+  .search-close { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; border:0; border-radius:11px; background:var(--ds-surface-2); color:var(--ds-fg); cursor:pointer; }
   .search-dialog-input { display:flex; align-items:center; gap:10px; min-height:48px; padding:0 13px; border-radius:12px; background:var(--ds-surface-2); color:var(--ds-fg-2); }
   .search-dialog-input input { min-width:0; width:100%; min-height:48px; border:0; color:var(--ds-fg); background:transparent; font:inherit; font-size:15px; }
   .search-dialog-input input::placeholder { color:var(--ds-fg-2); }

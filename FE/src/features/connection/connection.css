@@ -22,16 +22,17 @@
   .connection-notice { position: relative; flex-shrink: 0; margin: 0; padding: 0; border: 0; background: transparent; }
   .connection-notice .connection-notice-heading { min-height: 36px; gap: 6px; padding: 4px 8px; border-radius: 8px; }
   .connection-notice-heading > span { margin: 0; color: var(--ds-fg-2); }
-  .connection-notice-heading .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ds-fg-2); }
-  .connection-notice-heading .connection-dot.connection-attention { background: var(--ds-warn); }
+  .connection-notice-heading .connection-dot { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; color: var(--ds-fg-2); }
+  .connection-notice-heading .connection-dot.connection-attention { color: var(--ds-warn); }
+  .connection-notice-heading .connection-status-icon { flex-shrink: 0; }
   .connection-notice-body { position: absolute; z-index: 50; right: 0; top: 46px; width: min(420px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--ds-line); border-radius: 12px; background: var(--ds-surface); box-shadow: 0 12px 36px #0003; }
   .connection-notice-body > strong { display: block; margin-bottom: 12px; color: var(--ds-fg); }
   .connection-notice-body button { margin-top: 8px; }
   @media (max-width: 768px) {
     .connection-notice { width: 44px; height: 44px; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
-    .connection-notice .connection-notice-heading { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; border-radius: 12px; }
-    .connection-notice-heading > span:not(.connection-dot) { display: none; }
-    .connection-notice-heading .connection-dot { width: 10px; height: 10px; }
+    .connection-notice .connection-notice-heading { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+    .connection-notice-heading > .connection-status-text { display: none; }
+    .connection-notice-heading .connection-dot { width: 20px; height: 20px; }
   }
   @media (max-width: 480px) { .connection-notice { padding: 0; } .connection-notice-body { position: fixed; top: 68px; right: 16px; } }
 }

@@ -1,10 +1,13 @@
 import { finiteNumber } from "../../entities/value";
 export const MISSING_VALUE = "—";
 
-/** Relative model scores share one precision across every screen. */
-export function formatRankScore(value: unknown): string {
+/** Relative model scores share one precision across every screen (default 4 decimals, supports custom digits). */
+export function formatRankScore(value: unknown, digits = 4): string {
   const number = finiteNumber(value);
-  return number === null ? MISSING_VALUE : (Object.is(number, -0) ? 0 : number).toFixed(4);
+  if (number === null) return MISSING_VALUE;
+  const rounded = Number(number.toFixed(digits));
+  const normalized = Object.is(rounded, -0) ? 0 : rounded;
+  return normalized.toFixed(digits);
 }
 
 export function formatNumber(value: unknown, digits = 0): string {

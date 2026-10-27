@@ -573,3 +573,42 @@ describe("briefing generation polling budget", () => {
 });
 
 beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));
+
+describe("target session ended badge in BriefingPage", () => {
+  it("shows ended badge when current time is past 15:30 on the target session", async () => {
+    const spy = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-08T16:00:00+09:00"));
+    try {
+      mockBackend(path => {
+        if (path.includes("/api/korean-market/next-session")) {
+          return Promise.resolve(jsonResponse({ baseDate: "2026-10-07", nextSession: "2026-10-08" }));
+        }
+        return undefined;
+      });
+      mount();
+      await screen.findByRole("heading", { name: /10\/08\(목\) 대상 브리핑/ });
+      expect(screen.getByTestId("briefing-target-ended")).toHaveTextContent("예측 대상 종료");
+      expect(screen.getByTestId("briefing-target-ended-hint")).toHaveTextContent("다음 거래일 순위는 새 분석 후 표시됩니다.");
+      expect(screen.getByRole("link", { name: "분석 실행 안내" }).getAttribute("href")).toContain("/about#analysis-guide");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("does not show ended badge before 15:30 on the target session", async () => {
+    const spy = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-08T11:00:00+09:00"));
+    try {
+      mockBackend(path => {
+        if (path.includes("/api/korean-market/next-session")) {
+          return Promise.resolve(jsonResponse({ baseDate: "2026-10-07", nextSession: "2026-10-08" }));
+        }
+        return undefined;
+      });
+      mount();
+      await screen.findByRole("heading", { name: /10\/08\(목\) 대상 브리핑/ });
+      expect(screen.queryByTestId("briefing-target-ended")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("briefing-target-ended-hint")).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

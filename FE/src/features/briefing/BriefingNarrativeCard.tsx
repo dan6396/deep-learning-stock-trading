@@ -97,8 +97,9 @@ export function BriefingNarrativeCard({
     ...(isStale ? [{ key: "stale", text: "요약 작성 이후 시장 지표가 갱신되었습니다", warning: false, priority: recentlyGenerated ? 20 : 40 }] : []),
   ].sort((left, right) => right.priority - left.priority);
   const supportingNotices = [...notices.slice(1), ...(isPartialTemplate ? [{ key: "partial", text: "AI 요약에 규칙 기반 문장이 포함되어 있습니다.", warning: false }] : [])];
-  const overview = withoutRankScoreDisclaimer(narrative.overview);
-  const marketNote = withoutRankScoreDisclaimer(narrative.marketNote);
+  const overview = narrative.overview ? withoutRankScoreDisclaimer(narrative.overview) : "";
+  const marketNote = narrative.marketNote ? withoutRankScoreDisclaimer(narrative.marketNote) : "";
+  const canExpand = Boolean(marketNote) || (overview ? overview.length > 120 : false);
   // 종합 카드 인용 근거: 시장 지표(M:)와 종목(R:)만 표시 (E/C/N 제외)
   const validCitations = useMemo(
     () =>
@@ -206,7 +207,7 @@ export function BriefingNarrativeCard({
         </div>
 
         {validCitations.length > 0 && (
-          <div className="briefing-narrative-citations" aria-label="브리핑 인용 근거">
+          <div className={`briefing-narrative-citations ${canExpand && !isExpanded ? "is-collapsed-mobile" : ""}`} aria-label="브리핑 인용 근거">
             <span className="briefing-narrative-citations-label">인용 근거:</span>
             <div className="briefing-narrative-chip-list">
               {validCitations.map((parsed) => {
@@ -240,6 +241,7 @@ export function BriefingNarrativeCard({
           </div>
         )}
 
+        {canExpand && (
         <div className="briefing-narrative-toggle-row">
           <button
             type="button"
@@ -251,6 +253,7 @@ export function BriefingNarrativeCard({
             {isExpanded ? "요약 접기" : "요약 더 보기"}
           </button>
         </div>
+        )}
       </div>
     </article>
   );
