@@ -21,7 +21,7 @@ const price = offset => ({ date: date(offset), price: 100 + offset });
 const candle = point => ({ time: point.date, rawTime: point.date, open: point.price, high: point.price + 1, low: point.price - 1, close: point.price,
   rawValues: { open: point.price, high: point.price + 1, low: point.price - 1, close: point.price, volume: 1 } });
 function range(rawPrices) { return { rawPrices, prices: rawPrices.filter(row => row.date && row.price > 0), candles: rawPrices.filter(row => row.date && row.price > 0).map(candle) }; }
-function bundle(rawPrices) { return { source: "cache", asOf: new Date(now).toISOString(), chartData: { code: "055550", symbol: "055550", ranges: Object.fromEntries(["1D", "1M", "3M", "1Y", "3Y", "5Y"].map(key => [key, range(rawPrices)])) }, sourceStock: { code: "055550" }, summary: {} }; }
+function bundle(rawPrices) { return { source: "cache", asOf: new Date(now).toISOString(), chartData: { code: "055550", symbol: "055550", ranges: Object.fromEntries(["1D", "1M", "3M", "1Y", "3Y", "5Y"].map(key => [key, { ...range(rawPrices), ...(key === "1D" ? { intraday: { queriedAt: new Date(now).toISOString(), rejectedFuturePrices: 0, rejectedFutureCandles: 0, needsRefresh: false } } : {}) }])) }, sourceStock: { code: "055550" }, summary: {} }; }
 const mixed = () => [...Array.from({ length: 27 }, (_, index) => price(index + 1)), price(0)];
 const env = { KIS_ENV: "real", KIS_BASE_URL: "https://fixture-order.invalid", KIS_APP_KEY: "fixture-order-key", KIS_APP_SECRET: "fixture-order-secret", KIS_REQUEST_DELAY_MS: "1", KIS_INTRADAY_PAGE_COUNT: "1" };
 beforeEach(() => { files.chart = files.daily = null; vi.resetModules(); vi.spyOn(Date, "now").mockReturnValue(now); });

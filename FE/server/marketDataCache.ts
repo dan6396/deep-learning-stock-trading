@@ -7,7 +7,7 @@ declare const process: { cwd(): string };
 export type CacheEntry<T> = { builtAt: number; data: T };
 
 /** Only public market payloads are persisted; keys contain hashed scopes, never credentials. */
-export function createMarketDataCache<T>(name: string, validate: (value: unknown) => value is T, directory?: string, maxAgeMs = 14 * 86_400_000, normalize: (value: T) => T = value => value) {
+export function createMarketDataCache<T>(name: string, validate: (value: unknown) => value is T, directory?: string, maxAgeMs = 14 * 86_400_000, normalize: (value: T, builtAt: number) => T = value => value) {
   const memory = new Map<string, CacheEntry<T>>(), pending = new Map<string, Promise<T>>();
   const reads = new Map<string, Promise<CacheEntry<T> | null>>();
   const failedAt = new Map<string, number>();
@@ -27,7 +27,7 @@ export function createMarketDataCache<T>(name: string, validate: (value: unknown
           const parsed = JSON.parse(text);
           if (parsed.version !== 2 || !Number.isFinite(parsed.builtAt) || parsed.builtAt <= 0 || parsed.builtAt > Date.now() + 60_000 || Date.now() - parsed.builtAt > maxAgeMs || !validate(parsed.data)) return null;
           // Repair legacy payload order without changing freshness or writing to disk.
-          const entry: CacheEntry<T> = { builtAt: parsed.builtAt, data: normalize(parsed.data) };
+          const entry: CacheEntry<T> = { builtAt: parsed.builtAt, data: normalize(parsed.data, parsed.builtAt) };
           memory.set(key, entry);
           return entry;
         } catch { return null; }
@@ -40,7 +40,8 @@ export function createMarketDataCache<T>(name: string, validate: (value: unknown
   }
   async function write(key: string, data: T, persistent = false): Promise<T> {
     if (!validate(data)) throw new Error("Invalid market cache value.");
-    const entry = { builtAt: Date.now(), data: normalize(structuredClone(data)) };
+    const builtAt = Date.now();
+    const entry = { builtAt, data: normalize(structuredClone(data), builtAt) };
     memory.set(key, entry); failedAt.delete(key);
     if (persistent) {
       try {

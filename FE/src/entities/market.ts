@@ -16,6 +16,7 @@ export type DashboardData = {
 export type ChartData = {
   code: string; range: TimeRange;
   interpolated?: boolean;
+  observedAt?: string | null;
   coverage?: ChartCoverage;
   prices: { date: string | null; price: number | null; rawTimeVerified?: boolean }[];
   candles: { time: string | null; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null; rawOhlc: boolean; rawTimeVerified?: boolean }[];
@@ -73,7 +74,9 @@ export function adaptChart(value: unknown, expectedCode: string, range: TimeRang
     status: correctRange && rawCoverage.status === "partial" ? "partial" : correctRange && rawCoverage.status === "empty" ? "empty" : "unverified",
     requestedStart: correctRange ? date(rawCoverage.requestedStart) : null, requestedEnd: correctRange ? date(rawCoverage.requestedEnd) : null,
     observedStart: correctRange ? date(rawCoverage.observedStart) : null, observedEnd: correctRange ? date(rawCoverage.observedEnd) : null };
-  return { ...meta, source, data: { code: expectedCode, range, prices, coverage, interpolated: selected.interpolated === true || selected.seriesSource === "interpolated" || chart.seriesSource === "interpolated" || bundle.seriesSource === "interpolated",
+  return { ...meta, source, data: { code: expectedCode, range, prices, coverage,
+    observedAt: range === "1D" ? textValue(record(selected.intraday).queriedAt) : undefined,
+    interpolated: selected.interpolated === true || selected.seriesSource === "interpolated" || chart.seriesSource === "interpolated" || bundle.seriesSource === "interpolated",
     candles: selected.candles.map(item => { const p = record(item); return { time: textValue(Object.prototype.hasOwnProperty.call(p, "rawTime") ? p.rawTime : p.time),
       open: rawNumber(p, "open"), high: rawNumber(p, "high"), low: rawNumber(p, "low"), close: rawNumber(p, "close"), volume: rawNumber(p, "volume"),
       rawOhlc: ["open", "high", "low", "close"].every(key => Object.prototype.hasOwnProperty.call(record(p.rawValues), key)), rawTimeVerified: Object.prototype.hasOwnProperty.call(p, "rawTime") }; }),

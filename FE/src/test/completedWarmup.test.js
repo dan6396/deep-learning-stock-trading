@@ -19,6 +19,22 @@ afterEach(() => {
 });
 
 describe("completed TOP5 warmup through existing KIS providers (mock KIS)", () => {
+  it("continues warming other targets when one chart repair remains deferred and backs off that job", async () => {
+    const rank = rows(["005930", "000660"]);
+    buildKisStockChart.mockResolvedValueOnce({ chartData: { ranges: { "1D": { intraday: { needsRefresh: true } } } } });
+    refreshCompletedTopFive(rank, {}); await idle();
+    expect(buildKisStockChart.mock.calls.map(([code]) => code)).toEqual(["005930", "000660"]);
+    expect(getDailyHistory.mock.calls.map(([code]) => code)).toEqual(["005930", "000660"]);
+    expect(globalThis.__top5RefreshWorker.stats().failed).toBe(1);
+    refreshCompletedTopFive(rank, {}); await idle();
+    expect(buildKisStockChart).toHaveBeenCalledTimes(2);
+    vi.setSystemTime(Date.now() + 59_999);
+    refreshCompletedTopFive(rank, {}); await idle();
+    expect(buildKisStockChart).toHaveBeenCalledTimes(2);
+    vi.setSystemTime(Date.now() + 1);
+    refreshCompletedTopFive(rank, {}); await idle();
+    expect(buildKisStockChart).toHaveBeenCalledTimes(4);
+  });
   it("includes a stalled recovery rank read in the quote budget and ignores late resolution", async () => {
     let release;
     const gate = new Promise(resolve => { release = resolve; });

@@ -1,4 +1,5 @@
 import { TIME_RANGES, type CandlePoint, type StockChartBundle, type StockChartData } from "../src/types/stockChart";
+import { isRecentMarketSession } from "./marketCachePolicy";
 
 type RawPrice = { date: string | null; price: number | null };
 type RangeData = StockChartData["ranges"]["1M"];
@@ -82,8 +83,40 @@ export function normalizeDailyChartRange(range: RangeData): RangeData {
     ...(range.rawPrices ? { rawPrices: normalizeRawPrices(range.rawPrices) } : {}) };
 }
 
-export function normalizeStockChartBundle(bundle: StockChartBundle): StockChartBundle {
+/** A cached future timestamp must not become valid just because the clock advanced. */
+export function normalizeIntradayChartRange(range: RangeData, queriedAt: number, repairCache = false): RangeData {
+  const recordedAt = Date.parse(range.intraday?.queriedAt ?? "");
+  const cutoff = Math.min(queriedAt, Number.isFinite(recordedAt) ? recordedAt : queriedAt);
+  const future = (time: string | null | undefined) => {
+    if (!time || time.length <= 10) return false;
+    const timestamp = Date.parse(time.length === 19 ? `${time}+09:00` : time);
+    return Number.isFinite(timestamp) && timestamp > cutoff;
+  };
+  const candles = range.candles.filter(row => !future(row.rawTime ?? row.time));
+  const prices = range.prices.filter(row => !future(row.rawDate ?? row.date));
+  const rawPrices = range.rawPrices?.filter(row => !future(row.date));
+  const rejectedFutureCandles = range.candles.length - candles.length;
+  const rejectedFuturePrices = range.rawPrices ? range.rawPrices.length - rawPrices!.length : range.prices.length - prices.length;
+  return { ...range, candles, prices, ...(rawPrices ? { rawPrices } : {}), intraday: {
+    ...range.intraday,
+    queriedAt: new Date(cutoff).toISOString(),
+    rejectedFuturePrices: (range.intraday?.rejectedFuturePrices ?? 0) + rejectedFuturePrices,
+    rejectedFutureCandles: (range.intraday?.rejectedFutureCandles ?? 0) + rejectedFutureCandles,
+    needsRefresh: range.intraday?.needsRefresh === true || (repairCache && (rejectedFuturePrices > 0 || rejectedFutureCandles > 0)),
+  } };
+}
+
+export function normalizeStockChartBundle(bundle: StockChartBundle, builtAt = Date.now()): StockChartBundle {
   const ranges = { ...bundle.chartData.ranges };
   for (const range of TIME_RANGES) if (range !== "1D") ranges[range] = normalizeDailyChartRange(ranges[range]);
+  const intraday = ranges["1D"], now = Date.now();
+  // Legacy incremental merges may already contain fabricated rows before builtAt.
+  // Adding metadata makes this a one-time migration; successful repair clears the flag.
+  const legacyRecent = !intraday.intraday && [
+    ...intraday.candles.map(row => row.rawTime ?? row.time),
+    ...(intraday.rawPrices ?? intraday.prices).map(row => row.date),
+  ].some(time => time !== null && isRecentMarketSession(time.slice(0, 10), now));
+  ranges["1D"] = normalizeIntradayChartRange(intraday, Math.min(builtAt, now), true);
+  if (legacyRecent) ranges["1D"].intraday!.needsRefresh = true;
   return { ...bundle, chartData: { ...bundle.chartData, ranges } };
 }

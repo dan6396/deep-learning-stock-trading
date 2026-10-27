@@ -132,7 +132,11 @@ function refreshWorker(env: Record<string, string | undefined>) {
     quote: code => buildKisStockQuote(code, background, true),
     urgentQuote: code => buildKisStockQuote(code, { ...env, KIS_REQUEST_PRIORITY: "user" }, true),
     history: code => getDailyHistory(code, { allowNetwork: true }, background),
-    chart: code => buildKisStockChart(code, background, true),
+    chart: async code => {
+      const result = await buildKisStockChart(code, background, true);
+      // A deferred repair is one failed job; schedule() backs it off and drains the rest.
+      return result?.chartData?.ranges["1D"].intraday?.needsRefresh ? null : result;
+    },
     indices: () => buildKisIndices(background, true),
     session: date => fetchKisTargetSession(date, background),
   });

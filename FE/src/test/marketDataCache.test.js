@@ -26,6 +26,7 @@ describe("public market file cache", () => {
     const restored = await restarted.read("symbol", true);
     expect(restored.data.rawPrices.map(row => row.date)).toEqual(expected);
     expect(restored.builtAt).toBe(builtAt);
+    expect(normalize).toHaveBeenLastCalledWith(expect.any(Object), builtAt);
     expect(await readFile(file, "utf8")).toBe(original);
     await restarted.read("symbol"); await restarted.read("symbol", true);
     expect(normalize).toHaveBeenCalledTimes(1);

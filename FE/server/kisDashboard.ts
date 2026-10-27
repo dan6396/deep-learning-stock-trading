@@ -18,9 +18,9 @@ import { readBoundedJson } from "./boundedJson";
 import { kisMaxRps, kisRequestLimiter, kisRequestMetrics, type KisPriority } from "./kisRateLimit";
 import { inFlightKey, shareInFlight } from "./inFlight";
 import { createMarketDataCache } from "./marketDataCache";
-import { marketCacheExpiry, marketClock } from "./marketCachePolicy";
+import { marketCacheExpiry, marketClock, intradayQueryCursor, intradayRepairRetryAt } from "./marketCachePolicy";
 import { marketHistorySessions } from "./marketHistoryCalendar";
-import { normalizeRawPrices, mergeDailyRawPrices, sliceDailyRawPrices, normalizeDailyChartRange, normalizeStockChartBundle, uniqueSortedCandles } from "./chartNormalization";
+import { normalizeRawPrices, mergeDailyRawPrices, sliceDailyRawPrices, normalizeDailyChartRange, normalizeStockChartBundle, normalizeIntradayChartRange, uniqueSortedCandles } from "./chartNormalization";
 
 declare const process: {
   cwd: () => string;
@@ -1306,10 +1306,13 @@ async function fetchIntradayChartRange(
   accessToken: string,
   code: string,
   pageCount: number,
-  rawPrices?: { date: string | null; price: number | null }[],
-): Promise<CandlePoint[]> {
+): Promise<RangeData> {
   const candles: CandlePoint[] = [];
-  let cursorTime: string | null = "153000";
+  let rawPrices: { date: string | null; price: number | null }[] = [];
+  const queriedAt = Date.now();
+  // Before opening or on closed sessions retain the previous-session request.
+  // KIS fabricates current-price rows when the requested time is in the future.
+  let cursorTime: string | null = intradayQueryCursor(queriedAt);
   let previousOldestTime: string | null = null;
 
   for (let page = 0; page < pageCount && cursorTime; page += 1) {
@@ -1339,7 +1342,10 @@ async function fetchIntradayChartRange(
     candles.push(...rows.map(timeRowToCandle).filter((candle): candle is CandlePoint => candle !== null));
     rawPrices?.push(...rows.map(row => ({ date: rawCandleTime(row.stck_bsop_date ?? row.bsop_date, row.stck_cntg_hour ?? row.cntg_hour, true), price: pickNullableNumber(row, ["stck_prpr", "stck_clpr"]) })));
 
-    const rowTimes = rows.map(rowTimeValue).filter((value) => /^\d{6}$/.test(value));
+    const rowTimes = rows.filter(row => {
+      const time = rawCandleTime(row.stck_bsop_date ?? row.bsop_date, row.stck_cntg_hour ?? row.cntg_hour, true);
+      return time !== null && Date.parse(time) <= queriedAt;
+    }).map(rowTimeValue).filter((value) => /^\d{6}$/.test(value));
     if (rowTimes.length === 0) {
       break;
     }
@@ -1350,21 +1356,27 @@ async function fetchIntradayChartRange(
     }
 
     previousOldestTime = oldestTime;
-    cursorTime = previousMinute(oldestTime);
+    const nextCursor = previousMinute(oldestTime);
+    if (nextCursor !== null && nextCursor >= cursorTime) break;
+    cursorTime = nextCursor;
   }
 
-  if (rawPrices) {
-    const rawDays = rawPrices.map(point => point.date?.slice(0, 10) ?? "").sort();
-    const latestRawDay = rawDays[rawDays.length - 1];
-    const seen = new Set<string>();
-    const latestRaw = rawPrices.filter(point => {
-      if (point.date === null) return true; // Unknown position stays a gap marker, never today's observation.
-      if (point.date.slice(0, 10) !== latestRawDay || seen.has(point.date)) return false;
-      seen.add(point.date); return true;
-    });
-    rawPrices.splice(0, rawPrices.length, ...latestRaw);
+  const sanitized = normalizeIntradayChartRange({ candles, prices: candlesToPrices(candles), rawPrices }, queriedAt);
+  const rejected = sanitized.intraday!;
+  if (rejected.rejectedFuturePrices || rejected.rejectedFutureCandles) {
+    console.warn(`[kis] ${code} 1D rejected future observations: prices=${rejected.rejectedFuturePrices} candles=${rejected.rejectedFutureCandles} queriedAt=${rejected.queriedAt}`);
   }
-  return latestSessionCandles(candles);
+  rawPrices = sanitized.rawPrices!;
+  const rawDays = rawPrices.map(point => point.date?.slice(0, 10) ?? "").sort();
+  const latestRawDay = rawDays[rawDays.length - 1];
+  const seen = new Set<string>();
+  rawPrices = rawPrices.filter(point => {
+    if (point.date === null) return true; // Unknown position stays a gap marker, never today's observation.
+    if (point.date.slice(0, 10) !== latestRawDay || seen.has(point.date)) return false;
+    seen.add(point.date); return true;
+  });
+  const latest = latestSessionCandles(sanitized.candles);
+  return { ...sanitized, candles: latest, prices: candlesToPrices(latest), rawPrices };
 }
 
 function chartCoverage(target: TimeRange, sourceRange: TimeRange, method: "requested" | "subset" | "fallback", rawPrices: { date: string | null; price: number | null }[]) {
@@ -1387,13 +1399,14 @@ async function fetchRangeChart(
   if (cached && Date.now() < marketCacheExpiry(cached.builtAt, 600_000, true)) return cached.data;
   const load = async (): Promise<RangeData> => {
     const rawPrices: { date: string | null; price: number | null }[] = [];
+    if (range === "1D") {
+      const data = await fetchIntradayChartRange(config, accessToken, code, intradayPageCount(env));
+      return { ...data, coverage: chartCoverage(range, range, "requested", data.rawPrices ?? []) };
+    }
     const latest = cached?.data.candles[cached.data.candles.length - 1]?.time;
     // Recheck recent dates for corrections as well as fetching dates after the last row.
     const startDate = latest ? new Date(Date.parse(`${latest}T00:00:00Z`) - (range === "5Y" ? 62 : 14) * 86_400_000).toISOString().slice(0, 10) : undefined;
-    let candles =
-      range === "1D"
-        ? await fetchIntradayChartRange(config, accessToken, code, intradayPageCount(env), rawPrices)
-        : await fetchDailyChartRange(config, accessToken, code, range, rawPrices, startDate);
+    let candles = await fetchDailyChartRange(config, accessToken, code, range, rawPrices, startDate);
 
     if (cached) {
       if (!candles.length) throw new Error("Empty daily chart refresh.");
@@ -1410,7 +1423,7 @@ async function fetchRangeChart(
       rawPrices,
       coverage: chartCoverage(range, range, "requested", rawPrices),
   };
-  if (range !== "1D" && !data.candles.length) throw new Error("Empty daily chart.");
+  if (!data.candles.length) throw new Error("Empty daily chart.");
   return data;
   };
   return range === "1D" ? load() : dailyChartCache.refresh(key, load, true);
@@ -1567,13 +1580,35 @@ export async function buildKisStockChart(symbol: string, env = process.env, wait
   // The endpoint returns every range in one bundle; ALL is its existing range key.
   const key = `${kisScope(config)}:${code}:ALL`;
   const cached = await stockChartCache.read(key, true);
-  const refresh = (background = false) => shareInFlight(chartPending, key, () => loadKisStockChart(code, background ? { ...env, KIS_REQUEST_PRIORITY: "background" } : env, cached?.data, cached?.builtAt));
+  const repair = cached?.data.chartData.ranges["1D"].intraday;
+  const repairing = repair?.needsRefresh === true;
+  const cachedResult = () => ({ ...cached!.data, source: "cache" as const, sourceStock: { ...cached!.data.sourceStock, source: "cache" as const } });
+  const repairFailed = (data: StockChartBundle): StockChartBundle => {
+    const range = data.chartData.ranges["1D"];
+    return { ...data, chartData: { ...data.chartData, ranges: { ...data.chartData.ranges, "1D": { ...range,
+      intraday: { ...range.intraday!, needsRefresh: true, repairFailedAt: Date.now(), repairFailures: (repair?.repairFailures ?? 0) + 1 },
+    } } } };
+  };
+  const refresh = (background = false) => shareInFlight(chartPending, key, async () => {
+    try {
+      // Legacy repair must not compete with user quotes, even for waitForRefresh callers.
+      const data = await loadKisStockChart(code, background || repairing ? { ...env, KIS_REQUEST_PRIORITY: "background" } : env, cached?.data, cached?.builtAt);
+      return repairing && data.chartData.ranges["1D"].intraday?.needsRefresh ? repairFailed(data) : data;
+    } catch (error) {
+      if (!repairing || !cached) throw error;
+      // Quote/all-range failure also counts, without making the warmup reject.
+      console.warn(`[kis] ${code} 1D cache repair deferred`);
+      return repairFailed(cachedResult());
+    }
+  });
   if (cached) {
-    if (Date.now() >= marketCacheExpiry(cached.builtAt, stockChartCacheTtlMs(env))) {
+    // This gate precedes every fetch, independent of normal cache TTL/failedAt.
+    if (repairing && Date.now() < intradayRepairRetryAt(repair)) return cachedResult();
+    if (repairing || Date.now() >= marketCacheExpiry(cached.builtAt, stockChartCacheTtlMs(env))) {
       if (waitForRefresh) return stockChartCache.refresh(key, () => refresh(), true);
       stockChartCache.revalidate(key, () => refresh(true), true);
     }
-    return { ...cached.data, source: "cache", sourceStock: { ...cached.data.sourceStock, source: "cache" } };
+    return cachedResult();
   }
   // A user joining a cold prewarm must not inherit the background budget for every page.
   const foreground = env.KIS_REQUEST_PRIORITY !== "background";
@@ -1609,9 +1644,13 @@ async function loadKisStockChart(symbol: string, env: Record<string, string | un
       const saved = range !== "1D" ? await dailyChartCache.read(inFlightKey([kisScope(config), code, range]), true) : null;
       const isFresh = saved && Date.now() < marketCacheExpiry(saved.builtAt, 600_000, true);
       const sameSession = previous?.chartData.ranges["1D"].candles.some(row => row.rawTime?.startsWith(marketClock(Date.now()).date));
-      const incremental = sameSession && Date.now() - previousBuiltAt < 15 * 60_000;
-      const rangeData = await fetchRangeChart(config, accessToken, code, range, incremental && range === "1D" ? { ...env, KIS_INTRADAY_PAGE_COUNT: "1" } : env);
-      if (range === "1D" && previous && rangeData.candles.length) {
+      const repairing = previous?.chartData.ranges["1D"].intraday?.needsRefresh === true;
+      const incremental = !repairing && sameSession && Date.now() - previousBuiltAt < 15 * 60_000;
+      const rangeEnv = range === "1D" && repairing ? { ...env, KIS_INTRADAY_PAGE_COUNT: String(DEFAULT_INTRADAY_PAGE_COUNT) }
+        : incremental && range === "1D" ? { ...env, KIS_INTRADAY_PAGE_COUNT: "1" } : env;
+      const rangeData = await fetchRangeChart(config, accessToken, code, range, rangeEnv);
+      if (range === "1D" && repairing && !rangeData.candles.length) throw new Error("Empty intraday cache repair.");
+      if (range === "1D" && previous && !repairing && rangeData.candles.length) {
         const day = rangeData.candles[rangeData.candles.length - 1].time.slice(0, 10);
         const refreshed = new Set(rangeData.rawPrices?.map(row => row.date));
         const candles = uniqueSortedCandles([...previous.chartData.ranges[range].candles.filter(row => row.time.slice(0, 10) === day && !refreshed.has(row.time)), ...rangeData.candles]);
@@ -1624,7 +1663,7 @@ async function loadKisStockChart(symbol: string, env: Record<string, string | un
         anySuccess = true;
       }
     } catch (error) {
-      if (previous?.chartData.ranges[range].candles.length) {
+      if (previous && (previous.chartData.ranges[range].candles.length || (range === "1D" && previous.chartData.ranges[range].intraday?.needsRefresh))) {
         ranges[range] = previous.chartData.ranges[range]; reused = true;
         if (previous.asOf) observedAt.push(previous.asOf);
       }

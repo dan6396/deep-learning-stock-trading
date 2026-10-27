@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { safeArticleUrl, observationTime, validatedChart, formatReportRankScore, aggregateCandles, aggregateSegment } from "./reportData";
 import { chartBundle } from "../../test/fixtures/reportFixtures";
 import { adaptChart, adaptQuote } from "../../entities/market";
@@ -6,6 +6,30 @@ import { adaptCandidate } from "../../entities/candidate";
 import { pipelineRow } from "../../test/dataFixtures";
 
 describe("report input boundaries", () => {
+  it("trusts server query time despite browser clock skew and gives legacy data two minutes of tolerance", () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-27T13:01:00+09:00"));
+    try {
+      const bundle = chartBundle(), times = ["12:59", "13:00", "13:01", "15:30"];
+      const candles = times.map(t => ({ ...bundle.chartData.ranges["1D"].candles[0], time: `2026-10-27T${t}:00+09:00`, rawTime: `2026-10-27T${t}:00+09:00` }));
+      const range = { candles, prices: candles.map(c => ({ date: c.time, rawDate: c.rawTime, price: c.close })),
+        intraday: { queriedAt: "2026-10-27T13:00:00+09:00" } };
+      bundle.chartData.ranges["1D"] = range;
+      const data = adaptChart({ ...bundle, asOf: "2026-10-27T13:00:00+09:00" }, "005930", "1D").data;
+      expect(validatedChart(data)).toMatchObject({ rejectedPrices: 2, rejectedCandles: 2 });
+      expect(validatedChart(data).prices).toHaveLength(2);
+      const legacy = { ...data, observedAt: undefined };
+      expect(validatedChart(legacy)).toMatchObject({ rejectedPrices: 1, rejectedCandles: 1 });
+      vi.setSystemTime(new Date("2026-10-27T12:59:00+09:00"));
+      expect(validatedChart(legacy).prices).toHaveLength(3); // 13:01 is within the legacy tolerance.
+      vi.setSystemTime(new Date("2026-10-27T12:00:00+09:00"));
+      expect(validatedChart(data).prices).toHaveLength(2); // Server time remains authoritative.
+      const legacyResponse = adaptChart({ ...bundle, chartData: { ...bundle.chartData, ranges: { ...bundle.chartData.ranges, "1D": { ...range, intraday: undefined } } } }, "005930", "1D").data;
+      expect(legacyResponse.observedAt).toBeNull(); // Never inherit the bundle's oldest asOf.
+      vi.setSystemTime(new Date("2026-10-28T13:01:00+09:00"));
+      expect(validatedChart(data).prices).toHaveLength(2);
+      expect(validatedChart({ ...data, observedAt: "2026-10-27T04:00:00.005Z" }).prices).toHaveLength(2);
+    } finally { vi.useRealTimers(); }
+  });
   it.each([null, undefined, "", "javascript:alert(1)", "data:text/html,x", "//host/article", "/article", "unknown", "https://user:password@host/article"])("does not link unsafe/non-absolute URL %s", value => expect(safeArticleUrl(value)).toBeNull());
   it("permits only absolute HTTP/S article links", () => {
     expect(safeArticleUrl("https://news.example/article?a=1")).toBe("https://news.example/article?a=1");
@@ -127,6 +151,7 @@ describe("report input boundaries", () => {
     const data = adaptChart(chartBundle(), "005930", "1D").data;
     const point = { ...data.candles[0], time: "2026-10-27T09:00:00+09:00" };
     data.candles = [point, { ...point }, { ...point, time: "2026-10-26T09:00:00+09:00" }, { ...point, time: "2026-10-27T09:01:00+09:00", high: 1 }, { ...point, time: "2026-10-27T09:04:00+09:00" }];
+    data.observedAt = "2026-10-27T13:00:00+09:00";
     const before = structuredClone(data), view = validatedChart(data);
     expect(view.rejectedCandles).toBe(3);
     expect(aggregateCandles(view.candles, 5)[0].bucket).toMatchObject({ observed: 2, expected: 5 });

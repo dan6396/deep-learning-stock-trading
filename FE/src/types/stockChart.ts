@@ -43,6 +43,14 @@ export type StockChartData = {
       candles: CandlePoint[];
       rawPrices?: { date: string | null; price: number | null }[];
       coverage?: ChartCoverage;
+      intraday?: {
+        queriedAt: string;
+        rejectedFuturePrices: number;
+        rejectedFutureCandles: number;
+        needsRefresh: boolean;
+        repairFailedAt?: number;
+        repairFailures?: number;
+      };
     }
   >;
 };

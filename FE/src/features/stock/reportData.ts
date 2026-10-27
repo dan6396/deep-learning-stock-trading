@@ -25,10 +25,13 @@ const priceValue = (value: number | null): value is number => value !== null && 
 
 export function validatedChart(data: ChartData) {
   const segments: Price[][] = [], prices: Price[] = [], candles: Candle[] = [];
+  // Response metadata is ISO (including milliseconds), unlike raw KIS times.
+  const observedAt = data.observedAt ? Date.parse(data.observedAt.length === 19 ? `${data.observedAt}+09:00` : data.observedAt) : NaN;
+  const cutoff = Number.isFinite(observedAt) ? observedAt : Date.now() + 120_000;
   let segment: Price[] = [], previous = -Infinity, rejectedPrices = 0, rejectedCandles = 0;
   for (const point of data.prices) {
     const timestamp = observationTime(point.date);
-    if (!point.rawTimeVerified || timestamp === null || timestamp <= previous || !priceValue(point.price)) {
+    if (!point.rawTimeVerified || timestamp === null || timestamp > cutoff || timestamp <= previous || !priceValue(point.price)) {
       if (segment.length) segments.push(segment); segment = []; rejectedPrices++; continue;
     }
     const valid = { date: point.date!, price: point.price, timestamp }; prices.push(valid); segment.push(valid); previous = timestamp;
@@ -37,7 +40,7 @@ export function validatedChart(data: ChartData) {
   previous = -Infinity;
   for (const point of data.candles) {
     const timestamp = observationTime(point.time);
-    if (!point.rawTimeVerified || timestamp === null || timestamp <= previous || !point.rawOhlc ||
+    if (!point.rawTimeVerified || timestamp === null || timestamp > cutoff || timestamp <= previous || !point.rawOhlc ||
       !priceValue(point.open) || !priceValue(point.high) || !priceValue(point.low) || !priceValue(point.close) ||
       point.high < Math.max(point.open, point.close) || point.low > Math.min(point.open, point.close) || point.low > point.high) { rejectedCandles++; continue; }
     candles.push({ time: point.time!, open: point.open, high: point.high, low: point.low, close: point.close,
