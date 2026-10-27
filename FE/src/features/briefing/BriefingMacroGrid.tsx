@@ -22,7 +22,7 @@ const ORDERED_MACRO_IDS = [
 ] as const;
 
 export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
-  const indicators = macro.indicators;
+  const indicators = macro.preOpen ? macro.indicators.filter(row => !["NASDAQ", "USDKRW", "UST10Y"].includes(row.id)) : macro.indicators;
   const context = macro.context;
 
   const sortedIndicators = useMemo(() => {
@@ -134,8 +134,8 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
     <section className="briefing-macro-section" aria-labelledby="macro-section-heading">
       <div className="briefing-macro-header">
         <div className="briefing-macro-title-group">
-          <h2 id="macro-section-heading">시장 지표</h2>
-          <span className="briefing-macro-caption">국내·미국 주요 지표 및 환율·금리</span>
+          <h2 id="macro-section-heading">{macro.preOpen ? "그 밖의 시장 지표" : "시장 지표"}</h2>
+          <span className="briefing-macro-caption">{macro.preOpen ? "국내 지수·S&P 500·참고 통계" : "국내·미국 주요 지표 및 환율·금리"}</span>
         </div>
         {context?.usSessionDate && (
           <p className="briefing-macro-context-note" role="note">

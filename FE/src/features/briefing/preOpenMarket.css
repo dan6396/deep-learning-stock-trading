@@ -1,0 +1,25 @@
+@layer components {
+  .preopen-section { display: grid; gap: 16px; color: var(--ds-fg); }
+  .preopen-section h2 { margin: 0; font-size: 20px; }
+  .preopen-section > header p,.preopen-meta { color: var(--ds-fg-2); font-size: 12px; line-height: 1.6; }
+  .preopen-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .preopen-card,.preopen-outlook { min-width: 0; padding: 18px; border: 1px solid var(--ds-line); border-radius: 14px; background: var(--ds-surface); }
+  .preopen-card h3,.preopen-outlook h3 { margin: 0 0 12px; font-size: 14px; }
+  .preopen-value { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .preopen-card p,.preopen-outlook p { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+  .preopen-card .preopen-meta,.preopen-outlook .preopen-meta { font-size: 12px; }
+  .preopen-grid .preopen-unavailable { grid-column: 1 / -1; align-self: start; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 12px 14px; color: var(--ds-fg-2); }
+  .preopen-unavailable h3,.preopen-unavailable span { margin: 0; font-size: 12px; line-height: 1.6; font-weight: 400; }
+  .preopen-sparkline { width: 100%; height: 44px; display: block; margin: 16px 0 8px; }
+  .preopen-comment { border-top: 1px solid var(--ds-line); padding-top: 12px; }
+  .preopen-placeholder { display: inline-block; margin-right: 8px; color: var(--ds-fg-2); border: 1px solid var(--ds-line); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .preopen-outlook > header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
+  .preopen-stance { font-size: 14px; font-weight: 700; border: 1px solid var(--ds-line); padding: 5px 10px; border-radius: 6px; }
+  .preopen-citations { display: flex; flex-wrap: wrap; gap: 8px; }
+  .preopen-citations button { min-height: 44px; padding: 8px 12px; color: var(--ds-primary); background: var(--ds-surface-2); border: 1px solid var(--ds-line); border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .preopen-section .is-rise { color: var(--ds-rise); }.preopen-section .is-fall { color: var(--ds-fall); }
+  .briefing-headline-summary { padding: 12px 0; font-size: 13px; line-height: 1.7; }
+  .briefing-headline-summary small { font-size: 12px; color: var(--ds-fg-2); }
+  .briefing-headline-summary a { display: inline-flex; min-height: 44px; align-items: center; padding: 4px 8px; margin-right: 6px; font-size: 12px; }
+  @media(max-width:768px) { .preopen-grid { grid-template-columns: minmax(0,1fr); }.preopen-card,.preopen-outlook { padding: 14px; } }
+}

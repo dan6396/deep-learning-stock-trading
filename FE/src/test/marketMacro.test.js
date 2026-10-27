@@ -9,6 +9,22 @@ function payload(value = 100, time = timestamp) {
 const reply = (body) => ({ ok: true, json: async () => body });
 afterEach(() => vi.useRealTimers());
 describe("market macro", () => {
+  it("prefers the prior actual daily observation over metadata or a monthly baseline", async () => {
+    const body = payload(104), result = body.chart.result[0];
+    result.meta.previousClose = 103;
+    result.timestamp = [timestamp - 86400, timestamp];
+    result.indicators = { quote: [{ close: [102, 104] }] };
+    const macro = await createMarketMacro({ transport: async () => reply(body), now: () => timestamp * 1000 + 1000, reference: async () => null })({});
+    expect(macro.indicators[0]).toMatchObject({ value: 104, change: 2 });
+  });
+  it("uses the latest prior observation when today's daily bar has not arrived", async () => {
+    const body = payload(104), result = body.chart.result[0];
+    result.meta.previousClose = 80;
+    result.timestamp = [timestamp - 172800, timestamp - 86400];
+    result.indicators = { quote: [{ close: [101, 102] }] };
+    const macro = await createMarketMacro({ transport: async () => reply(body), now: () => timestamp * 1000 + 1000, reference: async () => null })({});
+    expect(macro.indicators[0]).toMatchObject({ value: 104, change: 2 });
+  });
   it("lets GET use Yahoo immediately after a bounded night wait and reflects background completion on its next read", async () => {
     vi.useFakeTimers(); let release;
     const transport = vi.fn(async () => reply(payload())), night = vi.fn(() => new Promise(resolve => { release = resolve; }));

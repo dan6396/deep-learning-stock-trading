@@ -90,7 +90,7 @@ async function request(routes, path) {
 }
 
 function geminiResponse(request) {
-  const input = JSON.parse(JSON.parse(request.body).contents[0].parts[0].text);
+  const input = JSON.parse(JSON.parse(request.body).contents[0].parts[0].text).inputData;
   return { ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify({
     overview: "모델 순위와 기사를 확인했습니다. 입력 순서를 유지합니다.", marketNote: "시장 관측 자료를 참고합니다.",
     stocks: input.stocks.map(stock => ({ code: stock.code, summary: "모델 순위를 유지합니다.", citations: [`R:${stock.code}`] })),

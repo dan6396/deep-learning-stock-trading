@@ -2,6 +2,8 @@ import { readBoundedJson } from "./boundedJson";
 import { createNightProvider, fetchKisNightFutures, unavailableNight } from "./kisBriefing";
 import type { KisReadOptions } from "./revalidatingCache";
 import { getNasdaqReference, type MacroReference } from "./briefingReference";
+import type { MacroObservation, PreOpenIndicator } from "../src/types/preOpenMacro";
+import { extractMacroHistory, buildPreOpenIndicators } from "./preOpenMacro";
 declare const process: { env: Record<string, string | undefined> };
 
 export const MACRO_UNIVERSE = [
@@ -17,8 +19,9 @@ export type MacroIndicator = {
   id: Definition["id"] | "KOSPI200_NIGHT"; name: string; value: number | null; change: number | null; changePct: number | null;
   unit: Definition["unit"]; asOf: string | null; source: "yahoo" | "kis"; status: "ok" | "unavailable";
   session?: "closed" | "open" | null;
+  history?: MacroObservation[];
 };
-export type MarketMacro = { asOf: string | null; indicators: MacroIndicator[];
+export type MarketMacro = { asOf: string | null; indicators: MacroIndicator[]; preOpen?: PreOpenIndicator[];
   context?: { usSessionDate: string | null; targetSessionNote: string }; reference?: MacroReference | null };
 type Options = { transport?: typeof fetch; now?: () => number; night?: typeof fetchKisNightFutures; reference?: typeof getNasdaqReference };
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
@@ -59,19 +62,24 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
       try {
         return await Promise.race([
           (async (): Promise<MacroIndicator> => {
-            const response = await transport(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(definition.symbol)}?range=1d&interval=1d`, {
+            const response = await transport(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(definition.symbol)}?range=1mo&interval=1d`, {
               signal: controller.signal, redirect: "error", headers: { Accept: "application/json", "User-Agent": "kospi-ai-trading-briefing/1.0" },
             });
             if (!response.ok) return unavailable;
             const body = await readBoundedJson(response);
             const meta = body?.chart?.error ? null : body?.chart?.result?.[0]?.meta;
+            const history = extractMacroHistory(body?.chart?.result?.[0], now(), definition.id === "KOSPI" || definition.id === "KOSDAQ" ? "Asia/Seoul" : definition.id === "USDKRW" ? "UTC" : "America/New_York");
             const value: unknown = meta?.regularMarketPrice;
-            const previous: unknown = meta?.chartPreviousClose ?? meta?.previousClose;
             const timestamp: unknown = meta?.regularMarketTime;
+            // Use the prior actual daily observation, even if today's daily bar is absent.
+            // chartPreviousClose is a monthly range baseline, so it is the last fallback.
+            const day = finite(timestamp) ? new Intl.DateTimeFormat("en-CA", { timeZone: meta?.exchangeTimezoneName || (definition.id === "KOSPI" || definition.id === "KOSDAQ" ? "Asia/Seoul" : definition.id === "USDKRW" ? "UTC" : "America/New_York"), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(timestamp * 1000)) : null;
+            const prior = history.filter(row => day && row.date < day);
+            const previous: unknown = prior[prior.length - 1]?.value ?? meta?.previousClose ?? meta?.chartPreviousClose;
             if (!finite(value) || !finite(previous) || previous <= 0 || !finite(timestamp) || timestamp <= 0 || !Number.isFinite(new Date(timestamp * 1000).getTime())) return unavailable;
             const change = value - previous, changePct = change / previous * 100;
             if (!finite(change) || !finite(changePct)) return unavailable;
-            return { ...unavailable, value, change, changePct, asOf: new Date(timestamp * 1000).toISOString(), status: "ok",
+            return { ...unavailable, value, change, changePct, history, asOf: new Date(timestamp * 1000).toISOString(), status: "ok",
               ...(definition.id === "NASDAQ" || definition.id === "SP500" ? { session: usSession(meta, timestamp, now()) } : {}) };
           })(),
           new Promise<MacroIndicator>(resolve => { timer = setTimeout(() => { controller.abort(); resolve(unavailable); }, 8000); }),
@@ -82,7 +90,7 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
     // Earliest actual observation: consumers must still show each market's own asOf.
     const [indicators, historical] = await Promise.all([yahoo, reference(env).catch(() => null)]);
     const times = indicators.flatMap(row => row.asOf ? [row.asOf] : []).sort();
-    return { asOf: times[0] ?? null, indicators, reference: historical };
+    return { asOf: times[0] ?? null, indicators, preOpen: buildPreOpenIndicators(indicators), reference: historical };
   }
   async function base(env: Record<string, string | undefined>): Promise<MarketMacro> {
     if (cached && now() < cached.expires) return structuredClone(cached.value);

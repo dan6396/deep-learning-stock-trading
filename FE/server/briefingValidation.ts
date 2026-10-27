@@ -17,6 +17,11 @@ export function formatMarketValue(value: number, unit: "pt" | "KRW" | "%"): stri
   return `${value.toLocaleString("ko-KR", { minimumFractionDigits: unit === "%" ? 2 : 0, maximumFractionDigits: 2 })}${unit === "KRW" ? "원" : unit}`;
 }
 export const roundMarketValue = (value: number) => Number(value.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 2 }));
+export const MACRO_NAME_ALIASES: Record<string, readonly string[]> = {
+  UST10Y: ["미국 국채 10년 금리", "미국 국채 10년물", "미 국채 10년물", "미 10년물", "10년물", "금리", "미국 금리", "미 금리", "10년 금리"],
+  NASDAQ: ["나스닥", "NASDAQ"], USDKRW: ["원·달러 환율", "원/달러", "원·달러", "원달러", "환율"],
+  KOSPI200_FOREIGN_FUTURES: ["코스피200 선물 외국인 순매수", "코스피200"], SP500: ["S&P 500", "S&P500"],
+};
 export function formatSupplyWon(value: number): string {
   if (Math.abs(value) < 10_000) return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
   let remaining = Math.round(Math.abs(value) / 10_000) * 10_000;
@@ -58,11 +63,11 @@ function quantities(text: string): Quantity[] | null {
 }
 
 function assignDirections(text: string, values: Quantity[], directional: (quantity: Quantity) => boolean): void {
-  for (const match of text.matchAll(/순매도|순매수|하락|내리|내렸|내림|떨어|약세|상승|오르|올랐|오름|강세/g)) {
+  for (const match of text.matchAll(/순매도|순매수|하락|내리|내렸|내림|낮아|낮았|줄었|떨어|약세|상승|오르|올랐|오름|높아|높았|늘었|강세/g)) {
     let index = values.length - 1;
     while (index >= 0 && values[index].end! > match.index!) index--;
     if (index < 0 || !directional(values[index]) || !/^(?:\s|[()（）은는이가을를]|각각|동반)*$/.test(text.slice(values[index].end, match.index))) continue;
-    const sign = /순매도|하락|내리|내렸|내림|떨어|약세/.test(match[0]) ? -1 : 1;
+    const sign = /순매도|하락|내리|내렸|내림|낮아|낮았|줄었|떨어|약세/.test(match[0]) ? -1 : 1;
     values[index].direction = sign;
     while (index > 0 && directional(values[index - 1])) {
       let between = text.slice(values[index - 1].end, values[index].offset);
@@ -96,10 +101,12 @@ export function unpublishedSupplyClaim(text: string): boolean {
 }
 
 /** Dates are calendar facts; clock digits, titles and identifiers cannot license quantities. */
-export function groundedNumbers(output: string, input: BriefingInput): boolean {
+export function groundedNumbers(output: string, input: BriefingInput, options: { outlook?: boolean } = {}): boolean {
   if (/(?:KRW|USD)/i.test(output)) return false;
   // An unrelated matching number cannot license an unpublished supply claim.
-  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply")) && unpublishedSupplyClaim(output)) return false;
+  const supplyText = options.outlook && input.macro.preOpen?.some(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "unavailable")
+    ? output.replace(/(?:코스피\s*200\s*)?(?:선물\s*외국인|외국인\s*선물)\s*순\s*매\s*[수도]\s*(?:자료|데이터|정보|흐름)?\s*(?:가|는|이|은)?\s*(?:확인되지\s*않(?:았습니다|았으며|았고|아|고|습니다|으며)|없(?:어|습니다|으며)|미확인(?:입니다)?)(?=$|[\s,.!?。;])/g, "선물 자료 미확인") : output;
+  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply")) && unpublishedSupplyClaim(supplyText)) return false;
   const dates = new Set<string>(), monthDays = new Set<string>(), allowed: Quantity[] = [];
   const quarterTopics = new Set<string>();
   const addDate = (value: unknown) => {
@@ -137,6 +144,21 @@ export function groundedNumbers(output: string, input: BriefingInput): boolean {
     };
     measured(indicator.value, unit); measured(indicator.change, unit, true); measured(indicator.changePct, "%", true);
   }
+  if (options.outlook) {
+    // These calibration facts are supplied explicitly in the outlook prompt only.
+    add(46.6, "%", false, 1); add(50.6, "%", false, 1);
+    for (const indicator of input.macro.preOpen ?? []) {
+      if (indicator.status !== "ok") continue;
+      addDate(indicator.asOf);
+      const unit = indicator.unit === "KRW" ? "원" : indicator.unit;
+      add(indicator.value, unit, false, 2);
+      add(indicator.change, indicator.unit === "%" ? "%p" : unit, true, indicator.unit === "%" ? 3 : 2);
+      add(indicator.fiveDayChange, indicator.unit === "%" ? "%p" : unit, true, indicator.unit === "%" ? 3 : 2);
+      add(indicator.changePct, "%", true, 2); add(indicator.fiveDayChangePct, "%", true, 2);
+      add(indicator.history.length, "개"); add(indicator.history.length, "거래일");
+      for (const observation of indicator.history) { addDate(observation.date); add(observation.value, unit, false, 2); }
+    }
+  }
   add(input.model?.poolSize ?? null, "개");
   add(input.stocks.length, "개");
   for (const stock of input.stocks) {
@@ -160,7 +182,7 @@ export function groundedNumbers(output: string, input: BriefingInput): boolean {
   let stripped = removeDates(output, true);
   if (stripped === null || /\d{1,2}:\d{2}/.test(stripped)) return false;
   // Numeric brand/index names are labels, not measurements.
-  for (const name of [...input.stocks.map(stock => stock.name), ...input.macro.indicators.map(indicator => indicator.name)].sort((left, right) => right.length - left.length)) {
+  for (const name of [...input.stocks.map(stock => stock.name), ...input.macro.indicators.map(indicator => indicator.name), ...(options.outlook ? [...(input.macro.preOpen?.map(row => row.name) ?? []), ...Object.values(MACRO_NAME_ALIASES).flat()] : [])].sort((left, right) => right.length - left.length)) {
     if (name) stripped = stripped.split(name).join(name.replace(/\d/g, " "));
   }
   // A cited article's quarter is a topic label, never a free numeric allowance.
@@ -197,6 +219,7 @@ function hasUnnegatedPhrase(text: string, unsafe: RegExp): boolean {
   return false;
 }
 export function forbiddenCausality(text: string): boolean {
+  text = text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
   // An explicitly named article topic is not a claim that a stock benefits.
   const topics = text.replace(/수혜\s*업종\s*(?:관련\s*)?(?:기사|뉴스)/g, "기사 주제");
   const factual = topics.replace(/(?:을|를)\s*반영(?:해|하여)\s*(?:요약|정리|기록|설명|표시|갱신|작성)(?:했|하|합|되)[가-힣]*/g, "자료 정리");
@@ -204,8 +227,13 @@ export function forbiddenCausality(text: string): boolean {
 }
 
 /** Preserve measured supply descriptions while excluding transaction advice. */
+export function forbiddenAction(text: string): boolean {
+  return /(?<![가-힣])사\s*(?:세\s*요|야)|팔\s*아\s*야|매\s*[수도]\s*하/.test(text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, ""));
+}
 export function forbiddenNarrative(text: string): boolean {
+  text = text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
+  if (forbiddenAction(text)) return true;
   const factualSupply = text.replace(/순\s*매\s*[수도](?!\s*(?:하|해|권|추천|의견|타이밍))|매\s*[수도]\s*세/g, "수급");
-  const unsafe = /유망|진입\s*적기|주목할\s*만|담아\s*볼|매력적|기회|모멘텀\s*지속|저가\s*매수|목표\s*(?:주\s*)?가|적정\s*주가|비\s*중|매\s*[수도]|추\s*천|확\s*률|(?:기대|예측|예상)\s*수익률?|수익\s*보장|상승\s*가능성|투자\s*권유|(?:주가|가격|목표|수익률?|상승|하락|반등|급등|오를|내릴).{0,6}(?:전망|예상|예측|기대)|(?:전망|예상|예측|기대).{0,6}(?:주가|가격|목표|수익률?|상승|하락|반등|급등|오를|내릴)|\b(?:buy|sell|recommend\w*|target\s*price|allocat\w*|probabilit\w*|expected\s*return)\b/gi;
+  const unsafe = /유망|진입\s*적기|주목할\s*만|담아\s*볼|매력적|기회|모멘텀\s*지속|저가\s*매수|목표\s*(?:주\s*)?가|적정\s*주가|(?<![가-힣])비\s*중(?=$|[^가-힣]|[은는이가을를의도만]|조정|확대|축소)|투자비중|매\s*[수도]|추\s*천|확\s*률|(?:기대|예측|예상)\s*수익률?|수익\s*보장|상승\s*가능성|투자\s*권유|(?:주가|가격|목표|수익률?|상승|하락|반등|급등|오를|내릴).{0,6}(?:전망|예상|예측|기대)|(?:전망|예상|예측|기대).{0,6}(?:주가|가격|목표|수익률?|상승|하락|반등|급등|오를|내릴)|\b(?:buy|sell|recommend\w*|target\s*price|allocat\w*|probabilit\w*|expected\s*return)\b/gi;
   return hasUnnegatedPhrase(factualSupply, unsafe);
 }

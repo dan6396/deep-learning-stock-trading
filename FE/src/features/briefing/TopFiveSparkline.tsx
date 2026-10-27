@@ -4,6 +4,7 @@ import { validatedChart } from "../stock/reportData";
 import { formatPercent } from "../../shared/lib/format";
 import type { ChartData } from "../../entities/market";
 import type { DataResult } from "../../entities/source";
+import { Sparkline } from "../../shared/ui/Sparkline";
 
 export interface SparklineQueryLike {
   data?: DataResult<ChartData> | null;
@@ -74,34 +75,6 @@ export function TopFiveSparkline({
   const note = isInterpolated ? " (보간 데이터)" : "";
   const changeRateLabel = formatPercent(roundedChange, "percent", 1);
 
-  const width = 120;
-  const height = 32;
-  const paddingY = 3;
-
-  const minPrice = Math.min(...view.prices.map(p => p.price));
-  const maxPrice = Math.max(...view.prices.map(p => p.price));
-  const priceRange = maxPrice - minPrice || 1;
-
-  const minTime = view.prices[0].timestamp;
-  const maxTime = view.prices[view.prices.length - 1].timestamp;
-  const timeRange = maxTime - minTime || 1;
-
-  // 결측 구간은 잇지 않고 세그먼트별로 분리하여 path 생성
-  const segmentPaths = view.segments
-    .filter(seg => seg.length > 0)
-    .map(seg => {
-      const coords = seg.map(pt => {
-        const x = Number((((pt.timestamp - minTime) / timeRange) * width).toFixed(1));
-        const y = Number(
-          (paddingY + (1 - (pt.price - minPrice) / priceRange) * (height - paddingY * 2)).toFixed(1)
-        );
-        return `${x},${y}`;
-      });
-      return seg.length === 1 ? `M ${coords[0]} L ${coords[0]}` : `M ${coords.join(" L ")}`;
-    });
-
-  const pathD = segmentPaths.join(" ");
-
   return (
     <div
       className="briefing-sparkline-wrap"
@@ -111,23 +84,12 @@ export function TopFiveSparkline({
         <span className="briefing-sparkline-label">1개월</span>
         <span className={`briefing-sparkline-change is-${trendDir}`}>{changeRateLabel}</span>
       </div>
-      <svg
+      <Sparkline
         className={`briefing-sparkline is-${trendDir}`}
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={`최근 1개월 종가 추세${note}, 시작 대비 ${changeRateLabel}`}
-      >
-        <path
-          d={pathD}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+        segments={view.segments}
+        color={strokeColor}
+        label={`최근 1개월 종가 추세${note}, 시작 대비 ${changeRateLabel}`}
+      />
     </div>
   );
 }

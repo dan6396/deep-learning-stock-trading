@@ -3,6 +3,8 @@ import { formatNumber } from "../shared/lib/format";
 import { adaptModelEvidence, type ModelEvidence } from "./modelEvidence";
 import { adaptDiversification } from "./stockInsight";
 import type { Diversification } from "./stockInsight";
+import { OUTLOOK_STANCES, type MarketOutlook, type HeadlineSummary, type PreOpenIndicator } from "../types/preOpenMacro";
+export type { PreOpenIndicator, MarketOutlook, HeadlineSummary } from "../types/preOpenMacro";
 
 export type BriefingStatus = "ready" | "no_run";
 
@@ -71,6 +73,7 @@ export type MacroData = {
   indicators: MacroIndicator[];
   context?: MacroContext;
   reference?: MacroReference | null;
+  preOpen?: PreOpenIndicator[];
 };
 
 export type EvidenceKind = "model" | "supply" | "news";
@@ -146,6 +149,8 @@ export type BriefingNarrative = {
   macroAsOf?: string | null;
   macroStale?: boolean;
   fieldSources?: NarrativeFieldSources;
+  marketOutlook?: MarketOutlook;
+  newsSummaries?: HeadlineSummary[];
 };
 
 export type BriefingDataSource = "live" | "cache" | "sample";
@@ -362,10 +367,28 @@ export function adaptMacroData(raw: unknown): MacroData {
     .filter((ind): ind is MacroIndicator => ind !== null);
   const context = adaptMacroContext(obj.context);
   const reference = adaptMacroReference(obj.reference);
+  const preOpen = Array.isArray(obj.preOpen) ? obj.preOpen.flatMap(raw => {
+    const row = record(raw), id = row.id;
+    if (!["UST10Y", "NASDAQ", "USDKRW", "KOSPI200_FOREIGN_FUTURES"].includes(String(id))) return [];
+    const dates = new Map<string, number>();
+    if (Array.isArray(row.history)) for (const item of row.history) {
+      const point = record(item), date = textValue(point.date), value = finiteNumber(point.value);
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date && value !== null) dates.set(date, value);
+    }
+    const value = finiteNumber(row.value), comment = record(row.comment);
+    return [{ id: id as PreOpenIndicator["id"], name: textValue(row.name) ?? String(id), value,
+      change: finiteNumber(row.change), changePct: finiteNumber(row.changePct), fiveDayChange: finiteNumber(row.fiveDayChange), fiveDayChangePct: finiteNumber(row.fiveDayChangePct),
+      history: [...dates].sort(([a], [b]) => a.localeCompare(b)).slice(-5).map(([date, value]) => ({ date, value })),
+      unit: row.unit === "%" || row.unit === "KRW" || row.unit === "계약" ? row.unit : "pt", asOf: textValue(row.asOf),
+      source: row.source === "yahoo" || row.source === "kis" ? row.source : "unknown", status: row.status === "ok" && value !== null ? "ok" : "unavailable",
+      comment: { text: textValue(comment.text) ?? "데이터 출처 확인 중", placeholder: true, ruleId: textValue(comment.ruleId) ?? "legacy" },
+    } as PreOpenIndicator];
+  }) : undefined;
 
   return {
     asOf,
     indicators,
+    ...(preOpen ? { preOpen } : {}),
     ...(context ? { context } : {}),
     ...(reference !== null ? { reference } : "reference" in obj ? { reference: null } : {}),
   };
@@ -478,6 +501,13 @@ export function adaptBriefingNarrative(raw: unknown): BriefingNarrative {
   const citations = citationsRaw.filter((c): c is string => typeof c === "string" && c.trim().length > 0);
   const macroAsOf = typeof obj.macroAsOf === "string" ? textValue(obj.macroAsOf) : obj.macroAsOf === null ? null : undefined;
   const macroStale = typeof obj.macroStale === "boolean" ? obj.macroStale : undefined;
+  const outlook = record(obj.marketOutlook);
+  const marketOutlook: MarketOutlook | undefined = OUTLOOK_STANCES.includes(outlook.stance as MarketOutlook["stance"]) && textValue(outlook.text)
+    ? { stance: outlook.stance as MarketOutlook["stance"], text: String(outlook.text), citations: Array.isArray(outlook.citations) ? outlook.citations.filter((id): id is string => typeof id === "string" && id.startsWith("M:")) : [], source: outlook.source === "llm" ? "llm" : "template" } : undefined;
+  const newsSummaries = Array.isArray(obj.newsSummaries) ? obj.newsSummaries.flatMap(raw => {
+    const row = record(raw), code = stockCode(row.code), text = textValue(row.text);
+    return code && text ? [{ code, text, citations: Array.isArray(row.citations) ? row.citations.filter((id): id is string => typeof id === "string" && id.startsWith(`N:${code}:`)) : [], source: row.source === "llm" ? "llm" as const : "template" as const }] : [];
+  }) : undefined;
 
   const rawFieldSources = record(obj.fieldSources);
   const overviewSource: FieldSource | undefined =
@@ -505,6 +535,8 @@ export function adaptBriefingNarrative(raw: unknown): BriefingNarrative {
     ...(macroAsOf !== undefined ? { macroAsOf } : {}),
     ...(macroStale !== undefined ? { macroStale } : {}),
     ...(fieldSources !== undefined ? { fieldSources } : {}),
+    ...(marketOutlook ? { marketOutlook } : {}),
+    ...(newsSummaries ? { newsSummaries } : {}),
   };
 }
 

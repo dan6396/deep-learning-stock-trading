@@ -29,6 +29,7 @@ export function BriefingStockEvidence({
 }) {
   const paths = useAppPaths();
   const stockNarrative = narrative.stocks.find(item => item.code === stock.code);
+  const headlineSummary = narrative.newsSummaries?.find(item => item.code === stock.code);
   const articlesToDisplay = stock.news.articles.slice(0, 3);
   const hasArticles = articlesToDisplay.length > 0;
   const visibleCautions = stock.cautions.filter(item => withoutRankScoreDisclaimer(item.text));
@@ -244,6 +245,11 @@ export function BriefingStockEvidence({
 
         {/* 관련 기사 출처 목록 (최대 3건) */}
         <div className="briefing-stock-news-section">
+          {headlineSummary && <div className="briefing-headline-summary" data-testid={`headline-summary-${stock.code}`}>
+            <small>기사 제목 기반 요약 · {headlineSummary.source === "llm" ? "AI 요약" : "기본 안내"} · 본문 미수집</small>
+            <p>{headlineSummary.text}</p>
+            <div>{headlineSummary.citations.map(id => { const article = stock.news.articles.find(row => row.id === id); return article ? <a key={id} href={`#${citationDomId(id)}`} onClick={event => { event.preventDefault(); onCitationClick(id); }}>{article.source || "기사 근거"}</a> : null; })}</div>
+          </div>}
           <div className="briefing-stock-news-header">
             <Newspaper aria-hidden="true" size={13} />
             <span className="briefing-stock-news-label">관련 기사</span>

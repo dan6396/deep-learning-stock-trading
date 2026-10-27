@@ -5,6 +5,7 @@ import { BriefingMacroGrid } from "./BriefingMacroGrid";
 import { BriefingNarrativeCard } from "./BriefingNarrativeCard";
 import { BriefingCompositionCard } from "./BriefingCompositionCard";
 import { BriefingStockEvidence } from "./BriefingStockSection";
+import { PreOpenMarketSection } from "./PreOpenMarketSection";
 import "./briefingTop.css";
 
 export type RenderStockEvidence = (code: string) => React.ReactNode;
@@ -163,6 +164,7 @@ export function BriefingTopContainer({
       )}
 
       {/* 3. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
+      <PreOpenMarketSection macro={briefing.macro} narrative={briefing.narrative} onCitationClick={handleCitationClick} />
       <BriefingMacroGrid macro={briefing.macro} />
 
       {/* 4. TOP5 후보 구성 카드 */}

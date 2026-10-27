@@ -5,6 +5,7 @@ import { readPipelineRunMarker, type PipelineRunMarker } from "./pipelineFreshne
 import { getMarketMacro, MACRO_UNIVERSE, usMarketDate, type MarketMacro } from "./marketMacro";
 import { unavailableNight } from "./kisBriefing";
 import { nextKrxSession } from "./krxCalendar";
+import { buildPreOpenIndicators } from "./preOpenMacro";
 import { formatSupplyWon } from "./briefingValidation";
 import { showBriefingSupply } from "./supplyVisibility";
 import { formatModelPercent, modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
@@ -117,11 +118,12 @@ type BriefingDependencies = {
 };
 type CaptureControl = { deadline: number; cancelled: boolean; marker: PipelineRunMarker | null; staged?: PipelineRunMarker; rows?: PipelineOutputRow[] };
 export const COMPLETED_PREPARATION_TIMEOUT_MS = 1500;
-export const AUTO_NARRATIVE_TIMEOUT_MS = 30_000;
+export const AUTO_NARRATIVE_TIMEOUT_MS = 35_000;
 
 function unavailableMarket(): MarketMacro {
-  return { asOf: null, indicators: [...MACRO_UNIVERSE.map(row => ({ id: row.id, name: row.name, unit: row.unit,
-    value: null, change: null, changePct: null, asOf: null, source: "yahoo" as const, status: "unavailable" as const })), unavailableNight()], reference: null };
+  const indicators = [...MACRO_UNIVERSE.map(row => ({ id: row.id, name: row.name, unit: row.unit,
+    value: null, change: null, changePct: null, asOf: null, source: "yahoo" as const, status: "unavailable" as const })), unavailableNight()];
+  return { asOf: null, indicators, preOpen: buildPreOpenIndicators(indicators), reference: null };
 }
 function emptyBriefing(env: Record<string, string | undefined>): BriefingPayload {
   const input = buildBriefingInput([], null, unavailableMarket(), Date.now(), env);
