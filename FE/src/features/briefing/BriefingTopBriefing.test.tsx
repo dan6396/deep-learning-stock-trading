@@ -1603,8 +1603,9 @@ describe("narrative regeneration policy", () => {
     const cssPath = path.resolve(__dirname, "briefingTop.css");
     const cssContent = fs.readFileSync(cssPath, "utf-8");
 
-    // CSS order:-1 must be completely removed in favor of DOM reordering
-    expect(cssContent).not.toContain("order: -1");
+    for (const file of ["briefingTop.css", "preOpenMarket.css"]) {
+      expect(fs.readFileSync(path.resolve(__dirname, file), "utf-8")).not.toMatch(/(?:^|[;{\s])order\s*:/);
+    }
     expect(cssContent).not.toContain(".briefing-top-container > .briefing-comparison-card");
     expect(cssContent).toContain(".briefing-narrative-citations.is-collapsed-mobile");
 
@@ -1634,47 +1635,19 @@ describe("narrative regeneration policy", () => {
     expect(citationCollapseMedia.every(m => m.includes("max-width: 768px"))).toBe(true);
   });
 
-  it("renders TOP5 before narrative in DOM when viewport matches mobile (max-width: 768px)", () => {
-    const origMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes("max-width: 768px"),
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
-
-    try {
-      const { container } = render(
-        <MemoryRouter>
-          <BriefingTopContainer
-            renderTopFive={renderTestTopFive}
-            briefing={mockExtendedBriefingData}
-            onSelectStock={vi.fn()}
-            isGenerating={false}
-            generateError={null}
-            onGenerateNarrative={vi.fn()}
-          />
-        </MemoryRouter>
-      );
-
-      const narrative = container.querySelector(".briefing-narrative-card")!;
-      const top5Table = container.querySelector("[data-testid='mock-top5-table']")!;
-      expect(narrative).not.toBeNull();
-      expect(top5Table).not.toBeNull();
-
-      const isFollowing = (a: Node, b: Node) =>
-        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-
-      // On mobile, TOP5 comes BEFORE narrative in actual DOM tree
-      expect(isFollowing(top5Table, narrative)).toBe(true);
-    } finally {
-      window.matchMedia = origMatchMedia;
-    }
-  });
 });
 
 beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));
+
+describe("market-first briefing layout", () => {
+  it("keeps narrative, pre-open indicators, opinion, TOP5, other markets and composition in one invariant DOM order", () => {
+      const data = structuredClone(mockExtendedBriefingData);
+      data.macro.preOpen = [{ id: "UST10Y", name: "미국 국채 10년 금리", unit: "%", value: 4.99, change: -0.002, changePct: -0.04, fiveDayChange: -0.13, fiveDayChangePct: -2.5, asOf: "2026-10-23", source: "yahoo", status: "ok", history: [{ date: "2026-10-23", value: 4.99 }], comment: { text: "관측된 금리입니다.", placeholder: true, ruleId: "fixture" } }];
+      data.narrative.marketOutlook = { stance: "중립", text: "장 초반 방향은 중립입니다.", citations: ["M:UST10Y"], source: "llm" };
+      const { container } = render(<MemoryRouter><BriefingTopContainer renderTopFive={renderTestTopFive} briefing={data} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
+      const selectors = [".briefing-narrative-card", ".preopen-grid", ".preopen-outlook", "[data-testid='mock-top5-table']", ".briefing-macro-section", ".briefing-composition-card"];
+      const elements = selectors.map(selector => container.querySelector(selector)!);
+      elements.forEach(element => expect(element).not.toBeNull());
+      for (let index = 0; index < elements.length - 1; index++) expect(elements[index].compareDocumentPosition(elements[index + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

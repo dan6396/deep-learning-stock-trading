@@ -378,6 +378,8 @@ export function adaptMacroData(raw: unknown): MacroData {
     const value = finiteNumber(row.value), comment = record(row.comment);
     return [{ id: id as PreOpenIndicator["id"], name: textValue(row.name) ?? String(id), value,
       change: finiteNumber(row.change), changePct: finiteNumber(row.changePct), fiveDayChange: finiteNumber(row.fiveDayChange), fiveDayChangePct: finiteNumber(row.fiveDayChangePct),
+      ...(row.fiveDaySum !== undefined ? { fiveDaySum: finiteNumber(row.fiveDaySum) } : {}),
+      ...(Number.isInteger(row.consecutiveDays) && Math.abs(Number(row.consecutiveDays)) <= 5 ? { consecutiveDays: Number(row.consecutiveDays) } : {}),
       history: [...dates].sort(([a], [b]) => a.localeCompare(b)).slice(-5).map(([date, value]) => ({ date, value })),
       unit: row.unit === "%" || row.unit === "KRW" || row.unit === "계약" ? row.unit : "pt", asOf: textValue(row.asOf),
       source: row.source === "yahoo" || row.source === "kis" ? row.source : "unknown", status: row.status === "ok" && value !== null ? "ok" : "unavailable",

@@ -1,0 +1,11 @@
+{
+  "rt_cd": "0",
+  "output": [
+    { "stck_bsop_date": "20261027", "frgn_ntby_qty": "670", "frgn_ntby_tr_pbmn": "148908", "bstp_nmix_prpr": "5638.34" },
+    { "stck_bsop_date": "20261026", "frgn_ntby_qty": "3451", "frgn_ntby_tr_pbmn": "740853", "bstp_nmix_prpr": "5469.47" },
+    { "stck_bsop_date": "20261023", "frgn_ntby_qty": "2177", "frgn_ntby_tr_pbmn": "451414", "bstp_nmix_prpr": "5550.30" },
+    { "stck_bsop_date": "20261022", "frgn_ntby_qty": "1552", "frgn_ntby_tr_pbmn": "313722", "bstp_nmix_prpr": "5533.77" },
+    { "stck_bsop_date": "20261021", "frgn_ntby_qty": "-3632", "frgn_ntby_tr_pbmn": "-816526", "bstp_nmix_prpr": "5735.66" },
+    { "stck_bsop_date": "20261020", "frgn_ntby_qty": "-1544", "frgn_ntby_tr_pbmn": "-350784", "bstp_nmix_prpr": "5552.74" }
+  ]
+}

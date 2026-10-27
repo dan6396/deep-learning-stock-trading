@@ -3,7 +3,7 @@ import { nextKrxSession } from "./krxCalendar";
 
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().startsWith(value);
 const datePattern = /(?<!\d)(?:(\d{4})\s*(?:년\s*|-)(\d{1,2})\s*(?:월\s*|-)(\d{1,2})\s*일?|(\d{1,2})\s*(?:\/|월\s*)(\d{1,2})\s*일?)(?!\d)/g;
-const quantityPattern = /[+-]?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?\s*(?:%p|퍼센트포인트|퍼센트|%|KRW|pt|bp|만|억|조|원|주|배|거래일|개|건|위|일|년)?/gi;
+const quantityPattern = /[+-]?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?\s*(?:%p|퍼센트포인트|퍼센트|%|KRW|pt|bp|만|억|조|원|주|배|거래일|계약|개|건|위|일|년)?/gi;
 function unitOf(token: string): string {
   return token.replace(/^[+-]?[\d,]+(?:\.\d+)?(?:[eE][+-]?\d+)?\s*/i, "").trim().replace(/^KRW$/i, "원")
     .replace(/^퍼센트$/, "%").replace(/^퍼센트포인트$/, "%p").toLowerCase();
@@ -20,7 +20,7 @@ export const roundMarketValue = (value: number) => Number(value.toLocaleString("
 export const MACRO_NAME_ALIASES: Record<string, readonly string[]> = {
   UST10Y: ["미국 국채 10년 금리", "미국 국채 10년물", "미 국채 10년물", "미 10년물", "10년물", "금리", "미국 금리", "미 금리", "10년 금리"],
   NASDAQ: ["나스닥", "NASDAQ"], USDKRW: ["원·달러 환율", "원/달러", "원·달러", "원달러", "환율"],
-  KOSPI200_FOREIGN_FUTURES: ["코스피200 선물 외국인 순매수", "코스피200"], SP500: ["S&P 500", "S&P500"],
+  KOSPI200_FOREIGN_FUTURES: ["코스피200 선물 외국인 순매수", "선물 외국인", "외국인 선물", "코스피200"], SP500: ["S&P 500", "S&P500"],
 };
 export function formatSupplyWon(value: number): string {
   if (Math.abs(value) < 10_000) return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
@@ -78,8 +78,11 @@ function assignDirections(text: string, values: Quantity[], directional: (quanti
     }
   }
   // A directly adjacent measured net-selling label also determines the amount's sign.
-  for (const quantity of values) if (directional(quantity) && quantity.unit === "원"
-    && /순매도\s*(?:합계\s*)?$/.test(text.slice(0, quantity.offset))) quantity.direction = -1;
+  for (const quantity of values) if (directional(quantity) && (quantity.unit === "원" || quantity.unit === "계약")) {
+    const label = text.slice(0, quantity.offset);
+    if (/순매도\s*(?:합계\s*)?$/.test(label)) quantity.direction = -1;
+    if (quantity.unit === "계약" && /순매수\s*(?:합계\s*)?$/.test(label)) quantity.direction = 1;
+  }
 }
 
 function sameMagnitude(actual: Quantity, expected: Quantity): boolean {
@@ -100,13 +103,89 @@ export function unpublishedSupplyClaim(text: string): boolean {
   });
 }
 
+/** Split prose conjunctions and commas, preserving thousands separators and decimals. */
+export function supplyClauses(text: string): string[] {
+  // Keep noun coordination (A와 B는) together so a joint subject stays visible.
+  return text.split(/(?<=[.!?。])\s+|[;\n，]|,(?!\d{3}(?:\D|$))|이며|이고|지만|으며|하고|그리고|그러나|반면|또한|(?<=[가-힣])고(?=\s)/).filter(part => part.trim());
+}
+export const spotSupplyContext = /현물|개별\s*종목|종목별|주식|시장\s*전체|외국인\s*코스피(?!\s*200)|코스피(?!\s*200)(?:에서(?:는)?|는|의)?\s*(?:외국인\s*)?순\s*매/;
+type FuturesSubject = "foreign" | "other" | null;
+// These are grammatical observation modifiers, not a list of investor names.
+const futuresMeasurement = /^(?:\s|[:]|은|는|이|가|도|의|최근|직전일|마지막|기준일|거래일|연속|수급|흐름|합계|총|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}|[+-]?\d[\d,]*(?:\.\d+)?\s*(?:계약|거래일|일))*$/;
+
+/** Resolve the subject of this supply predicate, allowing an explicit metric object
+ * in observer wording ("투자자들은 외국인 선물 ... 순매수를 지켜봅니다"). */
+function futuresSubjectAt(prefix: string, inherited: FuturesSubject): FuturesSubject {
+  const foreign = [...prefix.matchAll(/(?<![가-힣A-Za-z0-9])(?:코스피\s*200\s*)?(?:선물\s*외국인|외국인\s*선물)(?:\s*(?:수급|흐름|합계))*/g)];
+  const slots = [...prefix.matchAll(/([가-힣A-Za-z][가-힣A-Za-z0-9]*?)(은|는|이|가|도|과|와)(?:는|도)?(?=\s|$)/g)]
+    // "심리와 별개로", "투자자와는 무관하게" are adjuncts, not joint subjects.
+    .filter(slot => !/[과와]/.test(slot[2]) || !/^\s*(?:별개|무관|관계없이)/.test(prefix.slice(slot.index! + slot[0].length)));
+  const lastForeign = foreign[foreign.length - 1];
+  if (lastForeign && futuresMeasurement.test(prefix.slice(lastForeign.index! + lastForeign[0].length))) {
+    const before = prefix.slice(0, lastForeign.index).trimEnd();
+    // A coordinated noun immediately before the metric is also a supply subject.
+    if (/(?:과|와|및)\s*$/.test(before)) return "other";
+    return "foreign";
+  }
+  let subject = inherited;
+  for (const slot of slots) {
+    if (futuresMeasurement.test(slot[0])) continue;
+    const metric = foreign.some(match => slot.index! >= match.index! && slot.index! + slot[1].length <= match.index! + match[0].length);
+    subject = metric && !/[과와]/.test(slot[2]) ? "foreign" : "other";
+  }
+  if (slots.some(slot => !futuresMeasurement.test(slot[0]))) return subject;
+  // A newly introduced object of "살펴보면" cannot inherit an earlier investor.
+  if (/(?:을|를)\s*살펴보면/.test(prefix)) return "other";
+  if (futuresMeasurement.test(prefix)) return inherited;
+  return subject === "foreign" && /(?:관점에서|입장에서|시각과\s*별개로|와는?\s*무관하게)/.test(prefix) ? inherited : "other";
+}
+
+/** Check measured futures signs directly, without erasing any supply direction words. */
+export function futuresSupplyClaimsGrounded(text: string, flow: NonNullable<BriefingInput["macro"]["preOpen"]>[number]): boolean {
+  let subject: FuturesSubject = null;
+  for (const clause of supplyClauses(text)) {
+    if (unpublishedSupplyClaim(clause)) {
+      if (spotSupplyContext.test(clause)) return false;
+      let checkedDirection = false;
+      for (const match of clause.matchAll(/순\s*매\s*([수도])|매\s*([수도])\s*세/g)) {
+        const before = clause.slice(0, match.index), direction = (match[1] ?? match[2]) === "수" ? 1 : -1;
+        // '순매수' in the formal metric name is a label, not a positive observation.
+        if (/코스피\s*200\s*선물\s*외국인\s*$/.test(before) && /^\s*(?:는|은|이|가|:)?\s*(?:[+-]?[\d,]+\s*계약|자료|데이터|정보)/.test(clause.slice(match.index! + match[0].length))) {
+          subject = futuresSubjectAt(before, subject);
+          if (subject !== "foreign") return false;
+          checkedDirection = true;
+          continue;
+        }
+        subject = futuresSubjectAt(before, subject);
+        if (subject !== "foreign") return false;
+        checkedDirection = true;
+        const dated = flow.history.find(row => before.includes(row.date) || before.includes(`${Number(row.date.slice(5, 7))}/${Number(row.date.slice(8))}`));
+        const consecutive = /연속/.test(before);
+        const latest = /직전일|마지막|최근\s*거래일|기준일/.test(before);
+        const aggregate = /합계|최근\s*5\s*(?:거래일|일)|5\s*(?:거래일|일)/.test(before);
+        const amounts = [...before.matchAll(/([+-]?[\d,]+)\s*계약/g)];
+        const amount = amounts.length ? Number(amounts[amounts.length - 1][1].replace(/,/g, "")) : null;
+        const expected = consecutive ? flow.consecutiveDays : latest ? flow.value : aggregate ? flow.fiveDaySum : dated?.value
+          ?? (amount !== null && Math.abs(amount) === Math.abs(flow.value ?? NaN) ? flow.value : flow.fiveDaySum);
+        if (expected === null || expected === undefined || Math.sign(expected) !== direction) return false;
+        if (amount !== null && !consecutive && (Math.abs(amount) !== Math.abs(expected) || amount < 0 && direction > 0)) return false;
+      }
+      if (!checkedDirection && futuresSubjectAt(clause, subject) !== "foreign") return false;
+    }
+    subject = /[.!?。]\s*$/.test(clause) ? null : futuresSubjectAt(clause, subject);
+  }
+  return true;
+}
+
 /** Dates are calendar facts; clock digits, titles and identifiers cannot license quantities. */
 export function groundedNumbers(output: string, input: BriefingInput, options: { outlook?: boolean } = {}): boolean {
   if (/(?:KRW|USD)/i.test(output)) return false;
   // An unrelated matching number cannot license an unpublished supply claim.
   const supplyText = options.outlook && input.macro.preOpen?.some(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "unavailable")
     ? output.replace(/(?:코스피\s*200\s*)?(?:선물\s*외국인|외국인\s*선물)\s*순\s*매\s*[수도]\s*(?:자료|데이터|정보|흐름)?\s*(?:가|는|이|은)?\s*(?:확인되지\s*않(?:았습니다|았으며|았고|아|고|습니다|으며)|없(?:어|습니다|으며)|미확인(?:입니다)?)(?=$|[\s,.!?。;])/g, "선물 자료 미확인") : output;
-  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply")) && unpublishedSupplyClaim(supplyText)) return false;
+  const flow = options.outlook ? input.macro.preOpen?.find(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "ok") : null;
+  if (flow && !futuresSupplyClaimsGrounded(supplyText, flow)) return false;
+  if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply")) && unpublishedSupplyClaim(supplyText) && !flow) return false;
   const dates = new Set<string>(), monthDays = new Set<string>(), allowed: Quantity[] = [];
   const quarterTopics = new Set<string>();
   const addDate = (value: unknown) => {
@@ -151,12 +230,14 @@ export function groundedNumbers(output: string, input: BriefingInput, options: {
       if (indicator.status !== "ok") continue;
       addDate(indicator.asOf);
       const unit = indicator.unit === "KRW" ? "원" : indicator.unit;
-      add(indicator.value, unit, false, 2);
+      const contracts = indicator.id === "KOSPI200_FOREIGN_FUTURES";
+      add(indicator.value, unit, contracts, contracts ? 0 : indicator.unit === "%" ? 3 : 2);
       add(indicator.change, indicator.unit === "%" ? "%p" : unit, true, indicator.unit === "%" ? 3 : 2);
-      add(indicator.fiveDayChange, indicator.unit === "%" ? "%p" : unit, true, indicator.unit === "%" ? 3 : 2);
+      if (!contracts) add(indicator.fiveDayChange, indicator.unit === "%" ? "%p" : unit, true, indicator.unit === "%" ? 3 : 2);
       add(indicator.changePct, "%", true, 2); add(indicator.fiveDayChangePct, "%", true, 2);
       add(indicator.history.length, "개"); add(indicator.history.length, "거래일");
-      for (const observation of indicator.history) { addDate(observation.date); add(observation.value, unit, false, 2); }
+      if (contracts) { add(indicator.fiveDaySum ?? null, "계약", true, 0); add(Math.abs(indicator.consecutiveDays ?? 0), "거래일", false, 0); }
+      for (const observation of indicator.history) { addDate(observation.date); add(observation.value, unit, contracts, contracts ? 0 : indicator.unit === "%" ? 3 : 2); }
     }
   }
   add(input.model?.poolSize ?? null, "개");

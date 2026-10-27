@@ -4,6 +4,7 @@ export type PreOpenIndicator = {
   id: PreOpenMacroId; name: string; value: number | null; change: number | null; changePct: number | null;
   unit: "%" | "pt" | "KRW" | "계약"; history: MacroObservation[]; asOf: string | null;
   fiveDayChange: number | null; fiveDayChangePct: number | null;
+  fiveDaySum?: number | null; consecutiveDays?: number;
   source: "yahoo" | "kis" | "unknown"; status: "ok" | "unavailable";
   comment: { text: string; placeholder: true; ruleId: string };
 };

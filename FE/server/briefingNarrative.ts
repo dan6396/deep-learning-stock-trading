@@ -30,7 +30,7 @@ declare const process: { env: Record<string, string | undefined> };
 export const DEFAULT_BRIEFING_MODEL = "gemini-3.8-flash";
 type FieldSource = "llm" | "template";
 type NarrativeContent = { overview: string; marketNote: string; stocks: { code: string; summary: string; citations: string[]; source?: FieldSource }[]; citations: string[] };
-export const NARRATIVE_VALIDATION_VERSION = "2026-10-27-macro-outlook-news-v2.5";
+export const NARRATIVE_VALIDATION_VERSION = "2026-10-27-macro-outlook-news-v2.7";
 type RawField = { text: string; citations: string[]; provenance: string };
 type RawFields = { overview?: RawField; marketNote?: RawField; stocks?: Record<string, RawField>; marketOutlook?: unknown; newsSummaries?: unknown };
 export type BriefingNarrative = NarrativeContent & {
@@ -286,6 +286,7 @@ const systemInstruction = `당신은 한국어 시장 브리핑 편집자입니�
 사용 가능한 citation id는 M:<지표ID>, R:<종목코드>, E:<종목코드>:<번호>, C:<종목코드>:<번호>, N:<종목코드>:<번호> 중 입력에 존재하는 것뿐입니다.
 marketOutlook 필드에서만 예외적으로 코스피 장 초반 방향 판단과 인과 표현을 허용합니다. stance는 상승 우위/하락 우위/중립/판단 보류 중 하나이며 본문에 선택한 stance 문구를 그대로 포함하고 다른 stance 문구는 넣지 마세요. text는 장전 4종 지표의 관측값·5일 추세·임시 코멘트를 근거로 신중하게 쓰고 citations에는 실제 확보된 M: 지표만 넣으세요. 결측 지표를 근거로 쓰지 마세요. 종목명·6자리 종목코드를 쓰지 마세요. 개별 종목 권유·목표가·비중·순위 재정렬·보장·확률 수치 생성 금지는 이 필드에서도 유지합니다.
 inputData.outlookMissingFacts는 확보하지 못한 지표의 결측 사실입니다. 의견에서 '코스피200 선물 외국인 순매수 자료는 확인되지 않았습니다'처럼 결측을 알릴 수 있지만, 없는 수급 수치나 순매수/순매도 방향을 만들지 마세요. 결측 지표를 citations에 넣지 마세요.
+KOSPI200_FOREIGN_FUTURES가 ok이면 직전 한국 거래일의 외국인 선물 순매수 계약 수와 최근 실제 5일 합계·연속 일수·기준일을 사실로 사용하세요. 순매수는 양수, 순매도는 음수이며 현물·종목 수급과 섞지 마세요. '선물 외국인' 또는 '외국인 선물'이라고 명시하세요. 금액·선물 가격은 입력하지 않으며 결측이라고 쓰지 마세요.
 팀 재검증에서 직전 나스닥 상승 후 코스피 시가→종가 상승 비율은 46.6%로 같은 표본의 전체 상승일 비율 50.6%보다 낮았습니다. 46.6%를 일반적인 방향 일치율이라고 부르면 틀립니다. 나스닥을 장중 성과 예측으로 일반화하지 말고 장 초반 갭 맥락으로만 서술하세요. 다른 필드의 미래 예측·인과 금지는 그대로 유지됩니다.
 newsSummaries는 입력 종목 순서대로 code,text,citations를 반환하세요. 기사 제목·출처·발행일만 기반으로 각 3문장 요약하고 기사 본문을 읽었다고 하지 마세요. 제목의 숫자·매도/순매도/영향/전망/주가 표현을 옮기지 말고 주제만 중립적으로 요약하세요. 호재·악재 판정, 주가 전망·예측, 숫자 인용, 사세요/사야/팔아야/매수하/매도하 등 행동 권유는 금지합니다. 각 종목의 N: 기사 ID만 인용하세요. 기사 없는 종목은 빈 citations와 자료 없음 문구를 반환하세요.
 뉴스 요약에는 영향·때문·따른·인해 같은 인과어를 쓰지 말고 '~를 다룬 기사' 형식으로 쓰세요.
@@ -316,9 +317,9 @@ export function createNarrativeStore({ transport = (...args) => fetch(...args), 
   const macroSnapshot = (input: BriefingInput) => ({ asOf: input.macro.asOf, indicators: input.macro.indicators, context: input.macro.context, preOpen: input.macro.preOpen });
   const macroForModel = (input: BriefingInput) => ({ ...macroSnapshot(input), preOpen: input.macro.preOpen?.map(row => {
     const rounded = (value: number | null, digits = 2) => value === null ? null : Number(value.toFixed(digits));
-    return { ...row, value: rounded(row.value), change: rounded(row.change, row.unit === "%" ? 3 : 2),
+    return { ...row, value: rounded(row.value, row.unit === "%" ? 3 : 2), change: rounded(row.change, row.unit === "%" ? 3 : 2),
       fiveDayChange: rounded(row.fiveDayChange, row.unit === "%" ? 3 : 2), changePct: rounded(row.changePct), fiveDayChangePct: rounded(row.fiveDayChangePct),
-      history: row.history.map(point => ({ ...point, value: rounded(point.value)! })) };
+      history: row.history.map(point => ({ ...point, value: rounded(point.value, row.unit === "%" ? 3 : 2)! })) };
   }), indicators: input.macro.indicators.map(indicator => {
     const rounded = (value: number | null) => value === null ? null : roundMarketValue(value);
     return { ...indicator, value: rounded(indicator.value), change: rounded(indicator.change), changePct: rounded(indicator.changePct),

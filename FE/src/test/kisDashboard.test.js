@@ -182,6 +182,7 @@ describe("server market provenance", () => {
     expect(adaptQuote(quote).data).toMatchObject({ currentPrice: null, change: null, changeRate: null, volume: null, tradingValue: null });
   });
   it("adds original nullable OHLC/time without altering legacy substitutions, using fixture upstream only", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-26T16:00:00+09:00"));
     const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()), kisDay = day.replace(/-/g, "");
     const missing = { stck_bsop_date: kisDay, stck_prpr: "105", stck_clpr: "105", stck_oprc: "", stck_hgpr: "", stck_lwpr: "", cntg_vol: "0", acml_vol: "0" };
     const valid = { ...missing, stck_cntg_hour: "090000", stck_oprc: "100", stck_hgpr: "110", stck_lwpr: "90" };
@@ -205,6 +206,7 @@ describe("server market provenance", () => {
     expect(fetcher).toHaveBeenCalled();
   });
   it("retains a missing close between valid observations through daily/intraday and derived ranges", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-26T16:00:00+09:00"));
     const today = new Date(), day = offset => new Date(today.getTime() - offset * 86400000).toISOString().slice(0, 10), kisDay = day(0).replace(/-/g, "");
     const raw = { stck_oprc: "100", stck_hgpr: "110", stck_lwpr: "90", cntg_vol: "0", acml_vol: "0" };
     vi.stubGlobal("fetch", vi.fn(async url => {

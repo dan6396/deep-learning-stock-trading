@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import type { BriefingPayload } from "../../entities/briefing";
 import { citationDomId, parseCitation } from "../../entities/briefing";
 import { BriefingMacroGrid } from "./BriefingMacroGrid";
@@ -9,28 +9,6 @@ import { PreOpenMarketSection } from "./PreOpenMarketSection";
 import "./briefingTop.css";
 
 export type RenderStockEvidence = (code: string) => React.ReactNode;
-
-export function useIsMobile(query = "(max-width: 768px)"): boolean {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return false;
-    return window.matchMedia(query).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mql = window.matchMedia(query);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    setIsMobile(mql.matches);
-    if (mql.addEventListener) {
-      mql.addEventListener("change", handler);
-      return () => mql.removeEventListener("change", handler);
-    }
-    mql.addListener(handler);
-    return () => mql.removeListener(handler);
-  }, [query]);
-
-  return isMobile;
-}
 
 export type BriefingTopContainerProps = {
   briefing: BriefingPayload;
@@ -112,8 +90,6 @@ export function BriefingTopContainer({
     });
   }, []);
 
-  const isMobile = useIsMobile();
-
   const narrativeNode = (
     <BriefingNarrativeCard
       key="narrative"
@@ -151,23 +127,12 @@ export function BriefingTopContainer({
 
   return (
     <div className="briefing-top-container" data-testid="briefing-top-container">
-      {isMobile ? (
-        <>
-          {topFiveNode}
-          {narrativeNode}
-        </>
-      ) : (
-        <>
-          {narrativeNode}
-          {topFiveNode}
-        </>
-      )}
-
-      {/* 3. 시장 지표 그리드 (+ 하단 참고 통계 접이식 카드) */}
+      {narrativeNode}
       <PreOpenMarketSection macro={briefing.macro} narrative={briefing.narrative} onCitationClick={handleCitationClick} />
+      {topFiveNode}
       <BriefingMacroGrid macro={briefing.macro} />
 
-      {/* 4. TOP5 후보 구성 카드 */}
+      {/* TOP5 후보 구성 */}
       {briefing.composition && (
         <BriefingCompositionCard
           composition={briefing.composition}
@@ -176,7 +141,7 @@ export function BriefingTopContainer({
         />
       )}
 
-      {/* 5. 면책 조항 */}
+      {/* 공통 고지 */}
       {briefing.disclaimer && (
         <p className="briefing-disclaimer" data-testid="briefing-disclaimer">
           {briefing.disclaimer}

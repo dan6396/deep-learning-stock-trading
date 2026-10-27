@@ -4,6 +4,7 @@ import type { KisReadOptions } from "./revalidatingCache";
 import { getNasdaqReference, type MacroReference } from "./briefingReference";
 import type { MacroObservation, PreOpenIndicator } from "../src/types/preOpenMacro";
 import { extractMacroHistory, buildPreOpenIndicators } from "./preOpenMacro";
+import { getFuturesForeignFlow, futuresFlowIndicator } from "./futuresForeignFlow";
 declare const process: { env: Record<string, string | undefined> };
 
 export const MACRO_UNIVERSE = [
@@ -23,7 +24,7 @@ export type MacroIndicator = {
 };
 export type MarketMacro = { asOf: string | null; indicators: MacroIndicator[]; preOpen?: PreOpenIndicator[];
   context?: { usSessionDate: string | null; targetSessionNote: string }; reference?: MacroReference | null };
-type Options = { transport?: typeof fetch; now?: () => number; night?: typeof fetchKisNightFutures; reference?: typeof getNasdaqReference };
+type Options = { transport?: typeof fetch; now?: () => number; night?: typeof fetchKisNightFutures; reference?: typeof getNasdaqReference; foreignFlow?: typeof getFuturesForeignFlow };
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 export function usMarketDate(asOf: string): string {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(asOf));
@@ -47,7 +48,7 @@ export function usSession(meta: Record<string, any>, timestamp: number, now: num
 }
 
 /** One source and one unit convention for domestic and overseas indicators. */
-export function createMarketMacro({ transport = (...args) => fetch(...args), now = Date.now, night = (...args) => fetchKisNightFutures(...args), reference = getNasdaqReference }: Options = {}) {
+export function createMarketMacro({ transport = (...args) => fetch(...args), now = Date.now, night = (...args) => fetchKisNightFutures(...args), reference = getNasdaqReference, foreignFlow = getFuturesForeignFlow }: Options = {}) {
   let cached: { expires: number; value: MarketMacro } | null = null;
   let pending: Promise<MarketMacro> | null = null;
   const getNight = createNightProvider(night, now);
@@ -106,9 +107,13 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
     const nightResult = options.backgroundKis ? getNight(env, options) : Promise.race([getNight(env, options), new Promise<MacroIndicator>(resolve => {
       timer = setTimeout(() => resolve(unavailableNight()), 8000);
     })]).finally(() => { if (timer !== undefined) clearTimeout(timer); });
-    const [market, observedNight] = await Promise.all([base(env), nightResult]);
+    let flowTimer: ReturnType<typeof setTimeout> | undefined;
+    const flowResult = Promise.race([foreignFlow(env, options).catch(() => futuresFlowIndicator([])), new Promise<PreOpenIndicator>(resolve => {
+      flowTimer = setTimeout(() => resolve(futuresFlowIndicator([])), options.backgroundKis ? Math.max(0, Math.min(1500, options.kisWaitMs ?? 1500)) : 8000);
+    })]).finally(() => { if (flowTimer !== undefined) clearTimeout(flowTimer); });
+    const [market, observedNight, observedFlow] = await Promise.all([base(env), nightResult, flowResult]);
     const indicators = [...market.indicators, observedNight], times = indicators.flatMap(row => row.asOf ? [row.asOf] : []).sort();
-    return { ...market, asOf: times[0] ?? null, indicators };
+    return { ...market, asOf: times[0] ?? null, indicators, preOpen: [...(market.preOpen ?? []).filter(row => row.id !== "KOSPI200_FOREIGN_FUTURES"), observedFlow] };
   };
 }
 export const getMarketMacro = createMarketMacro();

@@ -1,6 +1,6 @@
 import type { BriefingInput } from "./briefing";
 import type { BriefingNarrative } from "./briefingNarrative";
-import { forbiddenNarrative, forbiddenCausality, groundedNumbers, MACRO_NAME_ALIASES } from "./briefingValidation";
+import { forbiddenNarrative, forbiddenCausality, groundedNumbers, MACRO_NAME_ALIASES, spotSupplyContext } from "./briefingValidation";
 import { OUTLOOK_STANCES, type MarketOutlook, type HeadlineSummary } from "../src/types/preOpenMacro";
 
 export const OUTLOOK_CALIBRATION = { conditionalUpPct: 46.6, baselinePct: 50.6,
@@ -33,6 +33,17 @@ export function validateMarketOutlook(value: unknown, input: BriefingInput): str
   // Do not relax instructions about stocks, positions, ranking, targets or guarantees.
   const prohibited = /목표\s*(?:주\s*)?가|적정\s*주가|권\s*(?:유|합|해|고)|(?:사는|파는|담는)\s*것|(?<![가-힣])보\s*장(?=$|[^가-힣]|[은는이가을를의도만]|합|하|해|받|되|된|됩)|수익\s*보장|순위\s*(?:재정렬|변경|조정)|(?:기대|예상|예측)\s*수익|\b(?:guarantee\w*)\b/i;
   if (forbiddenNarrative(normalized) || prohibited.test(normalized) || /호재|악재/.test(normalized)) return "forbidden_content";
+  if (spotSupplyContext.test(normalized) && /순\s*매\s*[수도]|수급|매\s*[수도]\s*세/.test(normalized)) return "forbidden_content";
+  const futures = input.macro.preOpen?.find(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "ok");
+  if (futures) {
+    if (/(?:선물\s*외국인|외국인\s*선물)[^.!?。]{0,30}(?:자료|흐름|데이터|수급)[^.!?。]{0,15}(?:미확인|결측|미제공|미확보|확인되지\s*않|없습니다)/.test(normalized)) return "invalid_availability";
+    for (const match of normalized.matchAll(/(\d+)\s*(?:거래일|일)\s*연속\s*순매([수도])/g)) {
+      if (Number(match[1]) !== Math.abs(futures.consecutiveDays ?? 0) || Math.sign(futures.consecutiveDays ?? 0) !== (match[2] === "수" ? 1 : -1)) return "ungrounded_number";
+    }
+    for (const match of normalized.matchAll(/\d+\s*(?:거래일|일)\s*합계(?:는|은|가|:)?\s*([+-]?[\d,]+)\s*계약/g)) {
+      if (Math.abs(Number(match[1].replace(/,/g, ""))) !== Math.abs(futures.fiveDaySum ?? NaN)) return "ungrounded_number";
+    }
+  }
   // Legacy live indicators and model ranks cannot license outlook measurements.
   // Keep their names only, so mentions of unavailable legacy series remain labels.
   const localInput = { ...input, model: null, stocks: [], macro: { ...input.macro, indicators: input.macro.indicators.map(row => ({ ...row, status: "unavailable" as const, value: null, change: null, changePct: null })) } };
@@ -54,6 +65,7 @@ function locallyGrounded(text: string, input: BriefingInput): boolean {
     }
     for (let index = 0; index < matches.length; index++) {
       const match = matches[index], fragment = sentence.slice(match.start, matches[index + 1]?.start ?? sentence.length);
+      if (match.id === "KOSPI200_FOREIGN_FUTURES" && /\d[\d,.]*\s*(?:%|퍼센트|원|억|조|pt|포인트)/i.test(fragment)) return false;
       if (!groundedNumbers(fragment, { ...input, macro: { ...input.macro, preOpen: input.macro.preOpen?.filter(row => row.id === match.id || row.status === "unavailable") } }, { outlook: true })) return false;
     }
   }
