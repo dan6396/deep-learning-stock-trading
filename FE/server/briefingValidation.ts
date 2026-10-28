@@ -20,7 +20,7 @@ export const roundMarketValue = (value: number) => Number(value.toLocaleString("
 export const MACRO_NAME_ALIASES: Record<string, readonly string[]> = {
   UST10Y: ["미국 국채 10년 금리", "미국 국채 10년물", "미 국채 10년물", "미 10년물", "10년물", "금리", "미국 금리", "미 금리", "10년 금리"],
   NASDAQ: ["나스닥", "NASDAQ"], USDKRW: ["원·달러 환율", "원/달러", "원·달러", "원달러", "환율"],
-  KOSPI200_FOREIGN_FUTURES: ["코스피200 선물 외국인 순매수", "선물 외국인", "외국인 선물", "코스피200"], SP500: ["S&P 500", "S&P500"],
+  KOSPI200_FOREIGN_FUTURES: ["코스피200 선물 외국인 순매수", "선물 외국인", "외국인 선물", "코스피200"],
 };
 export function formatSupplyWon(value: number): string {
   if (Math.abs(value) < 10_000) return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
@@ -106,12 +106,12 @@ export function unpublishedSupplyClaim(text: string): boolean {
 /** Split prose conjunctions and commas, preserving thousands separators and decimals. */
 export function supplyClauses(text: string): string[] {
   // Keep noun coordination (A와 B는) together so a joint subject stays visible.
-  return text.split(/(?<=[.!?。])\s+|[;\n，]|,(?!\d{3}(?:\D|$))|이며|이고|지만|으며|하고|그리고|그러나|반면|또한|(?<=[가-힣])고(?=\s)/).filter(part => part.trim());
+  return text.split(/(?<=[.!?。])\s+|[;\n，]|,(?!\d{3}(?:\D|$))|이며|이고|지만|으며|하고|그리고|그러나|반면|또한|(?<=순매[수도])이자|(?<=계약)으로(?=\s*\d+\s*(?:거래일|일)\s*연속)|(?<=[가-힣])고(?=\s)/).filter(part => part.trim());
 }
 export const spotSupplyContext = /현물|개별\s*종목|종목별|주식|시장\s*전체|외국인\s*코스피(?!\s*200)|코스피(?!\s*200)(?:에서(?:는)?|는|의)?\s*(?:외국인\s*)?순\s*매/;
 type FuturesSubject = "foreign" | "other" | null;
 // These are grammatical observation modifiers, not a list of investor names.
-const futuresMeasurement = /^(?:\s|[:]|은|는|이|가|도|의|최근|직전일|마지막|기준일|거래일|연속|수급|흐름|합계|총|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}|[+-]?\d[\d,]*(?:\.\d+)?\s*(?:계약|거래일|일))*$/;
+const futuresMeasurement = /^(?:\s|[:]|은|는|이|가|도|의|최근|직전일|마지막|기준일|기준|거래일|연속|수급|흐름|합계|총|순\s*매\s*[수도]|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}|[+-]?\d[\d,]*(?:\.\d+)?\s*(?:계약|거래일|일))*$/;
 
 /** Resolve the subject of this supply predicate, allowing an explicit metric object
  * in observer wording ("투자자들은 외국인 선물 ... 순매수를 지켜봅니다"). */
@@ -144,13 +144,31 @@ function futuresSubjectAt(prefix: string, inherited: FuturesSubject): FuturesSub
 export function futuresSupplyClaimsGrounded(text: string, flow: NonNullable<BriefingInput["macro"]["preOpen"]>[number]): boolean {
   let subject: FuturesSubject = null;
   for (const clause of supplyClauses(text)) {
+    // Bind each amount to the latest/aggregate/date wording in its own metric clause.
+    // A value present elsewhere in history cannot license swapping these metrics.
+    const quantities = [...clause.matchAll(/([+-]?[\d,]+)\s*계약/g)];
+    for (const [index, quantity] of quantities.entries()) {
+      const prefix = clause.slice(index ? quantities[index - 1].index! + quantities[index - 1][0].length : 0, quantity.index);
+      const suffix = clause.slice(quantity.index! + quantity[0].length, quantities[index + 1]?.index ?? clause.length);
+      if (futuresSubjectAt(clause.slice(0, quantity.index), subject) !== "foreign") return false;
+      const context = prefix + " " + suffix, amount = Number(quantity[1].replace(/,/g, ""));
+      const period = context.match(/(\d+)\s*(?:거래일|일)\s*합계/);
+      if (period && Number(period[1]) !== 5) return false;
+      const aggregate = /합계|(?:최근\s*)?5\s*(?:거래일|일)/.test(context);
+      const latest = /직전일|마지막|최근\s*거래일|기준일/.test(context);
+      if (aggregate && latest) return false;
+      const dated = flow.history.find(row => context.includes(row.date) || context.includes(`${Number(row.date.slice(5, 7))}/${Number(row.date.slice(8))}`));
+      const expected = aggregate ? flow.fiveDaySum : latest ? flow.value : dated?.value
+        ?? (Math.abs(amount) === Math.abs(flow.value ?? NaN) ? flow.value : flow.fiveDaySum);
+      if (expected === null || expected === undefined || Math.abs(amount) !== Math.abs(expected) || amount < 0 && expected > 0) return false;
+    }
     if (unpublishedSupplyClaim(clause)) {
       if (spotSupplyContext.test(clause)) return false;
       let checkedDirection = false;
       for (const match of clause.matchAll(/순\s*매\s*([수도])|매\s*([수도])\s*세/g)) {
         const before = clause.slice(0, match.index), direction = (match[1] ?? match[2]) === "수" ? 1 : -1;
         // '순매수' in the formal metric name is a label, not a positive observation.
-        if (/코스피\s*200\s*선물\s*외국인\s*$/.test(before) && /^\s*(?:는|은|이|가|:)?\s*(?:[+-]?[\d,]+\s*계약|자료|데이터|정보)/.test(clause.slice(match.index! + match[0].length))) {
+        if (/코스피\s*200\s*선물\s*외국인\s*$/.test(before) && /^\s*(?:는|은|이|가|:)?\s*(?:(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2})\s*기준\s*)?(?:[+-]?[\d,]+\s*계약|자료|데이터|정보)/.test(clause.slice(match.index! + match[0].length))) {
           subject = futuresSubjectAt(before, subject);
           if (subject !== "foreign") return false;
           checkedDirection = true;
@@ -178,12 +196,13 @@ export function futuresSupplyClaimsGrounded(text: string, flow: NonNullable<Brie
 }
 
 /** Dates are calendar facts; clock digits, titles and identifiers cannot license quantities. */
-export function groundedNumbers(output: string, input: BriefingInput, options: { outlook?: boolean } = {}): boolean {
+export function groundedNumbers(output: string, input: BriefingInput, options: { outlook?: boolean; stockOpinion?: boolean } = {}): boolean {
+  if (/S\s*&\s*P\s*500|SP500/i.test(output)) return false;
   if (/(?:KRW|USD)/i.test(output)) return false;
   // An unrelated matching number cannot license an unpublished supply claim.
   const supplyText = options.outlook && input.macro.preOpen?.some(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "unavailable")
     ? output.replace(/(?:코스피\s*200\s*)?(?:선물\s*외국인|외국인\s*선물)\s*순\s*매\s*[수도]\s*(?:자료|데이터|정보|흐름)?\s*(?:가|는|이|은)?\s*(?:확인되지\s*않(?:았습니다|았으며|았고|아|고|습니다|으며)|없(?:어|습니다|으며)|미확인(?:입니다)?)(?=$|[\s,.!?。;])/g, "선물 자료 미확인") : output;
-  const flow = options.outlook ? input.macro.preOpen?.find(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "ok") : null;
+  const flow = options.outlook || options.stockOpinion ? input.macro.preOpen?.find(row => row.id === "KOSPI200_FOREIGN_FUTURES" && row.status === "ok") : null;
   if (flow && !futuresSupplyClaimsGrounded(supplyText, flow)) return false;
   if (!input.stocks.some(stock => stock.evidence.some(fact => fact.kind === "supply")) && unpublishedSupplyClaim(supplyText) && !flow) return false;
   const dates = new Set<string>(), monthDays = new Set<string>(), allowed: Quantity[] = [];
@@ -215,7 +234,7 @@ export function groundedNumbers(output: string, input: BriefingInput, options: {
   addDate(input.macro.context?.usSessionDate); addDate(input.macro.context?.targetSessionNote);
   for (const indicator of input.macro.indicators) {
     addDate(indicator.asOf);
-    if (indicator.status !== "ok") continue;
+    if (indicator.status !== "ok" || indicator.id === "SP500") continue;
     const unit = indicator.unit === "KRW" ? "원" : indicator.unit;
     const measured = (value: number | null, outputUnit: string, directional = false) => {
       const rounded = value === null ? null : roundMarketValue(value);
@@ -223,9 +242,9 @@ export function groundedNumbers(output: string, input: BriefingInput, options: {
     };
     measured(indicator.value, unit); measured(indicator.change, unit, true); measured(indicator.changePct, "%", true);
   }
-  if (options.outlook) {
+  if (options.outlook || options.stockOpinion) {
     // These calibration facts are supplied explicitly in the outlook prompt only.
-    add(46.6, "%", false, 1); add(50.6, "%", false, 1);
+    if (options.outlook) { add(46.6, "%", false, 1); add(50.6, "%", false, 1); }
     for (const indicator of input.macro.preOpen ?? []) {
       if (indicator.status !== "ok") continue;
       addDate(indicator.asOf);
@@ -245,6 +264,13 @@ export function groundedNumbers(output: string, input: BriefingInput, options: {
   for (const stock of input.stocks) {
     add(stock.rank, "위"); add(stock.rankScore, "", false, Math.min(4, decimalPlaces(stock.rankScore))); add(stock.poolSize, "개"); add(Number(stock.topPercent.toFixed(2)), "%", false, 2);
     add(stock.news.articles.length, "건");
+    if (options.stockOpinion) { add(stock.evidence.length, "건"); add(stock.cautions.length, "건"); }
+    if (options.stockOpinion && stock.analysisMetrics) {
+      const metrics = stock.analysisMetrics;
+      add(metrics.rawRank, "위"); add(metrics.adjustedRank, "위");
+      for (const lb of metrics.lookbacks) { add(lb.sessions, "일"); add(lb.rank, "위"); add(Number(lb.topPercent.toFixed(2)), "%", false, 2); }
+      for (const feature of metrics.features) { add(Number(feature.percentile.toFixed(2)), "%", false, 2); add(Number(feature.tailPercent.toFixed(2)), "%", false, 2); }
+    }
     for (const article of stock.news.articles) {
       addDate(article.pubDate);
       for (const quarter of article.title.matchAll(/[1-4]\s*분기/g)) quarterTopics.add(quarter[0].replace(/\s/g, ""));
@@ -263,7 +289,7 @@ export function groundedNumbers(output: string, input: BriefingInput, options: {
   let stripped = removeDates(output, true);
   if (stripped === null || /\d{1,2}:\d{2}/.test(stripped)) return false;
   // Numeric brand/index names are labels, not measurements.
-  for (const name of [...input.stocks.map(stock => stock.name), ...input.macro.indicators.map(indicator => indicator.name), ...(options.outlook ? [...(input.macro.preOpen?.map(row => row.name) ?? []), ...Object.values(MACRO_NAME_ALIASES).flat()] : [])].sort((left, right) => right.length - left.length)) {
+  for (const name of [...input.stocks.map(stock => stock.name), ...input.macro.indicators.map(indicator => indicator.name), ...(options.outlook || options.stockOpinion ? [...(input.macro.preOpen?.map(row => row.name) ?? []), ...Object.values(MACRO_NAME_ALIASES).flat()] : [])].sort((left, right) => right.length - left.length)) {
     if (name) stripped = stripped.split(name).join(name.replace(/\d/g, " "));
   }
   // A cited article's quarter is a topic label, never a free numeric allowance.
@@ -310,6 +336,12 @@ export function forbiddenCausality(text: string): boolean {
 /** Preserve measured supply descriptions while excluding transaction advice. */
 export function forbiddenAction(text: string): boolean {
   return /(?<![가-힣])사\s*(?:세\s*요|야)|팔\s*아\s*야|매\s*[수도]\s*하/.test(text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, ""));
+}
+/** Strict investment actions shared by outlook and stock analysis summaries. */
+export function forbiddenInvestmentAdvice(text: string): boolean {
+  const pattern = /목표\s*(?:주\s*)?가|적정\s*주가|권\s*(?:유|합|해|고)|(?:사는|파는|담는)\s*것|담\s*(?:기|으|아|자)|보\s*유|(?<![가-힣])보\s*장(?=$|[^가-힣]|[은는이가을를의도만]|합|하|해|받|되|된|됩)|수익\s*보장|순위(?:를|는|의)?\s*(?:재정렬|변경|조정)|(?:기대|예상|예측)\s*수익|\b(?:guarantee\w*|hold|purchase|invest)\b/i;
+  const normalized = text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
+  return pattern.test(normalized) || pattern.test(normalized.replace(/[\s\p{P}\p{S}]/gu, ""));
 }
 export function forbiddenNarrative(text: string): boolean {
   text = text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");

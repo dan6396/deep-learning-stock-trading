@@ -394,7 +394,8 @@ describe("BriefingPage comprehensive briefing integration", () => {
     });
 
     mount();
-    await screen.findByText("미국장 2026-10-06 기준");
+    await screen.findByTestId("macro-card-KOSPI");
+    expect(screen.queryByText("미국장 2026-10-06 기준")).not.toBeInTheDocument();
     expect(screen.getByText("시장 개황 통합 테스트 내용")).toBeInTheDocument();
     expect(screen.getByText("통합 면책 조항")).toBeInTheDocument();
   });

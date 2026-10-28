@@ -10,19 +10,18 @@ import {
 import { Globe, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { BriefingMacroReference } from "./BriefingMacroReference";
 
-// 순서 고정: KOSPI, KOSDAQ, KOSPI200_NIGHT, NASDAQ, SP500, USDKRW, UST10Y
+// SP500 remains an API compatibility field, with no visible card or citation target.
 const ORDERED_MACRO_IDS = [
   "KOSPI",
   "KOSDAQ",
   "KOSPI200_NIGHT",
   "NASDAQ",
-  "SP500",
   "USDKRW",
   "UST10Y",
 ] as const;
 
 export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
-  const indicators = macro.preOpen ? macro.indicators.filter(row => !["NASDAQ", "USDKRW", "UST10Y"].includes(row.id)) : macro.indicators;
+  const indicators = macro.indicators.filter(row => row.id !== "SP500" && (!macro.preOpen || !["NASDAQ", "USDKRW", "UST10Y"].includes(row.id)));
   const context = macro.context;
 
   const sortedIndicators = useMemo(() => {
@@ -135,9 +134,9 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
       <div className="briefing-macro-header">
         <div className="briefing-macro-title-group">
           <h2 id="macro-section-heading">{macro.preOpen ? "그 밖의 시장 지표" : "시장 지표"}</h2>
-          <span className="briefing-macro-caption">{macro.preOpen ? "국내 지수·S&P 500·참고 통계" : "국내·미국 주요 지표 및 환율·금리"}</span>
+          <span className="briefing-macro-caption">{macro.preOpen ? "국내 지수·참고 통계" : "국내·미국 주요 지표 및 환율·금리"}</span>
         </div>
-        {context?.usSessionDate && (
+        {usIndicators.length > 0 && context?.usSessionDate && (
           <p className="briefing-macro-context-note" role="note">
             <Globe aria-hidden="true" size={14} />
             <span>미국장 {context.usSessionDate} 기준</span>
@@ -151,13 +150,13 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
             <div className="briefing-macro-group-header">
               <span className="briefing-macro-group-title">국내 시장</span>
             </div>
-            <div className="briefing-macro-grid is-domestic">
+            <div className={`briefing-macro-grid is-domestic${domesticIndicators.length === 2 ? " has-two" : ""}`}>
               {domesticIndicators.map(renderCard)}
             </div>
           </div>
         )}
 
-        <div className="briefing-macro-group-row">
+        {(usIndicators.length > 0 || fxRateIndicators.length > 0) && <div className="briefing-macro-group-row">
           {usIndicators.length > 0 && (
             <div className="briefing-macro-group is-us">
               <div className="briefing-macro-group-header">
@@ -179,7 +178,7 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
               </div>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* 시장 지표 섹션 하단 참고 통계 접이식 카드 */}

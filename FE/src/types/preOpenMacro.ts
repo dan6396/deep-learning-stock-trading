@@ -10,4 +10,4 @@ export type PreOpenIndicator = {
 };
 export const OUTLOOK_STANCES = ["상승 우위", "하락 우위", "중립", "판단 보류"] as const;
 export type MarketOutlook = { stance: typeof OUTLOOK_STANCES[number]; text: string; citations: string[]; source?: "llm" | "template" };
-export type HeadlineSummary = { code: string; text: string; citations: string[]; source?: "llm" | "template" };
+export type HeadlineSummary = { code: string; text: string; citations: string[]; source?: "llm" | "template"; summaryBasis?: "body" | "title"; sentenceCitations?: string[][] };

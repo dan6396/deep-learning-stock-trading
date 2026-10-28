@@ -9,6 +9,9 @@ import { buildPreOpenIndicators } from "./preOpenMacro";
 import { formatSupplyWon } from "./briefingValidation";
 import { showBriefingSupply } from "./supplyVisibility";
 import { formatModelPercent, modelEvidence, type ModelEvidence } from "../src/types/modelEvidence";
+import { stockOpinionMetrics } from "./stockOpinionMetrics";
+import type { StockOpinionMetrics } from "../src/types/stockOpinionMetrics";
+import type { ArticleBodyContext } from "./articleBodies";
 export { formatSupplyWon } from "./briefingValidation";
 import { createNarrativeStore, briefingInputHash, templateNarrative, isTargetSessionCaution, targetSessionCautionText, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
@@ -19,6 +22,7 @@ export type BriefingFact = { id: string; kind: "model" | "supply" | "news" | "ma
 export type BriefingStock = {
   rank: number; code: string; name: string; rankScore: number; poolSize: number; topPercent: number;
   modelEvidence?: ModelEvidence | null;
+  analysisMetrics?: StockOpinionMetrics;
   evidence: (BriefingFact & { kind: "model" | "supply" | "news" })[]; cautions: BriefingFact[];
   news: { status: "collected" | "collection_failed" | "not_collected";
     articles: { id: string; title: string; url: string; source: string; pubDate: string | null }[] };
@@ -26,8 +30,11 @@ export type BriefingStock = {
 export type BriefingInput = {
   model: { modelId: string; scoreKind: "rank_zscore"; baseDate: string; predictionTarget: string; poolSize: number; runStartedAt: string | null } | null;
   macro: MarketMacro; stocks: BriefingStock[];
+  /** Server-internal cache enrichment. Never spread into the public payload. */
+  articleBodies?: ArticleBodyContext;
+  articleBodyHashes?: Record<string, string>;
 };
-export type BriefingPayload = Omit<BriefingInput, "model"> & {
+export type BriefingPayload = Omit<BriefingInput, "model" | "articleBodies" | "articleBodyHashes"> & {
   model: (NonNullable<BriefingInput["model"]> & { finishedAt: string | null; elapsedMs: number | null }) | null;
   previousRun?: PreviousRun;
   kind: "official" | "adhoc" | "unknown";
@@ -74,7 +81,7 @@ function stockFacts(row: PipelineOutputRow, macro: MarketMacro, today: string, s
   if (input.prediction_base_date !== today) caution("data", targetSessionCautionText(String(input.prediction_base_date)));
   // Keep stock-specific citation IDs stable when macro collection recovers.
   if (macro.indicators.some(indicator => indicator.status !== "ok")) caution("macro", "일부 시장 지표를 확보하지 못했습니다.");
-  return { rank, code, name: row.result.company_name, rankScore: numeric(input.rank_score)!, poolSize, topPercent, modelEvidence: modelEvidence(input), evidence, cautions, news: { status, articles } };
+  return { rank, code, name: row.result.company_name, rankScore: numeric(input.rank_score)!, poolSize, topPercent, modelEvidence: modelEvidence(input), analysisMetrics: stockOpinionMetrics(input, row.data_meta as Record<string, unknown>), evidence, cautions, news: { status, articles } };
 }
 
 /** Reject ambiguous outputs; only model pred_rank determines order. */
@@ -184,6 +191,7 @@ export function createBriefingService({ rank = readCompletedRank, marker = readP
     const visibleCitations = (ids: string[]) => ids.filter(id => !hiddenCitations.has(id));
     const stocks = input.stocks.map(stock => ({ ...stock, cautions: stock.cautions.filter(fact => !hiddenDateCaution(fact)) }));
     const visibleNarrative = { ...narrative, citations: visibleCitations(narrative.citations),
+      ...(narrative.stockOpinions ? { stockOpinions: narrative.stockOpinions.map(stock => ({ ...stock, citations: visibleCitations(stock.citations) })) } : {}),
       stocks: narrative.stocks.map(stock => ({ ...stock, citations: visibleCitations(stock.citations) })) };
     const payload: BriefingPayload = { version: 1, status: input.model ? "ready" : "no_run", kind, ...input, stocks, narrative: visibleNarrative, composition: candidateComposition,
       model: input.model ? { ...input.model, finishedAt: after?.finishedAt !== undefined ? new Date(after.finishedAt).toISOString() : null,

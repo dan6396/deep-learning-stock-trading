@@ -54,7 +54,7 @@ export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { ma
       <p className="preopen-meta">AI 의견 · 투자 권유 아님{outlook.source === "template" ? " · 규칙 기반 대체" : ""}</p>
       <p id={`${contentId}-outlook`} className="preopen-outlook-text">{outlook.text}</p>
       {canExpandOutlook && <button type="button" className="preopen-outlook-toggle" aria-label={`AI 최종 의견 ${outlookExpanded ? "접기" : "더 보기"}`} aria-expanded={outlookExpanded} aria-controls={`${contentId}-outlook ${contentId}-citations`} onClick={() => setOutlookExpanded(previous => !previous)}>{outlookExpanded ? "접기" : "더 보기"}</button>}
-      <div id={`${contentId}-citations`} className="preopen-citations" aria-label="최종 의견 인용 근거">{outlook.citations.map(id => <button key={id} onClick={() => onCitationClick(id)}>{macro.preOpen?.find(row => `M:${row.id}` === id)?.name ?? id}</button>)}</div>
+      <div id={`${contentId}-citations`} className="preopen-citations" aria-label="최종 의견 인용 근거">{outlook.citations.filter(id => id !== "M:SP500").map(id => <button key={id} onClick={() => onCitationClick(id)}>{macro.preOpen?.find(row => `M:${row.id}` === id)?.name ?? id}</button>)}</div>
     </article>}
   </section>;
 }

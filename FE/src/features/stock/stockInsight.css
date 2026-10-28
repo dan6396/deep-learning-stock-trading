@@ -1,5 +1,16 @@
 @layer components {
+  .stock-report { --stock-ai-summary-size: 16px; }
+  .stock-report .stock-ai-summary { font-size: var(--stock-ai-summary-size, 16px); line-height: 1.7; overflow-wrap: anywhere; }
+  .stock-ai-summary > .report-muted { font-size: var(--stock-ai-summary-size, 16px); line-height: 1.7; }
+  .stock-ai-opinion-notice { display: inline-flex; flex-wrap: wrap; margin: 10px 0 6px; padding: 6px 10px; border: 1px solid var(--ds-line); border-radius: 8px; background: var(--ds-surface-2); color: var(--ds-fg); font-size: 12px; font-weight: 650; }
+  .stock-ai-opinion-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; }
+  .stock-opinion-citations { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .stock-opinion-citations button { min-width: 44px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--ds-line); border-radius: 8px; background: var(--ds-surface-2); color: var(--ds-fg); font: inherit; font-size: 12px; cursor: pointer; }
+  .stock-citation-target { scroll-margin-block: 120px; }
+  .stock-citation-target:focus { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
+  .report-ai-opinion-card .report-news-summary { border-top: 1px solid var(--ds-line); margin-top: 20px; padding-top: 16px; }
   .insight-section { margin-bottom: 24px; }
+  .report-model-card .insight-embedded { margin-bottom: 0; }
   .insight-section > h2 { margin-bottom: 8px; }
   .insight-section .insight-rank { margin-top: 16px; font-size: 15px; }
   .insight-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--ds-line); }
@@ -26,7 +37,7 @@
   .insight-scroll caption { text-align: left; color: var(--ds-fg-2); font-size: 12px; padding-bottom: 8px; }
   .insight-scroll th, .insight-scroll td { padding: 8px; border-bottom: 1px solid var(--ds-line); }
   .insight-news-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-  .insight-news-chips a { color: var(--ds-fg); background: var(--ds-surface-2); padding: 4px 10px; border-radius: 8px; }
+  .insight-news-chips a { color: var(--ds-fg); background: var(--ds-surface-2); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
 
   /* Collapsible long text for evidence explanations */
   .insight-expandable-note { margin-top: 8px; }
@@ -39,7 +50,8 @@
   .insight-note-toggle {
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
+    min-width: 44px;
+    min-height: 44px;
     margin-top: 4px;
     padding: 0;
     border: 0;
@@ -58,7 +70,7 @@
     font-weight: 500;
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
+    min-height: 44px;
   }
   .insight-details summary:hover { text-decoration: underline; }
   .insight-details[open] summary { margin-bottom: 4px; }

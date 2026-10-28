@@ -32,7 +32,7 @@ export function parseRelatedNews(xml: string, name: string): PipelineNewsItem[] 
 }
 
 /** The caller supplies validated, current model records. Only the first five raw ranks are queried. */
-export async function collectTopFiveArticles(records: ModelRecord[], outputDir: string, startedAt: number, transport: typeof fetch = fetch): Promise<RelatedNewsSnapshot> {
+export async function collectTopFiveArticles(records: ModelRecord[], outputDir: string, startedAt: number, transport: typeof fetch = fetch, bodies?: (articles: { url: string }[], directory: string) => Promise<unknown>): Promise<RelatedNewsSnapshot> {
   const top = records.filter(row => /^\d{6}$/.test(row.ticker) && Number.isInteger(Number(row.pred_rank)) && Number(row.pred_rank) > 0)
     .sort((a, b) => Number(a.pred_rank) - Number(b.pred_rank)).slice(0, 5);
   const entries = await Promise.all(top.map(async row => {
@@ -52,6 +52,8 @@ export async function collectTopFiveArticles(records: ModelRecord[], outputDir: 
   }));
   const snapshot: RelatedNewsSnapshot = { version: 1, startedAt, collectedAt: new Date().toISOString(), stocks: Object.fromEntries(entries) };
   await writeFile(join(outputDir, RELATED_NEWS_FILE), JSON.stringify(snapshot), "utf8");
+  // Separate private cache only; related_news.json and attached public articles stay metadata-only.
+  try { await bodies?.(entries.flatMap(([, entry]) => entry.articles.flatMap(article => typeof article.url === "string" ? [{ url: article.url }] : [])), outputDir); } catch { /* Body failures retain title-only news and do not fail an analysis. */ }
   return snapshot;
 }
 

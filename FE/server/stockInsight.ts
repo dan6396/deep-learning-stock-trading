@@ -4,25 +4,35 @@ import { modelEvidence } from "../src/types/modelEvidence";
 import { stockObservations } from "./stockObservations";
 import { safeArticleUrl } from "../src/shared/lib/articleUrl";
 import type { StockInsight } from "../src/types/stockInsight";
+import { currentHeadlineSummary, readCachedHeadlineSummaries } from "./headlineSummaryCache";
+import { cachedArticleBodies } from "./articleBodies";
+import { pipelineOutputDir } from "./pipelineFreshness";
 declare const process: { env: Record<string, string | undefined> };
 export function createStockInsightService({ rank = getRankPayload, briefing = getBriefing, observations = stockObservations } = {}) {
   return async (code: string, env = process.env): Promise<StockInsight> => {
     if (!/^\d{6}$/.test(code) || code === "000000") throw new Error("유효한 6자리 종목 코드가 필요합니다.");
     const [rows, context, observed] = await Promise.all([rank(env), briefing(env).catch(() => null), observations.get([code])]);
     const row = rows.find(row => row.input_row.ticker === code), model = row ? modelEvidence(row.input_row) : null;
-    const top = context?.stocks.find(stock => stock.code === code), narrative = context?.narrative.stocks.find(stock => stock.code === code);
-    const articles = top?.news.articles ?? (row?.news ?? []).flatMap((article, i) => {
+    const index = context?.stocks.findIndex(stock => stock.code === code) ?? -1, top = index >= 0 ? context?.stocks[index] : undefined;
+    const opinion = top ? context?.narrative.stockOpinions?.find(stock => stock.code === code) : undefined;
+    const articles = top?.news.articles.map(({ id, title, url, source, pubDate }) => ({ id, title, url, source, pubDate })) ?? (row?.news ?? []).flatMap((article, i) => {
       const url = safeArticleUrl(article.url);
       return url && article.title ? [{ id: `N:${code}:${i + 1}`, title: article.title, url, source: article.source ?? "", pubDate: article.pub_date ?? null }] : [];
     }).slice(0, 3);
-    const usable = narrative?.source === "llm" && context?.narrative.status === "llm"
-      && narrative.citations.some(id => articles.some(article => article.id === id));
+    const candidate = context?.narrative.newsSummaries?.find(stock => stock.code === code);
+    const articleBodies = top && context ? await cachedArticleBodies(context.stocks, pipelineOutputDir(env)) : {};
+    let headline = top && context?.macro ? currentHeadlineSummary(candidate, { ...context, articleBodies }, index) : null;
+    if (!headline && top && context?.macro && context.model) {
+      headline = (await readCachedHeadlineSummaries(context, env)).find(stock => stock.code === code) ?? null;
+    }
     const sensitivity = observed.sensitivities[0];
     return { version: 1, code, name: row?.result.company_name ?? code, status: model ? "ready" : "no_model",
       baseDate: row && typeof row.input_row.prediction_base_date === "string" ? row.input_row.prediction_base_date : null, model, sensitivity,
-      news: { summary: usable ? narrative.summary : articles.length ? `관련 기사 ${articles.length}건의 제목·출처·발행 시각을 확인할 수 있습니다.` : "현재 연결된 관련 기사가 없습니다.",
-        source: usable ? "llm" : "template", bodyCollected: false, limitation: "기사 본문을 수집하지 않았습니다. 제목 기반 요약이며 사실 확인이나 호재·악재 판정이 아닙니다.",
-        articles, citations: usable ? narrative.citations.filter(id => articles.some(article => article.id === id)) : articles.map(article => article.id) },
+      ...(opinion ? { aiOpinion: { source: opinion.source, text: opinion.text, citations: opinion.citations,
+        ...(context?.narrative.generatedAt ? { generatedAt: context.narrative.generatedAt } : {}) } } : {}),
+      news: { summary: headline ? headline.text : articles.length ? `관련 기사 ${articles.length}건의 제목·출처·발행 시각을 확인할 수 있습니다.` : "현재 연결된 관련 기사가 없습니다.",
+        source: headline ? "llm" : "template", summarySource: headline ? "llm" : "template", summaryBasis: headline?.summaryBasis ?? "title", bodyCollected: articles.some(article => Boolean(articleBodies[article.id])), limitation: headline?.summaryBasis === "body" ? "수집된 기사 제목·본문에 한정한 요약입니다. 사실 확인이나 호재·악재 판정이 아닙니다." : "기사 제목에 한정한 요약입니다. 본문 확보 여부는 기사마다 다르며 사실 확인이나 호재·악재 판정이 아닙니다.",
+        articles, citations: headline ? headline.citations : articles.map(article => article.id) },
       cautions: ["다음 거래일 시가→종가 상대 순위입니다. 하루 등락만으로 모델을 평가하지 않습니다.",
         "입력 특징의 백분위는 모델 기여도나 인과 설명이 아닙니다.",
         ...(model?.agreement === "불일치" ? ["20일·120일 모델의 상대 순위 차이가 비교 종목 수의 25%를 넘습니다."] : []),

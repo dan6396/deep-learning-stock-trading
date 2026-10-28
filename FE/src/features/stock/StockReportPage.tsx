@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, RefreshCw, Info } from "lucide-react";
+import { ArrowLeft, RefreshCw, Info } from "lucide-react";
 import { queries, queryKeys } from "../../shared/api/queries";
 import { formatDate, formatNumber, formatPercent, formatRankScore, formatSessionDate, formatWon } from "../../shared/lib/format";
 import { usePageTitle } from "../../hooks/usePageTitle";
@@ -14,8 +14,12 @@ import { SourceMeta } from "../briefing/SourceMeta";
 import { PastObservationTag } from "../briefing/PastObservationTag";
 import { SignalView } from "../briefing/SignalView";
 import { ReportChart } from "./ReportChart";
-import { StockInsightSection } from "./StockInsightSection";
-import { safeArticleUrl } from "./reportData";
+import { StockInsightDetails } from "./StockInsightSection";
+import { useStockInsight } from "./useStockInsight";
+import { StockNewsCard, reportNewsArticles } from "./StockNewsCard";
+import { StockAiOpinionCard } from "./StockAiOpinionCard";
+import type { OpinionCitationTarget } from "./StockCitationChips";
+import { formatModelPercent } from "../../entities/modelEvidence";
 import { useAppPaths } from "../../app/paths";
 import { WatchToggle, WatchlistNotice } from "../watchlist/WatchToggle";
 import "../briefing/briefing.css";
@@ -28,15 +32,31 @@ function StockReport({ code }: { code: string }) {
   const paths = useAppPaths();
   const stock = useQuery(queries.stock(code)), quote = useQuery(queries.quote(code)), candidates = useQuery(queries.candidates()), client = useQueryClient();
   const candidate = candidates.data?.data.find(row => row.code === code), detail = mergeCandidateDetail(candidate, stock.data?.data);
+  const insight = useStockInsight(code);
+  const rank = detail ? detail.rank : insight.data?.model?.rank ?? null, poolSize = detail ? detail.poolSize : insight.data?.model?.poolSize ?? null;
+  const rankBased = detail?.scoreKind === "rank_zscore" || (!detail && Boolean(insight.data?.model));
+  const rankScore = detail ? detail.rankScore : insight.data?.model?.rankScore;
+  const articles = reportNewsArticles(code, detail?.news ?? [], insight.data?.news);
+  const citationTargets = new Map<string, OpinionCitationTarget>();
+  if (detail?.rank != null || insight.data?.model) citationTargets.set(`R:${code}`, { targetId: `report-model-card-${code}`, label: "모델 순위" });
+  if (rankBased && rank != null && poolSize != null) {
+    citationTargets.set(`R:${code}:raw`, { targetId: `stock-model-raw-${code}`, label: "원본 모델 순위" });
+    citationTargets.set(`E:${code}:1`, { targetId: `report-model-card-${code}`, label: "모델 순위 근거" });
+    citationTargets.set(`C:${code}:1`, { targetId: `stock-rank-interpretation-${code}`, label: "점수 해석 주의" });
+  }
+  if (insight.data?.model?.lookbacks.length === 2) for (const lb of insight.data.model.lookbacks) citationTargets.set(`R:${code}:${lb.sessions}`, { targetId: `stock-model-${code}-${lb.sessions}`, label: `${lb.sessions}일 모델` });
+  for (const feature of insight.data?.model?.features ?? []) citationTargets.set(`E:${code}:feature:${feature.key}`, { targetId: `stock-feature-${code}-${feature.key}`, label: feature.label });
+  articles.forEach((article, index) => article.citationIds.forEach(id => citationTargets.set(id, { targetId: article.targetId, label: `관련 기사 ${index + 1}` })));
   const production = useCandidateProduction(candidates), notice = productionNotice(production);
   const membership: CandidateMembership = resolveMembership(candidates, Boolean(candidate), production);
   const signals = detail ? briefingSignals(detail, membership, production) : null, modelMeta = candidate ? candidates.data : stock.data;
   // News-adjusted (final) figures exist only when a news run produced the final list.
   const showFinal = production === "produced", nextSession = useNextSession(detail?.baseDate);
+  if (showFinal && detail?.finalRank != null) citationTargets.set(`R:${code}:adjusted`, { targetId: `stock-model-adjusted-${code}`, label: "최종 보정 순위" });
   const nextSessionLabel = detail?.predictionTarget === "next_session_open_to_close" && nextSession.data ? formatSessionDate(nextSession.data) : null;
   usePageTitle(`${detail?.name ?? quote.data?.data?.name ?? code} · 종목 리포트`);
   async function refresh() {
-    const keys = [queryKeys.stock(code), queryKeys.quote(code), queryKeys.candidates(), ["chart", code]];
+    const keys = [queryKeys.stock(code), queryKeys.quote(code), queryKeys.candidates(), ["chart", code], ["stock-insight", code]];
     await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey })));
     await Promise.all(keys.map(queryKey => client.refetchQueries({ queryKey })));
   }
@@ -67,11 +87,11 @@ function StockReport({ code }: { code: string }) {
     {stock.isSuccess && stock.data.data === null && <p className="report-notice" role="status">상세 분석 결과가 없습니다.{candidate ? " 후보 목록 원본을 표시합니다." : ""}</p>}
     {(candidates.data?.source === "sample" || stock.data?.source === "sample") && <p className="report-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
 
-    {/* 1. 종목명·현재가·전일 대비 등락 */}
+    {/* Price summary and history share one card. */}
     <section className="report-card report-price-card" aria-labelledby="report-price-title">
       <div className="report-price-summary">
         <div>
-          <h2 id="report-price-title">조회 가격</h2>
+          <h2 id="report-price-title">가격</h2>
           <p className="report-price" data-testid="report-price">{formatWon(quote.data?.data?.currentPrice)}</p>
           <p className={tone(quote.data?.data?.changeRate)}>
             전일 대비 {formatPercent(quote.data?.data?.changeRate, "percent")} · {formatWon(quote.data?.data?.change)}
@@ -87,32 +107,36 @@ function StockReport({ code }: { code: string }) {
       {quote.isPending && <p role="status" className="report-muted">시세를 조회하고 있습니다.</p>}
       {quote.isError && <p className="report-notice" role="status">{quote.data ? "이전 조회 결과 · 시세 갱신 실패" : "시세 조회 실패"}</p>}
       {quote.isSuccess && quote.data.data === null && <p className="report-muted">시세 결과가 없습니다.</p>}
-      <dl className="report-stats">
+      <dl className="report-stats report-price-stats">
         {quote.data?.data?.volume != null && <div><dt>거래량</dt><dd>{formatNumber(quote.data.data.volume)}</dd></div>}
         {quote.data?.data?.tradingValue != null && <div><dt>거래대금</dt><dd>{formatWon(quote.data.data.tradingValue)}</dd></div>}
       </dl>
+      <ReportChart key={code} code={code} />
     </section>
 
-    {/* 2. 가격 차트 */}
-    <ReportChart key={code} code={code} />
+    <StockAiOpinionCard opinion={insight.data?.aiOpinion} news={insight.data?.news} targets={citationTargets} />
+    {(detail || insight.data) && <StockNewsCard articles={articles} news={insight.data?.news} targets={citationTargets} showSummary={!insight.data?.aiOpinion} />}
 
     {/* 3. 모델 순위 요약 한 줄 */}
-    <section className="report-card report-model-card" aria-labelledby="report-model-title">
+    <section id={`report-model-card-${code}`} tabIndex={-1} className="report-card report-model-card stock-citation-target" data-report-signal={signals ? "model" : undefined} aria-labelledby="report-model-title">
       <h2 id="report-model-title">{showFinal ? "모델 순위와 최종 보정" : "모델 순위"}</h2>
-      <p className="report-model-one-liner">
-        {detail?.poolSize != null && detail?.rank != null
-          ? `${formatNumber(detail.poolSize)}종목 중 ${formatNumber(detail.rank)}위`
+      <div className="report-model-topline">
+      <p id={`stock-model-raw-${code}`} tabIndex={-1} className="report-model-one-liner stock-citation-target">
+        {poolSize != null && rank != null
+          ? <>{formatNumber(poolSize)}종목 중 <strong>{formatNumber(rank)}위</strong> · 상위 {formatModelPercent(rank / poolSize * 100)}</>
           : "순위 정보 없음"}
       </p>
+      {signals && <SignalView signal={signals.model.modelLabel?.startsWith("모델 순위 ") ? { ...signals.model, modelLabel: "모델 순위" } : signals.model} model />}
+      </div>
       <dl className="report-predictions">
         <div>
-          <dt>{detail?.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측수익률"}</dt>
+          <dt>{rankBased ? "순위 점수" : "모델 예측수익률"}</dt>
           <dd
             className="report-model-value"
             data-testid="report-prediction"
-            title={detail?.rankScore != null ? String(detail.rankScore) : undefined}
+            title={rankScore != null ? String(rankScore) : undefined}
           >
-            {detail?.scoreKind === "rank_zscore" ? formatRankScore(detail.rankScore, 2) : formatPercent(detail?.predictedReturn)}
+            {rankBased ? formatRankScore(rankScore, 2) : formatPercent(detail?.predictedReturn)}
           </dd>
         </div>
         {showFinal && (
@@ -125,89 +149,18 @@ function StockReport({ code }: { code: string }) {
         )}
       </dl>
       <dl className="report-stats">
-        {showFinal && detail?.finalRank != null && <div><dt>최종 보정 순위</dt><dd data-testid="report-final-rank">{formatNumber(detail.finalRank)}위</dd></div>}
+        {showFinal && detail?.finalRank != null && <div id={`stock-model-adjusted-${code}`} tabIndex={-1} className="stock-citation-target"><dt>최종 보정 순위</dt><dd data-testid="report-final-rank">{formatNumber(detail.finalRank)}위</dd></div>}
         {detail?.baseDate && <div><dt>분석 기준일</dt><dd>{formatDate(detail.baseDate)}</dd></div>}
         {detail?.predictionTarget === "next_session_open_to_close" && <div><dt>예측 대상</dt><dd>다음 거래일 시가→종가</dd></div>}
         {nextSessionLabel && <div><dt>다음 거래일</dt><dd data-testid="report-next-session">{nextSessionLabel}</dd></div>}
       </dl>
       {modelMeta && <SourceMeta source={modelMeta.source} asOf={modelMeta.asOf} label="분석 시각" />}
+      {signals ? <p className="report-muted report-model-reason">{signals.model.reason}</p> : <p className="report-empty">분석 근거가 없습니다.</p>}
+      {signals && production !== "unproduced" && <div className="report-signals"><div data-report-signal="news"><div><strong>뉴스</strong><SignalView signal={signals.news} /></div><p className="report-muted">{signals.news.reason}</p></div></div>}
+      {detail && detail.scoreKind !== "rank_zscore" && <p className="report-muted report-footnote">모델의 긍정 표시는 최종 후보에 포함됐다는 뜻일 수 있습니다. 원본 예측이 음수인 종목도 후보에 포함될 수 있습니다.</p>}
+      {rankBased && <p id={`stock-rank-interpretation-${code}`} tabIndex={-1} className="report-muted stock-citation-target">순위 점수는 수익률·확률이 아닙니다.</p>}
+      {insight.data && <StockInsightDetails insight={insight.data} embedded />}
     </section>
-
-    {/* 4. 분석 근거(모델 설명, 입력 특징, 미국장 관측) */}
-    <div className="report-evidence-group">
-      <section className="report-card report-evidence-card" aria-labelledby="report-evidence-title">
-        <p className="report-eyebrow">분석 근거</p>
-        <h2 id="report-evidence-title">순위와 분석 근거</h2>
-        {signals ? (
-          <div className="report-signals">
-            {(production === "unproduced" ? ["model"] as const : ["model", "news"] as const).map(key => (
-              <div key={key} data-report-signal={key}>
-                <div>
-                  <strong>{key === "model" ? "모델" : "뉴스"}</strong>
-                  <SignalView signal={signals[key]} model={key === "model"} />
-                </div>
-                <p className="report-muted">{signals[key].reason}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="report-empty">분석 근거가 없습니다.</p>
-        )}
-        {detail && detail.scoreKind !== "rank_zscore" && (
-          <p className="report-muted report-footnote">
-            모델의 긍정 표시는 최종 후보에 포함됐다는 뜻일 수 있습니다. 원본 예측이 음수인 종목도 후보에 포함될 수 있습니다.
-          </p>
-        )}
-        <p className="report-summary">
-          {detail?.scoreKind === "rank_zscore"
-            ? `동일 기준일 비교 종목 중 ${detail.rank ?? "—"}위입니다.`
-            : !detail || detail.predictedReturn === null
-            ? "원본 모델 예측값이 없어 수익률 요약을 제공하지 않습니다."
-            : showFinal
-            ? `원본 모델 예측은 ${formatPercent(detail.predictedReturn)}이며 최종 보정 예측은 ${formatPercent(detail.finalPredictedReturn)}입니다.`
-            : `모델 예측은 ${formatPercent(detail.predictedReturn)}입니다.`}
-        </p>
-      </section>
-      <StockInsightSection code={code} />
-    </div>
-
-    {/* 5. 기사 (관련 뉴스) */}
-    {detail && detail.news.length > 0 && (
-      <section className="report-card report-news-card" aria-labelledby="report-news-title">
-        <div className="report-section-heading">
-          <div><h2 id="report-news-title">관련 뉴스</h2></div>
-        </div>
-        <ul className="report-news">
-          {detail.news.map((article, index) => {
-            const url = safeArticleUrl(article.url);
-            return (
-              <li key={`${article.title}-${index}`}>
-                <div className="report-news-heading">
-                  <h3>
-                    {url ? (
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        {article.title ?? "제목 미확인"}
-                        <ExternalLink aria-hidden="true" size={14} />
-                      </a>
-                    ) : (
-                      article.title ?? "제목 미확인"
-                    )}
-                  </h3>
-                  {(article.sentiment === "positive" || article.sentiment === "negative" || article.sentiment === "neutral") && (
-                    <span className="report-news-sentiment" data-article-sentiment={article.sentiment}>
-                      {article.sentiment === "positive" ? "긍정" : article.sentiment === "negative" ? "부정" : "중립"}
-                    </span>
-                  )}
-                </div>
-                <p className="report-muted">{article.source ?? "발행처 미확인"} · {formatDate(article.publishedAt, true)}</p>
-                {article.reason && <p>{article.reason}</p>}
-                {article.description && <p className="report-muted">{article.description}</p>}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    )}
 
     {/* 6. 한계·고지 */}
     <PerformancePanel code={code} />

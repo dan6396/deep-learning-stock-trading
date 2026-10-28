@@ -5,6 +5,11 @@ import type { MacroData, BriefingNarrative } from "../../entities/briefing";
 const macro: MacroData = { asOf: null, indicators: [], preOpen: [{ id: "UST10Y", name: "미 국채 10년물", unit: "%", source: "yahoo", status: "ok", value: 4.2, change: 0.01, changePct: 0.24, fiveDayChange: 0.15, fiveDayChangePct: 3.7, asOf: "2026-10-26T20:00:00Z", history: [{ date: "2026-10-20", value: 4.05 }, { date: "2026-10-26", value: 4.2 }], comment: { text: "관측 구간 금리 상승입니다.", placeholder: true, ruleId: "up" } }] };
 const narrative: BriefingNarrative = { status: "llm", generatedAt: "", llmModel: "fixture", inputHash: "fixture", fallbackReason: null, overview: "", marketNote: "", stocks: [], citations: [], marketOutlook: { stance: "중립", text: "장 초반 갭 맥락으로만 판단합니다.", citations: ["M:UST10Y"], source: "llm" } };
 describe("pre-open market cards", () => {
+  it("hides the removed legacy SP500 outlook chip and retains live indicator citations", () => {
+    render(<PreOpenMarketSection macro={macro} narrative={{ ...narrative, marketOutlook: { ...narrative.marketOutlook!, citations: ["M:SP500", "M:UST10Y"] } }} onCitationClick={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /SP500|S&P 500/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "미 국채 10년물" })).toBeInTheDocument();
+  });
   it("renders units, provisional wording, actual observation count and linked opinion", () => {
     const click = vi.fn(); render(<PreOpenMarketSection macro={macro} narrative={narrative} onCitationClick={click} />);
     expect(screen.getByText("장전 시장 지표")).toBeInTheDocument(); expect(screen.getByText("임시 문구")).toBeInTheDocument();

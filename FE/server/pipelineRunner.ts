@@ -6,6 +6,7 @@ import { validateModelOnlyOutputs, parseCsv, readPendingRank } from "./pipelineR
 import { prepareCompletedResults, prepareRunBriefing } from "./briefing";
 import { completedResults, failResultRun, setResultRunState } from "./completedResults";
 import { collectTopFiveArticles } from "./relatedNews";
+import { collectArticleBodies } from "./articleBodies";
 import { randomUUID } from "node:crypto";
 import { beginRun, completeRun, failRun } from "./runLedger";
 import type { RunKind } from "../src/types/performance";
@@ -460,7 +461,7 @@ async function executeCandidatePipeline(env: Record<string, string | undefined>,
       updateCandidateAnalysisProgress(progressSnapshot(4, 94, "모델 TOP5의 관련 기사를 수집하는 중입니다."));
       let articleCollectionStatus: "collected" | "unavailable" = "unavailable";
       try {
-        await collectTopFiveArticles(parseCsv(await readFile(join(outputDir, "step2_all_transformer_rank.csv"), "utf8")), outputDir, startedAt);
+        await collectTopFiveArticles(parseCsv(await readFile(join(outputDir, "step2_all_transformer_rank.csv"), "utf8")), outputDir, startedAt, fetch, collectArticleBodies);
         articleCollectionStatus = "collected";
       } catch { /* Article/cache failure must never invalidate validated model predictions. */ }
       updateCandidateAnalysisProgress(progressSnapshot(5, 98, articleCollectionStatus === "collected" ? "관련 기사 수집 상태를 저장했습니다." : "기사 수집 기록 저장 실패 · 모델 결과를 유지합니다."));

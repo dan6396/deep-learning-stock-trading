@@ -277,7 +277,9 @@ describe("briefing narrative guard", () => {
       { id: "SP500", name: "S&P 500", value: 7655.66, change: -100, changePct: -1.31, unit: "pt", status: "ok" },
       { id: "KOSPI200_NIGHT", name: "코스피200 야간선물", value: 700, change: -35, changePct: -4.73, unit: "pt", status: "ok" },
     ];
-    const overview = "국내 증시에서 코스피와 코스닥이 각각 3.52%, 2.29% 하락 마감한 가운데, 미국 시장에서도 나스닥(-2.43%)과 S&P 500(-1.31%)이 동반 하락세를 보이고 있습니다. 코스피200 야간선물 역시 4.73% 내리며 약세를 나타냈습니다. 본 모델은 199개 종목을 대상으로 순위 점수를 산출하였으며, 해당 점수는 기대수익률이나 상승 확률을 의미하지 않습니다.";
+    const legacyOverview = "국내 증시에서 코스피와 코스닥이 각각 3.52%, 2.29% 하락 마감한 가운데, 미국 시장에서도 나스닥(-2.43%)과 S&P 500(-1.31%)이 동반 하락세를 보이고 있습니다. 코스피200 야간선물 역시 4.73% 내리며 약세를 나타냈습니다. 본 모델은 199개 종목을 대상으로 순위 점수를 산출하였으며, 해당 점수는 기대수익률이나 상승 확률을 의미하지 않습니다.";
+    expect(groundedNumbers(legacyOverview, data)).toBe(false);
+    const overview = legacyOverview.replace("나스닥(-2.43%)과 S&P 500(-1.31%)이 동반", "나스닥(-2.43%)이");
     expect(forbiddenNarrative(overview)).toBe(false);
     expect(forbiddenCausality(overview)).toBe(false);
     for (const sentence of overview.split(/(?<=다\.)\s+/)) expect(groundedNumbers(sentence, data), sentence).toBe(true);

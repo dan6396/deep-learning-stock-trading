@@ -15,7 +15,7 @@ function input() {
   return { model: { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-26", poolSize: 199, predictionTarget: "next_session_open_to_close", runStartedAt: null }, macro: { asOf: "2026-10-26T20:00:00Z", indicators: rows, preOpen: buildPreOpenIndicators(rows) }, stocks: [{ code: "138930", name: "BNK금융지주", rank: 1, rankScore: 1.71, poolSize: 199, topPercent: 0.5, evidence: [{ id: "E:138930:1", kind: "model", text: "전체 199개 중 1위입니다." }], cautions: [], news: { status: "collected", articles: [{ id: "N:138930:1", title: "BNK금융지주 공시 관련 소식", source: "경제지", pubDate: "2026-10-26T01:00:00Z", url: "https://example.com/article" }] } }] };
 }
 const outlook = () => ({ stance: "상승 우위", text: "나스닥의 상승 흐름 때문에 코스피 장 초반 갭은 상승 우위로 판단합니다. 장중 방향으로 일반화하지 않습니다.", citations: ["M:NASDAQ"] });
-const news = () => ({ code: "138930", text: "공시 관련 제목을 다룬 기사입니다. 출처와 발행일을 함께 확인할 수 있습니다.", citations: ["N:138930:1"] });
+const news = () => ({ code: "138930", text: "공시 관련 제목을 다룬 기사입니다. 공시를 발표했다고 보도했습니다.", citations: ["N:138930:1"] });
 const value = () => ({ overview: "시장 관측 자료입니다. 모델 순서를 유지합니다.", marketNote: "직전 미국장 관측 자료입니다.", stocks: [{ code: "138930", summary: "BNK금융지주는 전체 199개 중 1위입니다.", citations: ["E:138930:1"] }], citations: ["M:NASDAQ"], marketOutlook: outlook(), newsSummaries: [news()] });
 // JSON-compatible cases are also replayed by the external, offline fix5 tsx audit.
 const futuresSubjectCases = [
@@ -183,7 +183,8 @@ describe("pre-open macro and field-level narrative extensions", () => {
     expect(validateMarketOutlook({ ...outlook(), text: "비중을 늘리면 수익을 보장합니다. 상승 우위입니다." }, input())).toBe("forbidden_content");
   });
   it("treats indicator aliases as labels and binds each named indicator's numbers", () => {
-    expect(validateMarketOutlook({ ...outlook(), text: "미 10년물과 코스피200, S&P 500 관측을 살펴보며 상승 우위입니다." }, input())).toBeNull();
+    expect(validateMarketOutlook({ ...outlook(), text: "미 10년물과 코스피200 관측을 살펴보며 상승 우위입니다." }, input())).toBeNull();
+    expect(validateMarketOutlook({ ...outlook(), text: "S&P 500 관측을 살펴보며 상승 우위입니다." }, input())).toBe("ungrounded_number");
     const data = input(); data.macro.preOpen[0].value = 4.99;
     expect(validateMarketOutlook({ ...outlook(), text: "나스닥은 4.99%입니다. 상승 우위입니다." }, data)).toBe("ungrounded_number");
     expect(validateMarketOutlook({ ...outlook(), text: "미 10년물은 4.99%입니다. 상승 우위입니다." }, data)).toBeNull();

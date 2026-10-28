@@ -43,7 +43,9 @@ describe("related articles without news analysis", () => {
       if (query?.includes("테스트3")) return new Response("<html>blocked</html>");
       return new Response(feed(query?.includes("테스트1") ? item("테스트1 실적") : ""));
     });
-    const result = await collectTopFiveArticles(records, "fixture-output", 123, transport);
+    const bodies = vi.fn(async () => []);
+    const result = await collectTopFiveArticles(records, "fixture-output", 123, transport, bodies);
+    expect(bodies).toHaveBeenCalledOnce();
     expect(transport).toHaveBeenCalledTimes(5);
     expect(Object.keys(result.stocks)).toEqual(["100001", "100002", "100003", "100004", "100005"]);
     for (const [url, options] of transport.mock.calls) {

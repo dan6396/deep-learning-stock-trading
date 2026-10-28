@@ -35,8 +35,7 @@ export function ReportChart({ code }: { code: string }) {
   const chart = useQuery(queries.chart(code, range)), client = useQueryClient();
   const allowed = chart.data?.source === "live" || chart.data?.source === "cache";
   async function refresh() { await client.cancelQueries({ queryKey: queryKeys.chart(code, range), exact: true }); await client.refetchQueries({ queryKey: queryKeys.chart(code, range), exact: true }); }
-  return <section className="report-card report-chart" aria-labelledby="report-chart-title">
-    <div className="report-section-heading"><div><p className="report-eyebrow">가격 관측</p><h2 id="report-chart-title">가격 이력</h2></div><button className="report-icon-button" onClick={() => void refresh()} aria-label="가격 이력 다시 조회"><RefreshCw aria-hidden="true" size={16} /></button></div>
+  return <div className="report-chart" role="group" aria-label="가격 이력">
     <div className="report-chart-controls">
       <div role="group" aria-label="가격 이력 기간">
         {TIME_RANGES.map(value => <button key={value} type="button" aria-pressed={range === value} onClick={() => { setRange(value); if (value === "1D") setInterval("5m"); }}>{labels[value]}</button>)}
@@ -54,6 +53,7 @@ export function ReportChart({ code }: { code: string }) {
         <button aria-pressed={mode === "area"} onClick={() => setMode("area")}>{range === "1D" ? "가격선" : "종가 선"}</button>
         <button aria-pressed={mode === "candle"} onClick={() => setMode("candle")}>캔들</button>
       </div>
+      <button className="report-icon-button" onClick={() => void refresh()} aria-label="가격 이력 다시 조회"><RefreshCw aria-hidden="true" size={16} /></button>
     </div>
     {chart.isFetching && chart.data && <small className="report-muted" role="status">가격 이력 갱신 중</small>}
     {chart.isError && <p className="report-notice" role="status">{chart.data ? "이전 조회 결과 · 가격 이력 갱신 실패" : chart.error.message.includes("코드") ? "종목 코드가 일치하지 않아 가격 이력을 표시하지 않습니다." : "가격 이력 조회 실패"}</p>}
@@ -62,5 +62,5 @@ export function ReportChart({ code }: { code: string }) {
         : chart.data && allowed ? <PriceChart key={`${code}-${range}-${mode}-${interval}`} data={chart.data.data} mode={mode} interval={interval} /> : null}
     {chart.data && <details className="report-muted report-footnote"><summary>데이터 출처·기간</summary><SourceMeta source={chart.data.source} asOf={chart.data.asOf} label="확인 시각" />{allowed && <CoverageNote data={chart.data.data} />}<p>각 점은 제공된 관측 시각의 가격입니다. 가격이 없는 구간은 선으로 잇지 않습니다.</p></details>}
     <PastObservationTag asOf={chart.data?.asOf} />
-  </section>;
+  </div>;
 }

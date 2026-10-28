@@ -131,7 +131,8 @@ describe("model TOP5 briefing", () => {
       expect(stock.cautions).toEqual(originalInput.stocks[index].cautions.filter(fact => !hiddenDate(fact)));
       expect(result.narrative.stocks[index].citations).toEqual([`E:${stock.code}:1`, `C:${stock.code}:1`, `C:${stock.code}:2`]);
     }
-    expect(result.narrative.citations).toEqual(MACRO_UNIVERSE.map(row => `M:${row.id}`));
+    expect(result.narrative.citations).toEqual(MACRO_UNIVERSE.filter(row => row.id !== "SP500").map(row => `M:${row.id}`));
+    expect(result.narrative.citations).not.toContain("M:SP500");
     expect(result.stocks[0].cautions.map(fact => fact.kind)).toEqual(["model", "news"]);
     expect(result.narrative.stocks[0].summary).toContain("10/23(금) 정규장 시가→종가");
     const ids = new Set([...result.macro.indicators.map(row => `M:${row.id}`), ...result.stocks.flatMap(stock => [`R:${stock.code}`, ...stock.evidence.map(fact => fact.id), ...stock.cautions.map(fact => fact.id), ...stock.news.articles.map(article => article.id)])]);

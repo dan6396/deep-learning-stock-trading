@@ -3,6 +3,7 @@ export type * from "../types/stockInsight";
 import { adaptModelEvidence } from "./modelEvidence";
 import { record, finiteNumber, textValue, stockCode } from "./value";
 import { safeArticleUrl } from "../shared/lib/articleUrl";
+import { adaptStockAiOpinion } from "./stockOpinion";
 export function adaptDiversification(raw: unknown): Diversification | null {
   const row = record(raw), codes = Array.isArray(row.codes) ? row.codes.filter((code): code is string => stockCode(code) !== null) : [];
   if (!codes.length || codes.length > 5 || new Set(codes).size !== codes.length || !Array.isArray(row.matrix) || row.matrix.length !== codes.length) return null;
@@ -19,6 +20,7 @@ export function adaptDiversification(raw: unknown): Diversification | null {
 }
 export function adaptStockInsight(raw: unknown, expectedCode: string): StockInsight {
   const root = record(raw), s = record(root.sensitivity), news = record(root.news), meta = record(root.data_meta);
+  const aiOpinion = adaptStockAiOpinion(root.aiOpinion, expectedCode);
   if (stockCode(root.code) !== expectedCode || root.version !== 1) throw new Error("종목 근거 응답을 확인할 수 없습니다.");
   const metrics = Array.isArray(s.metrics) ? s.metrics.flatMap(value => { const m = record(value), correlation = finiteNumber(m.correlation), beta = finiteNumber(m.beta), samples = finiteNumber(m.samples);
     return ["close_to_close", "open_to_close"].includes(String(m.definition)) && correlation !== null && Math.abs(correlation) <= 1 && beta !== null && samples !== null && samples >= 200
@@ -28,11 +30,14 @@ export function adaptStockInsight(raw: unknown, expectedCode: string): StockInsi
   const articles = Array.isArray(news.articles) ? news.articles.flatMap(value => { const a = record(value), id = textValue(a.id), title = textValue(a.title), url = safeArticleUrl(textValue(a.url));
     return id && title && url ? [{ id, title, url, source: textValue(a.source) ?? "", pubDate: textValue(a.pubDate) }] : []; }) : [];
   return { version: 1, code: expectedCode, name: textValue(root.name) ?? expectedCode, status: root.status === "ready" ? "ready" : "no_model", baseDate: textValue(root.baseDate), model: adaptModelEvidence(root.model),
+    ...(aiOpinion ? { aiOpinion } : {}),
     sensitivity: { status: s.status === "ready" && metrics.length === 2 ? "ready" : "preparing", metrics, samples: finiteNumber(s.samples) ?? 0, asOf: textValue(s.asOf),
       periodStart: textValue(s.periodStart), periodEnd: textValue(s.periodEnd), complete: s.complete === true,
       conditional: validConditional ? { count: nums[0]!, total: nums[1]!, ratioPct: nums[2]!, baselinePct: nums[3]!, baselineCount: nums[4]!, baselineTotal: nums[5]! } : null,
       source: textValue(s.source) ?? "", note: textValue(s.note) ?? "" },
-    news: { summary: textValue(news.summary) ?? "", source: news.source === "llm" ? "llm" : "template", bodyCollected: false, limitation: textValue(news.limitation) ?? "기사 본문은 수집하지 않았습니다.", articles,
+    news: { summary: textValue(news.summary) ?? "", source: news.source === "llm" ? "llm" : "template", bodyCollected: news.bodyCollected === true, limitation: textValue(news.limitation) ?? "본문 확보 여부는 기사마다 다를 수 있습니다.", articles,
+      ...(news.summaryBasis === "body" || news.summaryBasis === "title" ? { summaryBasis: news.summaryBasis } : {}),
+      ...(news.summarySource === "llm" || news.summarySource === "template" ? { summarySource: news.summarySource } : {}),
       citations: Array.isArray(news.citations) ? news.citations.filter((id): id is string => typeof id === "string" && articles.some(a => a.id === id)) : [] },
     cautions: Array.isArray(root.cautions) ? root.cautions.filter((v): v is string => typeof v === "string") : [], data_meta: { source: "cache", asOf: textValue(meta.asOf) } };
 }

@@ -100,6 +100,9 @@
   .briefing-macro-grid.is-domestic {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .briefing-macro-grid.is-domestic.has-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   .briefing-macro-grid.is-us,
   .briefing-macro-grid.is-fx-rate {

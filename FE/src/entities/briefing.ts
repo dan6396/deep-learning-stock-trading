@@ -2,6 +2,7 @@ import { finiteNumber, nonnegativeInteger, record, stockCode, textValue } from "
 import { formatNumber } from "../shared/lib/format";
 import { adaptModelEvidence, type ModelEvidence } from "./modelEvidence";
 import { adaptDiversification } from "./stockInsight";
+import { adaptStockAiOpinion, type StockOpinion } from "./stockOpinion";
 import type { Diversification } from "./stockInsight";
 import { OUTLOOK_STANCES, type MarketOutlook, type HeadlineSummary, type PreOpenIndicator } from "../types/preOpenMacro";
 export type { PreOpenIndicator, MarketOutlook, HeadlineSummary } from "../types/preOpenMacro";
@@ -151,6 +152,7 @@ export type BriefingNarrative = {
   fieldSources?: NarrativeFieldSources;
   marketOutlook?: MarketOutlook;
   newsSummaries?: HeadlineSummary[];
+  stockOpinions?: StockOpinion[];
 };
 
 export type BriefingDataSource = "live" | "cache" | "sample";
@@ -508,10 +510,16 @@ export function adaptBriefingNarrative(raw: unknown): BriefingNarrative {
     ? { stance: outlook.stance as MarketOutlook["stance"], text: String(outlook.text), citations: Array.isArray(outlook.citations) ? outlook.citations.filter((id): id is string => typeof id === "string" && id.startsWith("M:")) : [], source: outlook.source === "llm" ? "llm" : "template" } : undefined;
   const newsSummaries = Array.isArray(obj.newsSummaries) ? obj.newsSummaries.flatMap(raw => {
     const row = record(raw), code = stockCode(row.code), text = textValue(row.text);
-    return code && text ? [{ code, text, citations: Array.isArray(row.citations) ? row.citations.filter((id): id is string => typeof id === "string" && id.startsWith(`N:${code}:`)) : [], source: row.source === "llm" ? "llm" as const : "template" as const }] : [];
+    return code && text ? [{ code, text, citations: Array.isArray(row.citations) ? row.citations.filter((id): id is string => typeof id === "string" && id.startsWith(`N:${code}:`)) : [], source: row.source === "llm" ? "llm" as const : "template" as const,
+      ...(row.summaryBasis === "body" || row.summaryBasis === "title" ? { summaryBasis: row.summaryBasis as "body" | "title" } : {}),
+      ...(Array.isArray(row.sentenceCitations) ? { sentenceCitations: row.sentenceCitations.map(list => Array.isArray(list) ? list.filter((id): id is string => typeof id === "string" && id.startsWith(`N:${code}:`)) : []) } : {}) }] : [];
   }) : undefined;
 
   const rawFieldSources = record(obj.fieldSources);
+  const stockOpinions = Array.isArray(obj.stockOpinions) ? obj.stockOpinions.flatMap(raw => {
+    const row = record(raw), code = stockCode(row.code), opinion = code ? adaptStockAiOpinion(row, code) : undefined;
+    return code && opinion ? [{ code, ...opinion }] : [];
+  }) : undefined;
   const overviewSource: FieldSource | undefined =
     rawFieldSources.overview === "llm" || rawFieldSources.overview === "template" ? rawFieldSources.overview : undefined;
   const marketNoteSource: FieldSource | undefined =
@@ -539,6 +547,7 @@ export function adaptBriefingNarrative(raw: unknown): BriefingNarrative {
     ...(fieldSources !== undefined ? { fieldSources } : {}),
     ...(marketOutlook ? { marketOutlook } : {}),
     ...(newsSummaries ? { newsSummaries } : {}),
+    ...(stockOpinions ? { stockOpinions } : {}),
   };
 }
 
@@ -880,7 +889,7 @@ export function parseCitation(id: string): ParsedCitation {
 
   if (clean.startsWith("M:")) {
     const macroId = clean.slice(2);
-    const isValid = (VALID_MACRO_IDS as readonly string[]).includes(macroId);
+    const isValid = macroId !== "SP500" && (VALID_MACRO_IDS as readonly string[]).includes(macroId);
     return {
       rawId: clean,
       type: "macro",

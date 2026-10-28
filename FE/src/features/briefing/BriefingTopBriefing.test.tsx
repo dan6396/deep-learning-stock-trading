@@ -221,7 +221,15 @@ function StockEvidenceList({ stocks, narrative, onCitationClick = () => {} }: {
 }
 
 describe("BriefingMacroGrid", () => {
-  it("renders all 6 indicators with correct formatting, sessions and context note", () => {
+  it("omits SP500 and its empty US group for pre-open briefing while keeping domestic indices", () => {
+    render(<BriefingMacroGrid macro={{ ...mockBriefingData.macro, preOpen: [] }} />);
+    expect(screen.queryByTestId("macro-card-SP500")).not.toBeInTheDocument();
+    expect(screen.queryByText("미국 증시")).not.toBeInTheDocument();
+    expect(screen.getByText("국내 지수·참고 통계")).toBeInTheDocument();
+    expect(screen.getByTestId("macro-card-KOSPI")).toBeInTheDocument();
+    expect(screen.getByTestId("macro-card-KOSDAQ")).toBeInTheDocument();
+  });
+  it("renders supported indicators with correct formatting, sessions and context note", () => {
     render(<BriefingMacroGrid macro={mockBriefingData.macro} />);
 
     // Context note
@@ -242,7 +250,7 @@ describe("BriefingMacroGrid", () => {
 
     // 권장 4: session === "closed"이고 context.usSessionDate가 있으면 "10/22 미국장 종가", session === "open"이면 "미국 장중"
     expect(screen.getByTestId("macro-card-NASDAQ")).toHaveTextContent("10/22 종가 · Yahoo");
-    expect(screen.getByTestId("macro-card-SP500")).toHaveTextContent("장중 · Yahoo");
+    expect(screen.queryByTestId("macro-card-SP500")).not.toBeInTheDocument();
   });
 
   it("handles unavailable indicators without displaying asOf time", () => {
@@ -282,6 +290,12 @@ describe("BriefingMacroGrid", () => {
 });
 
 describe("BriefingNarrativeCard", () => {
+  it("hides legacy SP500 citation chips while preserving displayed targets", () => {
+    render(<BriefingNarrativeCard narrative={{ ...mockBriefingData.narrative, citations: ["M:SP500", "M:KOSPI"] }}
+      stocks={mockBriefingData.stocks} isGenerating={false} generateError={null} onGenerate={vi.fn()} onCitationClick={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /S&P 500/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "시장 지표 코스피 카드로 이동" })).toBeInTheDocument();
+  });
   it("renders LLM narrative badge, macroAsOf and disabled button when fresh", () => {
     const onGenerate = vi.fn();
     const onCitationClick = vi.fn();

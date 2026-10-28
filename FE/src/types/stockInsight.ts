@@ -1,4 +1,6 @@
 import type { ModelEvidence } from "./modelEvidence";
+import type { StockAiOpinion } from "./stockOpinion";
+export type { StockAiOpinion } from "./stockOpinion";
 export type SensitivityMetric = { definition: "close_to_close" | "open_to_close"; correlation: number; beta: number; samples: number };
 export type NasdaqSensitivity = {
   asOf?: string | null;
@@ -16,7 +18,8 @@ export type Diversification = {
 export type StockInsight = {
   version: 1; code: string; name: string; status: "ready" | "no_model"; baseDate: string | null;
   model: ModelEvidence | null; sensitivity: NasdaqSensitivity;
-  news: { summary: string; source: "llm" | "template"; bodyCollected: false; limitation: string;
+  aiOpinion?: StockAiOpinion;
+  news: { summary: string; source: "llm" | "template"; summarySource?: "llm" | "template"; summaryBasis?: "body" | "title"; bodyCollected: boolean; limitation: string;
     articles: { id: string; title: string; url: string; source: string; pubDate: string | null }[]; citations: string[] };
   cautions: string[]; data_meta: { source: "cache"; asOf: string | null };
 };

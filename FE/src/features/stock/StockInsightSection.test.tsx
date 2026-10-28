@@ -40,9 +40,11 @@ describe("transparent input observations", () => {
     expect(screen.getByTitle("모델 일치도")).toHaveTextContent("일치");
     expect(screen.getByText("상위 1%").closest("div")).toHaveTextContent("20일 모델2위");
     expect(screen.getByRole("meter")).toHaveAttribute("value", "95");
+    expect(screen.queryByText("공시 제목을 확인했습니다.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "뉴스 이슈와 출처" })).not.toBeInTheDocument();
     expect(screen.getByRole("table")).toHaveTextContent("종가→종가"); expect(screen.getByText(/51\/100일/)).toBeInTheDocument();
     expect(container).toHaveTextContent("1.60");
-    expect(container).toHaveTextContent("모델 기여도"); expect(container).toHaveTextContent("기사 본문을 수집하지 않았습니다"); expectReadableUserText(container);
+    expect(container).toHaveTextContent("모델 기여도"); expectReadableUserText(container);
   });
 
   it("shows toggle only when content actually overflows (scrollHeight > clientHeight), toggles expansion and resets on text change", () => {
@@ -55,11 +57,12 @@ describe("transparent input observations", () => {
       Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => 60 });
 
       const longNoteWithDecimal = "최근 1년 동안 나스닥 상승 시 동반 상승 비율은 평균 51.2%보다 높게 나타났으며, 통계적으로 유의미한 변동 패턴을 분석하여 모델 입력 특징으로 반영했습니다.";
-      const { rerender } = render(<CollapsibleNote text={longNoteWithDecimal} />);
+      const { rerender } = render(<CollapsibleNote className="stock-ai-summary" text={longNoteWithDecimal} />);
 
       const noteEl = screen.getByText(longNoteWithDecimal);
       expect(noteEl).toBeInTheDocument();
       expect(noteEl).toHaveClass("insight-note-clamped");
+      expect(noteEl.parentElement).toHaveClass("stock-ai-summary");
 
       const toggleBtn = screen.getByRole("button", { name: "자세히" });
       expect(toggleBtn).toBeInTheDocument();
@@ -73,7 +76,7 @@ describe("transparent input observations", () => {
 
       // text 변경 시 expanded 상태 리셋
       const updatedNote = "다른 긴 설명 텍스트입니다. 변동성 요인이 추가되어 관측치가 갱신되었습니다.";
-      rerender(<CollapsibleNote text={updatedNote} />);
+      rerender(<CollapsibleNote className="stock-ai-summary" text={updatedNote} />);
       const updatedToggleBtn = screen.getByRole("button", { name: "자세히" });
       expect(updatedToggleBtn).toHaveAttribute("aria-expanded", "false");
       expect(screen.getByText(updatedNote)).toHaveClass("insight-note-clamped");
