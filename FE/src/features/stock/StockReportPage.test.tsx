@@ -85,15 +85,15 @@ describe("stock report using actual fetch fixtures", () => {
     mount();
     const opinion = await screen.findByRole("region", { name: "AI 최종 의견" });
     expect(within(opinion).getByText("AI 의견 · 투자 권유 아님 · 방향 판단 아님")).toBeInTheDocument();
-    expect(within(opinion).getByText(source === "llm" ? "AI 요약" : "규칙 기반 기본 안내")).toBeInTheDocument();
+    expect(within(opinion).getAllByText(source === "llm" ? "AI 요약" : "규칙 기반 기본 안내")[0]).toBeInTheDocument();
     expect(opinion.querySelector(".stock-ai-summary p")).toHaveTextContent(body.aiOpinion.text);
     expect(opinion.querySelector(".stock-ai-summary p")).toHaveStyle({ WebkitLineClamp: "5" });
     expect(opinion.querySelector("time")).toHaveTextContent("생성 시각 2026. 10. 07. 18:00 (KST)");
     const news = screen.getByRole("region", { name: "관련 뉴스" });
     const summary = within(opinion).getByText(body.news.summary);
     expect(summary.parentElement).toHaveClass("stock-ai-summary");
-    expect(opinion).toHaveTextContent("기사 제목 기반 요약");
-    expect(within(opinion).getByText(`${source === "llm" ? "AI 요약" : "규칙 기반 기본 안내"} · 기사 제목 기반 요약`)).toBeInTheDocument();
+    if (source === "llm") expect(opinion).toHaveTextContent("제목 기반");
+    expect(within(opinion).getAllByText(`${source === "llm" ? "AI 요약 · 제목 기반" : "규칙 기반 기본 안내"}`)[0]).toBeInTheDocument();
     expect(within(opinion).getByRole("heading", { name: "관련 뉴스 요약" })).toBeInTheDocument();
     expect(within(news).queryByText(body.news.summary)).not.toBeInTheDocument();
     expect(within(opinion).getByRole("group", { name: "뉴스 요약 인용 근거" })).toHaveTextContent("관련 기사 1");
@@ -128,7 +128,7 @@ describe("stock report using actual fetch fixtures", () => {
     expect(screen.queryByRole("region", { name: "AI 최종 의견" })).not.toBeInTheDocument();
     expect(news).toContainElement(summary);
     expect(summary.parentElement).toHaveClass("stock-ai-summary");
-    expect(within(news).getByText(`${summarySource === "llm" ? "AI 요약" : "규칙 기반 기본 안내"} · 기사 제목 기반 요약`)).toBeInTheDocument();
+    expect(within(news).getByText(`${summarySource === "llm" ? "AI 요약 · 제목 기반" : "규칙 기반 기본 안내"}`)).toBeInTheDocument();
     expect(summary.compareDocumentPosition(news.querySelector("ul")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(news).getByRole("group", { name: "뉴스 요약 인용 근거" })).toHaveTextContent("관련 기사 1");
     expect(document.querySelectorAll('.insight-news-chips')).toHaveLength(0);
@@ -260,6 +260,21 @@ describe("stock report using actual fetch fixtures", () => {
   it("keeps previous analysis/quote data with background failure warnings", async () => {
     let failure = false; backend(path => failure && (path.includes("stock-analysis") || path.includes("quote")) ? Promise.resolve(new Response("error", { status: 502 })) : undefined); mount(); await screen.findByRole("heading", { name: "종목 A" }); await waitFor(() => expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원"));
     failure = true; fireEvent.click(screen.getByRole("button", { name: "다시 조회" })); await screen.findByText("이전 조회 결과 · 분석 갱신 실패"); await screen.findByText("이전 조회 결과 · 시세 갱신 실패"); expect(screen.getByTestId("report-price")).toHaveTextContent("12,300원");
+  });
+  it("keeps the stock page and article links usable when the strict sentence gate replaces both fields", async () => {
+    const saved = insightBody();
+    const body = { ...saved, aiOpinion: { source: "template", text: "모집단 199개 중 모델 순위 1위이며 순위 점수는 1.6015입니다. 입력 지표는 비교 종목 안에서의 상대적 위치이며 순위의 원인이 아닙니다.", citations: ["R:005930"] },
+      news: { ...saved.news, source: "template", summarySource: "template", summaryBasis: "title", summary: "관련 기사 1건의 제목·출처·발행 시각을 확인할 수 있습니다." } };
+    backend(path => path.includes("stock-insight") ? Promise.resolve(jsonResponse(body)) : undefined);
+    mount();
+    const opinion = await screen.findByRole("region", { name: "AI 최종 의견" });
+    expect(within(opinion).getAllByText("규칙 기반 기본 안내")[0]).toBeInTheDocument();
+    expect(within(opinion).getAllByText("규칙 기반 기본 안내")[1]).toBeInTheDocument();
+    expect(within(opinion).getByRole("heading", { name: "관련 뉴스 요약" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /^모델 순위/ })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "가격" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /원본 기사/ })).toHaveAttribute("href", "https://news.example/article");
+    expectReadableUserText(document.body, { abnormal: true });
   });
   it("combines quote and history in one card, preserving observations before news and model rank", async () => {
     backend(); mount();

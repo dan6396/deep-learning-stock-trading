@@ -109,11 +109,12 @@ export function decodeGoogleArticle(raw: string): string | null {
   try { const decoded = Buffer.from(id, "base64url").toString("utf8"); const candidate = decoded.match(/https:\/\/[^\s\x00-\x20"<>]+/)?.[0]; return candidate ? publicArticleUrl(candidate).toString() : null; } catch { return null; }
 }
 
-export function createArticleBodyStore({ directory, transport = fetchPublicArticle, now = Date.now, timeoutMs = 5000, trace }: { directory: string; transport?: ArticleTransport; now?: () => number; timeoutMs?: number; trace?: (event: ArticleTrace) => void }) {
+export function createArticleBodyStore({ directory, transport = fetchPublicArticle, now = Date.now, timeoutMs = 5000, trace, persist = true }: { directory: string; transport?: ArticleTransport; now?: () => number; timeoutMs?: number; trace?: (event: ArticleTrace) => void; persist?: boolean }) {
   const memo = new Map<string, ArticleBodyRecord>(), pending = new Map<string, Promise<ArticleBodyRecord>>(), policies = new Map<string, Promise<{ text: string; status: number }>>();
   const path = (url: string) => join(directory, ".private-news-bodies", `${key(url)}.json`);
   async function read(url: string): Promise<ArticleBodyRecord | null> {
     if (memo.has(url)) return memo.get(url)!;
+    if (!persist) return null;
     try { const value = JSON.parse(await readFile(path(url), "utf8"));
       if (value.version !== 1 || value.url !== url || !Number.isFinite(value.retryAt) || !["ready", "unavailable"].includes(value.status)) return null;
       if (value.status === "ready" && (!value.body || value.body.url !== url || typeof value.body.text !== "string" || value.body.text.length < 100 || value.body.text.length > 2000 || !Number.isFinite(Date.parse(value.body.collectedAt)))) return null;
@@ -174,7 +175,7 @@ export function createArticleBodyStore({ directory, transport = fetchPublicArtic
         result = { version: 1, url, status: "unavailable", reason, ...(typeof code === "string" && /^[A-Z0-9_]{1,50}$/.test(code) ? { failureCode: code } : {}), attemptedAt: now(), retryAt: now() + Math.min(21_600_000, 60_000 * 2 ** Math.min(failures - 1, 9)), failures };
       } finally { if (timer !== undefined) clearTimeout(timer); controller.abort(); }
       memo.set(url, result);
-      try { const dir = join(directory, ".private-news-bodies"); await mkdir(dir, { recursive: true }); const temp = path(url) + ".tmp"; await writeFile(temp, JSON.stringify(result), "utf8"); await rename(temp, path(url)); } catch { /* Cache persistence cannot fail the analysis run. */ }
+      if (persist) try { const dir = join(directory, ".private-news-bodies"); await mkdir(dir, { recursive: true }); const temp = path(url) + ".tmp"; await writeFile(temp, JSON.stringify(result), "utf8"); await rename(temp, path(url)); } catch { /* Cache persistence cannot fail the analysis run. */ }
       return result;
     })();
     pending.set(url, work); try { return await work; } finally { pending.delete(url); }

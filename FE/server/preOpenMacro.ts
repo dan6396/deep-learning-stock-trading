@@ -24,7 +24,7 @@ export function buildPreOpenIndicators(indicators: MacroIndicator[]): PreOpenInd
   const currentUsDate = nasdaq?.asOf ? usMarketDate(nasdaq.asOf) : null;
   const closedNasdaq = (nasdaq?.history ?? []).filter(row => currentUsDate && (nasdaq?.session === "open" ? row.date < currentUsDate : row.date <= currentUsDate));
   const referenceDate = closedNasdaq[closedNasdaq.length - 1]?.date ?? (nasdaq?.session === "closed" ? currentUsDate : null);
-  const rows = (["UST10Y", "NASDAQ", "USDKRW"] as const).map(id => {
+  const rows = (["UST10Y", "NASDAQ", "USDKRW", "SOX"] as const).filter(id => id !== "SOX" || indicators.some(row => row.id === "SOX")).map(id => {
     const observed = indicators.find(row => row.id === id);
     const history = (observed?.status === "ok" ? observed.history ?? [] : []).filter(row => referenceDate && row.date <= referenceDate).slice(-5);
     const last = history[history.length - 1], previous = history[history.length - 2], first = history[0];

@@ -10,19 +10,19 @@ describe("read-only stock insight", () => {
     const rank = vi.fn(async () => [row]), briefing = vi.fn(async () => ({ stocks: [{ code: "005930", news: { articles: [{ id: "N:005930:1", title: "공시", url: "https://example.com/news", source: "발행처", pubDate: null }] } }], narrative: { status: "llm", stocks: [{ code: "005930", source: "llm", summary: "공시 제목을 확인했습니다.", citations: ["N:005930:1", "R:005930"] }] }, model: { runStartedAt: "2026-10-22T01:00:00Z" } }));
     const observations = { get: vi.fn(async () => ({ sensitivities: [sensitivity] })) };
     const service = createStockInsightService({ rank, briefing, observations });
-    const result = await service("005930", {}); expect(result.model.lookbacks).toEqual([]); expect(result.model.features).toEqual([]);
+    const result = await service("005930", { BRIEFING_NEWS_VALIDATION: "on" }); expect(result.model.lookbacks).toEqual([]); expect(result.model.features).toEqual([]);
     expect(result.news).toMatchObject({ source: "template", summarySource: "template", bodyCollected: false, summary: "관련 기사 1건의 제목·출처·발행 시각을 확인할 수 있습니다.", citations: ["N:005930:1"] });
     expect(result.sensitivity.status).toBe("preparing"); expect(result.cautions.join(" ")).toContain("하루 등락만으로");
     await expect(service("000000", {})).rejects.toThrow("6자리"); expect(rank).toHaveBeenCalledTimes(1);
   });
-  const article = { id: "N:005930:1", title: "삼성전자 공시", url: "https://example.com/news", source: "발행처", pubDate: null };
-  function context() { return { model: null, macro: { asOf: null, indicators: [] },
+  const article = { id: "N:005930:1", title: "삼성전자 공시 서비스 공개", url: "https://example.com/news", source: "발행처", pubDate: null };
+  function context() { return { newsValidation: "on", model: null, macro: { asOf: null, indicators: [] },
     stocks: [{ code: "005930", name: "삼성전자", rank: 1, rankScore: 1.6, poolSize: 200, topPercent: 0.5, evidence: [], cautions: [], news: { status: "collected", articles: [article] } }],
     narrative: { status: "template", stocks: [{ code: "005930", source: "llm", summary: "사용하면 안 되는 종목 요약입니다.", citations: ["N:005930:1"] }],
-      newsSummaries: [{ code: "005930", text: "공시 주제를 다룬 기사입니다. 공시를 발표했다고 보도했습니다.", source: "llm", citations: ["N:005930:1"] }] } }; }
+      newsSummaries: [{ code: "005930", text: "공시를 다룬 기사입니다. 서비스 공개를 다룬 기사입니다.", source: "llm", citations: ["N:005930:1"] }] } }; }
   function service(value) { return createStockInsightService({ rank: async () => [], briefing: async () => value, observations: { get: async () => ({ sensitivities: [sensitivity] }) } }); }
   it("uses currently valid newsSummaries independent of legacy root status", async () => {
-    const data = context(), result = await service(data)("005930", {});
+    const data = context(), result = await service(data)("005930", { BRIEFING_NEWS_VALIDATION: "on" });
     expect(result.news).toMatchObject({ summary: data.narrative.newsSummaries[0].text, source: "llm", summarySource: "llm", citations: [article.id] });
     expect(adaptStockInsight(result, "005930").news.summarySource).toBe("llm");
   });
@@ -34,13 +34,13 @@ describe("read-only stock insight", () => {
     if (reason === "wrongCitation") headline.citations = ["N:005930:9"];
     if (reason === "wrongStock") headline.code = "000660";
     if (reason === "missingArticles") data.stocks[0].news.articles = [];
-    const result = await service(data)("005930", {});
+    const result = await service(data)("005930", { BRIEFING_NEWS_VALIDATION: "on" });
     expect(result.news.summarySource).toBe("template"); expect(result.news.source).toBe("template");
     expect(result.news.summary).not.toContain("사용하면 안 되는 종목 요약");
   });
   it("uses the same safe sentence selection as briefing and preserves older adapter payloads", async () => {
     const data = context(); data.narrative.newsSummaries[0].text += " 주가 상승이 예상됩니다.";
-    const result = await service(data)("005930", {});
+    const result = await service(data)("005930", { BRIEFING_NEWS_VALIDATION: "on" });
     expect(result.news.summarySource).toBe("llm"); expect(result.news.summary).not.toContain("예상");
     const legacy = structuredClone(result); delete legacy.news.summarySource;
     expect(adaptStockInsight(legacy, "005930").news.summarySource).toBeUndefined();

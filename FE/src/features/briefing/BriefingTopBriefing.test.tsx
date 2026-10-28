@@ -1656,7 +1656,7 @@ beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-
 describe("market-first briefing layout", () => {
   it("keeps narrative, pre-open indicators, opinion, TOP5, other markets and composition in one invariant DOM order", () => {
       const data = structuredClone(mockExtendedBriefingData);
-      data.macro.preOpen = [{ id: "UST10Y", name: "미국 국채 10년 금리", unit: "%", value: 4.99, change: -0.002, changePct: -0.04, fiveDayChange: -0.13, fiveDayChangePct: -2.5, asOf: "2026-10-23", source: "yahoo", status: "ok", history: [{ date: "2026-10-23", value: 4.99 }], comment: { text: "관측된 금리입니다.", placeholder: true, ruleId: "fixture" } }];
+      data.macro.preOpen = [{ id: "UST10Y", name: "미국 국채 10년 금리", unit: "%", value: 4.99, change: -0.002, changePct: -0.04, fiveDayChange: -0.13, fiveDayChangePct: -2.5, asOf: "2026-10-23", source: "yahoo", status: "ok", history: [{ date: "2026-10-23", value: 4.99 }], comment: { text: "관측된 금리입니다.", ruleId: "fixture" } }];
       data.narrative.marketOutlook = { stance: "중립", text: "장 초반 방향은 중립입니다.", citations: ["M:UST10Y"], source: "llm" };
       const { container } = render(<MemoryRouter><BriefingTopContainer renderTopFive={renderTestTopFive} briefing={data} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
       const selectors = [".briefing-narrative-card", ".preopen-grid", ".preopen-outlook", "[data-testid='mock-top5-table']", ".briefing-macro-section", ".briefing-composition-card"];

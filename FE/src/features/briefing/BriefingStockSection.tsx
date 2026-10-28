@@ -246,7 +246,7 @@ export function BriefingStockEvidence({
         {/* 관련 기사 출처 목록 (최대 3건) */}
         <div className="briefing-stock-news-section">
           {headlineSummary && <div className="briefing-headline-summary" data-testid={`headline-summary-${stock.code}`}>
-            <small>기사 제목 기반 요약 · {headlineSummary.source === "llm" ? "AI 요약" : "기본 안내"} · 본문 미수집</small>
+            <small>{headlineSummary.source === "llm" ? `AI 요약 · ${headlineSummary.summaryBasis === "body" ? "기사 본문 기반" : headlineSummary.summaryBasis === "excerpt" ? "발췌 기반" : "제목 기반"}` : "규칙 기반 기본 안내"}</small>
             <p>{headlineSummary.text}</p>
             <div>{headlineSummary.citations.map(id => { const article = stock.news.articles.find(row => row.id === id); return article ? <a key={id} href={`#${citationDomId(id)}`} onClick={event => { event.preventDefault(); onCitationClick(id); }}>{article.source || "기사 근거"}</a> : null; })}</div>
           </div>}

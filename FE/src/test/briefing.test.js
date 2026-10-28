@@ -258,7 +258,7 @@ describe("model TOP5 briefing", () => {
   it("labels intraday and mismatched US dates without claiming a completed previous session", () => {
     const intraday = structuredClone(macro); intraday.indicators[2].session = "open";
     expect(buildBriefingInput(rows(), marker, intraday, now).macro.context?.targetSessionNote).toContain("장중 관측");
-    intraday.indicators[3].asOf = "2026-10-21T20:00:00Z";
+    intraday.indicators.find(row => row.id === "SP500").asOf = "2026-10-21T20:00:00Z";
     expect(buildBriefingInput(rows(), marker, intraday, now).macro.context?.usSessionDate).toBeNull();
   });
   it("GET never requests generation; no_run POST never requests it; run changes invalidate results", async () => {

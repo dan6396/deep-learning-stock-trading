@@ -1,3 +1,4 @@
+import { configuredNewsValidation } from "./newsValidation";
 import { getRankPayload } from "./pipelineResults";
 import { getBriefing } from "./briefing";
 import { modelEvidence } from "../src/types/modelEvidence";
@@ -5,7 +6,7 @@ import { stockObservations } from "./stockObservations";
 import { safeArticleUrl } from "../src/shared/lib/articleUrl";
 import type { StockInsight } from "../src/types/stockInsight";
 import { currentHeadlineSummary, readCachedHeadlineSummaries } from "./headlineSummaryCache";
-import { cachedArticleBodies } from "./articleBodies";
+import { cachedArticleContext } from "./articlePrivacy";
 import { pipelineOutputDir } from "./pipelineFreshness";
 declare const process: { env: Record<string, string | undefined> };
 export function createStockInsightService({ rank = getRankPayload, briefing = getBriefing, observations = stockObservations } = {}) {
@@ -20,8 +21,9 @@ export function createStockInsightService({ rank = getRankPayload, briefing = ge
       return url && article.title ? [{ id: `N:${code}:${i + 1}`, title: article.title, url, source: article.source ?? "", pubDate: article.pub_date ?? null }] : [];
     }).slice(0, 3);
     const candidate = context?.narrative.newsSummaries?.find(stock => stock.code === code);
-    const articleBodies = top && context ? await cachedArticleBodies(context.stocks, pipelineOutputDir(env)) : {};
-    let headline = top && context?.macro ? currentHeadlineSummary(candidate, { ...context, articleBodies }, index) : null;
+    const privateContext = top && context ? await cachedArticleContext(context, pipelineOutputDir(env)) : { articleBodies: {}, articleExcerpts: {} };
+    const articleBodies: import("./articleBodies").ArticleBodyContext = privateContext.articleBodies;
+    let headline = top && context?.macro ? currentHeadlineSummary(candidate, { ...context, ...privateContext, newsValidation: configuredNewsValidation(env) }, index) : null;
     if (!headline && top && context?.macro && context.model) {
       headline = (await readCachedHeadlineSummaries(context, env)).find(stock => stock.code === code) ?? null;
     }
@@ -31,8 +33,8 @@ export function createStockInsightService({ rank = getRankPayload, briefing = ge
       ...(opinion ? { aiOpinion: { source: opinion.source, text: opinion.text, citations: opinion.citations,
         ...(context?.narrative.generatedAt ? { generatedAt: context.narrative.generatedAt } : {}) } } : {}),
       news: { summary: headline ? headline.text : articles.length ? `관련 기사 ${articles.length}건의 제목·출처·발행 시각을 확인할 수 있습니다.` : "현재 연결된 관련 기사가 없습니다.",
-        source: headline ? "llm" : "template", summarySource: headline ? "llm" : "template", summaryBasis: headline?.summaryBasis ?? "title", bodyCollected: articles.some(article => Boolean(articleBodies[article.id])), limitation: headline?.summaryBasis === "body" ? "수집된 기사 제목·본문에 한정한 요약입니다. 사실 확인이나 호재·악재 판정이 아닙니다." : "기사 제목에 한정한 요약입니다. 본문 확보 여부는 기사마다 다르며 사실 확인이나 호재·악재 판정이 아닙니다.",
-        articles, citations: headline ? headline.citations : articles.map(article => article.id) },
+        source: headline ? "llm" : "template", summarySource: headline ? "llm" : "template", ...(headline ? { summaryBasis: headline.summaryBasis } : {}), bodyCollected: articles.some(article => Boolean(articleBodies[article.id])), limitation: !headline ? "기사 목록을 확인할 수 있습니다." : headline.summaryBasis === "body" ? "기사 본문을 바탕으로 작성한 AI 요약입니다." : headline.summaryBasis === "excerpt" ? "기사 발췌를 바탕으로 작성한 AI 요약입니다." : "기사 제목을 바탕으로 작성한 AI 요약입니다.",
+        ...(headline?.validation === "off" ? { validation: "off" } : {}), articles, citations: headline ? headline.citations : articles.map(article => article.id) },
       cautions: ["다음 거래일 시가→종가 상대 순위입니다. 하루 등락만으로 모델을 평가하지 않습니다.",
         "입력 특징의 백분위는 모델 기여도나 인과 설명이 아닙니다.",
         ...(model?.agreement === "불일치" ? ["20일·120일 모델의 상대 순위 차이가 비교 종목 수의 25%를 넘습니다."] : []),

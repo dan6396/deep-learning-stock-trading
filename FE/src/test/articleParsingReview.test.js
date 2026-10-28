@@ -36,7 +36,10 @@ describe("bounded article and robots parsing", () => {
     const stored = { ...input, articleBodies: undefined, articleBodyHashes: articleBodyHashes(input) };
     expect(briefingInputHash(stored)).toBe(briefingInputHash(input));
     expect(briefingInputHash({ ...input, articleBodies: { "N:005930:1": { text: text + "정정된 기사입니다." } } })).not.toBe(briefingInputHash(stored));
-    expect(removeArticlePassages({ overview: text.slice(0, 130), marketNote: "독립된 관측 요약입니다." }, input)).toEqual({ overview: "", marketNote: "독립된 관측 요약입니다." });
+    // Whole source sentences are removed; a truncated final fragment below 40
+    // characters is deliberately permitted by the new short-quote policy.
+    expect(removeArticlePassages({ overview: text.trim(), marketNote: "독립된 관측 요약입니다." }, input)).toEqual({ overview: "", marketNote: "독립된 관측 요약입니다." });
+    expect(removeArticlePassages({ overview: text.trim() + " 독립된 관측 요약입니다." }, input)).toEqual({ overview: "독립된 관측 요약입니다." });
   });
   it("accepts only HTML/XHTML for extraction even when another content type contains article markup", async () => {
     const store = createArticleBodyStore({ directory: "node_modules/.tmp/non-html", transport: async url => url.endsWith("robots.txt") ? { status: 404, text: "" } : { status: 200, contentType: "application/pdf", text: "<article>" + "article".repeat(100) + "</article>" } });

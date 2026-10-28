@@ -15,7 +15,8 @@ export const MACRO_UNIVERSE = [
   { id: "USDKRW", name: "원·달러 환율", symbol: "KRW=X", unit: "KRW" },
   { id: "UST10Y", name: "미국 국채 10년 금리", symbol: "^TNX", unit: "%" },
 ] as const;
-type Definition = typeof MACRO_UNIVERSE[number];
+const PREOPEN_UNIVERSE = [{ id: "SOX", name: "필라델피아 반도체 지수", symbol: "^SOX", unit: "pt" }] as const;
+type Definition = typeof MACRO_UNIVERSE[number] | typeof PREOPEN_UNIVERSE[number];
 export type MacroIndicator = {
   id: Definition["id"] | "KOSPI200_NIGHT"; name: string; value: number | null; change: number | null; changePct: number | null;
   unit: Definition["unit"]; asOf: string | null; source: "yahoo" | "kis"; status: "ok" | "unavailable";
@@ -53,10 +54,10 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
   let pending: Promise<MarketMacro> | null = null;
   const getNight = createNightProvider(night, now);
   async function load(env: Record<string, string | undefined>): Promise<MarketMacro> {
-    const yahoo = Promise.all(MACRO_UNIVERSE.map(async definition => {
+    const yahoo = Promise.all([...MACRO_UNIVERSE, ...PREOPEN_UNIVERSE].map(async definition => {
       const unavailable: MacroIndicator = { id: definition.id, name: definition.name, unit: definition.unit,
         value: null, change: null, changePct: null, asOf: null, source: "yahoo", status: "unavailable",
-        ...(definition.id === "NASDAQ" || definition.id === "SP500" ? { session: null } : {}) };
+        ...(definition.id === "NASDAQ" || definition.id === "SP500" || definition.id === "SOX" ? { session: null } : {}) };
       // The deadline covers headers AND body, including transports that ignore abort.
       const controller = new AbortController();
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -81,7 +82,7 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
             const change = value - previous, changePct = change / previous * 100;
             if (!finite(change) || !finite(changePct)) return unavailable;
             return { ...unavailable, value, change, changePct, history, asOf: new Date(timestamp * 1000).toISOString(), status: "ok",
-              ...(definition.id === "NASDAQ" || definition.id === "SP500" ? { session: usSession(meta, timestamp, now()) } : {}) };
+              ...(definition.id === "NASDAQ" || definition.id === "SP500" || definition.id === "SOX" ? { session: usSession(meta, timestamp, now()) } : {}) };
           })(),
           new Promise<MacroIndicator>(resolve => { timer = setTimeout(() => { controller.abort(); resolve(unavailable); }, 8000); }),
         ]);
@@ -89,9 +90,10 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
       finally { if (timer !== undefined) clearTimeout(timer); }
     }));
     // Earliest actual observation: consumers must still show each market's own asOf.
-    const [indicators, historical] = await Promise.all([yahoo, reference(env).catch(() => null)]);
+    const [observations, historical] = await Promise.all([yahoo, reference(env).catch(() => null)]);
+    const indicators = observations.filter(row => row.id !== "SOX");
     const times = indicators.flatMap(row => row.asOf ? [row.asOf] : []).sort();
-    return { asOf: times[0] ?? null, indicators, preOpen: buildPreOpenIndicators(indicators), reference: historical };
+    return { asOf: times[0] ?? null, indicators, preOpen: buildPreOpenIndicators(observations), reference: historical };
   }
   async function base(env: Record<string, string | undefined>): Promise<MarketMacro> {
     if (cached && now() < cached.expires) return structuredClone(cached.value);
@@ -113,7 +115,8 @@ export function createMarketMacro({ transport = (...args) => fetch(...args), now
     })]).finally(() => { if (flowTimer !== undefined) clearTimeout(flowTimer); });
     const [market, observedNight, observedFlow] = await Promise.all([base(env), nightResult, flowResult]);
     const indicators = [...market.indicators, observedNight], times = indicators.flatMap(row => row.asOf ? [row.asOf] : []).sort();
-    return { ...market, asOf: times[0] ?? null, indicators, preOpen: [...(market.preOpen ?? []).filter(row => row.id !== "KOSPI200_FOREIGN_FUTURES"), observedFlow] };
+    const order = ["NASDAQ", "UST10Y", "SOX", "KOSPI200_FOREIGN_FUTURES", "USDKRW"];
+    return { ...market, asOf: times[0] ?? null, indicators, preOpen: [...(market.preOpen ?? []).filter(row => row.id !== "KOSPI200_FOREIGN_FUTURES"), observedFlow].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)) };
   };
 }
 export const getMarketMacro = createMarketMacro();

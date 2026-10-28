@@ -36,7 +36,8 @@ export function adaptStockInsight(raw: unknown, expectedCode: string): StockInsi
       conditional: validConditional ? { count: nums[0]!, total: nums[1]!, ratioPct: nums[2]!, baselinePct: nums[3]!, baselineCount: nums[4]!, baselineTotal: nums[5]! } : null,
       source: textValue(s.source) ?? "", note: textValue(s.note) ?? "" },
     news: { summary: textValue(news.summary) ?? "", source: news.source === "llm" ? "llm" : "template", bodyCollected: news.bodyCollected === true, limitation: textValue(news.limitation) ?? "본문 확보 여부는 기사마다 다를 수 있습니다.", articles,
-      ...(news.summaryBasis === "body" || news.summaryBasis === "title" ? { summaryBasis: news.summaryBasis } : {}),
+      ...(news.summaryBasis === "body" || news.summaryBasis === "excerpt" || news.summaryBasis === "title" ? { summaryBasis: news.summaryBasis } : {}),
+      ...(news.validation === "off" ? { validation: "off" as const } : {}),
       ...(news.summarySource === "llm" || news.summarySource === "template" ? { summarySource: news.summarySource } : {}),
       citations: Array.isArray(news.citations) ? news.citations.filter((id): id is string => typeof id === "string" && articles.some(a => a.id === id)) : [] },
     cautions: Array.isArray(root.cautions) ? root.cautions.filter((v): v is string => typeof v === "string") : [], data_meta: { source: "cache", asOf: textValue(meta.asOf) } };

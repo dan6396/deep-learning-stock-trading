@@ -21,7 +21,7 @@ const ORDERED_MACRO_IDS = [
 ] as const;
 
 export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
-  const indicators = macro.indicators.filter(row => row.id !== "SP500" && (!macro.preOpen || !["NASDAQ", "USDKRW", "UST10Y"].includes(row.id)));
+  const indicators = macro.indicators.filter(row => row.id !== "SP500" && (!macro.preOpen || !["NASDAQ", "SOX", "USDKRW", "UST10Y"].includes(row.id)));
   const context = macro.context;
 
   const sortedIndicators = useMemo(() => {

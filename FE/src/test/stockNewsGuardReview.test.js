@@ -11,7 +11,10 @@ describe("reviewed stock/news language boundary", () => {
     expect(stockOpinionSentenceReason(text, data, 0)).not.toBeNull(); expect(headlineSentenceReason(text, data, 0)).not.toBeNull();
   });
   it.each(["모델 순위 1위이며 순위 점수는 1.7입니다.", "입력 근거 1건을 확인했습니다."])("retains a grounded stock fact: %s", text => expect(stockOpinionSentenceReason(text, data, 0)).toBeNull());
-  it.each(["공시 내용을 다룬 기사입니다.", "공시를 발표했다고 보도했습니다."])("retains neutral article attribution: %s", text => expect(headlineSentenceReason(text, data, 0)).toBeNull());
+  it.each(["공시를 다룬 기사입니다.", "공시를 발표했다고 보도했습니다."])("retains neutral article attribution: %s", text => {
+    const grounded = text.includes("발표했다고") ? { ...data, articleBodies: { "N:005930:1": { text: "공시를 발표했습니다." } } } : data;
+    expect(headlineSentenceReason(text, grounded, 0, ["N:005930:1"])).toBeNull();
+  });
   it("preserves marketOutlook's explicit direction exception", () => {
     expect(validateMarketOutlook({ stance: "상승 우위", text: "코스피 시장 장 초반은 상승 우위로 출발할 가능성이 있습니다.", citations: ["M:NASDAQ"] }, data)).toBeNull();
   });
@@ -20,6 +23,8 @@ describe("reviewed stock/news language boundary", () => {
     expect(stockNameAliases("삼성전자")).not.toContain("전자");
     const own = { ...data, stocks: [{ ...data.stocks[0], code: "000660", name: "SK하이닉스" }] };
     expect(stockOpinionSentenceReason("하이닉스의 모델 순위 1위입니다.", own, 0)).toBeNull();
-    expect(headlineSentenceReason("하이닉스의 공시를 다룬 기사입니다.", own, 0)).toBeNull();
+    // Company aliases remain valid opinion entities; news must use actual source words.
+    expect(headlineSentenceReason("하이닉스의 공시를 다룬 기사입니다.", own, 0)).toBe("source_not_grounded");
+    expect(headlineSentenceReason("공시를 다룬 기사입니다.", own, 0)).toBeNull();
   });
 });

@@ -3,7 +3,11 @@ import type { StockOpinion } from "../src/types/stockOpinion";
 import { forbiddenNarrative, forbiddenCausality, forbiddenInvestmentAdvice, groundedNumbers, MACRO_NAME_ALIASES, futuresSupplyClaimsGrounded } from "./briefingValidation";
 import { KOSPI200_POOL } from "./kospi200Pool";
 import { forbiddenStockNewsForecast, mentionsOtherStock, compactPolicyText, stockPolicyAssertions } from "./stockNewsLanguage";
-import { stockFactAnchor } from "./stockFactAnchors";
+import { stockFactAnchor, newsFactAnchor } from "./stockFactAnchors";
+import { checkStockSentence, stockSentenceAllowlistReason, stockSentenceFactKey, uniqueStockSentenceIndices } from "./stockSentenceAllowlist";
+import { stockSentenceContext } from "./stockSentenceContext";
+import { recordStockSentenceRejections } from "./stockSentenceDiagnostics";
+import { articleFactsGrounded } from "./newsFacts";
 
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const normalize = (value: string) => value.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
@@ -97,8 +101,11 @@ export function stockOpinionSentenceReason(value: string, input: BriefingInput, 
   for (const match of normalized.matchAll(/(근거|주의|기사)(?:는|가|:)?\s*(\d+)\s*건/g)) if (Number(match[2]) !== counts[match[1]]) return "ungrounded_count";
   // Opinion facts must be independent of private supply and other stocks' numbers.
   const local = { ...input, stocks: [{ ...stock, evidence: stock.evidence.filter(row => row.kind !== "supply") }] };
-  if (!groundedNumbers(normalized, local, { stockOpinion: true }) || !marketFactsGrounded(normalized, input)) return "ungrounded_number";
-  return stockFactAnchor(normalized, input, index, [...citations]) ? null : "no_anchor";
+  const citedFact = newsFactAnchor(normalized, input, index, [...citations]);
+  if (citedFact && !articleFactsGrounded(normalized, input, index, [...citations].filter(id => id.startsWith(`N:${stock.code}:`)))) return "ungrounded_number";
+  if (!citedFact && !groundedNumbers(normalized, local, { stockOpinion: true }) || !marketFactsGrounded(normalized, input)) return "ungrounded_number";
+  if (!stockFactAnchor(normalized, input, index, [...citations])) return "no_anchor";
+  return stockSentenceAllowlistReason(normalized, stockSentenceContext(input, index, "opinion", [...citations]));
 }
 
 export function validateStockOpinion(value: unknown, input: BriefingInput, index: number): string | null {
@@ -124,7 +131,11 @@ export function validateStockOpinion(value: unknown, input: BriefingInput, index
     for (const lb of stock.analysisMetrics.lookbacks) if (new RegExp(`${lb.sessions}\\s*(?:거래일|일)\\s*모델`).test(text) && !citations.includes(`R:${stock.code}:${lb.sessions}`)) return "invalid_citation";
     for (const feature of stock.analysisMetrics.features) if (featureAliases[feature.key].some(label => text.includes(label)) && !citations.includes(`E:${stock.code}:feature:${feature.key}`)) return "invalid_citation";
   }
-  return sentences.map(sentence => stockOpinionSentenceReason(sentence, input, index, new Set(citations))).find(Boolean) ?? null;
+  const reason = sentences.map(sentence => stockOpinionSentenceReason(sentence, input, index, new Set(citations))).find(Boolean);
+  if (reason) return reason;
+  const checks = sentences.map(sentence => checkStockSentence(sentence, stockSentenceContext(input, index, "opinion", citations)));
+  if (new Set(checks.map(stockSentenceFactKey).filter(Boolean)).size < (stock.analysisMetrics ? 3 : 2)) return "insufficient_facts";
+  return uniqueStockSentenceIndices(checks).length === sentences.length ? null : "duplicate_sentence";
 }
 
 /** New inputs retain at least three factual sentences; legacy caches keep their old minimum. */
@@ -133,7 +144,11 @@ export function selectStockOpinion(value: unknown, input: BriefingInput, index: 
   const sentences = opinionSentences(value.text);
   if (sentences.length > 6) return null;
   const citations = new Set<string>(Array.isArray(value.citations) ? value.citations.filter((id): id is string => typeof id === "string") : []);
-  const text = sentences.filter(sentence => stockOpinionSentenceReason(sentence, input, index, citations) === null).join(" ");
+  const reasons = sentences.map(sentence => stockOpinionSentenceReason(sentence, input, index, citations));
+  recordStockSentenceRejections("stockOpinions", input.stocks[index].code, reasons);
+  const eligible = sentences.filter((_sentence, i) => reasons[i] === null);
+  const checks = eligible.map(sentence => checkStockSentence(sentence, stockSentenceContext(input, index, "opinion", [...citations])));
+  const text = uniqueStockSentenceIndices(checks).map(i => eligible[i]).join(" ");
   const candidate = { ...value, text };
   return validateStockOpinion(candidate, input, index) === null
     ? { code: input.stocks[index].code, text, citations: [...new Set(value.citations as string[])], source: "llm" } : null;

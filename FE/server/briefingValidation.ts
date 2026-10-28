@@ -20,6 +20,7 @@ export const roundMarketValue = (value: number) => Number(value.toLocaleString("
 export const MACRO_NAME_ALIASES: Record<string, readonly string[]> = {
   UST10Y: ["미국 국채 10년 금리", "미국 국채 10년물", "미 국채 10년물", "미 10년물", "10년물", "금리", "미국 금리", "미 금리", "10년 금리"],
   NASDAQ: ["나스닥", "NASDAQ"], USDKRW: ["원·달러 환율", "원/달러", "원·달러", "원달러", "환율"],
+  SOX: ["필라델피아 반도체 지수", "필라델피아 반도체", "반도체 지수", "SOX"],
   KOSPI200_FOREIGN_FUTURES: ["코스피200 선물 외국인 순매수", "선물 외국인", "외국인 선물", "코스피200"],
 };
 export function formatSupplyWon(value: number): string {
@@ -196,7 +197,7 @@ export function futuresSupplyClaimsGrounded(text: string, flow: NonNullable<Brie
 }
 
 /** Dates are calendar facts; clock digits, titles and identifiers cannot license quantities. */
-export function groundedNumbers(output: string, input: BriefingInput, options: { outlook?: boolean; stockOpinion?: boolean } = {}): boolean {
+export function groundedNumbers(output: string, input: BriefingInput, options: { outlook?: boolean; stockOpinion?: boolean; rejectedTokens?: string[] } = {}): boolean {
   if (/S\s*&\s*P\s*500|SP500/i.test(output)) return false;
   if (/(?:KRW|USD)/i.test(output)) return false;
   // An unrelated matching number cannot license an unpublished supply claim.
@@ -308,8 +309,20 @@ export function groundedNumbers(output: string, input: BriefingInput, options: {
       && sameMagnitude(quantity, { value: indicator.value, unit: indicator.unit === "KRW" ? "원" : indicator.unit }));
   };
   assignDirections(stripped, outputQuantities, isDirectional);
-  return outputQuantities.every(quantity => allowed.some(expected => sameMagnitude(quantity, expected)
+  const rejected = outputQuantities.filter(quantity => !allowed.some(expected => sameMagnitude(quantity, expected)
     && (quantity.direction === undefined ? quantity.value >= 0 || expected.value <= 0 : expected.directional && Math.sign(expected.value) === quantity.direction)));
+  if (options.rejectedTokens) options.rejectedTokens.push(...rejected.map(quantity => stripped!.slice(quantity.offset, quantity.end).trim()).filter(token => token.length <= 48));
+  return !rejected.length;
+}
+
+/** Numbers and units only, never surrounding words or model/article sentences. */
+export function rejectedNumericTokens(output: string, input: BriefingInput, options: { outlook?: boolean; stockOpinion?: boolean } = {}): string[] {
+  const tokens: string[] = [];
+  const accepted = groundedNumbers(output, input, { ...options, rejectedTokens: tokens });
+  if (!accepted && !tokens.length) {
+    for (const match of output.matchAll(quantityPattern)) if (!groundedNumbers(match[0], input, options)) tokens.push(match[0].trim());
+  }
+  return [...new Set(tokens)].filter(token => token.length <= 48 && /^[+-]?[\d,.]+(?:[eE][+-]?\d+)?(?:\s*(?:%p|퍼센트포인트|퍼센트|%|KRW|pt|bp|만|억|조|원|주|배|거래일|계약|개|건|위|일|년))*$/i.test(token)).slice(0, 30);
 }
 
 const disclaimerNoun = String.raw`(?:상승\s*확률|(?:기대|예측|예상)\s*수익률|수익률|확\s*률|매\s*[수도](?:\s*(?:권유|의견|추천))?|투자\s*권유|추천|권유|의견|(?:수익\s*)?보장|예측|전망|목표\s*(?:주\s*)?가|적정\s*주가|비\s*중|원인|영향)`;

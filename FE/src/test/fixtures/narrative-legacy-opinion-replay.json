@@ -1,0 +1,1213 @@
+{
+  "input": {
+    "model": {
+      "modelId": "plain_20_120_rank_mean_v1",
+      "scoreKind": "rank_zscore",
+      "baseDate": "2026-10-26",
+      "predictionTarget": "next_session_open_to_close",
+      "poolSize": 199,
+      "runStartedAt": "2026-10-26T18:40:27.957Z"
+    },
+    "macro": {
+      "asOf": "2026-10-26T18:59:52.000Z",
+      "context": {
+        "usSessionDate": "2026-10-26",
+        "targetSessionNote": "2026-10-26 미국 정규장 마감 자료이며, 모델 예측 대상은 2026-10-27 한국 정규장의 시가→종가입니다."
+      },
+      "indicators": [
+        {
+          "id": "KOSPI",
+          "name": "코스피",
+          "status": "ok",
+          "value": 5638.34,
+          "change": 168.86978515625015,
+          "changePct": 3.0874980303933217,
+          "unit": "pt",
+          "source": "yahoo",
+          "asOf": "2026-10-27T11:05:40.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 6889.740234375
+            },
+            {
+              "date": "2026-09-29",
+              "value": 6870.81005859375
+            },
+            {
+              "date": "2026-09-30",
+              "value": 6838.0400390625
+            },
+            {
+              "date": "2026-10-01",
+              "value": 6971.35009765625
+            },
+            {
+              "date": "2026-10-02",
+              "value": 7003.740234375
+            },
+            {
+              "date": "2026-10-06",
+              "value": 6941.39013671875
+            },
+            {
+              "date": "2026-10-07",
+              "value": 6803.89990234375
+            },
+            {
+              "date": "2026-10-08",
+              "value": 6625.93017578125
+            },
+            {
+              "date": "2026-10-12",
+              "value": 6384.240234375
+            },
+            {
+              "date": "2026-10-13",
+              "value": 6035.35009765625
+            },
+            {
+              "date": "2026-10-14",
+              "value": 6008.81005859375
+            },
+            {
+              "date": "2026-10-15",
+              "value": 5554.22021484375
+            },
+            {
+              "date": "2026-10-16",
+              "value": 5668.0498046875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 5768.009765625
+            },
+            {
+              "date": "2026-10-20",
+              "value": 5552.740234375
+            },
+            {
+              "date": "2026-10-21",
+              "value": 5735.66015625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 5533.77001953125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 5550.2998046875
+            },
+            {
+              "date": "2026-10-26",
+              "value": 5469.47021484375
+            },
+            {
+              "date": "2026-10-27",
+              "value": 5638.33984375
+            }
+          ]
+        },
+        {
+          "id": "KOSDAQ",
+          "name": "코스닥",
+          "status": "ok",
+          "value": 743.83,
+          "change": 16.61997802734379,
+          "changePct": 2.2854440292585405,
+          "unit": "pt",
+          "source": "yahoo",
+          "asOf": "2026-10-27T11:05:40.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 846.5800170898438
+            },
+            {
+              "date": "2026-09-29",
+              "value": 849.7999877929688
+            },
+            {
+              "date": "2026-09-30",
+              "value": 855.9099731445312
+            },
+            {
+              "date": "2026-10-01",
+              "value": 894.2899780273438
+            },
+            {
+              "date": "2026-10-02",
+              "value": 893.2899780273438
+            },
+            {
+              "date": "2026-10-06",
+              "value": 919.9199829101562
+            },
+            {
+              "date": "2026-10-07",
+              "value": 898.4299926757812
+            },
+            {
+              "date": "2026-10-08",
+              "value": 892.27001953125
+            },
+            {
+              "date": "2026-10-12",
+              "value": 849.1900024414062
+            },
+            {
+              "date": "2026-10-13",
+              "value": 837.030029296875
+            },
+            {
+              "date": "2026-10-14",
+              "value": 823.8800048828125
+            },
+            {
+              "date": "2026-10-15",
+              "value": 760.8200073242188
+            },
+            {
+              "date": "2026-10-16",
+              "value": 794.780029296875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 808.8900146484375
+            },
+            {
+              "date": "2026-10-20",
+              "value": 781.969970703125
+            },
+            {
+              "date": "2026-10-21",
+              "value": 792.760009765625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 764.0999755859375
+            },
+            {
+              "date": "2026-10-23",
+              "value": 751.6900024414062
+            },
+            {
+              "date": "2026-10-26",
+              "value": 727.2100219726562
+            },
+            {
+              "date": "2026-10-27",
+              "value": 743.8300170898438
+            }
+          ]
+        },
+        {
+          "id": "NASDAQ",
+          "name": "나스닥",
+          "status": "ok",
+          "value": 26169.38,
+          "change": 214.04015625000102,
+          "changePct": 0.8246478664448753,
+          "unit": "pt",
+          "source": "yahoo",
+          "session": "closed",
+          "asOf": "2026-10-26T21:15:59.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 26820.380859375
+            },
+            {
+              "date": "2026-09-29",
+              "value": 26797.5390625
+            },
+            {
+              "date": "2026-09-30",
+              "value": 26861.060546875
+            },
+            {
+              "date": "2026-10-01",
+              "value": 26871.599609375
+            },
+            {
+              "date": "2026-10-02",
+              "value": 27190.859375
+            },
+            {
+              "date": "2026-10-05",
+              "value": 27477.310546875
+            },
+            {
+              "date": "2026-10-06",
+              "value": 27599.7890625
+            },
+            {
+              "date": "2026-10-07",
+              "value": 27538.689453125
+            },
+            {
+              "date": "2026-10-08",
+              "value": 27193.33984375
+            },
+            {
+              "date": "2026-10-09",
+              "value": 27366.169921875
+            },
+            {
+              "date": "2026-10-12",
+              "value": 27245.900390625
+            },
+            {
+              "date": "2026-10-13",
+              "value": 27204.380859375
+            },
+            {
+              "date": "2026-10-14",
+              "value": 26692.869140625
+            },
+            {
+              "date": "2026-10-15",
+              "value": 26713.029296875
+            },
+            {
+              "date": "2026-10-16",
+              "value": 26140.029296875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 26430.890625
+            },
+            {
+              "date": "2026-10-20",
+              "value": 26424.8203125
+            },
+            {
+              "date": "2026-10-21",
+              "value": 26702.859375
+            },
+            {
+              "date": "2026-10-22",
+              "value": 26008.859375
+            },
+            {
+              "date": "2026-10-23",
+              "value": 25955.33984375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 26169.380859375
+            }
+          ]
+        },
+        {
+          "id": "SP500",
+          "name": "S&P 500",
+          "status": "ok",
+          "value": 7676.77,
+          "change": 53.08982421875044,
+          "changePct": 0.6963805274440171,
+          "unit": "pt",
+          "source": "yahoo",
+          "session": "closed",
+          "asOf": "2026-10-26T20:43:43.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 7683.68994140625
+            },
+            {
+              "date": "2026-09-29",
+              "value": 7670.83984375
+            },
+            {
+              "date": "2026-09-30",
+              "value": 7651.5400390625
+            },
+            {
+              "date": "2026-10-01",
+              "value": 7666.4501953125
+            },
+            {
+              "date": "2026-10-02",
+              "value": 7722.72021484375
+            },
+            {
+              "date": "2026-10-05",
+              "value": 7773.9501953125
+            },
+            {
+              "date": "2026-10-06",
+              "value": 7818.93017578125
+            },
+            {
+              "date": "2026-10-07",
+              "value": 7801.77001953125
+            },
+            {
+              "date": "2026-10-08",
+              "value": 7765.35986328125
+            },
+            {
+              "date": "2026-10-09",
+              "value": 7811.5400390625
+            },
+            {
+              "date": "2026-10-12",
+              "value": 7807.240234375
+            },
+            {
+              "date": "2026-10-13",
+              "value": 7805.4501953125
+            },
+            {
+              "date": "2026-10-14",
+              "value": 7718.93994140625
+            },
+            {
+              "date": "2026-10-15",
+              "value": 7744.06005859375
+            },
+            {
+              "date": "2026-10-16",
+              "value": 7659.43994140625
+            },
+            {
+              "date": "2026-10-19",
+              "value": 7690.72998046875
+            },
+            {
+              "date": "2026-10-20",
+              "value": 7712.56982421875
+            },
+            {
+              "date": "2026-10-21",
+              "value": 7757.169921875
+            },
+            {
+              "date": "2026-10-22",
+              "value": 7663.43017578125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 7623.68017578125
+            },
+            {
+              "date": "2026-10-26",
+              "value": 7676.77001953125
+            }
+          ]
+        },
+        {
+          "id": "USDKRW",
+          "name": "원·달러 환율",
+          "status": "ok",
+          "value": 1327.08,
+          "change": 5.319990234374927,
+          "changePct": 0.4024929030284606,
+          "unit": "KRW",
+          "source": "yahoo",
+          "asOf": "2026-10-27T12:24:06.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 1354.510009765625
+            },
+            {
+              "date": "2026-09-29",
+              "value": 1359.56005859375
+            },
+            {
+              "date": "2026-09-30",
+              "value": 1350.5
+            },
+            {
+              "date": "2026-10-01",
+              "value": 1356.8399658203125
+            },
+            {
+              "date": "2026-10-02",
+              "value": 1360.5899658203125
+            },
+            {
+              "date": "2026-10-05",
+              "value": 1342.56005859375
+            },
+            {
+              "date": "2026-10-06",
+              "value": 1343.75
+            },
+            {
+              "date": "2026-10-07",
+              "value": 1339.739990234375
+            },
+            {
+              "date": "2026-10-08",
+              "value": 1339.0799560546875
+            },
+            {
+              "date": "2026-10-09",
+              "value": 1342.989990234375
+            },
+            {
+              "date": "2026-10-12",
+              "value": 1340.8399658203125
+            },
+            {
+              "date": "2026-10-13",
+              "value": 1334.1300048828125
+            },
+            {
+              "date": "2026-10-14",
+              "value": 1340.31005859375
+            },
+            {
+              "date": "2026-10-15",
+              "value": 1339.3499755859375
+            },
+            {
+              "date": "2026-10-16",
+              "value": 1340.949951171875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 1333.4300537109375
+            },
+            {
+              "date": "2026-10-20",
+              "value": 1330
+            },
+            {
+              "date": "2026-10-21",
+              "value": 1323.93994140625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 1325.5899658203125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 1325.989990234375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 1321.760009765625
+            },
+            {
+              "date": "2026-10-27",
+              "value": 1327.0799560546875
+            }
+          ]
+        },
+        {
+          "id": "UST10Y",
+          "name": "미국 국채 10년 금리",
+          "status": "ok",
+          "value": 4.986,
+          "change": -0.0019999160766603907,
+          "changePct": -0.040094549124079296,
+          "unit": "%",
+          "source": "yahoo",
+          "asOf": "2026-10-26T18:59:52.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 5.239999771118164
+            },
+            {
+              "date": "2026-09-29",
+              "value": 5.255000114440918
+            },
+            {
+              "date": "2026-09-30",
+              "value": 5.293000221252441
+            },
+            {
+              "date": "2026-10-01",
+              "value": 5.236999988555908
+            },
+            {
+              "date": "2026-10-02",
+              "value": 5.2769999504089355
+            },
+            {
+              "date": "2026-10-05",
+              "value": 5.310999870300293
+            },
+            {
+              "date": "2026-10-06",
+              "value": 5.269000053405762
+            },
+            {
+              "date": "2026-10-07",
+              "value": 5.2769999504089355
+            },
+            {
+              "date": "2026-10-08",
+              "value": 5.230999946594238
+            },
+            {
+              "date": "2026-10-09",
+              "value": 5.24399995803833
+            },
+            {
+              "date": "2026-10-12",
+              "value": 5.239999771118164
+            },
+            {
+              "date": "2026-10-13",
+              "value": 5.2170000076293945
+            },
+            {
+              "date": "2026-10-14",
+              "value": 5.190000057220459
+            },
+            {
+              "date": "2026-10-15",
+              "value": 5.089000225067139
+            },
+            {
+              "date": "2026-10-16",
+              "value": 5.0980000495910645
+            },
+            {
+              "date": "2026-10-19",
+              "value": 5.136000156402588
+            },
+            {
+              "date": "2026-10-20",
+              "value": 5.117000102996826
+            },
+            {
+              "date": "2026-10-21",
+              "value": 5.145999908447266
+            },
+            {
+              "date": "2026-10-22",
+              "value": 4.953000068664551
+            },
+            {
+              "date": "2026-10-23",
+              "value": 4.98799991607666
+            },
+            {
+              "date": "2026-10-26",
+              "value": 4.986000061035156
+            }
+          ]
+        },
+        {
+          "id": "KOSPI200_NIGHT",
+          "name": "코스피200 야간선물",
+          "status": "unavailable",
+          "value": null,
+          "change": null,
+          "changePct": null,
+          "unit": "pt",
+          "source": "kis",
+          "session": null,
+          "asOf": null
+        }
+      ],
+      "preOpen": [
+        {
+          "id": "UST10Y",
+          "name": "미국 국채 10년 금리",
+          "status": "ok",
+          "value": 4.986000061035156,
+          "change": -0.0019998550415039062,
+          "changePct": -0.040093325484193344,
+          "unit": "%",
+          "source": "yahoo",
+          "asOf": "2026-10-26T18:59:52.000Z",
+          "fiveDayChange": -0.13100004196166992,
+          "fiveDayChangePct": -2.560094573477697,
+          "history": [
+            {
+              "date": "2026-10-20",
+              "value": 5.117000102996826
+            },
+            {
+              "date": "2026-10-21",
+              "value": 5.145999908447266
+            },
+            {
+              "date": "2026-10-22",
+              "value": 4.953000068664551
+            },
+            {
+              "date": "2026-10-23",
+              "value": 4.98799991607666
+            },
+            {
+              "date": "2026-10-26",
+              "value": 4.986000061035156
+            }
+          ],
+          "comment": {
+            "text": "최근 관측 구간에서 금리가 낮아졌습니다. 5개 관측일의 첫날 대비 -0.13%p입니다."
+          }
+        },
+        {
+          "id": "NASDAQ",
+          "name": "나스닥",
+          "status": "ok",
+          "value": 26169.380859375,
+          "change": 214.041015625,
+          "changePct": 0.8246511774205904,
+          "unit": "pt",
+          "source": "yahoo",
+          "asOf": "2026-10-26T21:15:59.000Z",
+          "fiveDayChange": -255.439453125,
+          "fiveDayChangePct": -0.966664863201234,
+          "history": [
+            {
+              "date": "2026-10-20",
+              "value": 26424.8203125
+            },
+            {
+              "date": "2026-10-21",
+              "value": 26702.859375
+            },
+            {
+              "date": "2026-10-22",
+              "value": 26008.859375
+            },
+            {
+              "date": "2026-10-23",
+              "value": 25955.33984375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 26169.380859375
+            }
+          ],
+          "comment": {
+            "text": "최근 관측 구간에서 나스닥이 하락했습니다. 5개 관측일의 첫날 대비 -0.97%입니다."
+          }
+        },
+        {
+          "id": "USDKRW",
+          "name": "원·달러 환율",
+          "status": "ok",
+          "value": 1321.760009765625,
+          "change": -4.22998046875,
+          "changePct": -0.3190054600640183,
+          "unit": "KRW",
+          "source": "yahoo",
+          "asOf": "2026-10-26",
+          "fiveDayChange": -8.239990234375,
+          "fiveDayChangePct": -0.6195481379229323,
+          "history": [
+            {
+              "date": "2026-10-20",
+              "value": 1330
+            },
+            {
+              "date": "2026-10-21",
+              "value": 1323.93994140625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 1325.5899658203125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 1325.989990234375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 1321.760009765625
+            }
+          ],
+          "comment": {
+            "text": "최근 관측 구간에서 원·달러 환율이 내렸습니다. 5개 관측일의 첫날 대비 -8.24원입니다."
+          }
+        },
+        {
+          "id": "KOSPI200_FOREIGN_FUTURES",
+          "name": "코스피200 선물 외국인 순매수",
+          "status": "unavailable",
+          "value": null,
+          "change": null,
+          "changePct": null,
+          "unit": "계약",
+          "source": "unknown",
+          "asOf": null,
+          "fiveDayChange": null,
+          "fiveDayChangePct": null,
+          "history": [],
+          "comment": {
+            "text": "데이터 출처 확인 중"
+          }
+        }
+      ]
+    },
+    "stocks": [
+      {
+        "rank": 1,
+        "code": "138930",
+        "name": "BNK금융지주",
+        "rankScore": 1.7117636168976957,
+        "poolSize": 199,
+        "topPercent": 0.5025125628140703,
+        "evidence": [
+          {
+            "id": "E:138930:1",
+            "kind": "model",
+            "text": "전체 199개 중 1위(상위 0.5%)입니다."
+          },
+          {
+            "id": "E:138930:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 톱스타뉴스, 비즈니스포스트, 매일경제입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:138930:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:138930:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-26이며 오늘 날짜와 다릅니다."
+          },
+          {
+            "id": "C:138930:3",
+            "kind": "macro",
+            "text": "일부 시장 지표를 확보하지 못했습니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:138930:1",
+              "title": "BNK금융지주, 3일간 16.75% 하락에 소수계좌 매도 집중으로 투자주의종목 지정",
+              "url": "https://news.google.com/rss/articles/CBMickFVX3lxTE5sWWpwS01zcUdYOHBCOXJVcExYc21ZYjJUZTNFbTJWMElRNHRqeWF5QUtpOU5DTVJnLWJ2MWc3cGdFeUhOTVM0eFNhbVp6UWtRaW9vQ2VvZVMwRENkNkl1Y1VlVGFtNk5mNjgwR093UmFDdw?oc=5",
+              "source": "톱스타뉴스",
+              "pubDate": "2026-10-26T11:08:46.000Z"
+            },
+            {
+              "id": "N:138930:2",
+              "title": "BNK금융지주 3분기 누적 순이익 6223억 19% 줄어, 비이자이익 감소 영향",
+              "url": "https://news.google.com/rss/articles/CBMic0FVX3lxTE5KXzFiS2tnZldyRTRZWktGR3pCR29lWGZwVmIxOW9NclZzaTUwNmhPVzlvRkJBZ1NUX1V5bnBHRFppVTB4ZlU4U1dwRkhtTm5yWDFZTENWbWZxRGtWcS1OSTVGeVBMZWd2OUltaFBTMG05QTQ?oc=5",
+              "source": "비즈니스포스트",
+              "pubDate": "2026-10-26T08:15:38.000Z"
+            },
+            {
+              "id": "N:138930:3",
+              "title": "BNK금융지주, 부울경 데이터산업과 AX 생태계 성장 지원",
+              "url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTE1mbl9FUDJ6TDlpZWxIZ3Y5cjFSUTNIMkl1ekhVSHVra1d6aTlwcUxHY29CLTA3SDhUZ2ZCd2UtRjdBZFRFUUhKQmRScnNwUQ?oc=5",
+              "source": "매일경제",
+              "pubDate": "2026-10-26T07:04:25.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "code": "329180",
+        "name": "HD현대중공업",
+        "rankScore": 1.5986131405264918,
+        "poolSize": 199,
+        "topPercent": 1.0050251256281406,
+        "evidence": [
+          {
+            "id": "E:329180:1",
+            "kind": "model",
+            "text": "전체 199개 중 2위(상위 1%)입니다."
+          },
+          {
+            "id": "E:329180:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 울산신문, 비즈니스포스트, 톱스타뉴스입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:329180:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:329180:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-26이며 오늘 날짜와 다릅니다."
+          },
+          {
+            "id": "C:329180:3",
+            "kind": "macro",
+            "text": "일부 시장 지표를 확보하지 못했습니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:329180:1",
+              "title": "HD현대중공업 임단협 타결 수주 암초 제거하나",
+              "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTFBwNFdRVFZyY3B4YXlvSVc4Z0FGeUQxM0hwZ09PdTFORWZXUTR2VmNDMnk2ZmxMa0tnNTlCQnJ2RjRHLXBpS0NsUmtjcnRja1VlOHVsVWhfeWJZQXZGYzBoZ1NBSUE3VUZkLW16dTJ30gFyQVVfeXFMTkRhYi15cGNPSjRSSjJ2dm9DaGpxTjdGd3N4ZTJtdDdoVGplV0FkWllNS19yNk1pZzVMLVRUb1NGeU1KYjNsdEhSb1RiR2lJUExTNzZRWW5iMXRYLW5SVkRMSDYxWkVfS00xWUZ1VFBjQUNR?oc=5",
+              "source": "울산신문",
+              "pubDate": "2026-10-26T11:18:00.000Z"
+            },
+            {
+              "id": "N:329180:2",
+              "title": "[오늘의 주목주] '실적 경계' HD현대중공업 주가 5%대 내려, 코스피 외국인 순매도에 5460선 하락",
+              "url": "https://news.google.com/rss/articles/CBMic0FVX3lxTE9DSzhrSWpudDdTWGpudmt1Tkh5dF9LTGZCbU91czVJc0MzWXd3d2MzaTdwUDQ0d1ZiTWIxbmVsdlZKVzNabHAtQmZKOU1PU2QyN3hjNGtmNUZ3elBjbFJTLTh4UXo5V0JGSU1LR2d0T01FbVE?oc=5",
+              "source": "비즈니스포스트",
+              "pubDate": "2026-10-26T07:44:19.000Z"
+            },
+            {
+              "id": "N:329180:3",
+              "title": "HD현대중공업 주가, 10월 26일 28만 9,500원 5.08% 하락",
+              "url": "https://news.google.com/rss/articles/CBMickFVX3lxTE1RMUtBV1FXYnNtazdRTWJEYzVRN19EWGpneVdEaktleHZ1enhHcGhyanRzUXM3ZkwwTll3YVBxRlduTkNZOTg1SUt6eHBXQ19BY3Bsc1NUWHVTdC1GbU5CQkFFSDZPWGR4MEJmaWsySU0zQQ?oc=5",
+              "source": "톱스타뉴스",
+              "pubDate": "2026-10-26T07:04:17.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 3,
+        "code": "285130",
+        "name": "SK케미칼",
+        "rankScore": 1.569600197867209,
+        "poolSize": 199,
+        "topPercent": 1.507537688442211,
+        "evidence": [
+          {
+            "id": "E:285130:1",
+            "kind": "model",
+            "text": "전체 199개 중 3위(상위 1.5%)입니다."
+          },
+          {
+            "id": "E:285130:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 한스경제, 아시아뉴스통신, 헬스코리아뉴스입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:285130:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:285130:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-26이며 오늘 날짜와 다릅니다."
+          },
+          {
+            "id": "C:285130:3",
+            "kind": "macro",
+            "text": "일부 시장 지표를 확보하지 못했습니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:285130:1",
+              "title": "SK케미칼 '옴나리스' 수입정지 3개월…품질검사 전 출하",
+              "url": "https://news.google.com/rss/articles/CBMia0FVX3lxTE1rOHRER0s4YUlVcHR4dWF4dnFTRktGclBzV2VYS2JjNnZmc1ZJcGk4a29DVkowNHR6MzRTWXBJOHFoN0YtZmV0N19WWEtxbllKejJTR2g5b0dRS295NnFhNmxxX3hkdlpVYWVv0gFvQVVfeXFMTlY3aVpBalkzRzdfZS1Yb0NWcWZ1cWgwTVpxb1VCLVdhalpJcDBRLW9sQy1vNzNuTWRxY2hWQkhCY1BzQ3V5VGpOQjJhdEVBTDhTZnUxdVFDby0ybVBFaXBmTmJYS1ZTbzhNbWhZazZN?oc=5",
+              "source": "한스경제",
+              "pubDate": "2026-10-26T07:32:07.000Z"
+            },
+            {
+              "id": "N:285130:2",
+              "title": "SK케미칼 주가 상승 중",
+              "url": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE85c2hlMEJ1Q2hWaTl0ZVlqUHQ4eFotWEdyR1pROThkSFROandha3V5NkRIbnp2eVplZjg5T2xnY1R0Yk5qT2NGWHI0eW5vMnJpT0dkaTBnWEhpRDJS?oc=5",
+              "source": "아시아뉴스통신",
+              "pubDate": "2026-10-26T00:05:32.000Z"
+            },
+            {
+              "id": "N:285130:3",
+              "title": "명인제약, 라코사미드 주사제 시장 가세 … SK케미칼 독점 깨고 양자구도 재편",
+              "url": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE54SlBFRjRxeDFGdnZtOURZREFwc1Atd0hfT0dKdTFwaldWVXVISXFDZnBXcEJ4T0kxQldyZnk4dzhQWklPVFo1X1N5SzltRHFPOWtpNUx3ZzhLaXlqZjVzbDVsa0FyQU0?oc=5",
+              "source": "헬스코리아뉴스",
+              "pubDate": "2026-10-25T15:17:42.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 4,
+        "code": "042660",
+        "name": "한화오션",
+        "rankScore": 1.5144756068145713,
+        "poolSize": 199,
+        "topPercent": 2.0100502512562812,
+        "evidence": [
+          {
+            "id": "E:042660:1",
+            "kind": "model",
+            "text": "전체 199개 중 4위(상위 2%)입니다."
+          },
+          {
+            "id": "E:042660:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 거제통영오늘신문, 경향신문, 폴리뉴스 Polinews입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:042660:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:042660:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-26이며 오늘 날짜와 다릅니다."
+          },
+          {
+            "id": "C:042660:3",
+            "kind": "macro",
+            "text": "일부 시장 지표를 확보하지 못했습니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:042660:1",
+              "title": "시민연대 \"한화오션 노사갈등 조속 해결 촉구\"",
+              "url": "https://news.google.com/rss/articles/CBMia0FVX3lxTE52Zk9LN1FDVFZTeEV1Q1B2aEZDRTV2Q21tTTI2RkhBYjhqaXlPRDlDSW1pMjA2WTFzT1ZSNlBBSFI3dWZ0LUo5bWlrZmsyZHM1b0RLaGVQSVZiZTNYYTg0eFhQVGFqa3MyVFZr?oc=5",
+              "source": "거제통영오늘신문",
+              "pubDate": "2026-10-26T12:11:50.000Z"
+            },
+            {
+              "id": "N:042660:2",
+              "title": "한화오션, 해외 함정 시장 개척 박차",
+              "url": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE56WjI2T3NXQTd4NFR3MXJEX3pDb2gyeUNYNGRCQkZhengwbG1Nb3VMaEJEVDJZeGpaMG9KaTYxVDR1Z1poS2xZSUdIMk5ZYjVMWHMyRjdjQ2VZQWw5NGhJ0gFfQVVfeXFMTnpaMjZPc1dBN3g0VHcxckRfekNvaDJ5Q1g0ZEJCRmF6eDBsbU1vdUxoQkRUMll4alowb0ppNjFUNHVnWmhLbFlJR0gyTlliNUxYczJGN2NDZVlBbDk0aEk?oc=5",
+              "source": "경향신문",
+              "pubDate": "2026-10-26T08:43:00.000Z"
+            },
+            {
+              "id": "N:042660:3",
+              "title": "한화오션 '美 필리조선소 투자'… 수익성 개선 속도 낼까",
+              "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTFBzd09QWlY1SzZEdnozeDdFUC16WUR5NTN2NHZ5WjI5YVhHR0U0b0tVeHFpd0cwbmt4a0JLS0Fhc2l4aThBVm1SMW5yb2tUUHBaUDZrd2pfa3RacHNJSW8yeGNyY0lSTDBNOXFoZ3ZR?oc=5",
+              "source": "폴리뉴스 Polinews",
+              "pubDate": "2026-10-26T08:10:17.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 5,
+        "code": "112610",
+        "name": "씨에스윈드",
+        "rankScore": 1.5115743125486427,
+        "poolSize": 199,
+        "topPercent": 2.512562814070352,
+        "evidence": [
+          {
+            "id": "E:112610:1",
+            "kind": "model",
+            "text": "전체 199개 중 5위(상위 2.5%)입니다."
+          },
+          {
+            "id": "E:112610:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 페로타임즈, 핀포인트뉴스, 뉴스핌입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:112610:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:112610:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-26이며 오늘 날짜와 다릅니다."
+          },
+          {
+            "id": "C:112610:3",
+            "kind": "macro",
+            "text": "일부 시장 지표를 확보하지 못했습니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:112610:1",
+              "title": "씨에스윈드, 3분기 영업익 753억 전망…하부구조물 마진 20%대",
+              "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBNMWt3OVFUbjNBRnB5OVcwZUtVaFh6UGM5MmtrMTF3b2FFT1lRT0tWNHRJUF9BMGZJR3JONEpNWG1aUUpIMUlWZ0ZqMW9ibUN6M0h1THFxekY5azBjMDFXS3JSZW84MGR6XzBHbQ?oc=5",
+              "source": "페로타임즈",
+              "pubDate": "2026-10-26T05:29:09.000Z"
+            },
+            {
+              "id": "N:112610:2",
+              "title": "씨에스윈드, 환율 하락에도 3분기 선방 전망…하부구조물이 버팀목",
+              "url": "https://news.google.com/rss/articles/CBMic0FVX3lxTE9FXzF4Zm1uR1dPR2JveGRKS0tBeXloOWJWa0dlU0kxdko5TFdrWXlSWWRSdURqYV9mc0ctV3pQaXJhZWZQSVlYdHFyRXctTFdMZDcwNmZNTEZGZHpmY0lhOGlCUWFBUmswQVY2Nkt1VFk3WEXSAXdBVV95cUxNV3g2OEZRWEdQcmlNNmpzdktyeXJqNS1SMHYydGhQbkZIZURCdGlXNWFqRXdIOGNGZ2xwVkt6V0R2V2M4cFM4aEsweWoxZDBSbk9Nc1JsRE05UkIyUjBQV0V2NkFqd3ZYUXFPdkFUNUFtQndCczRZaw?oc=5",
+              "source": "핀포인트뉴스",
+              "pubDate": "2026-10-24T04:25:19.000Z"
+            },
+            {
+              "id": "N:112610:3",
+              "title": "[리포트 브리핑]씨에스윈드, '환율 약세, 매출 이연에도 양호한 마진 기대' 목표가 80,000원 - 하나증권",
+              "url": "https://news.google.com/rss/articles/CBMiXEFVX3lxTFBWWHVYcDY3dmtxVXRYVUxRNTdKcjNCa01HcEtPZi1PRE1weVQ1WWdLbklHdzVwckRXOGZfYllCUnV0R1lMel80Z1IzSTkxNTcteWhuVElZdmp5Y2s4?oc=5",
+              "source": "뉴스핌",
+              "pubDate": "2026-10-22T23:37:00.000Z"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "sets": [
+    {
+      "label": "briefing-generated.json",
+      "sourceHash": "9456273ee2c69a4dec58cfbf7d2e57952b01c46618a3006a218101b2c9244408",
+      "rows": [
+        {
+          "code": "138930",
+          "text": "BNK금융지주는 전체 199개 종목 중 1위(상위 0.5%)를 기록했습니다. 순위 점수는 1.7118입니다.",
+          "citations": [
+            "R:138930",
+            "E:138930:1"
+          ]
+        },
+        {
+          "code": "329180",
+          "text": "HD현대중공업은 전체 199개 종목 중 2위(상위 1%)에 올랐습니다. 순위 점수는 1.5986입니다.",
+          "citations": [
+            "R:329180",
+            "E:329180:1"
+          ]
+        },
+        {
+          "code": "285130",
+          "text": "SK케미칼은 전체 199개 종목 중 3위(상위 1.5%)를 나타냈습니다. 순위 점수는 1.5696입니다.",
+          "citations": [
+            "R:285130",
+            "E:285130:1"
+          ]
+        },
+        {
+          "code": "042660",
+          "text": "한화오션은 전체 199개 종목 중 4위(상위 2%)에 위치했습니다. 순위 점수는 1.5145입니다.",
+          "citations": [
+            "R:042660",
+            "E:042660:1"
+          ]
+        },
+        {
+          "code": "112610",
+          "text": "씨에스윈드는 전체 199개 종목 중 5위(상위 2.5%)를 기록했습니다. 순위 점수는 1.5116입니다.",
+          "citations": [
+            "R:112610",
+            "E:112610:1"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "briefing-generated-second.json",
+      "sourceHash": "a122923f21f0560ba8fac61679dd9916e1053d039c42fc3c2496d7c50a7f0053",
+      "rows": [
+        {
+          "code": "138930",
+          "text": "BNK금융지주는 모델 순위 1위(상위 0.5%)로 순위 점수는 1.7118입니다. 관련 기사로는 투자주의종목 지정, 3분기 누적 순이익 실적, 지역 데이터산업 지원 소식 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:138930",
+            "E:138930:1",
+            "E:138930:2"
+          ]
+        },
+        {
+          "code": "329180",
+          "text": "HD현대중공업은 모델 순위 2위(상위 1%)로 순위 점수는 1.5986입니다. 임단협 타결 관련 수주 동향 및 최근 주가 흐름을 다룬 기사 등 3건이 수집되었습니다.",
+          "citations": [
+            "R:329180",
+            "E:329180:1",
+            "E:329180:2"
+          ]
+        },
+        {
+          "code": "285130",
+          "text": "SK케미칼은 모델 순위 3위(상위 1.5%)로 순위 점수는 1.5696입니다. 의약품 수입정지 처분 이슈, 최근 주가 동향, 경쟁사의 동일 성분 시장 진입 관련 보도 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:285130",
+            "E:285130:1",
+            "E:285130:2"
+          ]
+        },
+        {
+          "code": "042660",
+          "text": "한화오션은 모델 순위 4위(상위 2%)로 순위 점수는 1.5145입니다. 노사 갈등 관련 시민연대 성명, 해외 함정 시장 개척, 미국 필리조선소 투자 관련 기사 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:042660",
+            "E:042660:1",
+            "E:042660:2"
+          ]
+        },
+        {
+          "code": "112610",
+          "text": "씨에스윈드는 모델 순위 5위(상위 2.5%)로 순위 점수는 1.5116입니다. 3분기 영업이익 실적 전망 및 하부구조물 부문 마진 관련 보도 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:112610",
+            "E:112610:1",
+            "E:112610:2"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "result-copy/rawFields.stocks",
+      "sourceHash": "391b6c24ea41199014e431e9fcd943c4064d8d975c71289c229d0c405bd8c50c",
+      "rows": [
+        {
+          "code": "138930",
+          "text": "BNK금융지주는 모델 순위 1위(상위 0.5%)로 순위 점수는 1.7118입니다. 관련 기사로는 투자주의종목 지정, 3분기 누적 순이익 실적, 지역 데이터산업 지원 소식 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:138930",
+            "E:138930:1",
+            "E:138930:2"
+          ]
+        },
+        {
+          "code": "329180",
+          "text": "HD현대중공업은 모델 순위 2위(상위 1%)로 순위 점수는 1.5986입니다. 임단협 타결 관련 수주 동향 및 최근 주가 흐름을 다룬 기사 등 3건이 수집되었습니다.",
+          "citations": [
+            "R:329180",
+            "E:329180:1",
+            "E:329180:2"
+          ]
+        },
+        {
+          "code": "285130",
+          "text": "SK케미칼은 모델 순위 3위(상위 1.5%)로 순위 점수는 1.5696입니다. 의약품 수입정지 처분 이슈, 최근 주가 동향, 경쟁사의 동일 성분 시장 진입 관련 보도 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:285130",
+            "E:285130:1",
+            "E:285130:2"
+          ]
+        },
+        {
+          "code": "042660",
+          "text": "한화오션은 모델 순위 4위(상위 2%)로 순위 점수는 1.5145입니다. 노사 갈등 관련 시민연대 성명, 해외 함정 시장 개척, 미국 필리조선소 투자 관련 기사 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:042660",
+            "E:042660:1",
+            "E:042660:2"
+          ]
+        },
+        {
+          "code": "112610",
+          "text": "씨에스윈드는 모델 순위 5위(상위 2.5%)로 순위 점수는 1.5116입니다. 3분기 영업이익 실적 전망 및 하부구조물 부문 마진 관련 보도 등 3건이 확인되었습니다.",
+          "citations": [
+            "R:112610",
+            "E:112610:1",
+            "E:112610:2"
+          ]
+        }
+      ]
+    }
+  ]
+}

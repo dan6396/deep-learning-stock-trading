@@ -1,23 +1,66 @@
-import type { PreOpenIndicator, PreOpenMacroId } from "../src/types/preOpenMacro";
-
-/** Editable wording/threshold table. These provisional rules never predict KOSPI. */
-export const MACRO_COMMENT_RULES: Record<PreOpenMacroId, { threshold: number; up: string; down: string; flat: string }> = {
-  UST10Y: { threshold: 0.01, up: "최근 관측 구간에서 금리가 높아졌습니다", down: "최근 관측 구간에서 금리가 낮아졌습니다", flat: "최근 관측 구간의 금리 변화가 작습니다" },
-  NASDAQ: { threshold: 0.1, up: "최근 관측 구간에서 나스닥이 상승했습니다", down: "최근 관측 구간에서 나스닥이 하락했습니다", flat: "최근 관측 구간의 나스닥 변화가 작습니다" },
-  USDKRW: { threshold: 1, up: "최근 관측 구간에서 원·달러 환율이 올랐습니다", down: "최근 관측 구간에서 원·달러 환율이 내렸습니다", flat: "최근 관측 구간의 환율 변화가 작습니다" },
-  KOSPI200_FOREIGN_FUTURES: { threshold: 1, up: "외국인 선물 수급 합계는 순매수입니다", down: "외국인 선물 수급 합계는 순매도입니다", flat: "외국인 선물 수급 합계는 보합입니다" },
+import type { PreOpenIndicator, PreOpenMacroId, MacroAnalysisBand } from "../src/types/preOpenMacro";
+type FiveBandRule = { metric: "daily_percent" | "five_day_relative_percent" | "five_day_contract_sum"; small: number; large: number; messages: Record<MacroAnalysisBand, string> };
+type ThreeBandRule = { metric: "five_day_relative_percent"; small: number; large: number; messages: Record<"상승" | "보합" | "하락", string> };
+type Rule = FiveBandRule | ThreeBandRule;
+/** Team-owned literal wording (including supplied spelling), metric and boundaries. */
+export const MACRO_COMMENT_RULES: Record<PreOpenMacroId, Rule> = {
+  NASDAQ: { metric: "daily_percent", small: .5, large: 1.5, messages: {
+    "상승": "전일 미 나스닥 지수가 강세를 보이며 글로벌 위험자산 선호 심리가 부각됨에 따라, 코스피 역시 기술주와 성장주를 중심으로 긍정적인 탄력이 기대됩니다.",
+    "소폭 상승": "전일 미 나스닥 지수가 제한적인 폭으로 상승 마감하여, 코스피는 하방 경직성을 확보한 가운데 종목별 차별화 장세가 나타날 것으로 예상됩니다.",
+    "보합": "전일 미 나스닥 지수가 뚜렷한 방향성 없이 혼조세로 마감함에 따라, 금일 코스피는 외국인 수급 및 장중 이슈에 따른 좁은 박스권 내 눈치보기 양상이 예상됩니다.",
+    "소폭 하락": "전일 미 나스닥 지수가 소폭 하락하며 단기 숨고르기에 들어감에 따라, 코스피 장 초반 경계 매물이 출회되며 관망세가 짙어질 가능성이 있습니다.",
+    "하락": "전일 미 나스닥 지수가 큰 폭으로 하락하며 글로벌 투자 심리가 위축되어, 코스피 역시 대형 기술주를 중심으로 매도세가 확대되며 하방 압력이 커질 우려가 있습니다.",
+  } },
+  UST10Y: { metric: "five_day_relative_percent", small: .5, large: 2, messages: {
+    "상승": "최근 5거래일간 미 국채 10년물 금리가 뚜렷한 상승세를 이어가며 밸류에이션 부담이 가중되어, 코스피 내 고퍼주(성장주)의 투자 심리가 위축될 수 있습니다.",
+    "소폭 상승": "최근 5거래일간 미 국채 금리가 완만한 우상향 흐름을 보이고 있어, 지수 상단을 일부 제한하는 단기 경계 요인으로 작용할 전망입니다.",
+    "보합": "최근 5거래일간 미 국채 금리가 안정적인 보합권 내에 머물고 있어, 금리 변동성에 따른 국내 증시 충격 우려는 당분간 제한적일 것으로 판단됩니다.",
+    "소폭 하락": "최근 5거래일간 미 국채 금리가 소폭 하락하며 안정세를 찾아감에 따라, 밸류에이션 부담이 완화되며 시장 전반의 투자 심리 개선에 기여할 것으로 보입니다.",
+    "하락": "최근 5거래일간 미 국채 금리가 확연한 하락 추세를 보이며 위험자산 선호 현상이 강해져, 코스피 성장주 및 대형주의 반등 탄력이 한층 강화될 것으로 기대됩니다.",
+  } },
+  SOX: { metric: "five_day_relative_percent", small: 1, large: 4, messages: {
+    "상승": "최근 5거래일간 필라델피아 반도체 지수가 강세를 보임에 따라, 국내 IT 투톱을 비롯한 반도체 대형주에 외국인 매수세가 유입되며 코스피 상승을 견인할 것으로 예상됩니다.",
+    "소폭 상승": "최근 5거래일간 필라델피아 반도체 지수가 점진적인 우상향 흐름을 유지하여, 국내 반도체 소부장(소재·부품·장비) 섹터를 중심으로 긍정적인 온기가 확산될 전망입니다.",
+    "보합": "최근 5거래일간 필라델피아 반도체 지수가 보합권에 머물러 있어, 국내 IT 섹터 역시 추가 모멘텀을 대기하며 개별 기업 실적 이슈에 연동되는 장세가 예상됩니다.",
+    "소폭 하락": "최근 5거래일간 필라델피아 반도체 지수가 단기 조정을 겪고 있어, 국내 반도체 관련주들도 장중 차익 매물이 출회되며 일시적으로 상승 탄력이 둔화될 가능성이 있습니다.",
+    "하락": "최근 5거래일간 필라델피아 반도체 지수가 뚜렷한 약세를 띠며 글로벌 IT 업황 우려가 부각되어, 코스피 반도체 대장주들의 하락을 유발하고 지수 하락 압력으로 작용할 우려가 있습니다.",
+  } },
+  KOSPI200_FOREIGN_FUTURES: { metric: "five_day_contract_sum", small: 1500, large: 4500, messages: {
+    "상승": "최근 5거래일간 외국인 선물 순매수 물량이 대규모로 유입되며 강한 상승세를 보이고 있어, 현물 시장에서의 매수 우위 및 지수의 추가 상승 랠리가 강력히 시사됩니다.",
+    "소폭 상승": "최근 5거래일간 외국인 선물 순매수 규모가 점진적으로 늘어나며 파생 시장 수급이 개선되고 있어, 코스피의 완만한 반등 흐름과 굳건한 하방 지지력이 기대됩니다.",
+    "보합": "최근 5거래일간 누적 외국인 선물 포지션이 뚜렷한 방향성 없이 중립적인 보합권에 머물러 있어, 당분간 프로그램 매매를 통한 박스권 내 단기 수급 공방이 예상됩니다.",
+    "소폭 하락": "최근 5거래일간 외국인의 선물 매도 물량이 점차 출회되며 수급 여건이 소폭 악화되고 있어, 지수 반등 시마다 상단에서 저항 매물이 출회될 가능성이 높습니다.",
+    "하락": "최근 5거래일간 외국인 선물 포지션이 대규모 순매도로 가파르게 꺾임에 따라, 현·선물 동반 매도 압력이 가중되어 지수의 단기 하락폭이 크게 확대될 위험이 존재합니다.",
+  } },
+  USDKRW: { metric: "five_day_relative_percent", small: 3, large: 3, messages: {
+    "상승": "최근 5거래일간 원/달러 환율이 가파른 상승세(원화 약세)를 지속하며 외국인의 환차손 우려를 자극해, 국내 증시에서의 자금 이탈 및 수급 악화 요인으로 작용할 전망입니다.",
+    "보합": "최근 5거래일간 원/달러 환율이 제한적인 범위 내에서 보합세를 유지함에 따라, 수급 교란 변수로 작용할 가능성이 낮아져 증시는 펀더멘털 이슈에 집중할 것으로 보입니다.",
+    "하락": "최근 5거래일간 원/달러 환율이 뚜렷한 하락세(원화 강세)를 보이며 환차익 기대감이 높아져, 코스피 대형주를 중심으로 우호적인 외국인 자금 유입이 강력히 기대됩니다.",
+  } },
 };
+// Correct only floating-point representation noise at an exact boundary; never
+// round the economic value before classification (4.99 -> 5.09 remains >2%).
+const compare = (a: number, b: number) => Math.abs(a - b) <= Number.EPSILON * 16 * Math.max(1, Math.abs(a), Math.abs(b)) ? 0 : a > b ? 1 : -1;
+export function macroAnalysisValue(row: Omit<PreOpenIndicator, "comment">): number | null {
+  if (row.status !== "ok") return null;
+  const rule = MACRO_COMMENT_RULES[row.id];
+  if (rule.metric === "daily_percent") return row.changePct != null && Number.isFinite(row.changePct) ? row.changePct : null;
+  if (row.history.length !== 5) return null;
+  const value = rule.metric === "five_day_contract_sum" ? row.fiveDaySum : row.fiveDayChangePct;
+  return value != null && Number.isFinite(value) ? value : null;
+}
 export function macroComment(row: Omit<PreOpenIndicator, "comment">): PreOpenIndicator["comment"] {
-  if (row.status !== "ok") return { text: row.id === "KOSPI200_FOREIGN_FUTURES" ? "데이터 출처 확인 중" : "직전 미국장 기준 관측 자료가 없습니다", placeholder: true, ruleId: "unavailable" };
-  if (row.id === "KOSPI200_FOREIGN_FUTURES") {
-    const sum = row.fiveDaySum ?? 0, streak = row.consecutiveDays ?? 0, rule = MACRO_COMMENT_RULES[row.id];
-    const state = sum >= rule.threshold ? "up" : sum <= -rule.threshold ? "down" : "flat";
-    return { text: `외국인 선물은 ${row.history.length}거래일 합계 ${sum > 0 ? "+" : ""}${sum.toLocaleString("ko-KR")}계약입니다. ${rule[state]}.${streak ? ` 외국인 선물은 ${Math.abs(streak)}거래일 연속 순매${streak > 0 ? "수" : "도"}입니다.` : ""}`, placeholder: true, ruleId: `${row.id}:${state}` };
-  }
-  if (row.history.length < 2 || row.fiveDayChange === null) return { text: "추세를 비교할 관측일이 부족합니다", placeholder: true, ruleId: "insufficient" };
-  const rule = MACRO_COMMENT_RULES[row.id], delta = row.id === "NASDAQ" ? row.fiveDayChangePct ?? 0 : row.fiveDayChange;
-  const state = delta > rule.threshold ? "up" : delta < -rule.threshold ? "down" : "flat";
-  const change = row.id === "NASDAQ" ? row.fiveDayChangePct! : row.fiveDayChange;
-  const unit = row.id === "UST10Y" ? "%p" : row.id === "NASDAQ" ? "%" : row.unit === "KRW" ? "원" : row.unit;
-  return { text: `${rule[state]}. ${row.history.length}개 관측일의 첫날 대비 ${change > 0 ? "+" : ""}${Number(change.toFixed(row.unit === "%" ? 3 : 2))}${unit}입니다.`, placeholder: true, ruleId: `${row.id}:${state}` };
+  if (row.status !== "ok") return { text: row.id === "KOSPI200_FOREIGN_FUTURES" ? "데이터 출처 확인 중" : "직전 미국장 기준 관측 자료가 없습니다", ruleId: "unavailable", band: null, metric: null };
+  const metric = macroAnalysisValue(row);
+  if (metric === null) return { text: "추세를 비교할 관측일이 부족합니다", ruleId: "insufficient", band: null, metric: null };
+  const rule = MACRO_COMMENT_RULES[row.id];
+  let band: MacroAnalysisBand;
+  if (compare(metric, rule.large) > 0) band = "상승";
+  else if (compare(metric, -rule.large) < 0) band = "하락";
+  else if (compare(metric, rule.small) > 0) band = "소폭 상승";
+  else if (compare(metric, -rule.small) < 0) band = "소폭 하락";
+  else band = "보합";
+  // Three-band rules have equal thresholds, so neither small-change branch is reachable.
+  const text = (rule.messages as Record<MacroAnalysisBand, string>)[band];
+  return { text, ruleId: `${row.id}:${band}`, band, metric };
 }

@@ -87,7 +87,7 @@ describe("briefing narrative guard", () => {
   it("repairs only newly invalid fields of an older persisted cache without calling Gemini", async () => {
     const data = input(), transport = vi.fn(async () => response());
     await createNarrativeStore({ transport }).resolve(data, true, env);
-    for (const [path, body] of disk) { const cached = JSON.parse(body); delete cached.rawFields; cached.narrative.overview = "환율은 1324.92 KRW입니다. 시장 관측 자료입니다."; disk.set(path, JSON.stringify(cached)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cached = JSON.parse(body); delete cached.rawFields; cached.narrative.overview = "환율은 1324.92 KRW입니다. 시장 관측 자료입니다."; disk.set(path, JSON.stringify(cached)); }
     const result = await createNarrativeStore({ transport }).resolve(data, false, env);
     expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template", fieldSources: { overview: "template", marketNote: "llm" } });
     expect(result.overview).not.toContain("KRW"); expect(result.stocks[0].source).toBe("llm"); expect(transport).toHaveBeenCalledOnce();
@@ -372,7 +372,7 @@ describe("Gemini narrative generation and cache", () => {
   it("restores previously rejected raw fields only after current validation, preserving identity and metadata", async () => {
     const data = input(), transport = vi.fn(async () => response()), original = content();
     const first = await createNarrativeStore({ transport }).resolve(data, true, env);
-    for (const [path, body] of disk) {
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue;
       const cached = JSON.parse(body), fallback = templateNarrative(data, "forbidden_content", Date.parse(first.generatedAt));
       cached.narrative = { ...fallback, llmModel: null }; cached.lastFailureAt = Date.now();
       cached.rawFields.overview.text = "순위 점수는 수익률이 아니며 확률을 의미하지 않습니다. 입력 사실을 설명합니다.";
@@ -388,7 +388,7 @@ describe("Gemini narrative generation and cache", () => {
   it.each(["매수하세요.", "기관 매수세가 유입됐습니다.", "순 매수가 외국인에게 확인됐습니다."])("never trusts raw text that fails current rules: %s", async summary => {
     const data = input(), transport = vi.fn(async () => response());
     await createNarrativeStore({ transport }).resolve(data, true, env);
-    for (const [path, body] of disk) { const cached = JSON.parse(body); cached.rawFields.stocks["005930"].text = summary; disk.set(path, JSON.stringify(cached)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cached = JSON.parse(body); cached.rawFields.stocks["005930"].text = summary; disk.set(path, JSON.stringify(cached)); }
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const store = createNarrativeStore({ transport }), result = await store.resolve(data, false, env);
@@ -401,7 +401,7 @@ describe("Gemini narrative generation and cache", () => {
   });
   it("rejects unknown raw citations and all-raw failures without leaking raw fields", async () => {
     const data = input(), transport = vi.fn(async () => response()); await createNarrativeStore({ transport }).resolve(data, true, env);
-    for (const [path, body] of disk) { const cached = JSON.parse(body);
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cached = JSON.parse(body);
       cached.rawFields.overview.citations = ["M:FAKE"]; cached.rawFields.marketNote.text = "매수하세요.";
       cached.rawFields.stocks["005930"].text = "전체 999개 중 1위입니다."; disk.set(path, JSON.stringify(cached)); }
     const result = await createNarrativeStore({ transport }).resolve(data, false, env);
@@ -423,7 +423,7 @@ describe("Gemini narrative generation and cache", () => {
     expect(briefingInputHash(recovered)).toBe(briefingInputHash(data));
     const reused = await store.resolve(recovered, false, env);
     expect(reused.status).toBe("llm"); expect(reused.generatedAt).toBe(first.generatedAt); expect(reused.macroStale).toBe(true); expect(transport).toHaveBeenCalledTimes(1);
-    for (const [path, body] of disk) { const saved = JSON.parse(body); saved.inputHash = briefingInputHash(saved.input, true); saved.narrative.inputHash = saved.inputHash; disk.set(path, JSON.stringify(saved)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const saved = JSON.parse(body); saved.inputHash = briefingInputHash(saved.input, true); saved.narrative.inputHash = saved.inputHash; disk.set(path, JSON.stringify(saved)); }
     const differentPolicy = await createNarrativeStore({ transport }).resolve(recovered, false, env);
     expect(differentPolicy.status).toBe("template"); expect(differentPolicy.inputHash).toBe(briefingInputHash(data)); expect(transport).toHaveBeenCalledTimes(1);
   });
@@ -445,7 +445,9 @@ describe("Gemini narrative generation and cache", () => {
     expect((await store.resolve(data, true, env)).status).toBe("llm");
     await store.resolve(data, false, env); await store.resolve(data, true, env);
     await createNarrativeStore({ transport }).resolve(data, true, env);
-    expect(transport).toHaveBeenCalledOnce(); expect(rename).toHaveBeenCalledOnce();
+    expect(transport).toHaveBeenCalledOnce();
+    expect(rename.mock.calls.filter(([, path]) => path.endsWith("briefing-narrative.json"))).toHaveLength(1);
+    expect(rename.mock.calls.filter(([, path]) => path.endsWith("briefing-narrative-diagnostics.json"))).toHaveLength(1);
     const [url, options] = transport.mock.calls[0];
     expect(String(url)).not.toContain(env.GEMINI_API_KEY);
     expect(options?.headers).toMatchObject({ "x-goog-api-key": env.GEMINI_API_KEY });
@@ -489,7 +491,7 @@ describe("Gemini narrative generation and cache", () => {
   it("rebuilds a corrupted template field from canonical input while retaining valid cached LLM fields", async () => {
     const value = content(); value.stocks[0].summary = "999999원입니다.";
     const transport = vi.fn(async () => response(value)); await createNarrativeStore({ transport }).resolve(input(), true, env);
-    for (const [path, body] of disk) { const cached = JSON.parse(body); cached.narrative.stocks[0].summary = "외부 문구"; disk.set(path, JSON.stringify(cached)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cached = JSON.parse(body); cached.narrative.stocks[0].summary = "외부 문구"; disk.set(path, JSON.stringify(cached)); }
     const result = await createNarrativeStore({ transport }).resolve(input(), false, env);
     expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template", fieldSources: { overview: "llm", marketNote: "llm" } });
     expect(result.stocks[0]).toEqual(templateNarrative(input(), null).stocks[0]);
@@ -578,7 +580,7 @@ describe("Gemini narrative generation and cache", () => {
   });
   it("replaces a corrupted persisted stock field while retaining independently validated fields", async () => {
     const transport = vi.fn(async () => response()); await createNarrativeStore({ transport }).resolve(input(), true, env);
-    for (const [path, body] of disk) { const cache = JSON.parse(body); delete cache.rawFields; cache.narrative.stocks[0].summary = "매수하세요."; disk.set(path, JSON.stringify(cache)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cache = JSON.parse(body); delete cache.rawFields; cache.narrative.stocks[0].summary = "매수하세요."; disk.set(path, JSON.stringify(cache)); }
     const result = await createNarrativeStore({ transport }).resolve(input(), false, env);
     expect(result).toMatchObject({ status: "llm", fallbackReason: "partial_template" });
     expect(result.stocks[0].source).toBe("template"); expect(JSON.stringify(result)).not.toContain("매수하세요");
@@ -642,7 +644,7 @@ describe("Gemini narrative generation and cache", () => {
   });
   it("rejects unvalidated reasons in a persisted template cache", async () => {
     await createNarrativeStore({ transport: vi.fn() }).resolve(input(), true, { ...env, GEMINI_API_KEY: "" });
-    for (const [path, body] of disk) { const cached = JSON.parse(body); cached.narrative.fallbackReason = "arbitrary provider response"; disk.set(path, JSON.stringify(cached)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cached = JSON.parse(body); cached.narrative.fallbackReason = "arbitrary provider response"; disk.set(path, JSON.stringify(cached)); }
     expect((await createNarrativeStore().resolve(input(), false, env)).fallbackReason).toBe("not_generated");
   });
 });

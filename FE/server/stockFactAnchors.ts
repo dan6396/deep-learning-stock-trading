@@ -7,7 +7,7 @@ export function citedArticleTopic(text: string, input: BriefingInput, index: num
   const stock = input.stocks[index];
   const lexical = text.normalize("NFKC");
   return stock.news.articles.filter(article => citations.includes(article.id)).some(article => {
-    const source = `${article.title} ${input.articleBodies?.[article.id]?.text ?? ""}`.normalize("NFKC");
+    const source = `${article.title} ${input.articleExcerpts?.[article.id]?.text ?? ""} ${input.articleBodies?.[article.id]?.text ?? ""}`.normalize("NFKC");
     const terms = source.match(/[가-힣]{2,}|[a-zA-Z]{3,}/g) ?? [];
     return terms.some(term => {
       const stem = term.replace(/(?:에서는|으로|에서|에게|이다|했다|한다|하며|하고|은|는|이|가|을|를|의|와|과)$/, "");

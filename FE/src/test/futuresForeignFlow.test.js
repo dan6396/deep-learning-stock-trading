@@ -74,8 +74,8 @@ describe("previous-session KOSPI200 foreign futures flow", () => {
   it("creates provisional sum and trailing buy/sell comments including zero", () => {
     for (const [values, sign, streak] of [[[-1, -2, 1, 2, 3], "up", 3], [[1, 2, 3, -2, -5], "down", -2], [[1, -1, 1, -1, 0], "flat", 0]]) {
       const flow = futuresFlowIndicator(parseFuturesForeignFlow(raw, day).map((row, index) => ({ ...row, value: values[index] })));
-      expect(flow.comment.placeholder).toBe(true); expect(flow.comment.ruleId).toContain(sign); expect(flow.consecutiveDays).toBe(streak);
-      if (streak) expect(flow.comment.text).toContain(`${Math.abs(streak)}거래일 연속 순매${streak > 0 ? "수" : "도"}`);
+      expect(flow.comment).not.toHaveProperty("placeholder"); expect(flow.comment.band).toBe("보합"); expect(flow.consecutiveDays).toBe(streak);
+      expect(flow.comment.text).toContain("박스권");
     }
   });
   it("rejects a six-session window with the 10/22 observation missing, including old disk caches", async () => {
@@ -141,6 +141,6 @@ describe("previous-session KOSPI200 foreign futures flow", () => {
   it("joins futures with existing six indicators without changing old transport counts", async () => {
     const flow = futuresFlowIndicator(parseFuturesForeignFlow(raw, day));
     const result = await createMarketMacro({ transport: vi.fn(async () => ({ ok: false })), foreignFlow: async () => flow, reference: async () => null })({});
-    expect(result.preOpen[3].value).toBe(3451); expect(result.indicators).toHaveLength(7);
+    expect(result.preOpen.find(row => row.id === "KOSPI200_FOREIGN_FUTURES").value).toBe(3451); expect(result.indicators).toHaveLength(7);
   });
 });

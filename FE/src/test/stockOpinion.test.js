@@ -22,7 +22,7 @@ function input() {
 }
 function opinion(index = 0) {
   const stock = input().stocks[index];
-  return { code: stock.code, text: `모집단 200개 중 모델 순위 ${stock.rank}위이며 순위 점수는 ${stock.rankScore}입니다. 입력 근거 1건을 확인했습니다. 주의 1건이 있으며 일부 입력 자료는 미확인입니다. 관련 기사 1건은 공시 주제를 다루며 기사 본문은 수집하지 않았습니다.`,
+  return { code: stock.code, text: `모집단 200개 중 모델 순위 ${stock.rank}위이며 순위 점수는 ${stock.rankScore}입니다. 입력 근거 1건을 확인했습니다. 주의 1건이 있으며 일부 입력 자료는 미확인입니다. 공시를 다룬 기사입니다.`,
     citations: [`R:${stock.code}`, `E:${stock.code}:1`, `C:${stock.code}:1`, `N:${stock.code}:1`] };
 }
 function content() { return { overview: "시장 관측 자료입니다. 모델 순서를 유지합니다.", marketNote: "시장 자료를 확인했습니다.",
@@ -37,7 +37,7 @@ describe("stock analysis opinion policy", () => {
     "모집단 200개 중 모델 순위 1위이며 순위 점수는 1.7입니다.",
     "입력 근거 1건·주의 1건·기사 1건이 확인됩니다.",
     "일부 입력 자료는 미확인입니다.",
-    "공시 주제를 다룬 기사이며 본문은 수집하지 않았습니다.",
+    "공시를 다룬 기사이며 본문은 수집하지 않았습니다.",
     "나스닥은 1% 상승 마감했습니다.",
     "방향 판단은 하지 않습니다.",
   ])("accepts grounded fact: %s", text => expect(stockOpinionSentenceReason(text, input(), 0)).toBeNull());
@@ -110,7 +110,13 @@ describe("one-call generation and cache compatibility", () => {
     expect(result.stockOpinions.map(row => row.source)).toEqual(["llm", "llm"]);
     const request = JSON.parse(transport.mock.calls[0][1].body);
     expect(request.generationConfig.responseSchema.required).toContain("stockOpinions");
-    const cached = JSON.parse([...disk.values()][0]);
+    const instruction = request.systemInstruction.parts[0].text;
+    expect(instruction).toContain("각 문장은 해당 종목의 입력 사실 항목 하나 이상과 역할에 맞는 중립 서술어로만 구성합니다");
+    expect(instruction).toContain("해당 기사는 {approvedTopic}를 다룬 기사입니다.");
+    expect(instruction).toContain("기사 주제 명사 사전:");
+    expect(instruction).toContain("marketOutlook에는 이 문형 제한을 적용하지 않습니다");
+    expect(instruction).not.toContain("바탕으로 각 3문장");
+    const cached = JSON.parse([...disk.entries()].find(([path]) => path.endsWith("briefing-narrative.json"))[1]);
     expect(cached.rawFields.stockOpinions).toEqual(content().stockOpinions);
     const reread = await createNarrativeStore({ transport }).resolve(input(), false, env);
     expect(reread.stockOpinions).toEqual(result.stockOpinions); expect(transport).toHaveBeenCalledOnce();
@@ -118,7 +124,7 @@ describe("one-call generation and cache compatibility", () => {
   it("replaces a bad raw cached opinion only", async () => {
     const transport = vi.fn(async () => response(content()));
     await createNarrativeStore({ transport }).resolve(input(), true, env);
-    for (const [path, body] of disk) { const cache = JSON.parse(body); cache.rawFields.stockOpinions[0].text = "매수하세요. 상승 우위입니다."; disk.set(path, JSON.stringify(cache)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cache = JSON.parse(body); cache.rawFields.stockOpinions[0].text = "매수하세요. 상승 우위입니다."; disk.set(path, JSON.stringify(cache)); }
     const result = await createNarrativeStore({ transport }).resolve(input(), false, env);
     expect(result.stockOpinions.map(row => row.source)).toEqual(["template", "llm"]);
     expect(result.stocks.every(row => row.source === "llm")).toBe(true);
@@ -140,7 +146,7 @@ describe("one-call generation and cache compatibility", () => {
     const transport = vi.fn(async () => response(value));
     const result = await createNarrativeStore({ transport }).resolve(input(), true, env);
     expect(result.stockOpinions.every(row => row.source === "template")).toBe(true);
-    for (const [path, body] of disk) { const cache = JSON.parse(body); delete cache.narrative.stockOpinions; disk.set(path, JSON.stringify(cache)); }
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cache = JSON.parse(body); delete cache.narrative.stockOpinions; disk.set(path, JSON.stringify(cache)); }
     const reread = await createNarrativeStore({ transport }).resolve(input(), false, env);
     expect(reread.stockOpinions).toEqual(result.stockOpinions);
     expect(adaptBriefingNarrative(value).stockOpinions).toBeUndefined();
@@ -148,8 +154,8 @@ describe("one-call generation and cache compatibility", () => {
   it("invalidates a previous policy fingerprint and changed input without generation on GET", async () => {
     const transport = vi.fn(async () => response(content()));
     await createNarrativeStore({ transport }).resolve(input(), true, env);
-    expect(NARRATIVE_VALIDATION_VERSION).toBe("2026-10-28-fact-anchors-no-sp500-v6");
-    for (const [path, body] of disk) { const cache = JSON.parse(body); cache.inputHash = cache.narrative.inputHash = "previous-policy"; disk.set(path, JSON.stringify(cache)); }
+    expect(NARRATIVE_VALIDATION_VERSION).toBe("2026-10-28-source-grounded-news-v13-news-default-off");
+    for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue; const cache = JSON.parse(body); cache.inputHash = cache.narrative.inputHash = "previous-policy"; disk.set(path, JSON.stringify(cache)); }
     const store = createNarrativeStore({ transport });
     expect((await store.resolve(input(), false, env)).fallbackReason).toBe("not_generated");
     await store.resolve(input(), true, env); expect(transport).toHaveBeenCalledTimes(2);

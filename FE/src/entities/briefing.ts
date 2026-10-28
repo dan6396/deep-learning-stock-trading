@@ -20,7 +20,7 @@ export type BriefingModelMeta = {
   elapsedMs: number | null;
 };
 
-export type MacroIndicatorId = "KOSPI" | "KOSDAQ" | "NASDAQ" | "SP500" | "USDKRW" | "UST10Y" | "KOSPI200_NIGHT";
+export type MacroIndicatorId = "KOSPI" | "KOSDAQ" | "NASDAQ" | "SOX" | "SP500" | "USDKRW" | "UST10Y" | "KOSPI200_NIGHT";
 export type MacroIndicatorUnit = "pt" | "KRW" | "%";
 export type MacroIndicatorSource = "yahoo" | "kis" | "unknown";
 export type MacroIndicatorStatus = "ok" | "unavailable";
@@ -244,11 +244,12 @@ export function withoutRankScoreDisclaimer(value: string): string {
     }).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
-const VALID_MACRO_IDS: readonly MacroIndicatorId[] = ["KOSPI", "KOSDAQ", "NASDAQ", "SP500", "USDKRW", "UST10Y", "KOSPI200_NIGHT"];
+const VALID_MACRO_IDS: readonly MacroIndicatorId[] = ["KOSPI", "KOSDAQ", "NASDAQ", "SOX", "SP500", "USDKRW", "UST10Y", "KOSPI200_NIGHT"];
 const DEFAULT_MACRO_NAMES: Record<MacroIndicatorId, string> = {
   KOSPI: "코스피",
   KOSDAQ: "코스닥",
   NASDAQ: "나스닥",
+  SOX: "필라델피아 반도체",
   SP500: "S&P 500",
   USDKRW: "원/달러 환율",
   UST10Y: "미국채 10년물",
@@ -371,7 +372,7 @@ export function adaptMacroData(raw: unknown): MacroData {
   const reference = adaptMacroReference(obj.reference);
   const preOpen = Array.isArray(obj.preOpen) ? obj.preOpen.flatMap(raw => {
     const row = record(raw), id = row.id;
-    if (!["UST10Y", "NASDAQ", "USDKRW", "KOSPI200_FOREIGN_FUTURES"].includes(String(id))) return [];
+    if (!["UST10Y", "NASDAQ", "SOX", "USDKRW", "KOSPI200_FOREIGN_FUTURES"].includes(String(id))) return [];
     const dates = new Map<string, number>();
     if (Array.isArray(row.history)) for (const item of row.history) {
       const point = record(item), date = textValue(point.date), value = finiteNumber(point.value);
@@ -385,7 +386,7 @@ export function adaptMacroData(raw: unknown): MacroData {
       history: [...dates].sort(([a], [b]) => a.localeCompare(b)).slice(-5).map(([date, value]) => ({ date, value })),
       unit: row.unit === "%" || row.unit === "KRW" || row.unit === "계약" ? row.unit : "pt", asOf: textValue(row.asOf),
       source: row.source === "yahoo" || row.source === "kis" ? row.source : "unknown", status: row.status === "ok" && value !== null ? "ok" : "unavailable",
-      comment: { text: textValue(comment.text) ?? "데이터 출처 확인 중", placeholder: true, ruleId: textValue(comment.ruleId) ?? "legacy" },
+      comment: { text: textValue(comment.text) ?? "데이터 출처 확인 중", ruleId: textValue(comment.ruleId) ?? "legacy", ...(typeof comment.metric === "number" ? { metric: comment.metric } : {}), ...(["상승", "소폭 상승", "보합", "소폭 하락", "하락"].includes(String(comment.band)) ? { band: comment.band as PreOpenIndicator["comment"]["band"] } : {}) },
     } as PreOpenIndicator];
   }) : undefined;
 
@@ -511,7 +512,8 @@ export function adaptBriefingNarrative(raw: unknown): BriefingNarrative {
   const newsSummaries = Array.isArray(obj.newsSummaries) ? obj.newsSummaries.flatMap(raw => {
     const row = record(raw), code = stockCode(row.code), text = textValue(row.text);
     return code && text ? [{ code, text, citations: Array.isArray(row.citations) ? row.citations.filter((id): id is string => typeof id === "string" && id.startsWith(`N:${code}:`)) : [], source: row.source === "llm" ? "llm" as const : "template" as const,
-      ...(row.summaryBasis === "body" || row.summaryBasis === "title" ? { summaryBasis: row.summaryBasis as "body" | "title" } : {}),
+      ...(row.summaryBasis === "body" || row.summaryBasis === "excerpt" || row.summaryBasis === "title" ? { summaryBasis: row.summaryBasis as "body" | "excerpt" | "title" } : {}),
+      ...(row.validation === "off" ? { validation: "off" as const } : {}),
       ...(Array.isArray(row.sentenceCitations) ? { sentenceCitations: row.sentenceCitations.map(list => Array.isArray(list) ? list.filter((id): id is string => typeof id === "string" && id.startsWith(`N:${code}:`)) : []) } : {}) }] : [];
   }) : undefined;
 
@@ -878,6 +880,7 @@ const MACRO_CITATION_LABELS: Record<string, string> = {
   KOSDAQ: "코스닥",
   KOSPI200_NIGHT: "야간선물",
   NASDAQ: "나스닥",
+  SOX: "필라델피아 반도체",
   SP500: "S&P 500",
   USDKRW: "원·달러",
   UST10Y: "미 10년물",

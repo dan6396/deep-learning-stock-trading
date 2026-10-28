@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PreOpenIndicator } from "../../entities/briefing";
 
 type Observation = PreOpenIndicator["history"][number];
@@ -13,7 +13,7 @@ export function formatObservation(value: number, unit: string, withUnit = true):
 export const chartLabelWidth = (text: string) => Array.from(text).reduce((width, character) => width + (/[가-힣]/.test(character) ? 12 : /[.,]/.test(character) ? 4 : 8), 0);
 
 /** Actual observations only. Labels have a separate band above the plot. */
-export function indicatorChartLayout(history: readonly Observation[], unit: string, width: number) {
+export function indicatorChartLayout(history: readonly Observation[], unit: string, width: number, minimumPlotTop = 26, labelLanes?: readonly number[]) {
   const data = history.filter(row => Number.isFinite(row.value));
   if (!data.length) return null;
   const values = data.map(row => row.value), futures = unit === "계약";
@@ -26,24 +26,28 @@ export function indicatorChartLayout(history: readonly Observation[], unit: stri
   // Axis labels already expose the extrema. Every observation remains in aria/tooltip.
   const axisValues = new Set(tickValues.map(value => formatObservation(value, unit, false)));
   const selected = data.map((_row, index) => index).filter(index => futures || !axisValues.has(formatObservation(data[index].value, unit, false)));
-  const occupied: { left: number; right: number; lane: number }[] = [];
+  const occupied: { left: number; right: number; lane: number; index: number }[] = [];
   const labels = selected.map(index => {
     const text = formatObservation(data[index].value, unit, false), size = chartLabelWidth(text) + 4;
     const center = Math.max(size / 2 + 2, Math.min(width - size / 2 - 2, x(index)));
     const bounds = { left: center - size / 2, right: center + size / 2 };
     let lane = 0;
     while (occupied.some(other => other.lane === lane && other.left < bounds.right + 6 && other.right + 6 > bounds.left)) lane++;
-    occupied.push({ ...bounds, lane });
-    return { index, text, x: center, y: 14 + lane * 16 };
+    occupied.push({ ...bounds, lane, index });
+    return { index, text, x: center, y: 14 + (labelLanes?.[index] ?? lane) * 16 };
   });
-  const plotTop = 26 + Math.max(0, ...occupied.map(label => label.lane)) * 16, plotBottom = plotTop + 52;
+  const labelConflicts = occupied.flatMap((label, index) => occupied.slice(0, index)
+    .filter(other => other.left < label.right + 6 && other.right + 6 > label.left)
+    .map(other => [other.index, label.index]));
+  const requiredPlotTop = 26 + Math.max(0, ...occupied.map(label => label.lane)) * 16;
+  const plotTop = Math.max(minimumPlotTop, requiredPlotTop), plotBottom = plotTop + 52;
   const y = (value: number) => max === min ? (plotTop + plotBottom) / 2 : plotBottom - (value - min) / (max - min) * 52;
   const ticks = tickValues.map(value => ({ value, text: formatObservation(value, unit), y: y(value) }));
   const dates = [...new Set(narrow ? [0, Math.floor(last / 2), last] : data.map((_row, index) => index))];
-  return { data, labels, ticks, dates, x, y, left, right, plotTop, plotBottom, height: plotBottom + 28, zero: futures ? y(0) : null };
+  return { data, labels, labelConflicts, ticks, dates, x, y, left, right, requiredPlotTop, plotTop, plotBottom, height: plotBottom + 28, zero: futures ? y(0) : null };
 }
 
-export function PreOpenIndicatorChart({ row, color }: { row: PreOpenIndicator; color: string }) {
+export function PreOpenIndicatorChart({ row, color, minimumPlotTop, labelLanes, onLabelSpaceChange }: { row: PreOpenIndicator; color: string; minimumPlotTop?: number; labelLanes?: readonly number[]; onLabelSpaceChange?: (id: string, height: number, conflicts: number[][]) => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(460), [active, setActive] = useState<number | null>(null);
   useEffect(() => {
@@ -51,7 +55,10 @@ export function PreOpenIndicatorChart({ row, color }: { row: PreOpenIndicator; c
     const observer = new ResizeObserver(([entry]) => setWidth(Math.max(240, entry.contentRect.width)));
     observer.observe(host.current); return () => observer.disconnect();
   }, []);
-  const chart = indicatorChartLayout(row.history, row.unit, width);
+  const chart = indicatorChartLayout(row.history, row.unit, width, minimumPlotTop, labelLanes);
+  const requiredPlotTop = chart?.requiredPlotTop ?? 26;
+  const conflictsKey = JSON.stringify(chart?.labelConflicts ?? []);
+  useLayoutEffect(() => { onLabelSpaceChange?.(row.id, requiredPlotTop, JSON.parse(conflictsKey)); }, [onLabelSpaceChange, row.id, requiredPlotTop, conflictsKey]);
   if (!chart) return <div className="preopen-chart" ref={host} role="img" aria-label={`${row.name}: 관측 자료 없음`}>관측 자료 없음</div>;
   const { data } = chart, futures = row.unit === "계약";
   const values = data.map(point => point.value), last = data[data.length - 1];
@@ -72,7 +79,7 @@ export function PreOpenIndicatorChart({ row, color }: { row: PreOpenIndicator; c
         <circle cx={chart.x(index)} cy={chart.y(point.value)} r={index === data.length - 1 || active === index ? 4 : 2.5} fill={futures ? point.value > 0 ? "var(--ds-rise)" : point.value < 0 ? "var(--ds-fall)" : "var(--ds-fg-2)" : color} stroke="var(--ds-surface)" strokeWidth="1" />
         <circle aria-hidden="true" className="preopen-chart-focus-ring" cx={chart.x(index)} cy={chart.y(point.value)} r="7" />
       </g>)}
-      {chart.labels.map(label => <text aria-hidden="true" key={label.index} className="preopen-chart-label" data-chart-label="value" x={label.x} y={label.y} textAnchor="middle">{label.text}</text>)}
+      {chart.labels.map(label => <text aria-hidden="true" key={label.index} className="preopen-chart-label" data-chart-label="value" data-observation-index={label.index} x={label.x} y={label.y} textAnchor="middle">{label.text}</text>)}
       {chart.dates.map(index => <text aria-hidden="true" key={index} className="preopen-chart-label" data-chart-label="date" x={chart.x(index)} y={chart.plotBottom + 22} textAnchor="middle">{dateLabel(data[index].date)}</text>)}
     </svg>
     {active !== null && data[active] && <div role="tooltip" aria-hidden="true" className="preopen-chart-tooltip">{data[active].date} · {formatObservation(data[active].value, row.unit)}</div>}

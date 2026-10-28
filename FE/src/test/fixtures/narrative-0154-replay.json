@@ -1,0 +1,1198 @@
+{
+  "sourceHash": "a2942b80046d7ff06e96ab917a9ce9685f3cfbc855b5389be063009aca179735",
+  "generatedAt": "2026-10-27T16:54:00.440Z",
+  "input": {
+    "model": {
+      "modelId": "plain_20_120_rank_mean_v1",
+      "scoreKind": "rank_zscore",
+      "baseDate": "2026-10-27",
+      "predictionTarget": "next_session_open_to_close",
+      "poolSize": 199,
+      "runStartedAt": "2026-10-27T14:05:08.625Z"
+    },
+    "macro": {
+      "asOf": "2026-10-27T11:05:40.000Z",
+      "context": {
+        "usSessionDate": "2026-10-27",
+        "targetSessionNote": "2026-10-27 미국 장중 관측 자료이며, 모델 예측 대상은 2026-10-28 한국 정규장의 시가→종가입니다."
+      },
+      "indicators": [
+        {
+          "id": "KOSPI",
+          "name": "코스피",
+          "status": "ok",
+          "value": 5638.34,
+          "change": 168.86978515625015,
+          "changePct": 3.0874980303933217,
+          "unit": "pt",
+          "source": "yahoo",
+          "asOf": "2026-10-27T11:05:40.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 6889.740234375
+            },
+            {
+              "date": "2026-09-29",
+              "value": 6870.81005859375
+            },
+            {
+              "date": "2026-09-30",
+              "value": 6838.0400390625
+            },
+            {
+              "date": "2026-10-01",
+              "value": 6971.35009765625
+            },
+            {
+              "date": "2026-10-02",
+              "value": 7003.740234375
+            },
+            {
+              "date": "2026-10-06",
+              "value": 6941.39013671875
+            },
+            {
+              "date": "2026-10-07",
+              "value": 6803.89990234375
+            },
+            {
+              "date": "2026-10-08",
+              "value": 6625.93017578125
+            },
+            {
+              "date": "2026-10-12",
+              "value": 6384.240234375
+            },
+            {
+              "date": "2026-10-13",
+              "value": 6035.35009765625
+            },
+            {
+              "date": "2026-10-14",
+              "value": 6008.81005859375
+            },
+            {
+              "date": "2026-10-15",
+              "value": 5554.22021484375
+            },
+            {
+              "date": "2026-10-16",
+              "value": 5668.0498046875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 5768.009765625
+            },
+            {
+              "date": "2026-10-20",
+              "value": 5552.740234375
+            },
+            {
+              "date": "2026-10-21",
+              "value": 5735.66015625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 5533.77001953125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 5550.2998046875
+            },
+            {
+              "date": "2026-10-26",
+              "value": 5469.47021484375
+            }
+          ]
+        },
+        {
+          "id": "KOSDAQ",
+          "name": "코스닥",
+          "status": "ok",
+          "value": 743.83,
+          "change": 16.61997802734379,
+          "changePct": 2.2854440292585405,
+          "unit": "pt",
+          "source": "yahoo",
+          "asOf": "2026-10-27T11:05:40.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 846.5800170898438
+            },
+            {
+              "date": "2026-09-29",
+              "value": 849.7999877929688
+            },
+            {
+              "date": "2026-09-30",
+              "value": 855.9099731445312
+            },
+            {
+              "date": "2026-10-01",
+              "value": 894.2899780273438
+            },
+            {
+              "date": "2026-10-02",
+              "value": 893.2899780273438
+            },
+            {
+              "date": "2026-10-06",
+              "value": 919.9199829101562
+            },
+            {
+              "date": "2026-10-07",
+              "value": 898.4299926757812
+            },
+            {
+              "date": "2026-10-08",
+              "value": 892.27001953125
+            },
+            {
+              "date": "2026-10-12",
+              "value": 849.1900024414062
+            },
+            {
+              "date": "2026-10-13",
+              "value": 837.030029296875
+            },
+            {
+              "date": "2026-10-14",
+              "value": 823.8800048828125
+            },
+            {
+              "date": "2026-10-15",
+              "value": 760.8200073242188
+            },
+            {
+              "date": "2026-10-16",
+              "value": 794.780029296875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 808.8900146484375
+            },
+            {
+              "date": "2026-10-20",
+              "value": 781.969970703125
+            },
+            {
+              "date": "2026-10-21",
+              "value": 792.760009765625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 764.0999755859375
+            },
+            {
+              "date": "2026-10-23",
+              "value": 751.6900024414062
+            },
+            {
+              "date": "2026-10-26",
+              "value": 727.2100219726562
+            }
+          ]
+        },
+        {
+          "id": "NASDAQ",
+          "name": "나스닥",
+          "status": "ok",
+          "value": 26475.674,
+          "change": 306.29314062499907,
+          "changePct": 1.1704256293678101,
+          "unit": "pt",
+          "source": "yahoo",
+          "session": "open",
+          "asOf": "2026-10-27T16:47:08.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 26820.380859375
+            },
+            {
+              "date": "2026-09-29",
+              "value": 26797.5390625
+            },
+            {
+              "date": "2026-09-30",
+              "value": 26861.060546875
+            },
+            {
+              "date": "2026-10-01",
+              "value": 26871.599609375
+            },
+            {
+              "date": "2026-10-02",
+              "value": 27190.859375
+            },
+            {
+              "date": "2026-10-05",
+              "value": 27477.310546875
+            },
+            {
+              "date": "2026-10-06",
+              "value": 27599.7890625
+            },
+            {
+              "date": "2026-10-07",
+              "value": 27538.689453125
+            },
+            {
+              "date": "2026-10-08",
+              "value": 27193.33984375
+            },
+            {
+              "date": "2026-10-09",
+              "value": 27366.169921875
+            },
+            {
+              "date": "2026-10-12",
+              "value": 27245.900390625
+            },
+            {
+              "date": "2026-10-13",
+              "value": 27204.380859375
+            },
+            {
+              "date": "2026-10-14",
+              "value": 26692.869140625
+            },
+            {
+              "date": "2026-10-15",
+              "value": 26713.029296875
+            },
+            {
+              "date": "2026-10-16",
+              "value": 26140.029296875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 26430.890625
+            },
+            {
+              "date": "2026-10-20",
+              "value": 26424.8203125
+            },
+            {
+              "date": "2026-10-21",
+              "value": 26702.859375
+            },
+            {
+              "date": "2026-10-22",
+              "value": 26008.859375
+            },
+            {
+              "date": "2026-10-23",
+              "value": 25955.33984375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 26169.380859375
+            },
+            {
+              "date": "2026-10-27",
+              "value": 26475.673828125
+            }
+          ]
+        },
+        {
+          "id": "SP500",
+          "name": "S&P 500",
+          "status": "ok",
+          "value": 7719.48,
+          "change": 42.70998046874956,
+          "changePct": 0.556353523162564,
+          "unit": "pt",
+          "source": "yahoo",
+          "session": "open",
+          "asOf": "2026-10-27T16:47:09.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 7683.68994140625
+            },
+            {
+              "date": "2026-09-29",
+              "value": 7670.83984375
+            },
+            {
+              "date": "2026-09-30",
+              "value": 7651.5400390625
+            },
+            {
+              "date": "2026-10-01",
+              "value": 7666.4501953125
+            },
+            {
+              "date": "2026-10-02",
+              "value": 7722.72021484375
+            },
+            {
+              "date": "2026-10-05",
+              "value": 7773.9501953125
+            },
+            {
+              "date": "2026-10-06",
+              "value": 7818.93017578125
+            },
+            {
+              "date": "2026-10-07",
+              "value": 7801.77001953125
+            },
+            {
+              "date": "2026-10-08",
+              "value": 7765.35986328125
+            },
+            {
+              "date": "2026-10-09",
+              "value": 7811.5400390625
+            },
+            {
+              "date": "2026-10-12",
+              "value": 7807.240234375
+            },
+            {
+              "date": "2026-10-13",
+              "value": 7805.4501953125
+            },
+            {
+              "date": "2026-10-14",
+              "value": 7718.93994140625
+            },
+            {
+              "date": "2026-10-15",
+              "value": 7744.06005859375
+            },
+            {
+              "date": "2026-10-16",
+              "value": 7659.43994140625
+            },
+            {
+              "date": "2026-10-19",
+              "value": 7690.72998046875
+            },
+            {
+              "date": "2026-10-20",
+              "value": 7712.56982421875
+            },
+            {
+              "date": "2026-10-21",
+              "value": 7757.169921875
+            },
+            {
+              "date": "2026-10-22",
+              "value": 7663.43017578125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 7623.68017578125
+            },
+            {
+              "date": "2026-10-26",
+              "value": 7676.77001953125
+            },
+            {
+              "date": "2026-10-27",
+              "value": 7719.47998046875
+            }
+          ]
+        },
+        {
+          "id": "USDKRW",
+          "name": "원·달러 환율",
+          "status": "ok",
+          "value": 1326.19,
+          "change": 4.429990234375055,
+          "changePct": 0.33515844038590503,
+          "unit": "KRW",
+          "source": "yahoo",
+          "asOf": "2026-10-27T16:47:05.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 1354.510009765625
+            },
+            {
+              "date": "2026-09-29",
+              "value": 1359.56005859375
+            },
+            {
+              "date": "2026-09-30",
+              "value": 1350.5
+            },
+            {
+              "date": "2026-10-01",
+              "value": 1356.8399658203125
+            },
+            {
+              "date": "2026-10-02",
+              "value": 1360.5899658203125
+            },
+            {
+              "date": "2026-10-05",
+              "value": 1342.56005859375
+            },
+            {
+              "date": "2026-10-06",
+              "value": 1343.75
+            },
+            {
+              "date": "2026-10-07",
+              "value": 1339.739990234375
+            },
+            {
+              "date": "2026-10-08",
+              "value": 1339.0799560546875
+            },
+            {
+              "date": "2026-10-09",
+              "value": 1342.989990234375
+            },
+            {
+              "date": "2026-10-12",
+              "value": 1340.8399658203125
+            },
+            {
+              "date": "2026-10-13",
+              "value": 1334.1300048828125
+            },
+            {
+              "date": "2026-10-14",
+              "value": 1340.31005859375
+            },
+            {
+              "date": "2026-10-15",
+              "value": 1339.3499755859375
+            },
+            {
+              "date": "2026-10-16",
+              "value": 1340.949951171875
+            },
+            {
+              "date": "2026-10-19",
+              "value": 1333.4300537109375
+            },
+            {
+              "date": "2026-10-20",
+              "value": 1330
+            },
+            {
+              "date": "2026-10-21",
+              "value": 1323.93994140625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 1325.5899658203125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 1325.989990234375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 1321.760009765625
+            },
+            {
+              "date": "2026-10-27",
+              "value": 1326.18994140625
+            }
+          ]
+        },
+        {
+          "id": "UST10Y",
+          "name": "미국 국채 10년 금리",
+          "status": "ok",
+          "value": 4.995,
+          "change": 0.008999938964843857,
+          "changePct": 0.1805041888221589,
+          "unit": "%",
+          "source": "yahoo",
+          "asOf": "2026-10-27T16:32:04.000Z",
+          "history": [
+            {
+              "date": "2026-09-28",
+              "value": 5.239999771118164
+            },
+            {
+              "date": "2026-09-29",
+              "value": 5.255000114440918
+            },
+            {
+              "date": "2026-09-30",
+              "value": 5.293000221252441
+            },
+            {
+              "date": "2026-10-01",
+              "value": 5.236999988555908
+            },
+            {
+              "date": "2026-10-02",
+              "value": 5.2769999504089355
+            },
+            {
+              "date": "2026-10-05",
+              "value": 5.310999870300293
+            },
+            {
+              "date": "2026-10-06",
+              "value": 5.269000053405762
+            },
+            {
+              "date": "2026-10-07",
+              "value": 5.2769999504089355
+            },
+            {
+              "date": "2026-10-08",
+              "value": 5.230999946594238
+            },
+            {
+              "date": "2026-10-09",
+              "value": 5.24399995803833
+            },
+            {
+              "date": "2026-10-12",
+              "value": 5.239999771118164
+            },
+            {
+              "date": "2026-10-13",
+              "value": 5.2170000076293945
+            },
+            {
+              "date": "2026-10-14",
+              "value": 5.190000057220459
+            },
+            {
+              "date": "2026-10-15",
+              "value": 5.089000225067139
+            },
+            {
+              "date": "2026-10-16",
+              "value": 5.0980000495910645
+            },
+            {
+              "date": "2026-10-19",
+              "value": 5.136000156402588
+            },
+            {
+              "date": "2026-10-20",
+              "value": 5.117000102996826
+            },
+            {
+              "date": "2026-10-21",
+              "value": 5.145999908447266
+            },
+            {
+              "date": "2026-10-22",
+              "value": 4.953000068664551
+            },
+            {
+              "date": "2026-10-23",
+              "value": 4.98799991607666
+            },
+            {
+              "date": "2026-10-26",
+              "value": 4.986000061035156
+            },
+            {
+              "date": "2026-10-27",
+              "value": 4.994999885559082
+            }
+          ]
+        },
+        {
+          "id": "KOSPI200_NIGHT",
+          "name": "코스피200 야간선물",
+          "status": "ok",
+          "value": 900.7,
+          "change": 28.350000000000023,
+          "changePct": 3.2498423797787614,
+          "unit": "pt",
+          "source": "kis",
+          "session": "open",
+          "asOf": "2026-10-27T16:47:00.000Z"
+        }
+      ],
+      "preOpen": [
+        {
+          "id": "UST10Y",
+          "name": "미국 국채 10년 금리",
+          "status": "ok",
+          "value": 4.986000061035156,
+          "change": -0.0019998550415039062,
+          "changePct": -0.040093325484193344,
+          "unit": "%",
+          "source": "yahoo",
+          "asOf": "2026-10-26",
+          "fiveDayChange": -0.13100004196166992,
+          "fiveDayChangePct": -2.560094573477697,
+          "history": [
+            {
+              "date": "2026-10-20",
+              "value": 5.117000102996826
+            },
+            {
+              "date": "2026-10-21",
+              "value": 5.145999908447266
+            },
+            {
+              "date": "2026-10-22",
+              "value": 4.953000068664551
+            },
+            {
+              "date": "2026-10-23",
+              "value": 4.98799991607666
+            },
+            {
+              "date": "2026-10-26",
+              "value": 4.986000061035156
+            }
+          ],
+          "comment": {
+            "text": "최근 관측 구간에서 금리가 낮아졌습니다. 5개 관측일의 첫날 대비 -0.131%p입니다."
+          }
+        },
+        {
+          "id": "NASDAQ",
+          "name": "나스닥",
+          "status": "ok",
+          "value": 26169.380859375,
+          "change": 214.041015625,
+          "changePct": 0.8246511774205904,
+          "unit": "pt",
+          "source": "yahoo",
+          "asOf": "2026-10-26",
+          "fiveDayChange": -255.439453125,
+          "fiveDayChangePct": -0.966664863201234,
+          "history": [
+            {
+              "date": "2026-10-20",
+              "value": 26424.8203125
+            },
+            {
+              "date": "2026-10-21",
+              "value": 26702.859375
+            },
+            {
+              "date": "2026-10-22",
+              "value": 26008.859375
+            },
+            {
+              "date": "2026-10-23",
+              "value": 25955.33984375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 26169.380859375
+            }
+          ],
+          "comment": {
+            "text": "최근 관측 구간에서 나스닥이 하락했습니다. 5개 관측일의 첫날 대비 -0.97%입니다."
+          }
+        },
+        {
+          "id": "USDKRW",
+          "name": "원·달러 환율",
+          "status": "ok",
+          "value": 1321.760009765625,
+          "change": -4.22998046875,
+          "changePct": -0.3190054600640183,
+          "unit": "KRW",
+          "source": "yahoo",
+          "asOf": "2026-10-26",
+          "fiveDayChange": -8.239990234375,
+          "fiveDayChangePct": -0.6195481379229323,
+          "history": [
+            {
+              "date": "2026-10-20",
+              "value": 1330
+            },
+            {
+              "date": "2026-10-21",
+              "value": 1323.93994140625
+            },
+            {
+              "date": "2026-10-22",
+              "value": 1325.5899658203125
+            },
+            {
+              "date": "2026-10-23",
+              "value": 1325.989990234375
+            },
+            {
+              "date": "2026-10-26",
+              "value": 1321.760009765625
+            }
+          ],
+          "comment": {
+            "text": "최근 관측 구간에서 원·달러 환율이 내렸습니다. 5개 관측일의 첫날 대비 -8.24원입니다."
+          }
+        },
+        {
+          "id": "KOSPI200_FOREIGN_FUTURES",
+          "name": "코스피200 선물 외국인 순매수",
+          "status": "ok",
+          "value": 670,
+          "change": -2781,
+          "changePct": null,
+          "unit": "계약",
+          "source": "kis",
+          "asOf": "2026-10-27",
+          "fiveDayChange": null,
+          "fiveDayChangePct": null,
+          "fiveDaySum": 4218,
+          "consecutiveDays": 4,
+          "history": [
+            {
+              "date": "2026-10-21",
+              "value": -3632
+            },
+            {
+              "date": "2026-10-22",
+              "value": 1552
+            },
+            {
+              "date": "2026-10-23",
+              "value": 2177
+            },
+            {
+              "date": "2026-10-26",
+              "value": 3451
+            },
+            {
+              "date": "2026-10-27",
+              "value": 670
+            }
+          ],
+          "comment": {
+            "text": "외국인 선물은 5거래일 합계 +4,218계약입니다. 외국인 선물 수급 합계는 순매수입니다. 외국인 선물은 4거래일 연속 순매수입니다."
+          }
+        }
+      ]
+    },
+    "stocks": [
+      {
+        "rank": 1,
+        "code": "030200",
+        "name": "KT",
+        "rankScore": 1.7030597340999105,
+        "poolSize": 199,
+        "topPercent": 0.5025125628140703,
+        "evidence": [
+          {
+            "id": "E:030200:1",
+            "kind": "model",
+            "text": "전체 199개 중 1위(상위 0.5%)입니다."
+          },
+          {
+            "id": "E:030200:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 경향신문, 조선일보, 서울경제TV입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:030200:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:030200:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-27이며 오늘 날짜와 다릅니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:030200:1",
+              "title": "AI 모델 선택·활용·보안까지…KT “토큰팩토리 하나로 끝~”",
+              "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFBRbG5IdGpob1RWUDRTZm1ZLWZ2QVJmb2gwaHV0dDIxN0ZGSVNEZ1lnZV9vcTlIVTRZOUF3WUw1UGhZaVc0Yk1ZWWNwUC0tSDlRSGtOa0VOLXQ4d9IBX0FVX3lxTE9UOW5HWGs5Z3lLSTNrN3dGUUFSaU5qc3pGNk82WFVnazdoc19uc1NVek1vQzRPdGNJc2MySGV4MjNJYnI1MEVtWjlEaVYzMi1rcEM4OXd2YWpKU3FBVnZF?oc=5",
+              "source": "경향신문",
+              "pubDate": "2026-10-27T11:49:00.000Z"
+            },
+            {
+              "id": "N:030200:2",
+              "title": "\"현장 목소리 적극 반영\" 한국시리즈 본격 담금질! '100만 야구팬' KT, 무관중 연습경기 대신 '관중석 개방' 확정 [수원현장]",
+              "url": "https://news.google.com/rss/articles/CBMigwFBVV95cUxNR2l0RzdMOVdvZnhUYnNYdVdzQTJQYzNiYnoxcTlGZ3hnTm9ZOGhScnRPV1VVaUppV3pBWHZ2LTNfQnBWOWJZTkhhRGlIOGVQRnJlVHBQc3ZLV1dTSFVXYVRubGVXVlk1ekFjVVdNcWl1b1dBNVpjVHYtQzFMU1c3WkFwUQ?oc=5",
+              "source": "조선일보",
+              "pubDate": "2026-10-27T10:22:00.000Z"
+            },
+            {
+              "id": "N:030200:3",
+              "title": "“AI 골라 쓰고 사용료 줄인다”…KT ‘토큰팩토리’ 승부수",
+              "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTFBNOWk0TTNkdjVpVVVmb2Z2ak5JYlp5X1N3NnZUcVpvdXZFR2xKZFJWOUtKWFhoQ0RycUs4cXkzMFZKS2JNSUczNkhKRGZya2Y0Zm9mWmRvY2lkVFhSdGNtdm5ZMXI?oc=5",
+              "source": "서울경제TV",
+              "pubDate": "2026-10-27T10:05:21.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "code": "024110",
+        "name": "기업은행",
+        "rankScore": 1.6624416143769143,
+        "poolSize": 199,
+        "topPercent": 1.0050251256281406,
+        "evidence": [
+          {
+            "id": "E:024110:1",
+            "kind": "model",
+            "text": "전체 199개 중 2위(상위 1%)입니다."
+          },
+          {
+            "id": "E:024110:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 오늘경제, ER 이코노믹리뷰, 서울경제TV입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:024110:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:024110:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-27이며 오늘 날짜와 다릅니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:024110:1",
+              "title": "[포커스] 마진 경쟁력 갖춘 기업은행, 中企금융 ‘체력·건전성 관리’ 병행",
+              "url": "https://news.google.com/rss/articles/CBMic0FVX3lxTE5CQkRBT25wZ2Vvd2toLU5jUHdZcjJWSkFWdjZWZlVTRHBTYWZxRVVPWFA0UXNRVjhzN3hNcmNaZVRfR0VDcnRQU0trODhramtETWJ0S1ZzVGs4U3l2SUhCT0k1NzJvd2c2eHVvNVVXUXh1ZUU?oc=5",
+              "source": "오늘경제",
+              "pubDate": "2026-10-27T12:50:00.000Z"
+            },
+            {
+              "id": "N:024110:2",
+              "title": "고금리에 中企 대출 '빨간불'…기업은행 연체율 1% 넘었다",
+              "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE9PMVhPN08tRWk0RmxzbjdMcVlnVndnSWFPaFEyV2dQNVVodDdadGIxbk1oaUVsVENKX3hES3NVX1VIWThmWF9SNWdOQ1Nad3RUaXlTTjQwdkM2eW85ejdzX0ZPaUU4NmdCT2piaQ?oc=5",
+              "source": "ER 이코노믹리뷰",
+              "pubDate": "2026-10-27T10:50:35.000Z"
+            },
+            {
+              "id": "N:024110:3",
+              "title": "기업은행, 中企 대출 272조원…연체·충당금 부담 가중",
+              "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE1FaXRfVHhTM3EtRzFIUDB1U1REdWczZzgwR2o1cFZ4V2RvMEl3R2ZZQ3pIV2VscjhZRkhsQjJIVWs1YnZzWjlSay1CVVRNTFRnR3NtQV9jSTBvLTgwS3F3alNnY1g?oc=5",
+              "source": "서울경제TV",
+              "pubDate": "2026-10-27T10:08:04.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 3,
+        "code": "055550",
+        "name": "신한지주",
+        "rankScore": 1.627626083185775,
+        "poolSize": 199,
+        "topPercent": 1.507537688442211,
+        "evidence": [
+          {
+            "id": "E:055550:1",
+            "kind": "model",
+            "text": "전체 199개 중 3위(상위 1.5%)입니다."
+          },
+          {
+            "id": "E:055550:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 비건뉴스, 시사저널e, FETV입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:055550:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:055550:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-27이며 오늘 날짜와 다릅니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:055550:1",
+              "title": "신한지주 3분기 배당 주당 740원 결정",
+              "url": "https://news.google.com/rss/articles/CBMiZkFVX3lxTE5vanI3b2owaTh1NjNDUFNUcVJfbjdKd1duNG9JZURaaENzRUF2OUJjaGNDZy1sbTBXeGFjRnAyYWhlLUtTQTRnbm16aHhTc3psZERFeEFSLUhJNTBadkM4SmJQcTNDZw?oc=5",
+              "source": "비건뉴스",
+              "pubDate": "2026-10-27T11:20:43.000Z"
+            },
+            {
+              "id": "N:055550:2",
+              "title": "신한지주, 롯데손보 ‘기본자본 신종자본증권’ 발행 시사",
+              "url": "https://news.google.com/rss/articles/CBMidkFVX3lxTFB1RWtLampCeWM0ZGtJSGJhMWZuZGR4SUJtTmdGa1lVRkVTSkdfNktTMXlLVjNwUEIwQjB0RjAxWng1eHRibEk3VU9rMFhfc2pwVWhHRDVMcl8zbmt6TUhHYXRONV91WFRJUzBCY0ZIWkhKQUFvSGfSAXZBVV95cUxQdUVrS2pqQnljNGRrSUhiYTFmbmRkeElCbU5nRmtZVUZFU0pHXzZLUzF5S1YzcFBCMEIwdEYwMVp4NXh0YmxJN1VPazBYX3NqcFVoR0Q1THJfM25rek1IR2F0TjVfdVhUSVMwQmNGSFpISkFBb0hn?oc=5",
+              "source": "시사저널e",
+              "pubDate": "2026-10-27T08:17:57.000Z"
+            },
+            {
+              "id": "N:055550:3",
+              "title": "신한지주, 3분기 당기순익 1조5846억…전분기 대비 12.9%↓",
+              "url": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE4xVG5Iam02bXBQYTlSSFpuWjFQdHNqdWRNLVJKc1FXN0F1TGhGcGsyVnlURTYyandtVmZQcWxuaEoxSGNzOGNqTnBqbk1RYmNLMUxVcGlWWkhqRXU5ZXdOaWZPelFJX3M4?oc=5",
+              "source": "FETV",
+              "pubDate": "2026-10-27T07:29:04.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 4,
+        "code": "004990",
+        "name": "롯데지주",
+        "rankScore": 1.5841066691968504,
+        "poolSize": 199,
+        "topPercent": 2.0100502512562812,
+        "evidence": [
+          {
+            "id": "E:004990:1",
+            "kind": "model",
+            "text": "전체 199개 중 4위(상위 2%)입니다."
+          },
+          {
+            "id": "E:004990:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 한스경제, 굿모닝경제, https://www.2news.co.kr/입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:004990:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:004990:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-27이며 오늘 날짜와 다릅니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:004990:1",
+              "title": "롯데렌탈, 롯데지주 브랜드 계약 단축…계열 분리 가속화",
+              "url": "https://news.google.com/rss/articles/CBMia0FVX3lxTE50M0g4c2E4TEVvQ1FpSEl2RVpPSHczVWJrMDJFM2RRY3M5Wll6V1Y3WUwybzJYYXlNT0JoTHMxeWkwaFlBT0pYYlMtcUdUVnF1eWh1UkU1RmtpNTJoX3FLRXJGcmJFd2U5QnpB0gFvQVVfeXFMUDk3UmMwbHRocnk0dkdWUDdZNkttYWZQMTJRQXdPazhkbWZab05GYldmZG84aFNTS3hTR1hKWFYwTkZreVo5UkxTMGYxNHBzNXZkNXNoaGlTMVNNcUxqb3VCczhtd2hDdXR1eV8tVU84?oc=5",
+              "source": "한스경제",
+              "pubDate": "2026-10-27T07:26:35.000Z"
+            },
+            {
+              "id": "N:004990:2",
+              "title": "[굿모닝! 27일 유통가 소식] 롯데지주·코웨이·배민·LG생활건강·아성다이소",
+              "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE5uYUZRclkzOGtIb1dpaWRMMlhJZG4teXptRGlJVk9fVmRBcExnOWZ6RHA0aWpIaFl2VTNNc01id0hrUU5yWEpuZVltQU5nVDZqbDhiVGM3dExnVGMwYm55STFNRFphYVA5eldfQg?oc=5",
+              "source": "굿모닝경제",
+              "pubDate": "2026-10-27T05:37:31.000Z"
+            },
+            {
+              "id": "N:004990:3",
+              "title": "롯데지주 2029년까지 주주환원 연장…주가 반등 이끌어낼까",
+              "url": "https://news.google.com/rss/articles/CBMiaEFVX3lxTFBDaWFZemFJZUxFQjQ4VklHbEJJc0U2bTJEaEJUVjJGS09BZ1VvWDZBUFloeEJLMTljbV9CZXhRMWsxeW5WNnNXVW11NWVJQVF1LXduRHRKT3ZnaW9ORDROcngzNnNGcjdT?oc=5",
+              "source": "https://www.2news.co.kr/",
+              "pubDate": "2026-10-26T02:23:00.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 5,
+        "code": "004170",
+        "name": "신세계",
+        "rankScore": 1.5144756068145713,
+        "poolSize": 199,
+        "topPercent": 2.512562814070352,
+        "evidence": [
+          {
+            "id": "E:004170:1",
+            "kind": "model",
+            "text": "전체 199개 중 5위(상위 2.5%)입니다."
+          },
+          {
+            "id": "E:004170:2",
+            "kind": "news",
+            "text": "관련 기사 3건을 확인했습니다. 출처: 재외동포신문, 아시아경제, 이코리아입니다."
+          }
+        ],
+        "cautions": [
+          {
+            "id": "C:004170:1",
+            "kind": "model",
+            "text": "순위 점수는 수익률·확률이 아닙니다."
+          },
+          {
+            "id": "C:004170:2",
+            "kind": "data",
+            "text": "모델 기준일은 2026-10-27이며 오늘 날짜와 다릅니다."
+          }
+        ],
+        "news": {
+          "status": "collected",
+          "articles": [
+            {
+              "id": "N:004170:1",
+              "title": "신한금융, 신세계 ‘쓱데이’쇼핑 연계 최대 50만원 상품권 지급",
+              "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE9Hei1KT0lBbzNtMHotVVJvQUlib0JadXRXckhkRWJsTHFxNW5nWVNLZnJZRDQwWllwY0FCbWQ2WEp3dEgzN3BZYUQ3SHo0OWdJbllhLVlrQThLTjU3c29nd1J2WVFJSFRwWlM1eA?oc=5",
+              "source": "재외동포신문",
+              "pubDate": "2026-10-27T08:45:37.000Z"
+            },
+            {
+              "id": "N:004170:2",
+              "title": "보온성에 편안함 더한 겨울 신발… 신세계 센텀시티서 ‘스부’ 선보여",
+              "url": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE9OSktTQUxPR0Vleklfd0dHNjhqTUg3TU9DMzFVb1BUQUg5NTI4M2liaGY3MWJpdFBwV09kbXBZaWZSdUxNT3kxTzdrN0luZlpWajB2ejRCZUptSGlYMnNKYQ?oc=5",
+              "source": "아시아경제",
+              "pubDate": "2026-10-27T08:11:30.000Z"
+            },
+            {
+              "id": "N:004170:3",
+              "title": "신세계 정용진·정유경 남매의 인사 승부수… 본업 수익성·뷰티 성장 시험대",
+              "url": "https://news.google.com/rss/articles/CBMib0FVX3lxTE5zY1FCVFB4TkRxVVdwTFQyeVVHZXVpS2VBVTB4dWVnN3FvZWhPdllJbGxoaHQtVWpjUzllS0xMOVMxelV1RTBUOXRpOG1IbFNMRXZnSDFwUUdJZGxUM2VCSlRJVS1HSmh0c0Fabnd0RQ?oc=5",
+              "source": "이코리아",
+              "pubDate": "2026-10-27T07:52:28.000Z"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rawFields": {
+    "stockOpinions": [
+      {
+        "code": "030200",
+        "text": "KT는 모집단 199개 종목 중 모델 1위(상위 0.5%)이며 순위 점수는 1.7031입니다. 입력 근거로는 상위권 순위와 언론 보도 3건이 확인되었습니다. 기사 본문은 수집되지 않았으며 제목 기준으로 토큰팩토리 출시 및 연습경기 관중석 개방 관련 사실을 확인했습니다. 순위 점수는 수익률이나 확률을 의미하지 않으며 모델 기준일(2026-10-27)과 당일의 시점 차이가 있습니다.",
+        "citations": [
+          "R:030200",
+          "E:030200:1",
+          "E:030200:2",
+          "C:030200:1",
+          "C:030200:2",
+          "N:030200:1",
+          "N:030200:2",
+          "N:030200:3"
+        ]
+      },
+      {
+        "code": "024110",
+        "text": "기업은행은 모집단 199개 종목 중 모델 2위(상위 1%)이며 순위 점수는 1.6624입니다. 마진 경쟁력 및 중소기업 대출 관련 기사 3건이 입력 근거로 확인되었습니다. 기사 본문은 미수집 상태이며 기사 제목을 통해 중소기업 대출 건전성 및 충당금 부담에 관한 내용을 확인했습니다. 순위 점수는 기대수익이 아니며 기준일과 당일 일자 간 불일치가 존재합니다.",
+        "citations": [
+          "R:024110",
+          "E:024110:1",
+          "E:024110:2",
+          "C:024110:1",
+          "C:024110:2",
+          "N:024110:1",
+          "N:024110:2",
+          "N:024110:3"
+        ]
+      },
+      {
+        "code": "055550",
+        "text": "신한지주는 199개 종목 가운데 모델 순위 3위(상위 1.5%)를 기록했고 순위 점수는 1.6276입니다. 배당과 실적 발표 등 3건의 보도 내역이 입력 근거로 제공되었습니다. 기사 본문은 미수집 상태로, 제목상 3분기 배당, 신종자본증권 발행, 분기 실적 발표 사실이 확인되었습니다. 순위 점수는 수익률이 아니며 모델 기준일은 2026-10-27입니다.",
+        "citations": [
+          "R:055550",
+          "E:055550:1",
+          "E:055550:2",
+          "C:055550:1",
+          "C:055550:2",
+          "N:055550:1",
+          "N:055550:2",
+          "N:055550:3"
+        ]
+      },
+      {
+        "code": "004990",
+        "text": "롯데지주는 전체 199개 종목 중 모델 4위(상위 2%)이며 순위 점수는 1.5841입니다. 브랜드 계약 및 주주환원 관련 기사 3건이 입력 근거로 확인되었습니다. 기사 본문은 확인되지 않았고 제목상 계열사 브랜드 계약 단축과 주주환원 연장에 관한 사실이 파악되었습니다. 순위 점수는 확률적 수익을 뜻하지 않으며 기준일 차이가 있습니다.",
+        "citations": [
+          "R:004990",
+          "E:004990:1",
+          "E:004990:2",
+          "C:004990:1",
+          "C:004990:2",
+          "N:004990:1",
+          "N:004990:2",
+          "N:004990:3"
+        ]
+      },
+      {
+        "code": "004170",
+        "text": "신세계는 199개 종목 중 모델 순위 5위(상위 2.5%)이며 순위 점수는 1.5145입니다. 계열사 쇼핑 행사와 인사 관련 3건의 기사가 입력 근거로 집계되었습니다. 기사 본문은 미수집 상태이며 제목 기준 쇼핑 연계 상품권 행사, 점포 상품 입점, 경영진 인사 사실이 확인되었습니다. 순위 점수는 예측 수익률이 아니며 모델 기준일과 당일 간 시점 차이가 있습니다.",
+        "citations": [
+          "R:004170",
+          "E:004170:1",
+          "E:004170:2",
+          "C:004170:1",
+          "C:004170:2",
+          "N:004170:1",
+          "N:004170:2",
+          "N:004170:3"
+        ]
+      }
+    ],
+    "newsSummaries": [
+      {
+        "code": "030200",
+        "text": "경향신문과 서울경제TV는 토큰팩토리 서비스 공개를 다룬 기사를 전했습니다. 조선일보는 관중석 개방 관련 소식을 다룬 기사를 보도했습니다. 본 기사 내용은 제목 기반으로 확인된 사항입니다.",
+        "citations": [
+          "N:030200:1",
+          "N:030200:2",
+          "N:030200:3"
+        ]
+      },
+      {
+        "code": "024110",
+        "text": "오늘경제는 마진 경쟁력과 건전성 관리를 다룬 기사를 전했습니다. ER 이코노믹리뷰는 중소기업 대출 연체 상황을 다룬 기사를 보도했습니다. 서울경제TV는 대출 규모 및 충당금 부담을 다룬 기사를 다루었습니다.",
+        "citations": [
+          "N:024110:1",
+          "N:024110:2",
+          "N:024110:3"
+        ]
+      },
+      {
+        "code": "055550",
+        "text": "비건뉴스는 분기 배당 결정을 다룬 기사를 보도했습니다. 시사저널e는 자본증권 발행 관련 내용을 다룬 기사를 실었습니다. FETV는 3분기 순이익 실적 발표를 다룬 기사를 전했습니다.",
+        "citations": [
+          "N:055550:1",
+          "N:055550:2",
+          "N:055550:3"
+        ]
+      },
+      {
+        "code": "004990",
+        "text": "한스경제는 브랜드 계약 단축 및 계열 분리 동향을 다룬 기사를 다루었습니다. 굿모닝경제는 유통가 소식을 다룬 기사를 게재했습니다. 제2뉴스는 주주환원 연장을 다룬 기사를 보도했습니다.",
+        "citations": [
+          "N:004990:1",
+          "N:004990:2",
+          "N:004990:3"
+        ]
+      },
+      {
+        "code": "004170",
+        "text": "재외동포신문은 쇼핑 행사 연계 상품권 증정 소식을 다룬 기사를 실었습니다. 아시아경제는 센텀시티점 신규 신발 브랜드 입점을 다룬 기사를 보도했습니다. 이코리아는 그룹 정기 인사 관련 동향을 다룬 기사를 전했습니다.",
+        "citations": [
+          "N:004170:1",
+          "N:004170:2",
+          "N:004170:3"
+        ]
+      }
+    ],
+    "marketOutlook": {
+      "text": "장 초반 코스피는 상승 우위 흐름을 보일 가능성이 있습니다. 직전 관측에서 나스닥이 214.04pt 올랐고 미국 국채 10년 금리는 4.986%로 5일 대비 -0.131%p 내렸으며, 원·달러 환율도 1321.76원으로 5일 기준 -8.24원 내렸습니다. 또한 코스피200 선물 외국인 순매수는 2026-10-27 기준 670계약으로 4거래일 연속 순매수이자 5일 합계 4,218계약 순매수를 기록해 우호적인 수급을 나타냈습니다. 다만 직전 나스닥 상승 후 코스피 시가→종가 상승 비율은 46.6%에 그쳐 장 초반 갭 맥락으로만 제한적으로 해석됩니다.",
+      "citations": [
+        "M:UST10Y",
+        "M:NASDAQ",
+        "M:USDKRW",
+        "M:KOSPI200_FOREIGN_FUTURES"
+      ],
+      "stance": "상승 우위"
+    }
+  }
+}

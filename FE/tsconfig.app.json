@@ -18,5 +18,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "server/relatedNews.ts", "server/node-shims.d.ts"]
+  "include": ["src", "server/relatedNews.ts", "server/macroCommentRules.ts", "server/naverNewsCollection.ts", "server/articleExcerpts.ts", "server/naverNews.ts", "server/stockSentenceAllowlist.ts", "server/node-shims.d.ts"]
 }

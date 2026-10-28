@@ -5,7 +5,7 @@ import { forbiddenStockNewsForecast } from "../../server/stockNewsLanguage";
 import { stockFactAnchor } from "../../server/stockFactAnchors";
 import { extractArticleText } from "../../server/articleText";
 
-const id = "N:005930:1", data = { model: null, macro: { indicators: [], preOpen: [{ id: "NASDAQ", name: "나스닥", status: "ok", unit: "pt", value: 100, change: 1, changePct: 1, fiveDayChange: 2, fiveDayChangePct: 2, history: [] }] }, stocks: [{ code: "005930", name: "삼성전자", rank: 1, rankScore: 1.7, poolSize: 200, topPercent: .5, evidence: [{ id: "E:005930:1", kind: "model", text: "모델 순위 1위입니다." }], cautions: [], news: { articles: [{ id, title: "삼성전자 공시 및 서비스 개편 발표", source: "경제지", url: "https://paper.example/a" }] } }] };
+const id = "N:005930:1", data = { newsValidation: "on", model: null, macro: { indicators: [], preOpen: [{ id: "NASDAQ", name: "나스닥", status: "ok", unit: "pt", value: 100, change: 1, changePct: 1, fiveDayChange: 2, fiveDayChangePct: 2, history: [] }] }, stocks: [{ code: "005930", name: "삼성전자", rank: 1, rankScore: 1.7, poolSize: 200, topPercent: .5, evidence: [{ id: "E:005930:1", kind: "model", text: "모델 순위 1위입니다." }], cautions: [], news: { articles: [{ id, title: "삼성전자 공시 및 서비스 개편 발표", source: "경제지", url: "https://paper.example/a" }] } }] };
 const citations = ["R:005930", "E:005930:1", id, "M:NASDAQ"];
 const bypasses = ["밸류에이션 매력이 있습니다.", "좋은 흐름을 보일 것으로 봅니다.", "주가가 한 단계 레벨업할 소지가 있습니다.", "신고가 경신이 점쳐집니다.", "매집 구간입니다.", "저점에서 올라설 것으로 관측됩니다.", "순위가 높아 투자 매력도가 큽니다.", "기사에서 호실적이 언급됩니다.", "수익이 날 것입니다.", "올라갈 여지는 남아 있습니다.", "순위 1위로 시세 분출이 나올 법합니다.", "강세 흐름이 이어질 듯합니다.", "주가는 오르는 방향입니다."];
 const normal = ["이 지표는 종목 간 비교에 활용할 수 있습니다.", "시장 지표는 별도로 확인할 수 있습니다.", "주가 예측이 아닙니다.", "순위는 수익률 예측이 아니며 기대수익을 의미하지 않습니다."];
@@ -34,15 +34,15 @@ describe("sentence fact allowlist supplements stock/news deny rules", () => {
     expect(stockFactAnchor("공시 주제를 다룬 기사입니다.", data, 0, [id])).toBe("article_topic");
   });
   it("accepts only attributed cited article topics, never unrelated inventions or notices", () => {
-    expect(headlineSentenceReason("공시를 발표했다고 보도했습니다.", data, 0, undefined, [id])).toBeNull();
+    expect(headlineSentenceReason("공시를 발표했다고 보도했습니다.", { ...data, articleBodies: { [id]: { text: "공시를 발표했습니다." } } }, 0, [id], [id])).toBeNull();
     expect(headlineSentenceReason("서비스 개편을 다룬 기사입니다.", data, 0, undefined, [id])).toBeNull();
-    for (const [text, ids] of [["공시를 다룬 기사입니다.", []], ["공시 내용입니다.", [id]], ["우주선 발사를 다룬 기사입니다.", [id]], ["본 기사 내용은 제목 기반으로 확인된 사항입니다.", [id]]]) expect(headlineSentenceReason(text, data, 0, undefined, ids)).toBe("no_anchor");
+    for (const [text, ids] of [["공시를 다룬 기사입니다.", []], ["공시 내용입니다.", [id]], ["우주선 발사를 다룬 기사입니다.", [id]], ["본 기사 내용은 제목 기반으로 확인된 사항입니다.", [id]]]) expect(headlineSentenceReason(text, data, 0, undefined, ids)).not.toBeNull();
     expect(headlineSentenceReason("호실적을 발표했다고 보도했습니다.", data, 0)).toBe("forbidden_content");
   });
   it("uses the cited body's text for a topic absent from its title", () => {
     const bodyInput = { ...data, articleBodies: { [id]: { text: "우주선 발사를 발표했습니다.", url: "https://paper.example/a", collectedAt: "2026-10-28T00:00:00Z" } } };
     expect(headlineSentenceReason("우주선 발사를 발표했다고 보도했습니다.", bodyInput, 0, [id])).toBeNull();
-    expect(headlineSentenceReason("우주선 발사를 발표했다고 보도했습니다.", data, 0, [id])).toBe("no_anchor");
+    expect(headlineSentenceReason("우주선 발사를 발표했다고 보도했습니다.", data, 0, [id])).toBe("source_not_grounded");
   });
   it("filters unanchored sentences with the existing minimum and field-local fallback", () => {
     expect(selectStockOpinion({ code: "005930", text: "모델 순위 1위입니다. 공시를 다룬 기사입니다. 설명입니다.", citations }, data, 0)?.text).toBe("모델 순위 1위입니다. 공시를 다룬 기사입니다.");

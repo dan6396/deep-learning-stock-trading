@@ -12,6 +12,7 @@ import { formatModelPercent, modelEvidence, type ModelEvidence } from "../src/ty
 import { stockOpinionMetrics } from "./stockOpinionMetrics";
 import type { StockOpinionMetrics } from "../src/types/stockOpinionMetrics";
 import type { ArticleBodyContext } from "./articleBodies";
+import type { ArticleExcerptContext, ArticleExcerptLookup } from "./articleExcerpts";
 export { formatSupplyWon } from "./briefingValidation";
 import { createNarrativeStore, briefingInputHash, templateNarrative, isTargetSessionCaution, targetSessionCautionText, type BriefingNarrative } from "./briefingNarrative";
 import { getBriefingComposition, buildBriefingComposition, type BriefingComposition } from "./briefingComposition";
@@ -33,8 +34,12 @@ export type BriefingInput = {
   /** Server-internal cache enrichment. Never spread into the public payload. */
   articleBodies?: ArticleBodyContext;
   articleBodyHashes?: Record<string, string>;
+  articleExcerpts?: ArticleExcerptContext;
+  articleExcerptHashes?: Record<string, string>;
+  articleExcerptLookupStats?: ArticleExcerptLookup;
+  newsValidation?: "off" | "on";
 };
-export type BriefingPayload = Omit<BriefingInput, "model" | "articleBodies" | "articleBodyHashes"> & {
+export type BriefingPayload = Omit<BriefingInput, "model" | "articleBodies" | "articleBodyHashes" | "articleExcerpts" | "articleExcerptHashes" | "articleExcerptLookupStats" | "newsValidation"> & {
   model: (NonNullable<BriefingInput["model"]> & { finishedAt: string | null; elapsedMs: number | null }) | null;
   previousRun?: PreviousRun;
   kind: "official" | "adhoc" | "unknown";

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import replay from "./fixtures/narrative-0154-replay.json";
+import { templateNarrative } from "../../server/briefingNarrative";
 import { describe, expect, it } from "vitest";
 import { futuresSupplyClaimsGrounded, groundedNumbers, supplyClauses } from "../../server/briefingValidation";
 import { validateMarketOutlook, selectMarketOutlook, applyNarrativeExtensions } from "../../server/briefingExtensions";
@@ -41,14 +41,14 @@ describe("composed foreign futures observations", () => {
   });
 });
 
-const path = resolve(process.cwd(), "../outputs/briefing-narrative.json");
-describe.skipIf(!existsSync(path))("offline replay of the saved raw market outlook", () => {
+describe("offline replay of the pinned raw market outlook", () => {
   it("adopts the complete currently grounded raw opinion without dropping facts", () => {
-    const cache = JSON.parse(readFileSync(path, "utf8")), raw = cache.rawFields.marketOutlook;
+    const cache = structuredClone(replay), raw = cache.rawFields.marketOutlook;
     expect(validateMarketOutlook(raw, cache.input)).toBeNull();
     const selected = selectMarketOutlook(raw, cache.input);
     expect(selected).toMatchObject({ source: "llm", stance: raw.stance, text: raw.text });
-    const repaired = applyNarrativeExtensions(cache.narrative, { ...cache.narrative, marketOutlook: raw }, cache.input);
+    const base = templateNarrative(cache.input, null);
+    const repaired = applyNarrativeExtensions(base, { ...base, marketOutlook: raw }, cache.input);
     expect(repaired.marketOutlook.source).toBe("llm");
     console.info("[market-outlook offline replay]", JSON.stringify({ source: repaired.marketOutlook.source, stance: repaired.marketOutlook.stance,
       originalTextMatch: repaired.marketOutlook.text === raw.text, sentences: raw.text.split(/(?<=[.!?。])\s+/).length }));

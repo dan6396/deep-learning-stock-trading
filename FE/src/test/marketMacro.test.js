@@ -30,25 +30,25 @@ describe("market macro", () => {
     const transport = vi.fn(async () => reply(payload())), night = vi.fn(() => new Promise(resolve => { release = resolve; }));
     const get = createMarketMacro({ transport, night, reference: async () => null });
     const pending = get({}, { backgroundKis: true }); await vi.advanceTimersByTimeAsync(1500);
-    const cold = await pending; expect(cold.indicators[0].status).toBe("ok"); expect(cold.indicators[6].status).toBe("unavailable");
+    const cold = await pending; expect(cold.indicators[0].status).toBe("ok"); expect(cold.indicators.find(row => row.id === "KOSPI200_NIGHT").status).toBe("unavailable");
     release({ id: "KOSPI200_NIGHT", name: "코스피200 야간선물", value: 848, change: 0, changePct: 0, unit: "pt", asOf: "2026-10-22T20:00:00Z", source: "kis", status: "ok" });
     await vi.advanceTimersByTimeAsync(0);
-    const warm = await get({}, { backgroundKis: true }); expect(warm.indicators[6].value).toBe(848);
-    expect(night).toHaveBeenCalledOnce(); expect(transport).toHaveBeenCalledTimes(6);
+    const warm = await get({}, { backgroundKis: true }); expect(warm.indicators.find(row => row.id === "KOSPI200_NIGHT").value).toBe(848);
+    expect(night).toHaveBeenCalledOnce(); expect(transport).toHaveBeenCalledTimes(7);
   });
   it("fetches all six symbols, percent units and real observation times; isolates cache copies", async () => {
     let now = timestamp * 1000 + 1000;
     const transport = vi.fn(async (url) => reply(payload(String(url).includes("%5ETNX") ? 4.2 : 100)));
     const get = createMarketMacro({ transport, now: () => now });
     const first = await get({});
-    expect(first.indicators).toHaveLength(7); expect(transport).toHaveBeenCalledTimes(6);
-    expect(first.indicators[6]).toMatchObject({ id: "KOSPI200_NIGHT", source: "kis", status: "unavailable" });
+    expect(first.indicators).toHaveLength(7); expect(transport).toHaveBeenCalledTimes(7);
+    expect(first.indicators.find(row => row.id === "KOSPI200_NIGHT")).toMatchObject({ id: "KOSPI200_NIGHT", source: "kis", status: "unavailable" });
     expect(first.indicators[0]).toMatchObject({ status: "ok", value: 100, change: 20, changePct: 25, asOf: "2026-10-22T20:00:00.000Z" });
     expect(first.indicators[2].session).toBe("closed");
-    expect(first.indicators[5]).toMatchObject({ unit: "%", value: 4.2 });
+    expect(first.indicators.find(row => row.id === "UST10Y")).toMatchObject({ unit: "%", value: 4.2 });
     first.indicators[0].value = 999;
-    expect((await get({})).indicators[0].value).toBe(100); expect(transport).toHaveBeenCalledTimes(6);
-    now += 600_001; await get({}); expect(transport).toHaveBeenCalledTimes(12);
+    expect((await get({})).indicators[0].value).toBe(100); expect(transport).toHaveBeenCalledTimes(7);
+    now += 600_001; await get({}); expect(transport).toHaveBeenCalledTimes(14);
   });
   it("keeps valid indicators when another fails or carries malformed metadata", async () => {
     const transport = vi.fn(async (url) => {
@@ -66,7 +66,7 @@ describe("market macro", () => {
     const transport = vi.fn(async () => reply({ chart: { result: [{ meta: { ...meta, chartPreviousClose: undefined, previousClose: 50 } }] } }));
     const get = createMarketMacro({ transport, now: () => now });
     expect((await get({ BRIEFING_MACRO_CACHE_TTL_MS: "100" })).indicators[0].changePct).toBe(100);
-    now += 101; await get({}); expect(transport).toHaveBeenCalledTimes(12);
+    now += 101; await get({}); expect(transport).toHaveBeenCalledTimes(14);
   });
   it("times out stalled bodies within eight seconds and coalesces concurrent loads", async () => {
     vi.useFakeTimers();
@@ -75,7 +75,7 @@ describe("market macro", () => {
     const first = get({}), second = get({});
     await vi.advanceTimersByTimeAsync(8000);
     expect((await first).indicators.every(row => row.status === "unavailable")).toBe(true);
-    expect(await second).toEqual(await first); expect(transport).toHaveBeenCalledTimes(6);
+    expect(await second).toEqual(await first); expect(transport).toHaveBeenCalledTimes(7);
     expect(transport.mock.calls[0][1]?.signal?.aborted).toBe(true);
   });
   it("exposes intraday US values and recognizes an early regular-session close", async () => {
@@ -105,6 +105,6 @@ describe("market macro", () => {
     vi.useFakeTimers();
     const get = createMarketMacro({ transport: vi.fn(async () => reply(payload())), night: () => new Promise(() => {}), reference: async () => ({ title: "fixture" }) });
     const pending = get({}); await vi.advanceTimersByTimeAsync(8000);
-    const result = await pending; expect(result.indicators[6].status).toBe("unavailable"); expect(result.reference.title).toBe("fixture");
+    const result = await pending; expect(result.indicators.find(row => row.id === "KOSPI200_NIGHT").status).toBe("unavailable"); expect(result.reference.title).toBe("fixture");
   });
 });

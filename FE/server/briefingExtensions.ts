@@ -2,9 +2,14 @@ import type { BriefingInput } from "./briefing";
 import type { BriefingNarrative } from "./briefingNarrative";
 import { forbiddenNarrative, forbiddenCausality, forbiddenInvestmentAdvice, groundedNumbers, MACRO_NAME_ALIASES, spotSupplyContext } from "./briefingValidation";
 import { stockOpinions } from "./stockOpinion";
-import { articleFactsGrounded, newsNumericTokens } from "./newsFacts";
+import { articleFactsGrounded } from "./newsFacts";
 import { forbiddenStockNewsForecast, mentionsOtherStock, compactPolicyText } from "./stockNewsLanguage";
-import { newsFactAnchor } from "./stockFactAnchors";
+import { stockSentenceFactKey, uniqueStockSentenceIndices } from "./stockSentenceAllowlist";
+import { checkNewsSentence } from "./newsSentenceGrounding";
+import { removeArticlePassages } from "./articlePrivacy";
+import { newsValidationEnabled } from "./newsValidation";
+import { stockSentenceContext } from "./stockSentenceContext";
+import { recordStockSentenceRejections } from "./stockSentenceDiagnostics";
 import { OUTLOOK_STANCES, type MarketOutlook, type HeadlineSummary } from "../src/types/preOpenMacro";
 
 export const OUTLOOK_CALIBRATION = { conditionalUpPct: 46.6, baselinePct: 50.6,
@@ -19,10 +24,10 @@ export function templateExtensions(input: BriefingInput): Extensions {
   const opinions = stockOpinions(undefined, input);
   if (!input.macro.preOpen) return { stockOpinions: opinions };
   const rows = input.macro.preOpen.filter(row => row.status === "ok");
-  return { stockOpinions: opinions, marketOutlook: { stance: "판단 보류", text: rows.length ? rows.map(row => row.comment.text).join(" ") : "장전 시장 지표를 확보하지 못해 방향 판단을 보류합니다.", citations: rows.map(row => `M:${row.id}`), source: "template" },
+  return { stockOpinions: opinions, marketOutlook: { stance: "판단 보류", text: rows.map(row => row.comment.text).filter(Boolean).join(" ") || "장전 시장 지표를 확보하지 못해 방향 판단을 보류합니다.", citations: rows.map(row => `M:${row.id}`), source: "template" },
     newsSummaries: input.stocks.map(stock => ({ code: stock.code,
       text: stock.news.articles.length ? `관련 기사 ${stock.news.articles.length}건의 제목·출처·발행일을 확인할 수 있습니다. 본문 확보 여부는 기사마다 다를 수 있습니다.` : "확인된 관련 기사 제목이 없습니다.",
-      citations: stock.news.articles.map(article => article.id), source: "template", summaryBasis: "title" })) };
+      citations: stock.news.articles.map(article => article.id), source: "template" })) };
 }
 
 /** Only this field permits market-level direction/causality. Advice stays forbidden. */
@@ -30,10 +35,14 @@ export function validateMarketOutlook(value: unknown, input: BriefingInput): str
   return marketOutlookReason(value, input, true);
 }
 
-function marketOutlookReason(value: unknown, input: BriefingInput, requireStance: boolean): string | null {
+export function marketOutlookCitationIds(input: BriefingInput): string[] {
+  return (input.macro.preOpen ?? []).filter(row => row.status === "ok").map(row => `M:${row.id}`);
+}
+
+export function marketOutlookReason(value: unknown, input: BriefingInput, requireStance: boolean): string | null {
   if (!object(value) || !OUTLOOK_STANCES.includes(value.stance) || !content(value.text) || !ids(value.citations)
     || Object.keys(value).some(key => !["stance", "text", "citations", "source"].includes(key))) return "invalid_schema";
-  const available = new Set((input.macro.preOpen ?? []).filter(row => row.status === "ok").map(row => `M:${row.id}`));
+  const available = new Set(marketOutlookCitationIds(input));
   if (value.citations.some(id => !available.has(id))) return "invalid_citation";
   const normalized = value.text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
   const compact = normalized.replace(/\s/g, "").toLowerCase();
@@ -93,6 +102,7 @@ function locallyGrounded(text: string, input: BriefingInput): boolean {
 }
 
 export function validateHeadlineSummary(value: unknown, input: BriefingInput, index: number): string | null {
+  if (!newsValidationEnabled(input)) return uncheckedHeadlineSummary(value, input, index) ? null : "invalid_schema";
   const stock = input.stocks[index];
   if (!object(value) || value.code !== stock.code || !content(value.text) || !ids(value.citations)
     || Object.keys(value).some(key => !["code", "text", "citations", "source", "summaryBasis", "sentenceCitations"].includes(key))) return "invalid_schema";
@@ -103,42 +113,64 @@ export function validateHeadlineSummary(value: unknown, input: BriefingInput, in
   if (value.sentenceCitations !== undefined && (!Array.isArray(value.sentenceCitations) || value.sentenceCitations.length !== sentences.length
     || value.sentenceCitations.some(row => !ids(row) || row.some(id => !allowed.has(id) || !value.citations.includes(id))))) return "invalid_citation";
   for (const [i, sentence] of sentences.entries()) {
-    const reason = headlineSentenceReason(sentence, input, index, value.sentenceCitations?.[i], value.sentenceCitations?.[i] ?? value.citations); if (reason) return reason;
+    const citations = value.sentenceCitations?.[i] ?? value.citations;
+    const reason = headlineSentenceReason(sentence, input, index, citations, citations); if (reason) return reason;
   }
+  const checks = sentences.map((sentence, i) => checkNewsSentence(sentence, stockSentenceContext(input, index, "news", value.sentenceCitations?.[i] ?? value.citations)));
+  if (new Set(checks.map(stockSentenceFactKey).filter(Boolean)).size < 2) return "insufficient_facts";
+  if (uniqueStockSentenceIndices(checks).length !== sentences.length) return "duplicate_sentence";
   return null;
 }
 
 export function headlineSentenceReason(text: string, input: BriefingInput, index: number, citations?: string[], anchorCitations = citations ?? input.stocks[index].news.articles.map(article => article.id)): string | null {
+  const effectiveCitations = citations ?? anchorCitations;
   const normalized = text.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
   if (forbiddenStockNewsForecast(normalized) || mentionsOtherStock(normalized, input, index)) return "forbidden_content";
   if (forbiddenInvestmentAdvice(normalized)) return "forbidden_content";
   if (/호재|악재|주가.{0,16}(?:상승|하락|반등|전망|예측|뛸|떨어질)|(?:실적|매출|영업이익|순이익).{0,24}(?:예상|전망|예측|기대|좋아질|나빠질|개선될|악화될|늘어날|줄어들|증가할|감소할)/.test(normalized) || forbiddenNarrative(normalized) || forbiddenNarrative(compactPolicyText(normalized)) || forbiddenCausality(normalized)) return "forbidden_content";
-  const bodyUsed = citations?.some(id => input.articleBodies?.[id]);
-  if (bodyUsed) {
-    if (!/(?:보도|전했|밝혔|발표했|설명했|소개했|다룬)/.test(normalized)) return "missing_attribution";
-    if (!articleFactsGrounded(normalized, input, index, citations!)) return "ungrounded_number";
-    return newsFactAnchor(normalized, input, index, anchorCitations) ? null : "no_anchor";
-  }
-  const lexical = input.stocks[index].news.articles.reduce((text, article) => article.source ? text.split(article.source).join(article.source.replace(/\d/g, " ")) : text, normalized);
-  // A title-only sentence cannot borrow a model rank/count or another story's number.
-  if (newsNumericTokens(lexical).length && !/^[^\d]*[1-4]\s*분기[^\d]*$/.test(lexical)) return "ungrounded_number";
-  if (!groundedNumbers(lexical, { ...input, stocks: [input.stocks[index]] })) return "ungrounded_number";
-  return newsFactAnchor(normalized, input, index, anchorCitations) ? null : "no_anchor";
+  if (spotSupplyContext.test(normalized) && /순\s*매\s*[수도]|수급|매\s*[수도]\s*세/.test(normalized)) return "forbidden_content";
+  if (!articleFactsGrounded(normalized, input, index, effectiveCitations)) return "ungrounded_number";
+  return checkNewsSentence(normalized, stockSentenceContext(input, index, "news", effectiveCitations)).reason;
 }
 
 /** Remove whole unsafe sentences only; never rewrite or weaken numeric/causality rules. */
+function uncheckedHeadlineSummary(value: unknown, input: BriefingInput, index: number): HeadlineSummary | null {
+  const stock = input.stocks[index];
+  if (!object(value) || value.code !== stock.code || !content(value.text)) return null;
+  const allowed = new Set(stock.news.articles.map(article => article.id));
+  const citations = Array.isArray(value.citations) ? [...new Set<string>(value.citations.filter((id: unknown): id is string => typeof id === "string" && allowed.has(id)))] : [];
+  const cachedBasis = value.source === "llm" && value.validation === "off" && ["body", "excerpt", "title"].includes(String(value.summaryBasis)) ? value.summaryBasis : null;
+  const summaryBasis = cachedBasis ?? (stock.news.articles.some(article => input.articleBodies?.[article.id]?.text) ? "body" : stock.news.articles.some(article => input.articleExcerpts?.[article.id]?.text) ? "excerpt" : "title");
+  return { code: stock.code, text: value.text, citations, source: "llm", validation: "off", summaryBasis };
+}
+
 export function selectHeadlineSummary(value: unknown, input: BriefingInput, index: number): HeadlineSummary | null {
+  if (!newsValidationEnabled(input)) return uncheckedHeadlineSummary(value, input, index);
+  // Cached/recovered candidates use the same sentence privacy policy as a fresh
+  // generation, including remapping sentenceCitations after a copied sentence.
+  if (object(value) && typeof value.text === "string") {
+    const cleaned = removeArticlePassages({ newsSummaries: [value] }, input) as { newsSummaries: unknown[] };
+    value = cleaned.newsSummaries[0];
+  }
+  if (object(value) && value.validation === "off") return null;
   if (!object(value) || typeof value.text !== "string") return null;
   if (value.summaryBasis === "body" && (!Array.isArray(value.citations) || !value.citations.some(id => typeof id === "string" && input.articleBodies?.[id]))) return null;
+  if (value.summaryBasis === "excerpt" && (!Array.isArray(value.citations) || !value.citations.some(id => typeof id === "string" && input.articleExcerpts?.[id]))) return null;
   const sentences = value.text.split(/(?<=[.!?。])\s+/).filter(Boolean);
   if (sentences.length > 3) return null;
   if (value.sentenceCitations !== undefined && (!Array.isArray(value.sentenceCitations) || value.sentenceCitations.length !== sentences.length)) return null;
   if (value.sentenceCitations?.some((row: unknown) => !ids(row))) return null;
-  const kept = sentences.map((text, i) => ({ text, citations: value.sentenceCitations?.[i] })).filter(row => headlineSentenceReason(row.text, input, index, row.citations, row.citations ?? (Array.isArray(value.citations) ? value.citations : [])) === null);
-  const candidate: Record<string, any> = { ...value, text: kept.map(row => row.text).join(" "), ...(value.sentenceCitations ? { sentenceCitations: kept.map(row => row.citations) } : {}) };
-  const bodyUsed = kept.some(row => Array.isArray(row.citations) && row.citations.some(id => input.articleBodies?.[id]));
+  const rows = sentences.map((text, i) => ({ text, citations: value.sentenceCitations?.[i] ?? (Array.isArray(value.citations) ? value.citations : []) }));
+  const reasons = rows.map(row => headlineSentenceReason(row.text, input, index, row.citations, row.citations ?? (Array.isArray(value.citations) ? value.citations : [])));
+  recordStockSentenceRejections("newsSummaries", input.stocks[index].code, reasons);
+  const eligible = rows.filter((_row, i) => reasons[i] === null).map(row => ({ ...row, check: checkNewsSentence(row.text, stockSentenceContext(input, index, "news", row.citations)) }));
+  const kept = uniqueStockSentenceIndices(eligible.map(row => row.check)).map(i => eligible[i]);
+  const candidate: Record<string, any> = { ...value, text: kept.map(row => row.text).join(" "), sentenceCitations: kept.map(row => row.citations) };
+  const sources = kept.flatMap(row => row.check.spans.flatMap(span => span.sourceOffsets));
+  const bodyUsed = sources.some(source => source.sourceKind === "body");
+  const excerptUsed = sources.some(source => source.sourceKind === "excerpt");
   return validateHeadlineSummary(candidate, input, index) === null ? { code: candidate.code, text: candidate.text, citations: candidate.citations,
-    ...(candidate.sentenceCitations ? { sentenceCitations: candidate.sentenceCitations } : {}), summaryBasis: bodyUsed ? "body" : "title", source: "llm" } as HeadlineSummary : null;
+    ...(candidate.sentenceCitations ? { sentenceCitations: candidate.sentenceCitations } : {}), summaryBasis: bodyUsed ? "body" : excerptUsed ? "excerpt" : "title", source: "llm" } as HeadlineSummary : null;
 }
 
 /** Revalidate extensions on every cache policy pass; a bad field cannot erase siblings. */

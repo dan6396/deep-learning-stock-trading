@@ -1,7 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import type { CandidateNews } from "../../entities/candidate";
 import type { StockInsight } from "../../entities/stockInsight";
-import { withoutRankScoreDisclaimer } from "../../entities/briefing";
 import { formatDate } from "../../shared/lib/format";
 import { safeArticleUrl } from "./reportData";
 import { CollapsibleNote } from "./StockInsightSection";
@@ -23,8 +22,8 @@ export function StockNewsSummary({ news, targets }: { news: StockInsight["news"]
   if (!news.summary) return null;
   return <div className="report-news-summary">
     <h3>관련 뉴스 요약</h3>
-    <p className="report-muted">{news.summarySource === "llm" ? "AI 요약" : "규칙 기반 기본 안내"} · {news.summaryBasis === "body" ? "기사 본문 기반 요약" : "기사 제목 기반 요약"}</p>
-    <CollapsibleNote className="stock-ai-summary" text={withoutRankScoreDisclaimer(news.summary)} />
+    <p className="report-muted">{news.summarySource === "llm" ? `AI 요약 · ${news.summaryBasis === "body" ? "기사 본문 기반" : news.summaryBasis === "excerpt" ? "발췌 기반" : "제목 기반"}` : "규칙 기반 기본 안내"}</p>
+    <CollapsibleNote className="stock-ai-summary" text={news.summary} />
     <StockCitationChips ids={news.citations} targets={targets} label="뉴스 요약 인용 근거" />
   </div>;
 }
@@ -40,7 +39,7 @@ export function StockNewsCard({ articles, news, targets, showSummary = true }: {
           <div className="report-news-heading"><h3>{url ? <a href={url} target="_blank" rel="noopener noreferrer">{article.title ?? "제목 미확인"}<ExternalLink aria-hidden="true" size={14} /></a> : article.title ?? "제목 미확인"}</h3>
             {article.sentiment && <span className="report-news-sentiment" data-article-sentiment={article.sentiment}>{article.sentiment === "positive" ? "긍정" : article.sentiment === "negative" ? "부정" : "중립"}</span>}
           </div>
-          <p className="report-muted">{article.source ?? "발행처 미확인"} · {formatDate(article.publishedAt, true)}</p>
+          <p className="report-muted">{article.source ?? "발행처 미확인"} · {formatDate(article.publishedAt, true)}{url && new URL(url).hostname === "news.google.com" ? " · Google News 경유" : ""}</p>
           {article.reason && <p>{article.reason}</p>}
           {article.description && <p className="report-muted">{article.description}</p>}
         </li>;

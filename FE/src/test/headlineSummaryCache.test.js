@@ -14,12 +14,12 @@ import { createStockInsightService } from "../../server/stockInsight";
 import { clearCachedJsonFiles } from "../../server/cachedJsonFile";
 import { articleBodyHashes } from "../../server/articlePrivacy";
 
-const env = { PIPELINE_OUTPUT_DIR: "node_modules/.tmp/headline-summary-tests", GEMINI_API_KEY: "fixture" };
+const env = { PIPELINE_OUTPUT_DIR: "node_modules/.tmp/headline-summary-tests", BRIEFING_NEWS_VALIDATION: "on", GEMINI_API_KEY: "fixture" };
 const path = join(pipelineOutputDir(env), "briefing-narrative.json");
-function input() { return { model: { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-26", poolSize: 200, predictionTarget: "next_session_open_to_close", runStartedAt: null },
+function input() { return { newsValidation: "on", model: { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-26", poolSize: 200, predictionTarget: "next_session_open_to_close", runStartedAt: null },
   macro: { asOf: null, indicators: [] }, stocks: [{ code: "030200", name: "KT", rank: 1, rankScore: 1.6, poolSize: 200, topPercent: 0.5, evidence: [{ id: "E:030200:1", kind: "model", text: "모델 순위 1위입니다." }], cautions: [],
-    news: { status: "collected", articles: [{ id: "N:030200:1", title: "KT 플랫폼 서비스 출시", url: "https://example.com/news?a=1&b=2", source: "발행처", pubDate: "2026-10-26T01:00:00Z" }] } }] }; }
-function headline() { return { code: "030200", source: "llm", summaryBasis: "title", text: "플랫폼 서비스 출시를 다룬 기사입니다. 서비스를 발표했다고 보도했습니다.", citations: ["N:030200:1"] }; }
+    news: { status: "collected", articles: [{ id: "N:030200:1", title: "KT 플랫폼 서비스 출시 공시", url: "https://example.com/news?a=1&b=2", source: "발행처", pubDate: "2026-10-26T01:00:00Z" }] } }] }; }
+function headline() { return { code: "030200", source: "llm", summaryBasis: "title", text: "플랫폼 서비스 출시를 다룬 기사입니다. 공시를 다룬 기사입니다.", citations: ["N:030200:1"], sentenceCitations: [["N:030200:1"], ["N:030200:1"]] }; }
 function cache() { return { version: 0, inputHash: "old-policy", input: input(), narrative: { ...templateNarrative(input(), null), newsSummaries: [headline()] } }; }
 beforeEach(() => { disk.clear(); writes.mockClear(); clearCachedJsonFiles(); });
 
@@ -43,7 +43,7 @@ describe("current validation of cached headline summaries", () => {
     expect(recoverHeadlineSummaries(cache(), data)).toEqual([]);
   });
   it("normalizes harmless title whitespace and URL query order only", () => {
-    const data = input(); data.stocks[0].news.articles[0].title = " KT  플랫폼 서비스 출시 ";
+    const data = input(); data.stocks[0].news.articles[0].title = " KT  플랫폼 서비스 출시 공시 ";
     data.stocks[0].news.articles[0].url = "https://example.com/news?b=2&a=1#reader";
     expect(recoverHeadlineSummaries(cache(), data)).toEqual([headline()]);
   });

@@ -19,7 +19,7 @@ export type StockInsight = {
   version: 1; code: string; name: string; status: "ready" | "no_model"; baseDate: string | null;
   model: ModelEvidence | null; sensitivity: NasdaqSensitivity;
   aiOpinion?: StockAiOpinion;
-  news: { summary: string; source: "llm" | "template"; summarySource?: "llm" | "template"; summaryBasis?: "body" | "title"; bodyCollected: boolean; limitation: string;
+  news: { summary: string; source: "llm" | "template"; summarySource?: "llm" | "template"; summaryBasis?: "body" | "excerpt" | "title"; validation?: "off"; bodyCollected: boolean; limitation: string;
     articles: { id: string; title: string; url: string; source: string; pubDate: string | null }[]; citations: string[] };
   cautions: string[]; data_meta: { source: "cache"; asOf: string | null };
 };
