@@ -174,7 +174,9 @@ describe("stock report using actual fetch fixtures", () => {
     expect(screen.queryByText("외국인 합계")).not.toBeInTheDocument();
     expect(document.querySelector('[data-report-signal="supply"]')).toBeNull();
     expect(document.querySelector(".report-agreement")).toBeNull();
-    expect(document.querySelector(".report-rules")).not.toHaveTextContent(/수급|일치도/);
+    expect(document.querySelector(".report-rules")).toBeNull();
+    expect(screen.queryByRole("region", { name: "종목 성과 기록" })).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([path]) => String(path).startsWith("/api/performance"))).toBe(false);
     expect(fetcher.mock.calls.every(([, options]) => options?.method === "GET")).toBe(true);
   });
   it("links only an absolute https original article with safe new-tab attributes", async () => {
@@ -286,7 +288,6 @@ describe("stock report using actual fetch fixtures", () => {
     const chart = within(priceCard).getByRole("group", { name: "가격 이력" });
     const newsCard = screen.getByRole("region", { name: "관련 뉴스" });
     const modelCard = report.querySelector(".report-model-card")!;
-    const rules = report.querySelector(".report-rules")!;
     const disclaimer = report.querySelector(".report-disclaimer")!;
 
     expect(chart.closest(".report-card")).toBe(priceCard);
@@ -308,8 +309,8 @@ describe("stock report using actual fetch fixtures", () => {
     expect(chart.compareDocumentPosition(newsCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(newsCard.compareDocumentPosition(modelCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(report.querySelector(".report-evidence-group")).toBeNull();
-    expect(modelCard.compareDocumentPosition(rules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(rules.compareDocumentPosition(disclaimer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(report.querySelector(".report-rules")).toBeNull();
+    expect(modelCard.compareDocumentPosition(disclaimer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
   it("retains distinct old quote and chart timestamps and all source and coverage information", async () => {
     backend(path => path.includes("quote") ? Promise.resolve(jsonResponse({ code: "005930", currentPrice: 44800, changeRate: -1.97, change: -900, accumulatedVolume: 1234, tradingValue: 567890, source: "cache", asOf: "2026-10-06T09:00:00Z" })) : undefined);

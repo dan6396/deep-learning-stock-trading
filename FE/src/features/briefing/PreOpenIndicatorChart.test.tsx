@@ -11,14 +11,9 @@ describe("pre-open observation chart", () => {
     expect(formatObservation(1321.764, "KRW")).toBe("1,321.76원");
     expect(formatObservation(-0.0001, "%")).toBe("0.000%");
   });
-  it("keeps extrema on the axis without repeating them in the value band at any width", () => {
+  it("keeps extrema on the axis and observation values on hover at any width", () => {
     const wide = indicatorChartLayout(points, "%", 460)!, narrow = indicatorChartLayout(points, "%", 317)!;
     expect(wide.dates).toEqual([0, 1, 2, 3, 4]); expect(narrow.dates).toEqual([0, 2, 4]);
-    for (const chart of [wide, narrow]) {
-      expect(chart.labels.map(label => label.index)).toEqual([2, 3, 4]);
-      const axisValues = chart.ticks.map(tick => formatObservation(tick.value, "%", false));
-      expect(chart.labels.every(label => !axisValues.includes(label.text))).toBe(true);
-    }
     expect(narrow.data.map(point => point.date)).toEqual(points.map(point => point.date));
   });
   it("handles missing, one-point and flat observations without fake points", () => {
@@ -63,24 +58,20 @@ describe("pre-open observation chart", () => {
     const history = points.map((point, index) => ({ ...point, value: [-1544, -3632, 1552, 2177, 3451][index] }));
     const layout = indicatorChartLayout(history, "계약", 317)!;
     expect(layout.ticks.map(tick => tick.text)).toEqual(["0계약"]);
-    expect(layout.labels).toHaveLength(5); expect(layout.zero).toBeGreaterThan(layout.plotTop); expect(layout.zero).toBeLessThan(layout.plotBottom);
+    expect(layout.data).toHaveLength(5); expect(layout.zero).toBeGreaterThan(layout.plotTop); expect(layout.zero).toBeLessThan(layout.plotBottom);
     render(<PreOpenIndicatorChart row={{ ...row, unit: "계약", history }} color="red" />);
     expect(screen.getByTestId("futures-zero-line")).toBeInTheDocument();
     const bars = screen.getAllByTestId("futures-bar");
     expect(bars).toHaveLength(5); expect(bars[0]).toHaveAttribute("fill", "var(--ds-fall)"); expect(bars[4]).toHaveAttribute("fill", "var(--ds-rise)");
     expect(screen.getByRole("button", { name: "2026-10-26 +3,451계약" })).toBeInTheDocument();
   });
-  it.each([240, 317, 460])("reserves Korean unit widths and keeps large signed futures labels inside %ipx", width => {
+  it.each([240, 317, 460])("reserves Korean unit widths and keeps axis labels inside %ipx", width => {
     expect(chartLabelWidth("+12,345계약")).toBeGreaterThan("+12,345계약".length * 7);
     for (const unit of ["KRW", "pt", "계약"]) {
       const history = points.map((point, index) => ({ ...point, value: [-12345, 12345, 34567, -45678, 56789][index] }));
       const chart = indicatorChartLayout(history, unit, width)!;
       for (const tick of chart.ticks) expect(chart.left - 12 - chartLabelWidth(tick.text)).toBeGreaterThanOrEqual(0);
-      for (const label of chart.labels) {
-        expect(label.x - chartLabelWidth(label.text) / 2).toBeGreaterThanOrEqual(0);
-        expect(label.x + chartLabelWidth(label.text) / 2).toBeLessThanOrEqual(width);
-      }
-      if (unit === "계약") expect(chart.labels.map(label => label.text)).toEqual(["-12,345", "+12,345", "+34,567", "-45,678", "+56,789"]);
+
     }
   });
 });

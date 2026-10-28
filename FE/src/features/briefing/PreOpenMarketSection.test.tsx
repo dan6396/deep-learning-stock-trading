@@ -24,10 +24,8 @@ describe("pre-open market cards", () => {
         expect(graphs).toHaveLength(3);
         expect(new Set(graphs.map(graph => graph.getAttribute("height"))).size).toBe(1);
         expect(new Set(graphs.flatMap(graph => [...graph.querySelectorAll('[data-chart-label="date"]')].map(date => date.getAttribute("y")))).size).toBe(1);
-        for (let index = 0; index < 5; index++) {
-          const labels = graphs.flatMap(graph => [...graph.querySelectorAll(`[data-observation-index="${index}"]`)]);
-          expect(new Set(labels.map(label => label.getAttribute("y"))).size).toBeLessThanOrEqual(1);
-        }
+        expect(container.querySelector('.preopen-chart-values')).toBeNull();
+        expect(container.querySelector('[data-chart-label="value"]')).toBeNull();
       }
     } finally { vi.unstubAllGlobals(); }
   });

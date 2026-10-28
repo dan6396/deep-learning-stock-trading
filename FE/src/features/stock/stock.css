@@ -84,9 +84,6 @@
   .report-news-sentiment { font-size: 12px; color: var(--ds-fg-2); white-space: nowrap; }
   .report-record { display: flex; gap: 16px; } .report-record svg { flex: 0 0 auto; color: var(--ds-fg-2); margin-top: 5px; }
   .report-record strong { display: block; margin: 10px 0 5px; }
-  .report-rules { margin-top: 20px; } .report-rules summary { cursor: pointer; min-height: 44px; font-weight: 650; }
-  .report-rules summary span { margin-left: 10px; color: var(--ds-fg-2); font-size: 12px; }
-  .report-rules dl { font-size: 12px; } .report-rules dt { font-weight: 650; } .report-rules dd { color: var(--ds-fg-2); margin: 5px 0 14px; }
   .report-disclaimer { padding: 20px 4px 0; }
   @media (max-width: 1280px) { .report-columns { grid-template-columns:minmax(0,1fr) 360px;gap:16px; } .report-card { padding:18px; } }
   @media (max-width: 1024px) { .report-columns { grid-template-columns:1fr; } .report-secondary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -99,7 +96,6 @@
     .report-predictions { gap:8px; }
     .report-predictions dd { font-size:24px; }
     .report-news-heading { flex-wrap:wrap; }
-    .report-rules summary span { display:block;margin:5px 0 0; }
     .report-chart-explore p { font-size: 12px; }
     .report-price-summary { flex-direction: column; }
   }

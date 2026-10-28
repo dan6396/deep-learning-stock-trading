@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { BriefingNarrative, MacroData, PreOpenIndicator } from "../../entities/briefing";
 import { citationDomId } from "../../entities/briefing";
 import { PreOpenIndicatorChart } from "./PreOpenIndicatorChart";
@@ -21,25 +21,10 @@ export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { ma
   const contentId = useId();
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(() => new Set());
   const [outlookExpanded, setOutlookExpanded] = useState(false);
-  const [labelSpace, setLabelSpace] = useState<Record<string, { height: number; conflicts: number[][] }>>({});
-  const onLabelSpaceChange = useCallback((id: string, height: number, conflicts: number[][]) => {
-    setLabelSpace(previous => previous[id]?.height === height && JSON.stringify(previous[id].conflicts) === JSON.stringify(conflicts) ? previous : { ...previous, [id]: { height, conflicts } });
-  }, []);
   if (!macro.preOpen) return null;
   const outlook = narrative.marketOutlook;
   const order = ["NASDAQ", "UST10Y", "SOX", "KOSPI200_FOREIGN_FUTURES", "USDKRW"];
   const indicators = [...macro.preOpen].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-  const chartSpaces = indicators.filter(row => row.history.length > 0 && !(row.id === "KOSPI200_FOREIGN_FUTURES" && row.status !== "ok")).flatMap(row => labelSpace[row.id] ? [labelSpace[row.id]] : []);
-  // A collision in any card reserves the same label lane in every card.
-  const conflicts = chartSpaces.flatMap(space => space.conflicts);
-  const labelLanes: number[] = [];
-  for (let index = 0; index < Math.max(0, ...indicators.map(row => row.history.length)); index++) {
-    const used = new Set(conflicts.filter(([a, b]) => b === index && a < index).map(([a]) => labelLanes[a]));
-    let lane = 0;
-    while (used.has(lane)) lane++;
-    labelLanes.push(lane);
-  }
-  const minimumPlotTop = Math.max(26 + Math.max(0, ...labelLanes) * 16, ...chartSpaces.map(space => space.height));
   const canExpandOutlook = Boolean(outlook && outlook.text.length > 120);
   const outlookCollapsed = canExpandOutlook && !outlookExpanded;
   return <section className="preopen-section" aria-labelledby="preopen-heading">
@@ -57,7 +42,7 @@ export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { ma
         <h3 id={`${contentId}-${row.id}-heading`}>{row.name}</h3><strong className={`preopen-value ${futures ? `is-${direction}` : ""}`}>{row.status === "ok" ? amount(row.value, row.unit, futures) : "자료 없음"}</strong>
         <p className={`preopen-day-change ${dayChange > 0 ? "is-rise" : dayChange < 0 ? "is-fall" : ""}`}>전일 대비 {change(row)}</p>
         {!futures && <p className="preopen-trend-label">5일 추세</p>}
-        <PreOpenIndicatorChart row={row} minimumPlotTop={minimumPlotTop} labelLanes={labelLanes} onLabelSpaceChange={onLabelSpaceChange} color={direction === "rise" ? "var(--ds-rise)" : direction === "fall" ? "var(--ds-fall)" : "var(--ds-fg-2)"} />
+        <PreOpenIndicatorChart row={row} color={direction === "rise" ? "var(--ds-rise)" : direction === "fall" ? "var(--ds-fall)" : "var(--ds-fg-2)"} />
         {futures && <p className={`preopen-trend is-${(row.fiveDaySum ?? 0) > 0 ? "rise" : (row.fiveDaySum ?? 0) < 0 ? "fall" : "flat"}`}>5일 합계 {amount(row.fiveDaySum ?? null, "계약", true)}</p>}
         {showComment && <button type="button" className="preopen-detail-toggle" aria-label={`${row.name} ${expandedDetails.has(row.id) ? "접기" : "자세히"}`} aria-expanded={expandedDetails.has(row.id)} aria-controls={`${contentId}-${row.id}`} onClick={() => setExpandedDetails(previous => {
           const next = new Set(previous); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next;

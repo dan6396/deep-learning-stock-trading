@@ -4,8 +4,6 @@ import { ArrowLeft, RefreshCw, Info } from "lucide-react";
 import { queries, queryKeys } from "../../shared/api/queries";
 import { formatDate, formatNumber, formatPercent, formatRankScore, formatSessionDate, formatWon } from "../../shared/lib/format";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { PerformancePanel } from "../history/PerformancePanel";
-import { SIGNAL_DESCRIPTIONS, SIGNAL_RULE_VERSION } from "../../entities/signals";
 import { briefingSignals, resolveMembership, type CandidateMembership } from "../briefing/membership";
 import { useCandidateProduction, productionNotice } from "../briefing/candidateProduction";
 import { mergeCandidateDetail } from "../briefing/DetailPanel";
@@ -163,18 +161,6 @@ function StockReport({ code }: { code: string }) {
     </section>
 
     {/* 6. 한계·고지 */}
-    <PerformancePanel code={code} />
-    <details className="report-card report-rules">
-      <summary>근거 판정 기준 <span title={SIGNAL_RULE_VERSION}>{formatDate(SIGNAL_RULE_VERSION.slice(3, 13))}</span></summary>
-      <dl>
-        {Object.entries(SIGNAL_DESCRIPTIONS).filter(([key]) => key !== "supply" && key !== "agreement").map(([key, description]) => (
-          <div key={key}>
-            <dt>{key === "model" ? "모델" : key === "news" ? "뉴스" : "다음 거래일"}</dt>
-            <dd>{description}</dd>
-          </div>
-        ))}
-      </dl>
-    </details>
     <p className="report-muted report-disclaimer">모델 순위는 투자 추천·수익 보장·실현 성과가 아닙니다. 투자 판단과 책임은 투자자에게 있습니다.</p>
   </div>;
 }
