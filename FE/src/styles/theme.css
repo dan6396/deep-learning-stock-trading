@@ -1,3 +1,9 @@
+/* Hallmark · checked: 2026-10-31 · genre: modern-minimal (inferred) · scope: app
+ * built: the project · redesign: polish · v2.0.0 */
+/* Hallmark · answered F3 · h1 and h2 balance globally in global.css, feature sheets inherit it */
+/* Hallmark · dismissed 19 · em dash only as an empty-cell mark and en dash only in date ranges; 67 · Korean sentence containing TOP5 is not set in capitals */
+/* Hallmark · dismissed 72 · the flagged TOP5 text sits inside a closed details element and is not painted */
+/* Hallmark · answered F24 · the connection popover keeps edge and shadow because it floats over content in both themes */
 /*
  * Design tokens for the current application.
  * Dark is the default; [data-theme="light"] on <html> switches the palette.
@@ -26,6 +32,16 @@
   --ds-warn: #ffb54c;
   --ds-warn-soft: rgba(255, 181, 76, 0.14);
   --ds-focus: #4c9aff;
+  --ds-accent-ink: #b8d5ff;
+  --ds-accent-soft: rgba(112, 176, 255, 0.16);
+  --ds-accent-line: rgba(112, 176, 255, 0.35);
+  --ds-rise-ink: #ffa4ae;
+  --ds-chip-ink: #b0b8c8;
+  --ds-chip-soft: rgba(255, 255, 255, 0.06);
+  --ds-chip-line: rgba(255, 255, 255, 0.15);
+  --ds-scrim: rgb(0 0 0 / 0.65);
+  --ds-shadow: rgba(0, 0, 0, 0.35);
+  --ds-selection: rgba(76, 154, 255, 0.28);
 
   /* Spacing scale */
   --ds-space-1: 4px;
@@ -36,6 +52,14 @@
   --ds-space-6: 24px;
   --ds-space-7: 32px;
   --ds-space-8: 40px;
+
+  /* Motion */
+  --ds-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ds-dur-1: 120ms;
+  --ds-dur-2: 180ms;
+  --ds-dur-3: 280ms;
+  --ds-dur-4: 520ms;
+  --ds-motion-rise: 8px;
 
   /* Typography scale */
   --ds-text-xs: 12px;
@@ -64,6 +88,16 @@
   --ds-warn: #a55300;
   --ds-warn-soft: #fff3e0;
   --ds-focus: #1b64da;
+  --ds-accent-ink: #1251b5;
+  --ds-accent-soft: rgba(27, 100, 218, 0.08);
+  --ds-accent-line: rgba(27, 100, 218, 0.25);
+  --ds-rise-ink: #b91527;
+  --ds-chip-ink: var(--ds-fg-2);
+  --ds-chip-soft: var(--ds-surface-2);
+  --ds-chip-line: var(--ds-line);
+  --ds-scrim: rgb(0 0 0 / 0.65);
+  --ds-shadow: rgba(0, 0, 0, 0.35);
+  --ds-selection: rgba(27, 100, 218, 0.18);
 }
 
 /* Match native controls and scrollbars to the application theme. */
@@ -111,22 +145,22 @@ html:has(.ds-root),body:has(.ds-root),#root:has(.ds-root) { background: var(--ds
 .run-reference { color: var(--ds-fg-2); font-size: 12px; min-width: 0; }
 .run-reference summary { cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; }
 .run-reference code { display: block; overflow-wrap: anywhere; padding-block: 8px; }
-.ds-header { display: flex; align-items: center; gap: 28px; min-height: 64px; padding: 0 28px; box-shadow: 0 1px 0 var(--ds-line); }
-.ds-brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; color: var(--ds-fg); font-size: 15px; font-weight: 750; text-decoration: none; min-height: 44px; }
-.ds-nav { display: flex; align-self: stretch; gap: 6px; }
-.ds-nav-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; color: var(--ds-fg-2); font-size: 14px; font-weight: 650; text-decoration: none; border-bottom: 3px solid transparent; }
+.ds-header { display: flex; align-items: center; gap: 28px; min-height: 64px; padding: 0 max(28px, calc((100% - 1512px) / 2 + 28px)); box-shadow: 0 1px 0 var(--ds-line); }
+.ds-brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: var(--ds-fg); font-size: 15px; font-weight: 700; text-decoration: none; min-height: 44px; }
+.ds-nav { display: flex; align-self: stretch; gap: 8px; }
+.ds-nav-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; color: var(--ds-fg-2); font-size: 14px; font-weight: 600; text-decoration: none; border-bottom: 3px solid transparent; }
 .ds-nav-active { color: var(--ds-fg); border-bottom-color: var(--ds-fg); }
 .ds-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .ds-theme-button { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-fg-2); cursor: pointer; flex-shrink: 0; }
 .ds-root button:focus-visible, .ds-root a:focus-visible, .ds-root summary:focus-visible, .ds-root input:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
 .ds-root :is(a,button,input,summary,[tabindex],[id]) { scroll-margin-top: 140px; scroll-margin-bottom: 24px; }
 .ds-footer { max-width: 1512px; margin: 0 auto; padding: 24px 28px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--ds-line); font-size: 12px; color: var(--ds-fg-2); }
-.ds-footer p { margin: 6px 0 0; line-height: 1.65; }
-.ds-footer nav { display: flex; gap: 18px; flex-shrink: 0; }
+.ds-footer p { margin: 8px 0 0; line-height: 1.65; }
+.ds-footer nav { display: flex; gap: 20px; flex-shrink: 0; }
 .ds-footer a { color: var(--ds-fg-2); display: inline-flex; align-items: center; min-height: 32px; }
 @media (max-width: 768px) {
-  .ds-root .ds-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0; min-height: auto; padding: 6px 12px 0; }
-  .ds-root .ds-header .ds-brand { order: 1; font-size: 13px; gap: 6px; min-height: 44px; max-width: calc(100% - 192px); overflow: hidden; }
+  .ds-root .ds-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0; min-height: auto; padding: 8px 12px 0; }
+  .ds-root .ds-header .ds-brand { order: 1; font-size: 13px; gap: 8px; min-height: 44px; max-width: calc(100% - 192px); overflow: hidden; }
   .ds-root .ds-header .ds-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ds-root .ds-header .ds-header-actions { order: 1; margin-left: auto; gap: 4px; }
   .ds-root .ds-header .ds-theme-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }

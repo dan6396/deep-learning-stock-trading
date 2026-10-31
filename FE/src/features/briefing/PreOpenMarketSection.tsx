@@ -17,12 +17,21 @@ function asOf(value: string | null) {
   if (!value) return "기준 시각 미확인";
   return value.length === 10 ? `${value} 일봉 · 종가 시각 미확인` : new Date(value).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) + " KST";
 }
-export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { macro: MacroData; narrative: BriefingNarrative; onCitationClick: (id: string) => void }) {
+/** Visible basis so a pre-open value is never mistaken for the summary snapshot taken later. */
+function basis(value: string | null) {
+  if (!value) return "기준 시각 미확인";
+  if (value.length === 10) return `${value.slice(5, 7)}/${value.slice(8, 10)} 종가 기준`;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "기준 시각 미확인";
+  return `${date.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })} KST 기준`;
+}
+export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { macro: MacroData; narrative: BriefingNarrative; onCitationClick: (id: string, scope?: "snapshot" | "preopen") => void }) {
   const contentId = useId();
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(() => new Set());
   const [outlookExpanded, setOutlookExpanded] = useState(false);
   if (!macro.preOpen) return null;
   const outlook = narrative.marketOutlook;
+  const outlookTitle = outlook?.source === "llm" ? "AI 최종 의견" : "지표 기반 참고 요약";
   const order = ["NASDAQ", "UST10Y", "SOX", "KOSPI200_FOREIGN_FUTURES", "USDKRW"];
   const indicators = [...macro.preOpen].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   const canExpandOutlook = Boolean(outlook && outlook.text.length > 120);
@@ -36,10 +45,10 @@ export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { ma
       const metadata = `${row.history.length}/5개 관측일 · 단위 ${row.unit === "KRW" ? "원" : row.unit} · ${futures ? `기준일 ${row.asOf ?? "미확인"} · KIS 시장별 투자자매매동향(일별) · 직전 거래일` : `${asOf(row.asOf)} · ${row.source === "yahoo" ? "Yahoo Finance" : row.source === "kis" ? "KIS" : "출처 확인 중"}`}`;
       const colorValue = futures ? row.value ?? 0 : fiveChange;
       const direction = colorValue === 0 ? "flat" : colorValue > 0 ? "rise" : "fall";
-      if (row.status !== "ok" && row.id === "KOSPI200_FOREIGN_FUTURES") return <article key={row.id} id={citationDomId(`M:${row.id}`)} className="preopen-card preopen-unavailable" tabIndex={-1} data-testid={`preopen-${row.id}`}><h3>{row.name}</h3><span>출처 확인 중</span></article>;
-      return <article key={row.id} id={citationDomId(`M:${row.id}`)} className="preopen-card" title={metadata} aria-labelledby={`${contentId}-${row.id}-heading`} aria-describedby={`${contentId}-${row.id}-metadata`} tabIndex={-1} data-testid={`preopen-${row.id}`}>
+      if (row.status !== "ok" && row.id === "KOSPI200_FOREIGN_FUTURES") return <article key={row.id} id={citationDomId(`M:${row.id}`, "preopen")} className="preopen-card preopen-unavailable" tabIndex={-1} data-testid={`preopen-${row.id}`}><h3>{row.name}</h3><span>출처 확인 중</span></article>;
+      return <article key={row.id} id={citationDomId(`M:${row.id}`, "preopen")} className="preopen-card" title={metadata} aria-labelledby={`${contentId}-${row.id}-heading`} aria-describedby={`${contentId}-${row.id}-metadata`} tabIndex={-1} data-testid={`preopen-${row.id}`}>
         <span id={`${contentId}-${row.id}-metadata`} hidden>{metadata}</span>
-        <h3 id={`${contentId}-${row.id}-heading`}>{row.name}</h3><strong className={`preopen-value ${futures ? `is-${direction}` : ""}`}>{row.status === "ok" ? amount(row.value, row.unit, futures) : "자료 없음"}</strong>
+        <h3 id={`${contentId}-${row.id}-heading`}>{row.name}</h3><p className="preopen-basis">{futures ? `${row.asOf ? `${row.asOf.slice(5, 7)}/${row.asOf.slice(8, 10)}` : "날짜 미확인"} 거래일 기준` : basis(row.asOf)}</p><strong className={`preopen-value ${futures ? `is-${direction}` : ""}`}>{row.status === "ok" ? amount(row.value, row.unit, futures) : "자료 없음"}</strong>
         <p className={`preopen-day-change ${dayChange > 0 ? "is-rise" : dayChange < 0 ? "is-fall" : ""}`}>전일 대비 {change(row)}</p>
         {!futures && <p className="preopen-trend-label">5일 추세</p>}
         <PreOpenIndicatorChart row={row} color={direction === "rise" ? "var(--ds-rise)" : direction === "fall" ? "var(--ds-fall)" : "var(--ds-fg-2)"} />
@@ -53,11 +62,11 @@ export function PreOpenMarketSection({ macro, narrative, onCitationClick }: { ma
       </article>;
     })}</div>
     {outlook && <article className={`preopen-outlook ${outlookCollapsed ? "is-collapsed" : "is-expanded"}`} aria-labelledby="outlook-heading" data-testid="market-outlook">
-      <header><h3 id="outlook-heading">AI 최종 의견</h3><span className={`preopen-stance ${outlook.stance === "상승 우위" ? "is-rise" : outlook.stance === "하락 우위" ? "is-fall" : ""}`}>{outlook.stance}</span></header>
-      <p className="preopen-meta">AI 의견 · 투자 권유 아님{outlook.source === "template" ? " · 규칙 기반 대체" : ""}</p>
+      <header><h3 id="outlook-heading">{outlookTitle}</h3><span className={`preopen-stance ${outlook.stance === "상승 우위" ? "is-rise" : outlook.stance === "하락 우위" ? "is-fall" : ""}`}>{outlook.stance}</span></header>
+      <p className="preopen-meta">{outlook.source === "llm" ? "AI 의견" : "참고 요약"} · 투자 권유 아님{outlook.source === "template" ? " · 규칙 기반 대체" : ""}</p>
       <p id={`${contentId}-outlook`} className="preopen-outlook-text">{outlook.text}</p>
-      {canExpandOutlook && <button type="button" className="preopen-outlook-toggle" aria-label={`AI 최종 의견 ${outlookExpanded ? "접기" : "더 보기"}`} aria-expanded={outlookExpanded} aria-controls={`${contentId}-outlook ${contentId}-citations`} onClick={() => setOutlookExpanded(previous => !previous)}>{outlookExpanded ? "접기" : "더 보기"}</button>}
-      <div id={`${contentId}-citations`} className="preopen-citations" aria-label="최종 의견 인용 근거">{outlook.citations.filter(id => id !== "M:SP500").map(id => <button key={id} onClick={() => onCitationClick(id)}>{macro.preOpen?.find(row => `M:${row.id}` === id)?.name ?? id}</button>)}</div>
+      {canExpandOutlook && <button type="button" className="preopen-outlook-toggle" aria-label={`${outlookTitle} ${outlookExpanded ? "접기" : "더 보기"}`} aria-expanded={outlookExpanded} aria-controls={`${contentId}-outlook ${contentId}-citations`} onClick={() => setOutlookExpanded(previous => !previous)}>{outlookExpanded ? "접기" : "더 보기"}</button>}
+      <div id={`${contentId}-citations`} className="preopen-citations" aria-label="최종 의견 인용 근거">{outlook.citations.filter(id => id !== "M:SP500").map(id => <button key={id} onClick={() => onCitationClick(id, "preopen")}>{macro.preOpen?.find(row => `M:${row.id}` === id)?.name ?? id}</button>)}</div>
     </article>}
   </section>;
 }

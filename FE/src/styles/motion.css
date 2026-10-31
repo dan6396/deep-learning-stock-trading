@@ -1,0 +1,142 @@
+/* Hallmark · checked: 2026-10-31 · redesign: polish · motion layer, transform and opacity only, stamp and record in styles/theme.css */
+/*
+ * Motion for a data desk: short, quiet, and only where something changes.
+ * One page reveal per route; everything else answers a user action
+ * (open, press, select). Durations and easing come from theme.css tokens.
+ * Every animation ends visible, so content never depends on it running.
+ * Transform animations fill backwards only, so no transform lingers after
+ * they finish (a lingering transform would trap fixed descendants).
+ */
+
+@keyframes ds-rise-in {
+  from { opacity: 0; transform: translateY(var(--ds-motion-rise)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ds-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ds-pop-in {
+  from { opacity: 0; transform: translateY(var(--ds-motion-rise)) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ds-bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* 1. Route reveal: the page settles in once per navigation. */
+.ds-main > * {
+  animation: ds-rise-in var(--ds-dur-3) var(--ds-ease-out) backwards;
+}
+
+/* 2. TOP5 score bars grow from the left, one row after another. */
+.briefing-top-score-bar-fill {
+  transform-origin: left center;
+  animation: ds-bar-grow var(--ds-dur-4) var(--ds-ease-out) backwards;
+}
+.briefing-top-five > li:nth-child(2) .briefing-top-score-bar-fill { animation-delay: 60ms; }
+.briefing-top-five > li:nth-child(3) .briefing-top-score-bar-fill { animation-delay: 120ms; }
+.briefing-top-five > li:nth-child(4) .briefing-top-score-bar-fill { animation-delay: 180ms; }
+.briefing-top-five > li:nth-child(5) .briefing-top-score-bar-fill { animation-delay: 240ms; }
+
+/* 3. Selecting another stock swaps the detail panel in place. */
+.briefing-detail-compact > * {
+  animation: ds-fade-in var(--ds-dur-2) var(--ds-ease-out) both;
+}
+
+/* 4. Disclosures: opened content fades in under its summary. */
+.ds-root details[open] > :not(summary),
+.preopen-card-details.is-expanded,
+.preopen-outlook.is-expanded .preopen-outlook-text {
+  animation: ds-fade-in var(--ds-dur-2) var(--ds-ease-out) both;
+}
+
+/* 5. Dialogs open with a short lift; the backdrop fades. */
+.search-dialog[open],
+.analysis-dialog[open],
+.admin-token-dialog[open] {
+  animation: ds-pop-in var(--ds-dur-2) var(--ds-ease-out) backwards;
+}
+.search-dialog[open]::backdrop,
+.analysis-dialog[open]::backdrop,
+.admin-token-dialog[open]::backdrop {
+  animation: ds-fade-in var(--ds-dur-2) var(--ds-ease-out) both;
+}
+
+/* 6. Tooltips and popovers appear instead of blinking on. */
+#rank-score-help[role="tooltip"],
+.preopen-chart-tooltip,
+.connection-notice-body {
+  animation: ds-fade-in var(--ds-dur-1) var(--ds-ease-out) both;
+}
+
+/* 7. Press feedback on the app's buttons. */
+.ds-analysis-trigger,
+.briefing-button,
+.rank-button,
+.stock-report-button,
+.watch-toggle,
+.ds-theme-button,
+.briefing-citation-chip {
+  transition:
+    transform var(--ds-dur-1) var(--ds-ease-out),
+    background-color var(--ds-dur-1) var(--ds-ease-out),
+    border-color var(--ds-dur-1) var(--ds-ease-out),
+    color var(--ds-dur-1) var(--ds-ease-out);
+}
+:is(.ds-analysis-trigger, .briefing-button, .rank-button, .stock-report-button, .briefing-citation-chip):active:not(:disabled) {
+  transform: scale(0.98);
+}
+:is(.watch-toggle, .ds-theme-button):active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* 8. Navigation and theme switch. */
+.ds-nav-link {
+  transition: color var(--ds-dur-1) var(--ds-ease-out), border-color var(--ds-dur-1) var(--ds-ease-out);
+}
+.ds-theme-button svg {
+  transition: transform var(--ds-dur-3) var(--ds-ease-out);
+}
+.ds-theme-button:hover svg {
+  transform: rotate(30deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-main > *,
+  .briefing-top-score-bar-fill,
+  .briefing-detail-compact > *,
+  .ds-root details[open] > :not(summary),
+  .preopen-card-details.is-expanded,
+  .preopen-outlook.is-expanded .preopen-outlook-text,
+  .search-dialog[open],
+  .analysis-dialog[open],
+  .admin-token-dialog[open],
+  .search-dialog[open]::backdrop,
+  .analysis-dialog[open]::backdrop,
+  .admin-token-dialog[open]::backdrop,
+  #rank-score-help[role="tooltip"],
+  .preopen-chart-tooltip,
+  .connection-notice-body {
+    animation: none;
+  }
+  .ds-analysis-trigger,
+  .briefing-button,
+  .rank-button,
+  .stock-report-button,
+  .watch-toggle,
+  .ds-theme-button,
+  .briefing-citation-chip,
+  .ds-nav-link,
+  .ds-theme-button svg {
+    transition: none;
+  }
+  :is(.ds-analysis-trigger, .briefing-button, .rank-button, .stock-report-button, .briefing-citation-chip, .watch-toggle, .ds-theme-button):active:not(:disabled),
+  .ds-theme-button:hover svg {
+    transform: none;
+  }
+}

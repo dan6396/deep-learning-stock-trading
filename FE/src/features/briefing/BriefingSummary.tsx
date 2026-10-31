@@ -24,11 +24,11 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
       <span className="briefing-execution-item">
         분석 완료 <strong>{finishedAt ? formatDate(finishedAt, true) : "—"}</strong>
       </span>
-      <span className="briefing-execution-divider">·</span>
+      <span className="briefing-execution-divider" aria-hidden="true" />
       <span className="briefing-execution-item">
         모집단 <strong>{formatNumber(resultPool)}종목</strong> ({formatDuration(duration)})
       </span>
-      <span className="briefing-execution-divider">·</span>
+      <span className="briefing-execution-divider" aria-hidden="true" />
       <span className="briefing-execution-item">
         {previousReason === "running" ? "새 분석 진행 중 · 이전 결과 표시" : previousReason === "failed" ? "새 분석 실패 · 이전 결과 표시" : "마지막 분석"}
       </span>
@@ -37,7 +37,7 @@ export function BriefingExecutionBar({ pool }: { pool: number | null }) {
       </span>}
       {(backend.isError || analysis.isError) && (
         <>
-          <span className="briefing-execution-divider">·</span>
+          <span className="briefing-execution-divider" aria-hidden="true" />
           <span className="briefing-execution-error" role="status">실행 상태 갱신 실패</span>
         </>
       )}

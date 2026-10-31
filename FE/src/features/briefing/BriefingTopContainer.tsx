@@ -22,10 +22,12 @@ export type BriefingTopContainerProps = {
 
 const highlightTimers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
-export function highlightCitationTarget(citationId: string) {
-  const targetId = citationDomId(citationId);
+export function highlightCitationTarget(citationId: string, scope: "snapshot" | "preopen" = "snapshot") {
+  const targetId = citationDomId(citationId, scope);
   const el = document.getElementById(targetId);
   if (!el) return;
+  const details = el.closest("details");
+  if (details) details.open = true;
   const existingTimer = highlightTimers.get(el);
   if (existingTimer !== undefined) {
     clearTimeout(existingTimer);
@@ -67,7 +69,7 @@ export function BriefingTopContainer({
     });
   }, []);
 
-  const handleCitationClick = useCallback((citationId: string) => {
+  const handleCitationClick = useCallback((citationId: string, scope: "snapshot" | "preopen" = "snapshot") => {
     const parsed = parseCitation(citationId);
     if (parsed.code) {
       setExpandedCodes((prev) => {
@@ -77,7 +79,7 @@ export function BriefingTopContainer({
         return next;
       });
     }
-    const targetId = citationDomId(citationId);
+    const targetId = citationDomId(citationId, scope);
     const targetEl = document.getElementById(targetId);
     if (citationId === "narrative" || citationId === "overview" || targetEl?.closest(".briefing-narrative-card")) {
       setIsNarrativeExpanded(true);
@@ -85,7 +87,7 @@ export function BriefingTopContainer({
     // Allow React to re-render the expanded section before scrolling
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        highlightCitationTarget(citationId);
+        highlightCitationTarget(citationId, scope);
       });
     });
   }, []);
@@ -128,8 +130,8 @@ export function BriefingTopContainer({
   return (
     <div className="briefing-top-container" data-testid="briefing-top-container">
       {narrativeNode}
-      <PreOpenMarketSection macro={briefing.macro} narrative={briefing.narrative} onCitationClick={handleCitationClick} />
       {topFiveNode}
+      <PreOpenMarketSection macro={briefing.macro} narrative={briefing.narrative} onCitationClick={handleCitationClick} />
       <BriefingMacroGrid macro={briefing.macro} />
 
       {/* TOP5 후보 구성 */}

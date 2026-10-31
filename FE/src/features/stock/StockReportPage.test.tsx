@@ -22,7 +22,7 @@ function backend(overrides?: (path: string, options?: RequestInit) => Promise<Re
     throw new Error(`Unexpected test request ${path}`);
   }); vi.stubGlobal("fetch", fetcher); return fetcher;
 }
-function mount(path = "/next/stock/005930") {
+function mount(path: string | { pathname: string; state: { rankReturnTo: string } } = "/next/stock/005930") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, refetchOnWindowFocus: false } } }); clients.push(client);
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Link to="/next/stock/000660">테스트 B</Link><Routes><Route path="/next/stock/:code" element={<StockReportPage />} /></Routes></MemoryRouter></QueryClientProvider>);
   return client;
@@ -35,6 +35,16 @@ function insightBody() {
     data_meta: { source: "cache", asOf: "2026-10-07T09:00:00Z" } };
 }
 describe("stock report using actual fetch fixtures", () => {
+  it("keeps a validated rank return URL and exposes missing values without filling them", async () => {
+    backend(path => path.includes("stock-insight") || path.includes("stock-analysis") ? Promise.resolve(jsonResponse(null)) : path === "/api/candidates" ? Promise.resolve(jsonResponse([])) : undefined);
+    const from = "/next/rank?query=005930&sort=name&direction=desc&page=2";
+    mount({ pathname: "/next/stock/005930", state: { rankReturnTo: from } });
+    expect(screen.getByRole("link", { name: "전체 순위로" })).toHaveAttribute("href", from);
+    const compact = document.querySelector(".report-model-compact");
+    await waitFor(() => expect(compact).toHaveTextContent("미제공"));
+    expect(compact?.querySelectorAll("dd")).toHaveLength(4);
+    expect(screen.getByRole("navigation", { name: "리포트 빠른 탐색" })).toHaveTextContent("모델 근거");
+  });
   it("consolidates the aggregate rank once while retaining comparisons, features, cautions and opinion anchors", async () => {
     const row = reportRow();
     Object.assign(row.input_row, { score_kind: "rank_zscore", rank_score: 1.601514, pred_rank: 1, pred_pool_size: 199 });
@@ -83,8 +93,8 @@ describe("stock report using actual fetch fixtures", () => {
     const row = reportRow(); row.news[0].url = "https://news.example/article";
     const fetcher = backend(path => path.includes("stock-insight") ? Promise.resolve(jsonResponse(body)) : path.includes("stock-analysis") ? Promise.resolve(jsonResponse(row)) : undefined);
     mount();
-    const opinion = await screen.findByRole("region", { name: "AI 최종 의견" });
-    expect(within(opinion).getByText("AI 의견 · 투자 권유 아님 · 방향 판단 아님")).toBeInTheDocument();
+    const opinion = await screen.findByRole("region", { name: source === "llm" ? "AI 최종 의견" : "모델·근거 요약" });
+    expect(within(opinion).getByText(`${source === "llm" ? "AI 의견" : "참고 요약"} · 투자 권유 아님 · 방향 판단 아님`)).toBeInTheDocument();
     expect(within(opinion).getAllByText(source === "llm" ? "AI 요약" : "규칙 기반 기본 안내")[0]).toBeInTheDocument();
     expect(opinion.querySelector(".stock-ai-summary p")).toHaveTextContent(body.aiOpinion.text);
     expect(opinion.querySelector(".stock-ai-summary p")).toHaveStyle({ WebkitLineClamp: "5" });
@@ -269,7 +279,7 @@ describe("stock report using actual fetch fixtures", () => {
       news: { ...saved.news, source: "template", summarySource: "template", summaryBasis: "title", summary: "관련 기사 1건의 제목·출처·발행 시각을 확인할 수 있습니다." } };
     backend(path => path.includes("stock-insight") ? Promise.resolve(jsonResponse(body)) : undefined);
     mount();
-    const opinion = await screen.findByRole("region", { name: "AI 최종 의견" });
+    const opinion = await screen.findByRole("region", { name: "모델·근거 요약" });
     expect(within(opinion).getAllByText("규칙 기반 기본 안내")[0]).toBeInTheDocument();
     expect(within(opinion).getAllByText("규칙 기반 기본 안내")[1]).toBeInTheDocument();
     expect(within(opinion).getByRole("heading", { name: "관련 뉴스 요약" })).toBeInTheDocument();

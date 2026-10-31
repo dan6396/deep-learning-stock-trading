@@ -871,8 +871,8 @@ export type ParsedCitation = {
   isValid: boolean;
 };
 
-export function citationDomId(id: string): string {
-  return "cite-" + id.trim().replace(/[^a-zA-Z0-9_-]/g, "-");
+export function citationDomId(id: string, scope: "snapshot" | "preopen" = "snapshot"): string {
+  return (scope === "preopen" ? "cite-preopen-" : "cite-") + id.trim().replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
 const MACRO_CITATION_LABELS: Record<string, string> = {

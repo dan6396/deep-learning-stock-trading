@@ -72,7 +72,7 @@ export function AnalysisControl({ onShowTopFive, onRequestStart, labelledBy }: {
   return <section className="briefing-card analysis-control" aria-labelledby={labelledBy ?? "analysis-control-heading"}>
     <div className="analysis-control-main">
       <div className="analysis-control-copy">
-        {!labelledBy && <><p className="briefing-eyebrow">분석 실행</p><h2 id="analysis-control-heading" ref={heading} tabIndex={-1}>새 분석 실행</h2></>}
+        {!labelledBy && <><h2 id="analysis-control-heading" ref={heading} tabIndex={-1}>새 분석 실행</h2></>}
         <p id="analysis-mode-description" className="analysis-control-description">모델 순위를 계산한 뒤 TOP5의 관련 기사를 수집하고 AI 요약을 생성합니다.</p>
         <p className="analysis-control-caption">분석에는 보통 1분 안팎이 걸리며 상황에 따라 더 걸릴 수 있습니다. 실행 중에도 현재 결과는 그대로 보입니다.</p>
         <p className="analysis-control-caption">관리자 실행은 수시 기록입니다. 공식 기록은 장 마감 후 예약 작업에서 생성합니다.</p>

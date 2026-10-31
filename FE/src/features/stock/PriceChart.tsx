@@ -130,7 +130,7 @@ function ChartView({ data, mode = "area", label, interval = "5m", compact = fals
 
   return <div className="price-chart" ref={container} data-chart-range={data.range} data-chart-code={data.code} data-chart-mode={mode} data-visible-count={visibleCount} data-visible-start={currentStart}>
     <p className="price-chart-heading">마지막 관측 <strong>{won(lastOverall.close)}</strong> <span data-price-direction={direction} style={{ color }}>{symbol} {signed(change)}</span><span className="price-chart-muted"> · {basisLabel} {won(basis)} 대비</span></p>
-    <p className="price-chart-muted" data-chart-period>조회기간 {rangeLabels[data.range]} · 전체 관측 {wholePeriod} · {points.length}개{mode === "candle" ? data.range === "1D" ? ` · 봉 간격 ${intervalMinutes}분 (한국시간, 버킷 시작 시각)` : " · 원본 봉" : ""}</p>
+    <p className="price-chart-muted" data-chart-period>조회기간 {rangeLabels[data.range]}, 전체 관측 {wholePeriod} ({points.length}개){mode === "candle" ? data.range === "1D" ? ` · 봉 간격 ${intervalMinutes}분 (한국시간, 버킷 시작 시각)` : " · 원본 봉" : ""}</p>
     {mode === "candle" && <>
       <svg className="price-chart-overview" viewBox={`0 0 ${w} 40`} role="img" aria-label={`전체 관측 기간 개요 ${wholePeriod} · ${points.length}개 봉 · 음영은 현재 구간`}>
         {points.map(point => <line key={point.time} x1={overviewX(point.timestamp)} x2={overviewX(point.timestamp)} y1={overviewY(point.low)} y2={overviewY(point.high)} stroke="var(--ds-fg-2)" />)}

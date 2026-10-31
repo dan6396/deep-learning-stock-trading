@@ -1,9 +1,10 @@
+/* Hallmark · checked: 2026-10-31 · redesign: polish · stamp and record in styles/theme.css */
 @layer components {
   .not-found { display: grid; gap: 12px; justify-items: start; max-width: 640px; margin: 40px auto; padding: 32px; border-radius: 22px; background: var(--ds-surface); color: var(--ds-fg); }
-  .not-found-code { margin: 0; color: var(--ds-fg-2); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+  .not-found-code { margin: 0; color: var(--ds-fg-2); font-size: 13px; font-weight: 700; }
   .not-found h1 { margin: 0; font-size: 28px; line-height: 1.3; letter-spacing: -.04em; }
   .not-found-text { margin: 0; color: var(--ds-fg-2); font-size: 15px; line-height: 1.6; }
-  .not-found-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; padding: 0 16px; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-fg); font-size: 14px; font-weight: 650; text-decoration: none; }
+  .not-found-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; padding: 0 16px; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-fg); font-size: 14px; font-weight: 600; text-decoration: none; }
   .not-found-link:hover { text-decoration: underline; }
   .not-found-link:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
   @media (max-width: 768px) { .not-found { margin: 20px 0; padding: 24px 20px; } .not-found h1 { font-size: 24px; } }

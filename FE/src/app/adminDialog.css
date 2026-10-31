@@ -1,11 +1,12 @@
+/* Hallmark · checked: 2026-10-31 · redesign: polish · stamp and record in styles/theme.css */
 @layer components {
   .admin-token-dialog {
     position: fixed;
     inset: 0;
     box-sizing: border-box;
     margin: auto;
-    width: min(440px, calc(100vw - var(--ds-space-7)));
-    max-width: calc(100vw - var(--ds-space-7));
+    width: min(440px, calc(100% - var(--ds-space-7)));
+    max-width: calc(100% - var(--ds-space-7));
     max-height: calc(100dvh - var(--ds-space-8));
     overflow: auto;
     padding: var(--ds-space-6);
@@ -54,6 +55,7 @@
     cursor: pointer;
   }
   .admin-token-actions .admin-token-save { border-color: var(--ds-primary); background: var(--ds-primary); color: var(--ds-on-primary); }
-  .admin-token-actions button:disabled { opacity: .5; cursor: not-allowed; }
+  .admin-token-actions button:active:not(:disabled) { transform: translateY(1px); }
+  .admin-token-actions button:disabled { cursor: not-allowed; background: var(--ds-surface-2); color: var(--ds-subtle); border-color: var(--ds-line); }
   .admin-token-dialog :is(input, button):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
 }

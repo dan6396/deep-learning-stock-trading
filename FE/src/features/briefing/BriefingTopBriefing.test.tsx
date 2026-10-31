@@ -224,8 +224,8 @@ describe("BriefingMacroGrid", () => {
   it("omits SP500 and its empty US group for pre-open briefing while keeping domestic indices", () => {
     render(<BriefingMacroGrid macro={{ ...mockBriefingData.macro, preOpen: [] }} />);
     expect(screen.queryByTestId("macro-card-SP500")).not.toBeInTheDocument();
-    expect(screen.queryByText("미국 증시")).not.toBeInTheDocument();
-    expect(screen.getByText("국내 지수·참고 통계")).toBeInTheDocument();
+    expect(screen.getByText("미국 증시")).toBeInTheDocument();
+    expect(screen.getByText("요약 관측값 · 장전 지표와 수집 시점이 다를 수 있습니다")).toBeInTheDocument();
     expect(screen.getByTestId("macro-card-KOSPI")).toBeInTheDocument();
     expect(screen.getByTestId("macro-card-KOSDAQ")).toBeInTheDocument();
   });
@@ -650,6 +650,7 @@ describe("TOP5 integrated evidence", () => {
     const { container } = render(<MemoryRouter><BriefingTopContainer briefing={mockBriefingData} onSelectStock={vi.fn()}
       isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} renderTopFive={renderTestTopFive} /></MemoryRouter>);
     const row = container.querySelector('[data-model-code="005930"]')!;
+    fireEvent.click(within(row as HTMLElement).getByText("가격·차트·근거 상세"));
     const evidence = screen.getByTestId("stock-card-005930");
     expect(row.contains(evidence)).toBe(true);
     expect(within(evidence).getByText(/두 모델 일치/)).toBeVisible();
@@ -677,6 +678,7 @@ describe("TOP5 integrated evidence", () => {
     render(<MemoryRouter><BriefingTopContainer briefing={data} onSelectStock={vi.fn()}
       isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} renderTopFive={renderTestTopFive} /></MemoryRouter>);
     const card = screen.getByTestId("stock-card-005930");
+    fireEvent.click(card.closest("details")!.querySelector("summary")!);
     expect(card.querySelector(".briefing-stock-summary-text")).toBeNull();
     expect(screen.getByTestId("stock-chip-evidence-005930")).toBeVisible();
     expect(screen.getByTestId("stock-chip-evidence-005930")).toHaveTextContent("근거 2건");
@@ -1467,7 +1469,8 @@ describe("briefing review regressions", () => {
     data.narrative.generatedAt = new Date(Date.now() - 601_000).toISOString();
     const { container } = render(<MemoryRouter><BriefingTopContainer renderTopFive={renderTestTopFive} briefing={data} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
     fireEvent.click(screen.getByTestId("macro-reference-toggle-btn"));
-    expectReadableUserText(container);
+    expectReadableUserText(container, { abnormal: true });
+    expect(container.querySelector(".briefing-comparison-signal")).toHaveTextContent("미확인");
     expect(container.textContent).not.toMatch(/macroStale|fallbackReason|partial_template|generation_timeout/);
     if (reason === "partial_template") expect(screen.getByTestId("partial-template-policy-hint")).toHaveTextContent("시장 지표가 갱신되면 다시 생성할 수 있습니다");
   });
@@ -1653,15 +1656,50 @@ describe("narrative regeneration policy", () => {
 
 beforeEach(() => window.sessionStorage.setItem("kospi-admin-token.v1", "fixture-admin"));
 
-describe("market-first briefing layout", () => {
-  it("keeps narrative, pre-open indicators, opinion, TOP5, other markets and composition in one invariant DOM order", () => {
+describe("TOP5-first briefing layout", () => {
+  it("keeps narrative, TOP5, pre-open indicators, opinion, other markets and composition in one invariant DOM order", () => {
       const data = structuredClone(mockExtendedBriefingData);
       data.macro.preOpen = [{ id: "UST10Y", name: "미국 국채 10년 금리", unit: "%", value: 4.99, change: -0.002, changePct: -0.04, fiveDayChange: -0.13, fiveDayChangePct: -2.5, asOf: "2026-10-23", source: "yahoo", status: "ok", history: [{ date: "2026-10-23", value: 4.99 }], comment: { text: "관측된 금리입니다.", ruleId: "fixture" } }];
       data.narrative.marketOutlook = { stance: "중립", text: "장 초반 방향은 중립입니다.", citations: ["M:UST10Y"], source: "llm" };
       const { container } = render(<MemoryRouter><BriefingTopContainer renderTopFive={renderTestTopFive} briefing={data} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
-      const selectors = [".briefing-narrative-card", ".preopen-grid", ".preopen-outlook", "[data-testid='mock-top5-table']", ".briefing-macro-section", ".briefing-composition-card"];
+      const selectors = [".briefing-narrative-card", "[data-testid='mock-top5-table']", ".preopen-grid", ".preopen-outlook", ".briefing-macro-section", ".briefing-composition-card"];
       const elements = selectors.map(selector => container.querySelector(selector)!);
       elements.forEach(element => expect(element).not.toBeNull());
       for (let index = 0; index < elements.length - 1; index++) expect(elements[index].compareDocumentPosition(elements[index + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("separate macro observation citation scopes", () => {
+  it.each(["template", "llm", "partial_template"] as const)("keeps snapshot and pre-open values, dates and citation destinations for %s", mode => {
+    const data = structuredClone(mockBriefingData);
+    data.macro.indicators = [{ id: "USDKRW", name: "원/달러 환율", value: 1334.98, change: 1, changePct: .1, unit: "KRW", asOf: "2026-10-23T06:30:00Z", source: "kis", status: "ok" }];
+    data.macro.preOpen = [{ id: "USDKRW", name: "장전 원/달러 환율", value: 1326.81, change: -2, changePct: -.1, fiveDayChange: -3, fiveDayChangePct: -.2, unit: "KRW", asOf: "2026-10-22", source: "yahoo", status: "ok", history: [{ date: "2026-10-22", value: 1326.81 }], comment: { text: "장전 관측 환율입니다.", ruleId: "fixture" } }];
+    data.narrative.status = mode === "template" ? "template" : "llm";
+    data.narrative.fallbackReason = mode === "partial_template" ? "partial_template" : null;
+    data.narrative.overview = "요약 관측 환율은 1334.98원입니다.";
+    data.narrative.citations = ["M:USDKRW"];
+    data.narrative.stocks[0].citations = ["M:USDKRW"];
+    data.narrative.stockOpinions = [{ code: data.stocks[0].code, text: "확장 의견 관측 환율은 1326.81원입니다.", citations: ["M:USDKRW"], source: "llm" }];
+    data.narrative.marketOutlook = { stance: "중립", text: "중립 · 장전 관측 환율은 1326.81원입니다.", citations: ["M:USDKRW"], source: mode === "template" ? "template" : "llm" };
+    const scroll = vi.fn(), previous = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { callback(0); return 0; });
+    try {
+      const { container } = render(<MemoryRouter><BriefingTopContainer renderTopFive={renderTestTopFive} briefing={data} onSelectStock={vi.fn()} isGenerating={false} generateError={null} onGenerateNarrative={vi.fn()} /></MemoryRouter>);
+      const snapshot = screen.getByTestId("macro-card-USDKRW"), preopen = screen.getByTestId("preopen-USDKRW");
+      expect(snapshot).toHaveTextContent("1,334.98"); expect(snapshot.querySelector("time")).toHaveAttribute("dateTime", "2026-10-23T06:30:00Z");
+      expect(preopen).toHaveTextContent("1,326.81"); expect(preopen).toHaveAttribute("title", expect.stringContaining("2026-10-22"));
+      expect(snapshot.id).not.toBe(preopen.id);
+      expect(container.querySelectorAll("#cite-M-USDKRW")).toHaveLength(1);
+      fireEvent.click(screen.getByTestId("citation-chip-M:USDKRW"));
+      expect(snapshot).toHaveFocus(); expect(preopen).not.toHaveClass("briefing-highlight");
+      fireEvent.click(within(screen.getByTestId("market-outlook")).getByRole("button", { name: "장전 원/달러 환율" }));
+      expect(preopen).toHaveFocus();
+      fireEvent.click(screen.getByTestId(`stock-expand-btn-${data.stocks[0].code}`));
+      fireEvent.click(screen.getByTestId("stock-citation-chip-M:USDKRW"));
+      expect(snapshot).toHaveFocus();
+      // Extended stockOpinions are a separate field, never remapped to legacy narrative.stocks.
+      expect(screen.queryByText("확장 의견 관측 환율은 1326.81원입니다.")).not.toBeInTheDocument();
+    } finally { HTMLElement.prototype.scrollIntoView = previous; raf.mockRestore(); }
   });
 });

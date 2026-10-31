@@ -38,7 +38,7 @@ export function PerformancePanel({ detailed = false, code }: { detailed?: boolea
     onSuccess: () => client.invalidateQueries({ queryKey: ["performance"] }) });
   const data = query.data, busy = collect.isPending || data?.collector.status === "running";
   return <section className={`performance-card${detailed ? " history-card" : " briefing-card"}`} aria-label={code ? "종목 성과 기록" : "성과 기록"}>
-    <div className="performance-heading"><div><p className="performance-eyebrow">가격 기반 성과</p><h2>{code ? "종목 성과 기록" : "성과 기록"}</h2></div>
+    <div className="performance-heading"><div><h2>{code ? "종목 성과 기록" : "성과 기록"}</h2></div>
       {detailed && <button className="performance-collect" type="button" onClick={() => collect.mutate()} disabled={busy}><RefreshCw size={16} aria-hidden="true" />{busy ? "실제 가격 수집 중" : "실제 가격 수집"}</button>}
     </div>
     <p className="performance-description">선별 종목의 다음 거래일 시가→종가 수익률입니다. 종목별 동일 비중으로 계산하며 거래 비용은 차감하지 않았습니다.</p>
@@ -55,13 +55,13 @@ export function PerformancePanel({ detailed = false, code }: { detailed?: boolea
       {data.collector.error && <p className="performance-reason" role="status">{data.collector.error}</p>}
       {detailed && <>
         <details><summary>수집 정보</summary><p className="performance-description">종가는 목표 거래일 18:30 이후 수집합니다. 수집하지 못한 기간은 다음 분석 때 다시 확인합니다.</p>
-        <p className="performance-description">최근 수집 확인 {formatDate(data.collector.checkedAt, true)} · 갱신 {formatDate(data.asOf, true)} · 최근 분석 최대 100건</p></details>
+        <p className="performance-description">최근 수집 확인 {formatDate(data.collector.checkedAt, true)}, 갱신 {formatDate(data.asOf, true)}. 최근 분석을 최대 100건까지 표시합니다.</p></details>
         <ol className="performance-runs">{data.runs.slice(0, VISIBLE_RUNS).map(run => runItem(run, Boolean(code)))}</ol>
         {data.runs.length > VISIBLE_RUNS && <details className="performance-older"><summary>이전 실행 {data.runs.length - VISIBLE_RUNS}건 더 보기</summary>
           <ol className="performance-runs" start={VISIBLE_RUNS + 1}>{data.runs.slice(VISIBLE_RUNS).map(run => runItem(run, Boolean(code)))}</ol>
         </details>}
       </>}
     </>}
-    {!detailed && <Link className="performance-link" to={paths.history}>실행별 기록과 수집 상태 보기 →</Link>}
+    {!detailed && <Link className="performance-link" to={paths.history}>실행별 기록과 수집 상태 보기</Link>}
   </section>;
 }

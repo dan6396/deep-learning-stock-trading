@@ -84,7 +84,7 @@ export function StockInsightDetails({ insight, embedded = false }: { insight: St
     {!embedded && <><h2 id="stock-input-observations-heading">모델 순위와 주요 지표</h2>
     <p className="report-muted">모델 순위와 입력 특징을 함께 확인합니다. 특징의 위치가 개별 예측의 원인을 설명하지는 않습니다.</p></>}
     {model ? <>
-      {!embedded && <p className="insight-rank">{model.poolSize.toLocaleString("ko-KR")}종목 중 <strong>{model.rank}위</strong> · 상위 {formatModelPercent(model.topPercent)} · 순위 점수 <span title={model.rankScore != null ? String(model.rankScore) : undefined}>{formatRankScore(model.rankScore, 2)}</span></p>}
+      {!embedded && <p className="insight-rank">{model.poolSize.toLocaleString("ko-KR")}종목 중 <strong>{model.rank}위</strong>, 상위 {formatModelPercent(model.topPercent)}. 순위 점수 <span title={model.rankScore != null ? String(model.rankScore) : undefined}>{formatRankScore(model.rankScore, 2)}</span></p>}
       {model.lookbacks.length === 2 && <div className="insight-block"><h3 className="insight-comparison-heading">20일·120일 모델 비교{model.agreement && <span className="insight-agreement" title="모델 일치도">{model.agreement}</span>}</h3>
         <div className="insight-lookbacks">{model.lookbacks.map(lb => {
           const topPercent = formatModelPercent(lb.rank / model.poolSize * 100);

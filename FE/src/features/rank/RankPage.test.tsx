@@ -1,22 +1,49 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { RankPage } from "./RankPage";
 import { wholeRank } from "../../test/fixtures/rankFixtures";
 import { backendStatusBody, deferred, jsonResponse } from "../../test/dataFixtures";
 import { expectReadableUserText } from "../../test/assertUserText";
 const clients: QueryClient[] = [];
 afterEach(() => { clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); });
-function mount() {
+function LocationProbe() { const location = useLocation(), navigate = useNavigate(); return <><output data-testid="location">{location.pathname + location.search}</output><button onClick={() => navigate(-1)}>뒤로 테스트</button></>; }
+function ReportProbe() { const location = useLocation(); return <output data-testid="return-to">{location.state?.rankReturnTo}</output>; }
+function mount(path = "/next/rank") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity, refetchOnWindowFocus: false } } }); clients.push(client);
-  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/next/rank"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><RankPage /></MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><LocationProbe /><Routes><Route path="/next/rank" element={<RankPage />} /><Route path="/next/stock/:code" element={<ReportProbe />} /></Routes></MemoryRouter></QueryClientProvider>);
 }
 function mockFetch(handler?: (path: string) => Promise<Response> | undefined) {
   const fetcher = vi.fn<typeof fetch>(async path => handler?.(String(path)) ?? (String(path) === "/api/backend/status" ? jsonResponse(backendStatusBody()) : jsonResponse(String(path) === "/api/rank" ? wholeRank() : wholeRank().slice(0, 5))));
   vi.stubGlobal("fetch", fetcher); return fetcher;
 }
 describe("whole-rank page fetch interactions", () => {
+  it("restores search, filter, ordering and page after report history navigation", async () => {
+    mockFetch(); mount("/next/rank?query=검증종목&filter=all&sort=name&direction=desc&page=2&keep=1");
+    await screen.findByText("2 / 10페이지 · 199종목");
+    expect(screen.getByRole("searchbox")).toHaveValue("검증종목");
+    const codes = [...document.querySelectorAll("[data-rank-code]")].map(row => row.getAttribute("data-rank-code"));
+    fireEvent.click(document.querySelector<HTMLAnchorElement>("[data-rank-code] a")!);
+    expect(screen.getByTestId("return-to")).toHaveTextContent("filter=all&sort=name&direction=desc&page=2&keep=1");
+    fireEvent.click(screen.getByRole("button", { name: "뒤로 테스트" }));
+    await screen.findByText("2 / 10페이지 · 199종목");
+    expect([...document.querySelectorAll("[data-rank-code]")].map(row => row.getAttribute("data-rank-code"))).toEqual(codes);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "100199" } });
+    expect(screen.getByTestId("location")).toHaveTextContent("page=1&keep=1");
+  });
+  it.each(["-1", "NaN", "999999999", "1.5"])("validates URL enums and page %s", async page => {
+    mockFetch(); mount(`/next/rank?filter=bad&sort=bad&direction=bad&page=${page}`);
+    await screen.findByText("1 / 10페이지 · 199종목");
+    expect(screen.getByRole("combobox")).toHaveValue("all");
+    expect(screen.getByRole("columnheader", { name: "원본 모델 순위" })).toHaveAttribute("aria-sort", "ascending");
+  });
+  it("clamps a valid page to loaded results and resets it when filtering", async () => {
+    mockFetch(); mount("/next/rank?page=999999&keep=1");
+    await screen.findByText("10 / 10페이지 · 199종목");
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "missing" } });
+    expect(screen.getByTestId("location")).toHaveTextContent("page=1&keep=1&filter=missing");
+  });
   it("shows compact neutral score columns and preserves model ranking controls", async () => {
     const rows = wholeRank();
     rows.forEach((row, index) => Object.assign(row.input_row, { score_kind: "rank_zscore", rank_score: index === 0 ? 1.601514 : 1.5 - index / 100 }));

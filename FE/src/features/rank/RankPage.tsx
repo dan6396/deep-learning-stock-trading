@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { queries } from "../../shared/api/queries";
@@ -14,7 +15,21 @@ const pageSize = 20;
 export function RankPage() {
   usePageTitle("전체 순위");
   const rank = useQuery(queries.rank()), candidates = useQuery(queries.candidates());
-  const [query, setQuery] = useState(""), [filter, setFilter] = useState<RankFilter>("all"), [sort, setSort] = useState<RankSort>("rank"), [descending, setDescending] = useState(false), [page, setPage] = useState(0);
+  const [params, setParams] = useSearchParams();
+  const query = (params.get("query") ?? "").slice(0, 100);
+  const filter = (["all", "candidate", "positive", "negative", "missing"].includes(params.get("filter") ?? "") ? params.get("filter") : "all") as RankFilter;
+  const sort = (["rank", "finalRank", "predictedReturn", "finalPredictedReturn", "name"].includes(params.get("sort") ?? "") ? params.get("sort") : "rank") as RankSort;
+  const descending = params.get("direction") === "desc";
+  const pageParam = params.get("page") ?? "1";
+  const page = /^\d{1,6}$/.test(pageParam) ? Math.max(0, Number(pageParam) - 1) : 0;
+  function updateParams(values: Record<string, string>, replace = false) {
+    const next = new URLSearchParams(params);
+    Object.entries(values).forEach(([key, value]) => next.set(key, value));
+    setParams(next, { replace, preventScrollReset: true });
+  }
+  const setQuery = (value: string) => updateParams({ query: value.slice(0, 100), page: "1" }, true);
+  const setFilter = (value: RankFilter) => updateParams({ filter: value, page: "1" });
+  const setPage = (value: number) => updateParams({ page: String(value + 1) });
   const production = useCandidateProduction(candidates), notice = productionNotice(production), modelOnly = production === "unproduced";
   // A failed refresh may retain old candidates; never expose their final values as confirmed.
   const showFinal = production === "produced" && candidates.isSuccess && !candidates.isError;
@@ -26,9 +41,9 @@ export function RankPage() {
   const rankModel = rank.data?.data.some(row => row.scoreKind === "rank_zscore") ?? false;
   const pages = Math.max(1, Math.ceil(rows.length / pageSize)), current = Math.min(page, pages - 1);
   const members = new Set(confirmed ? candidates.data.data.map(row => row.code) : []);
-  function changeSort(next: RankSort) { setDescending(activeSort === next ? !activeDescending : next === "predictedReturn" || next === "finalPredictedReturn"); setSort(next); setPage(0); }
+  function changeSort(next: RankSort) { updateParams({ sort: next, direction: (activeSort === next ? !activeDescending : next === "predictedReturn" || next === "finalPredictedReturn") ? "desc" : "asc", page: "1" }); }
   async function refresh() { await Promise.all([rank.refetch({ cancelRefetch: true }), candidates.refetch({ cancelRefetch: true })]); }
-  return <div className={`rank-page${rankModel ? " is-compact-rank" : ""}`}><div className="rank-title-row"><div><p className="rank-eyebrow">모델 순위</p><h1>전체 순위</h1><p className="rank-muted" hidden={rankModel}>{modelOnly ? "Transformer Ensemble의 원본 모델 예측 순위를 비교하세요." : "전체 분석 집합을 비교하세요. 최종 후보와 원본 모델 순위는 다른 기준입니다."}</p></div><button className="rank-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={16} />다시 조회</button></div>
+  return <div className={`rank-page${rankModel ? " is-compact-rank" : ""}`}><div className="rank-title-row"><div><h1>전체 순위</h1><p className="rank-muted" hidden={rankModel}>{modelOnly ? "Transformer Ensemble의 원본 모델 예측 순위를 비교하세요." : "전체 분석 집합을 비교하세요. 최종 후보와 원본 모델 순위는 다른 기준입니다."}</p></div><button className="rank-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={16} />다시 조회</button></div>
     <WatchlistNotice />
     <div className="rank-meta-strip">{rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="전체 순위 저장 시각" />}
     {rank.data?.source === "sample" && <p className="rank-notice" role="status">예시 데이터 · 실제 전체 분석 결과가 아닙니다.</p>}
@@ -36,12 +51,12 @@ export function RankPage() {
     {notice && !candidates.isError && <p className={modelOnly ? "rank-muted" : "rank-notice"} role="status" data-candidate-production={production}>{modelOnly ? "뉴스 보정 미사용 · 모델 순위 기준" : `${notice} 원본 뉴스는 별도로 평가합니다.`}</p>}
     {candidates.isError && <p className="rank-notice" role="status">최종 후보 조회 실패 · 후보 여부를 확인하지 못했습니다. 원본 뉴스는 별도로 평가합니다.</p>}
     {candidates.data?.source === "sample" && <p className="rank-notice" role="status">후보 목록은 예시 데이터입니다. 후보 목록과 모델 자료를 실제 분석으로 해석하지 마세요.</p>}
-    </div><section className="rank-card" aria-labelledby="rank-list-heading"><div className="rank-section-heading"><h2 id="rank-list-heading">모델 원본 비교 <span>{rank.data?.data.length ?? "—"}종목</span></h2><p className="rank-muted">다음 거래일 시가→종가 상대 순위 · 수익률/상승확률 아님</p></div>
-      <div className="rank-controls"><label className="rank-search"><Search aria-hidden="true" size={17} /><span className="watch-sr-only">종목 이름 또는 코드</span><input type="search" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} placeholder="이름 또는 6자리 코드" /></label>
-        <label className="rank-filter">보기<select value={activeFilter} onChange={event => { setFilter(event.target.value as RankFilter); setPage(0); }}><option value="all">전체 종목</option>{showFinal && <option value="candidate">최종 후보만</option>}<option value="positive">{rankModel ? "상대 순위 상위 5%" : "원본 예측 양수"}</option>{!rankModel && <option value="negative">원본 예측 0 이하</option>}<option value="missing">{rankModel ? "순위 점수 미제공" : "원본 예측 미제공"}</option></select></label></div>
+    </div><section className="rank-card" aria-labelledby="rank-list-heading"><div className="rank-section-heading"><h2 id="rank-list-heading">모델 원본 비교</h2><p className="rank-muted"><span>{rank.data?.data.length ?? "—"}종목</span>. 다음 거래일 시가→종가 상대 순위이며 수익률이나 상승 확률이 아닙니다.</p></div>
+      <div className="rank-controls"><label className="rank-search"><Search aria-hidden="true" size={17} /><span className="watch-sr-only">종목 이름 또는 코드</span><input type="search" value={query} onChange={event => { setQuery(event.target.value); }} placeholder="이름 또는 6자리 코드" /></label>
+        <label className="rank-filter">보기<select value={activeFilter} onChange={event => { setFilter(event.target.value as RankFilter); }}><option value="all">전체 종목</option>{showFinal && <option value="candidate">최종 후보만</option>}<option value="positive">{rankModel ? "상대 순위 상위 5%" : "원본 예측 양수"}</option>{!rankModel && <option value="negative">원본 예측 0 이하</option>}<option value="missing">{rankModel ? "순위 점수 미제공" : "원본 예측 미제공"}</option></select></label></div>
       {rank.isPending ? <p className="rank-empty" role="status">전체 순위를 조회하고 있습니다.</p> : rows.length ? <RankTable scoreMode={rankModel} production={production} showFinal={showFinal} modeReady={modeReady} rows={rows.slice(current * pageSize, (current + 1) * pageSize)} members={members} membershipState={membershipState} sort={activeSort} descending={activeDescending} onSort={changeSort} />
         : !rank.isError && <p className="rank-empty">{rank.data?.data.length ? activeFilter === "candidate" && !confirmed ? "최종 후보 목록을 확인할 수 없어 필터 결과를 제공하지 않습니다." : "검색 조건에 맞는 종목이 없습니다." : "최신 전체 분석 결과가 비어 있습니다."}</p>}
       {rows.length > 0 && <nav className="rank-pagination" aria-label="전체 순위 페이지"><span aria-live="polite">{current + 1} / {pages}페이지 · {rows.length}종목</span><button className="rank-button" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="이전 순위 페이지"><ChevronLeft aria-hidden="true" size={16} />이전</button><button className="rank-button" disabled={current === pages - 1} onClick={() => setPage(current + 1)} aria-label="다음 순위 페이지">다음<ChevronRight aria-hidden="true" size={16} /></button></nav>}
-      <p className="rank-muted rank-help">누락값은 —이며 양방향 정렬 모두 마지막에 표시합니다. 화면 순서를 모델 순위로 만들지 않습니다. {rankModel ? "원본 모델 순위·순위 점수와 확인된 기사 수를 표시합니다." : modelOnly ? "모델 원본 예측과 모델 신호를 표시합니다." : "최종 후보 여부는 모델 판정에만 사용하고, 뉴스는 실제 원본 근거로 평가합니다."}</p>
+      <p className="rank-muted rank-help">값이 없는 항목은 정렬 방향과 관계없이 마지막에 표시합니다. 화면 순서를 모델 순위로 만들지 않습니다. {rankModel ? "원본 모델 순위·순위 점수와 확인된 기사 수를 표시합니다." : modelOnly ? "모델 원본 예측과 모델 신호를 표시합니다." : "최종 후보 여부는 모델 판정에만 사용하고, 뉴스는 실제 원본 근거로 평가합니다."}</p>
     </section><p className="rank-muted">순위는 다음 거래일 시가→종가 상대 순위입니다. 하루 등락만으로 모델을 평가하지 않습니다. 투자 추천·수익 보장·실현 성과가 아닙니다.</p></div>;
 }

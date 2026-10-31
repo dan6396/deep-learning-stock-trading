@@ -38,6 +38,6 @@ describe("briefing month chart provenance", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
   it("shows no chart or fabricated prices on a failed GET", async () => {
-    mount(null, true); await screen.findByText("가격 이력 조회 실패 · —"); expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    mount(null, true); await screen.findByText("가격 이력 조회 실패"); expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });

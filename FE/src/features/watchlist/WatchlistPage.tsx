@@ -22,7 +22,7 @@ export function WatchlistPage() {
   const index = new Map((rank.data?.data ?? []).map(row => [row.code, row] as const)), missingCodes = new Set(watchlist.codes.filter(code => !index.has(code)));
   const rows = watchlist.codes.map(code => index.has(code) ? mergeCandidateDetail(members.get(code), index.get(code))! : adaptCandidate({ input_row: { ticker: code } }).data);
   async function refresh() { await Promise.all([rank.refetch({ cancelRefetch: true }), candidates.refetch({ cancelRefetch: true })]); }
-  return <div className="rank-page"><div className="rank-title-row"><div><p className="rank-eyebrow">직접 저장한 종목</p><h1>관심 종목 <span className="rank-muted">{watchlist.codes.length}개</span></h1><p className="rank-muted">별을 눌러 직접 고른 종목입니다. 이 브라우저에 저장합니다.</p></div><button className="rank-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={16} />다시 조회</button></div>
+  return <div className="rank-page"><div className="rank-title-row"><div><h1>관심 종목 <span className="rank-muted">{watchlist.codes.length}개</span></h1><p className="rank-muted">별을 눌러 직접 고른 종목입니다. 이 브라우저에 저장합니다.</p></div><button className="rank-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={16} />다시 조회</button></div>
     <WatchlistNotice />
     {rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="전체 순위 저장 시각" />}
     {rank.data?.source === "sample" && <p className="rank-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}

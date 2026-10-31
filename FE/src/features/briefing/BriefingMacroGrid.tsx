@@ -21,7 +21,7 @@ const ORDERED_MACRO_IDS = [
 ] as const;
 
 export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
-  const indicators = macro.indicators.filter(row => row.id !== "SP500" && (!macro.preOpen || !["NASDAQ", "SOX", "USDKRW", "UST10Y"].includes(row.id)));
+  const indicators = macro.indicators.filter(row => row.id !== "SP500");
   const context = macro.context;
 
   const sortedIndicators = useMemo(() => {
@@ -68,7 +68,7 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
     const isUsMarket = ind.id === "NASDAQ" || ind.id === "SP500";
     const isNightMarket = ind.id === "KOSPI200_NIGHT";
     const formattedValue = formatMacroValue(ind);
-    const asOfText = ind.status === "ok" ? formatMacroAsOf(ind.id, ind.asOf ?? macro.asOf) : null;
+    const asOfText = ind.status === "ok" ? formatMacroAsOf(ind.id, ind.asOf) : null;
     const sourceText = formatMacroSource(ind.source);
     const sessionDate = isUsMarket && ind.session === "closed" ? context?.usSessionDate?.slice(5).replace("-", "/") : null;
     const sessionText = ind.session === "open" ? (isNightMarket ? "야간 거래 중" : "장중") : ind.session === "closed" ? (isNightMarket ? "야간 종가" : "종가") : "";
@@ -120,7 +120,7 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
 
         <div className="briefing-macro-card-bottom">
           <span className="briefing-macro-as-of">
-            {metaText || "시각 미확인"} · {sourceText}
+            {ind.asOf ? <time dateTime={ind.asOf}>{metaText || "시각 미확인"}</time> : metaText || "시각 미확인"} · {sourceText}
           </span>
         </div>
       </article>
@@ -133,8 +133,8 @@ export function BriefingMacroGrid({ macro }: { macro: MacroData }) {
     <section className="briefing-macro-section" aria-labelledby="macro-section-heading">
       <div className="briefing-macro-header">
         <div className="briefing-macro-title-group">
-          <h2 id="macro-section-heading">{macro.preOpen ? "그 밖의 시장 지표" : "시장 지표"}</h2>
-          <span className="briefing-macro-caption">{macro.preOpen ? "국내 지수·참고 통계" : "국내·미국 주요 지표 및 환율·금리"}</span>
+          <h2 id="macro-section-heading">{macro.preOpen ? "요약 인용 시장 지표" : "시장 지표"}</h2>
+          <span className="briefing-macro-caption">{macro.preOpen ? "요약 관측값 · 장전 지표와 수집 시점이 다를 수 있습니다" : "국내·미국 주요 지표 및 환율·금리"}</span>
         </div>
         {usIndicators.length > 0 && context?.usSessionDate && (
           <p className="briefing-macro-context-note" role="note">

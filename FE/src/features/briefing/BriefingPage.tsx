@@ -61,6 +61,8 @@ export function BriefingPage() {
   const paths = useAppPaths(), client = useQueryClient(), [params, setParams] = useSearchParams(), [intro, setIntro] = useState(showIntro);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [scoreHelp, setScoreHelp] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshPending = useRef(false);
   const narrativeMutation = useMutation({
     onMutate: () => setGenerateError(null),
     mutationFn: async () => isAnalysisRunning(client) || client.getQueryData<BriefingPayload>(queryKeys.briefing())?.previousRun?.reason === "failed" ? null : requestBriefingNarrative(),
@@ -112,9 +114,19 @@ export function BriefingPage() {
     const next = new URLSearchParams(params); next.set("code", nextCode); setParams(next, { replace: reason === "keyboard" }); }
   function dismissIntro() { setIntro(false); try { localStorage.setItem(INTRO_STORAGE_KEY, "dismissed"); } catch { /* session-only dismissal */ } }
   async function refresh() {
-    const keys = [queryKeys.briefing(), queryKeys.rank(), queryKeys.indices(), queryKeys.backendStatus(), ...rows.map(row => queryKeys.quote(row.code)), ...(selectedCode ? [queryKeys.stock(selectedCode), queryKeys.chart(selectedCode, "1M")] : [])];
-    await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey, exact: true })));
-    await Promise.all(keys.map(queryKey => client.refetchQueries({ queryKey, exact: true, type: "active" })));
+    if (refreshPending.current) return;
+    refreshPending.current = true;
+    setIsRefreshing(true);
+    try {
+      const keys = [queryKeys.briefing(), queryKeys.rank(), queryKeys.indices(), queryKeys.backendStatus(), ...rows.map(row => queryKeys.quote(row.code)), ...(selectedCode ? [queryKeys.stock(selectedCode), queryKeys.chart(selectedCode, "1M")] : [])];
+      await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey, exact: true })));
+      await Promise.allSettled(keys.map(queryKey => client.refetchQueries({ queryKey, exact: true, type: "active" })));
+    } catch {
+      // Query errors are displayed by the existing per-query notices.
+    } finally {
+      refreshPending.current = false;
+      setIsRefreshing(false);
+    }
   }
   const renderTopFive = (renderEvidence?: RenderStockEvidence) => (
     <section className="briefing-card briefing-comparison-card" aria-labelledby="candidate-heading">
@@ -125,7 +137,7 @@ export function BriefingPage() {
       <div className="briefing-result-meta"><span>분석 기준일 <strong>{baseDate}</strong> · 모집단 {formatNumber(pool)}종목</span>{rank.data && <SourceMeta source={rank.data.source} asOf={rank.data.asOf} label="저장 시각" />}</div>
       {rank.data?.source === "sample" && <p className="briefing-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
       {rank.isError && <p className="briefing-notice" role="status">{rank.data ? "이전 조회 결과 · 모델 순위 갱신 실패" : "모델 순위 조회 실패 · 분석 결과를 가져오지 못했습니다."}</p>}
-      {rank.isPending ? <p className="briefing-empty" role="status">모델 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList rows={rows} selectedCode={selectedCode} onSelect={select} renderEvidence={renderEvidence} /> : !rank.isError && <p className="briefing-empty">표시할 모델 순위가 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
+      {rank.isPending ? <p className="briefing-empty" role="status">모델 순위를 조회하고 있습니다.</p> : rows.length ? <ModelTopFiveList stocks={briefing.data?.stocks} rows={rows} selectedCode={selectedCode} onSelect={select} renderEvidence={renderEvidence} /> : !rank.isError && <p className="briefing-empty">표시할 모델 순위가 없습니다.<small>AI 분석을 실행하면 원본 순위 상위 5개를 표시합니다.</small></p>}
       <div className="briefing-comparison-footer"><span>관련 기사는 순위에 반영하지 않습니다.</span><Link to={paths.rank}>전체 순위 보기 <ArrowRight aria-hidden="true" size={14} /></Link></div>
     </section>
   );
@@ -160,7 +172,7 @@ export function BriefingPage() {
           </p>
         )}
       </div>
-      <button type="button" className="briefing-button" onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={14} />다시 조회</button>
+      <button type="button" className="briefing-button" disabled={isRefreshing} aria-busy={isRefreshing} onClick={() => void refresh()}><RefreshCw aria-hidden="true" size={14} /><span aria-live="polite">{isRefreshing ? "조회 중…" : "다시 조회"}</span></button>
     </div>
     {intro && <section className="briefing-intro briefing-intro-compact" aria-label="서비스 첫 방문 안내"><Info aria-hidden="true" size={15} /><p>투자 권유가 아닙니다. <Link to={paths.about}>서비스 소개</Link>와 이용 방법을 확인하세요.</p><button type="button" className="briefing-icon-button" onClick={dismissIntro} aria-label="서비스 안내 닫기"><X aria-hidden="true" size={16} /></button></section>}
     <WatchlistNotice />

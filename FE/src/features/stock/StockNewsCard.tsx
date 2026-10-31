@@ -45,6 +45,6 @@ export function StockNewsCard({ articles, news, targets, showSummary = true }: {
         </li>;
       })}
     </ul> : <p className="report-empty">현재 연결된 관련 기사가 없습니다.</p>}
-    {news && <p className="report-muted">{news.limitation}</p>}
+    {news && articles.length > 0 && <p className="report-muted">{news.limitation}</p>}
   </section>;
 }

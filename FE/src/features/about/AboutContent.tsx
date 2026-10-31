@@ -1,5 +1,4 @@
 import React from "react";
-import { BRAND_NAME } from "../../shared/lib/brand";
 
 export const ABOUT_DESCRIPTION = "한국 주식의 모델 순위와 관련 기사를 함께 확인하세요. TOP5를 읽는 법과 실제 가격 기반 성과, 분석의 한계를 안내합니다.";
 export const ABOUT_SECTIONS = [
@@ -11,9 +10,8 @@ export const ABOUT_SECTIONS = [
 export function AboutContent({ briefing = "/", rank = "/rank", history = "/history" }: { briefing?: string; rank?: string; history?: string }) {
   return <article className="about-page">
     <header className="about-hero">
-      <p className="about-eyebrow">서비스 소개 · {BRAND_NAME}</p>
       <h1>한국 주식의 모델 순위와<br />관련 기사를 함께 봅니다</h1>
-      <a className="about-primary-link" href={briefing}>브리핑 보기 <span aria-hidden="true">→</span></a>
+      <a className="about-primary-link" href={briefing}>브리핑 보기</a>
     </header>
 
     <section className="about-section" aria-labelledby="about-purpose">
@@ -38,8 +36,8 @@ export function AboutContent({ briefing = "/", rank = "/rank", history = "/histo
       <div className="about-section-body">
         <p>{ABOUT_SECTIONS[1].text}</p>
         <dl className="about-reading-list">
-          <div><dt><a href={rank}>전체 순위 <span aria-hidden="true">→</span></a></dt><dd>모델 원본의 상대 위치를 확인합니다. 뉴스 포함 분석의 최종 후보와는 구분해서 읽으세요.</dd></div>
-          <div><dt><a href={history}>분석 기록 <span aria-hidden="true">→</span></a></dt><dd>과거 실행과 실제 가격 기반 성과를 봅니다. 공식 성과는 분석 시각·가격 자료 검증을 통과한 기록만 집계합니다.</dd></div>
+          <div><dt><a href={rank}>전체 순위</a></dt><dd>모델 원본의 상대 위치를 확인합니다. 뉴스 포함 분석의 최종 후보와는 구분해서 읽으세요.</dd></div>
+          <div><dt><a href={history}>분석 기록</a></dt><dd>과거 실행과 실제 가격 기반 성과를 봅니다. 공식 성과는 분석 시각·가격 자료 검증을 통과한 기록만 집계합니다.</dd></div>
         </dl>
         <div className="about-analysis-guide" id="analysis-guide">
           <h3>새 분석이 필요할 때</h3>

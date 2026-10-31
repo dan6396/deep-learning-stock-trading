@@ -1,5 +1,6 @@
+import type { BriefingStock } from "../../entities/briefing";
 import type { CandidateData } from "../../entities/candidate";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { queries, queryKeys } from "../../shared/api/queries";
@@ -96,7 +97,7 @@ export function RelatedArticles({ candidate }: { candidate: CandidateData }) {
   );
 }
 
-export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence }: { rows: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void; renderEvidence?: (code: string) => ReactNode }) {
+export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence, stocks = [] }: { stocks?: BriefingStock[]; rows: CandidateData[]; selectedCode: string | null; onSelect: (code: string, reason?: "pointer" | "keyboard") => void; renderEvidence?: (code: string) => ReactNode }) {
   const queryClient = useQueryClient();
   const [focusedCode, setFocusedCode] = useState(selectedCode);
   useEffect(() => setFocusedCode(selectedCode), [selectedCode]);
@@ -148,9 +149,11 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence 
   const minScore = validScores.length ? Math.min(...validScores) : 0;
   const maxScore = validScores.length ? Math.max(...validScores) : 0;
 
-  return <ol className="briefing-top-five" aria-label="모델 순위 TOP5" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedCode(entryCode ?? null); }}>{rows.map((row, index) => {
+  const commonPeriod = rows.length && rows.every(row => row.baseDate === sessionBase && row.predictionTarget === rows[0].predictionTarget) ? predictionPeriod(rows[0], nextSession) : "예측 기간·기준일은 각 상세 확인";
+  return <><p className="briefing-compare-meta">예측 기간 {commonPeriod}. 모델 일치는 20일과 120일 순위 차이를 비교한 상태입니다.</p><ol className="briefing-top-five" aria-label="모델 순위 TOP5" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedCode(entryCode ?? null); }}>{rows.map((row, index) => {
     const quote = quotes[index], price = quote.isError || quote.data?.source === "sample" ? null : quote.data?.data;
     const evidence = renderEvidence?.(row.code) ?? null;
+    const stock = stocks.find(item => item.code === row.code);
 
     const scorePercent =
       row.rankScore != null && Number.isFinite(row.rankScore)
@@ -188,28 +191,6 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence 
         }}><strong>{row.name ?? "종목명 미확인"}</strong>{" "}<small>{row.code}</small></button><WatchToggle code={row.code} name={row.name} />
       </div>
 
-      <div className="briefing-top-price">
-        <span>현재가</span>
-        <div className="briefing-top-price-row">
-          <strong className="briefing-top-price-value">{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong>
-          {hasChangeRate && (
-            <span className={`briefing-top-change is-${changeDir}`}>
-              <small className="briefing-top-change-prefix">전일 대비 </small>
-              {formatPercent(roundedChangeRate, "percent", 2)}
-            </span>
-          )}
-        </div>
-        <small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small>
-      </div>
-
-      <div className="briefing-top-sparkline-cell">
-        <TopFiveSparkline
-          code={row.code}
-          enabled={isSparklineEnabled}
-          query={chartQueries[index]}
-        />
-      </div>
-
       <div className="briefing-top-prediction">
         <span>{row.scoreKind === "rank_zscore" ? "순위 점수" : "모델 예측"}</span>
         {row.scoreKind === "rank_zscore" ? (
@@ -232,7 +213,34 @@ export function ModelTopFiveList({ rows, selectedCode, onSelect, renderEvidence 
         {row.predictedReturn === null && row.rankScore == null && <small>{row.scoreKind === "rank_zscore" ? "순위 점수 없음" : "원본 예측값 없음"}</small>}
       </div>
 
+      <div className="briefing-comparison-signal"><span>20·120일 모델 일치</span><strong>{stock?.modelEvidence?.agreement ?? "미확인"}</strong></div>
+      <div className="briefing-comparison-evidence"><span>분석 근거</span><strong>{stock ? `${stock.evidence.length}건` : "미확인"}</strong></div>
+      <details className="briefing-row-details"><summary>가격·차트·근거 상세<span className="watch-sr-only"> {row.name ?? row.code}</span></summary><div className="briefing-row-detail-content"><p className="briefing-row-period">{predictionPeriod(row, row.baseDate === sessionBase ? nextSession : null)} · 기준일 {formatDate(row.baseDate)}</p>
+      <div className="briefing-top-price">
+        <span>현재가</span>
+        <div className="briefing-top-price-row">
+          <strong className="briefing-top-price-value">{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong>
+          {hasChangeRate && (
+            <span className={`briefing-top-change is-${changeDir}`}>
+              <small className="briefing-top-change-prefix">전일 대비 </small>
+              {formatPercent(roundedChangeRate, "percent", 2)}
+            </span>
+          )}
+        </div>
+        <small>{quote.isError ? "가격 조회 실패" : quote.data?.source === "sample" ? "실제 가격 없음" : "시세 기준 " + formatDate(quote.data?.asOf, true)}</small>
+      </div>
+
+      <div className="briefing-top-sparkline-cell">
+        <TopFiveSparkline
+          code={row.code}
+          enabled={isSparklineEnabled}
+          query={chartQueries[index]}
+        />
+      </div>
+
+
       {evidence ?? <RelatedArticles candidate={row} />}
+      </div></details>
     </li>;
-  })}</ol>;
+  })}</ol></>;
 }

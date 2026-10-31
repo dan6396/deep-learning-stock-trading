@@ -64,7 +64,7 @@ body {
 }
 
 body::selection {
-  background: rgba(207, 69, 0, 0.18);
+  background: var(--ds-selection);
 }
 
 a {
@@ -110,11 +110,15 @@ h1, h2, h3 {
   margin-top: 0;
 }
 
+h1, h2 {
+  text-wrap: balance;
+}
+
 h1 {
   max-width: 760px;
   margin-bottom: 24px;
   font-size: clamp(42px, 6vw, 64px);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
 }
@@ -122,7 +126,7 @@ h1 {
 h2 {
   margin-bottom: 0;
   font-size: clamp(31px, 4vw, 36px);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 44px;
 }
@@ -130,7 +134,7 @@ h2 {
 h3 {
   margin-bottom: 12px;
   font-size: var(--type-2xl);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
@@ -140,9 +144,9 @@ h3 {
   min-height: 36px;
   align-items: center;
   padding: 8px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  border: 1px solid var(--ds-chip-line);
   border-radius: var(--corner-pill);
-  color: #f7e7dd;
+  color: var(--ds-fg);
   font-size: var(--type-sm);
   font-weight: 700;
 }
@@ -188,7 +192,7 @@ h3 {
   margin: 0;
   color: var(--color-ink);
   font-size: var(--type-lg);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .status-view p {
@@ -210,13 +214,13 @@ h3 {
   background: var(--color-ink);
   color: var(--color-white);
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .status-spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid rgba(20, 20, 19, 0.12);
+  border: 3px solid var(--ds-line);
   border-top-color: var(--color-signal);
   border-radius: 50%;
   animation: status-spin 720ms linear infinite;

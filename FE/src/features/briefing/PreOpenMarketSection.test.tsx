@@ -6,6 +6,10 @@ import { macroComment } from "../../../server/macroCommentRules";
 const macro: MacroData = { asOf: null, indicators: [], preOpen: [{ id: "UST10Y", name: "미 국채 10년물", unit: "%", source: "yahoo", status: "ok", value: 4.2, change: 0.01, changePct: 0.24, fiveDayChange: 0.15, fiveDayChangePct: 3.7, asOf: "2026-10-26T20:00:00Z", history: ["20", "21", "22", "23", "26"].map((day, i) => ({ date: `2026-10-${day}`, value: 4.05 + i * .0375 })), comment: { text: "관측 구간 금리 상승입니다.", ruleId: "up" } }] };
 const narrative: BriefingNarrative = { status: "llm", generatedAt: "", llmModel: "fixture", inputHash: "fixture", fallbackReason: null, overview: "", marketNote: "", stocks: [], citations: [], marketOutlook: { stance: "중립", text: "장 초반 갭 맥락으로만 판단합니다.", citations: ["M:UST10Y"], source: "llm" } };
 describe("pre-open market cards", () => {
+  it.each(["llm", "template", undefined] as const)("uses the actual outlook source %s in its title", source => {
+    render(<PreOpenMarketSection macro={macro} narrative={{ ...narrative, marketOutlook: { ...narrative.marketOutlook!, source: source as "llm" | "template" } }} onCitationClick={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: source === "llm" ? "AI 최종 의견" : "지표 기반 참고 요약" })).toBeInTheDocument();
+  });
   it("aligns plots and dates across different numeric label lengths after resizing", () => {
     const observers: ResizeObserverCallback[] = [];
     vi.stubGlobal("ResizeObserver", class {
@@ -64,7 +68,7 @@ describe("pre-open market cards", () => {
     expect(screen.getByTestId("preopen-UST10Y")).toHaveAttribute("aria-describedby", metadata.id);
     expect(screen.queryByText(/관측일|Yahoo Finance/, { selector: ":not([hidden])" })).not.toBeInTheDocument();
     expect(screen.getByText(/AI 의견 · 투자 권유 아님/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "미 국채 10년물" })); expect(click).toHaveBeenCalledWith("M:UST10Y");
+    fireEvent.click(screen.getByRole("button", { name: "미 국채 10년물" })); expect(click).toHaveBeenCalledWith("M:UST10Y", "preopen");
   });
   it("shows small yield moves precisely and keeps a rounded zero neutral", () => {
     const row = macro.preOpen![0];
@@ -96,7 +100,7 @@ describe("pre-open market cards", () => {
     expect(screen.getByTestId("market-outlook")).toHaveClass("is-collapsed");
     fireEvent.click(opinionButton); expect(screen.getByTestId("market-outlook")).toHaveClass("is-expanded");
     expect(opinionButton).toHaveAttribute("aria-expanded", "true");
-    fireEvent.click(screen.getByRole("button", { name: "미 국채 10년물" })); expect(click).toHaveBeenCalledWith("M:UST10Y");
+    fireEvent.click(screen.getByRole("button", { name: "미 국채 10년물" })); expect(click).toHaveBeenCalledWith("M:UST10Y", "preopen");
     expect(screen.getByTestId("preopen-UST10Y")).toBe(target);
     fireEvent.click(opinionButton); expect(screen.getByTestId("market-outlook")).toHaveClass("is-collapsed");
   });

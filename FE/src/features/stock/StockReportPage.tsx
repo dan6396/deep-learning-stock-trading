@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, RefreshCw, Info } from "lucide-react";
 import { queries, queryKeys } from "../../shared/api/queries";
 import { formatDate, formatNumber, formatPercent, formatRankScore, formatSessionDate, formatWon } from "../../shared/lib/format";
@@ -28,6 +28,9 @@ const tone = (value: number | null | undefined) => value != null && value > 0 ? 
 
 function StockReport({ code }: { code: string }) {
   const paths = useAppPaths();
+  const location = useLocation();
+  const from = location.state?.rankReturnTo;
+  const rankReturnTo = typeof from === "string" && (from === paths.rank || from.startsWith(`${paths.rank}?`)) ? from : null;
   const stock = useQuery(queries.stock(code)), quote = useQuery(queries.quote(code)), candidates = useQuery(queries.candidates()), client = useQueryClient();
   const candidate = candidates.data?.data.find(row => row.code === code), detail = mergeCandidateDetail(candidate, stock.data?.data);
   const insight = useStockInsight(code);
@@ -62,10 +65,9 @@ function StockReport({ code }: { code: string }) {
     {/* 1. Header: Back link, stock name, membership, actions */}
     <div className="report-title-row">
       <div>
-        <Link className="report-back" to={`${paths.briefing}?code=${code}`}>
-          <ArrowLeft aria-hidden="true" size={16} />브리핑으로
+        <Link className="report-back" to={rankReturnTo ?? `${paths.briefing}?code=${code}`}>
+          <ArrowLeft aria-hidden="true" size={16} />{rankReturnTo ? "전체 순위로" : "브리핑으로"}
         </Link>
-        <p className="report-eyebrow">종목 분석 · {code}</p>
         <h1>{detail?.name ?? quote.data?.data?.name ?? code}</h1>
         <p className="report-muted" data-membership={membership}>{code}{production === "unproduced" ? "" : ` · ${membershipLabels[membership]}`}</p>
       </div>
@@ -85,15 +87,17 @@ function StockReport({ code }: { code: string }) {
     {stock.isSuccess && stock.data.data === null && <p className="report-notice" role="status">상세 분석 결과가 없습니다.{candidate ? " 후보 목록 원본을 표시합니다." : ""}</p>}
     {(candidates.data?.source === "sample" || stock.data?.source === "sample") && <p className="report-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
 
+    <nav className="report-section-nav" aria-label="리포트 빠른 탐색"><a href="#report-price-title">가격</a>{(detail || insight.data) && <a href="#report-news-title">기사</a>}<a href="#report-model-title">모델 근거</a></nav>
     {/* Price summary and history share one card. */}
     <section className="report-card report-price-card" aria-labelledby="report-price-title">
       <div className="report-price-summary">
         <div>
           <h2 id="report-price-title">가격</h2>
+          {!quote.data?.data ? quote.isError && <p className="report-price-missing">시세 조회 실패. 아래 차트의 마지막 관측가를 참고하세요.</p> : <>
           <p className="report-price" data-testid="report-price">{formatWon(quote.data?.data?.currentPrice)}</p>
           <p className={tone(quote.data?.data?.changeRate)}>
             전일 대비 {formatPercent(quote.data?.data?.changeRate, "percent")} · {formatWon(quote.data?.data?.change)}
-          </p>
+          </p></>}
         </div>
         {quote.data && (
           <div className="report-price-meta">
@@ -102,8 +106,14 @@ function StockReport({ code }: { code: string }) {
           </div>
         )}
       </div>
+    <dl className="report-model-compact" aria-label="모델 핵심 요약">
+      <div><dt>원본 모델 순위</dt><dd>{rank != null ? `${formatNumber(rank)}위` : "미제공"}</dd></div>
+      <div><dt>{rankBased ? "순위 점수" : "모델 예측"}</dt><dd>{rankBased ? rankScore != null ? formatRankScore(rankScore, 2) : "미제공" : detail?.predictedReturn != null ? formatPercent(detail.predictedReturn) : "미제공"}</dd></div>
+      <div><dt>예측 대상일</dt><dd>{nextSessionLabel ?? "미제공"}</dd></div>
+      <div><dt>20·120일 모델 일치</dt><dd>{insight.data?.model?.agreement ?? "미제공"}</dd></div>
+    </dl>
       {quote.isPending && <p role="status" className="report-muted">시세를 조회하고 있습니다.</p>}
-      {quote.isError && <p className="report-notice" role="status">{quote.data ? "이전 조회 결과 · 시세 갱신 실패" : "시세 조회 실패"}</p>}
+      {quote.isError && quote.data && <p className="report-notice" role="status">이전 조회 결과 · 시세 갱신 실패</p>}
       {quote.isSuccess && quote.data.data === null && <p className="report-muted">시세 결과가 없습니다.</p>}
       <dl className="report-stats report-price-stats">
         {quote.data?.data?.volume != null && <div><dt>거래량</dt><dd>{formatNumber(quote.data.data.volume)}</dd></div>}

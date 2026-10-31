@@ -1,5 +1,5 @@
 import type { FocusEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowDown, ArrowUp, ArrowUpDown, MoveHorizontal } from "lucide-react";
 import type { CandidateData } from "../../entities/candidate";
 import { modelSignal } from "../../entities/signals";
@@ -38,6 +38,8 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
   modeReady?: boolean;
   scoreMode?: boolean;
 }) {
+  const location = useLocation();
+  const rankReturnTo = location.pathname + location.search;
   const paths = useAppPaths(), modelOnly = production === "unproduced";
   const visibleColumns = showFinal ? columns : columns.filter(column => column.key !== "finalRank" && column.key !== "finalPredictedReturn");
   function sortHeading(key: RankSort, label: string) {
@@ -76,7 +78,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
           const note = rankRowNote(analysisState, missingCodes.has(row.code), membership, modelOnly);
           return <tr key={row.code} data-rank-code={row.code} data-top-rank={top} data-membership={membership}>
             <td data-value="rank">{formatNumber(row.rank)}</td>
-            <td><div className="rank-score-stock"><Link to={paths.stock(row.code)}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link>{top && <SignalView signal={model} model />}</div>{note && <small className="rank-row-note">{note}</small>}</td>
+            <td><div className="rank-score-stock"><Link to={paths.stock(row.code)} state={{ rankReturnTo }}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link>{top && <SignalView signal={model} model />}</div>{note && <small className="rank-row-note">{note}</small>}</td>
             <td data-value="predictedReturn">{formatRankScore(row.rankScore)}</td>
             <td>{percent === null ? "—" : `${formatNumber(percent, 2)}%`}</td>
             {renderRankNewsCell(row)}
@@ -97,7 +99,7 @@ export function RankTable({ rows, members, membershipState, sort, descending = f
         const signals = rankSignals(row, membership, production), missing = missingCodes.has(row.code);
         const note = rankRowNote(analysisState, missing, membership, modelOnly);
         return <tr key={row.code} data-rank-code={row.code} data-membership={membership}>
-          <td><div className="rank-stock"><WatchToggle code={row.code} name={row.name} /><Link to={paths.stock(row.code)}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link></div>
+          <td><div className="rank-stock"><WatchToggle code={row.code} name={row.name} /><Link to={paths.stock(row.code)} state={{ rankReturnTo }}><strong>{row.name ?? "이름 미확인"}</strong><small>{row.code}</small></Link></div>
             {note && <small className="rank-row-note">{note}</small>}</td>
           <td data-value="predictedReturn"><PredictionDirection value={row.predictedReturn} rankScore={row.rankScore} scoreKind={row.scoreKind} /></td>
           <td data-value="rank">{formatNumber(row.rank)}</td>

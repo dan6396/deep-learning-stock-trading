@@ -1,12 +1,13 @@
+/* Hallmark · checked: 2026-10-31 · redesign: polish · stamp and record in styles/theme.css */
 @layer components {
-  .ds-analysis-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 13px; border: 0; border-radius: 10px; background: var(--ds-primary); color: var(--ds-on-primary); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
-  .analysis-dialog { position: fixed; inset: 0; margin: auto; width: min(740px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 20px; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-surface); color: var(--ds-fg); overflow: auto; }
-  .analysis-dialog::backdrop { background: rgb(0 0 0 / .65); }
-  .analysis-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .ds-analysis-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 8px 12px; border: 0; border-radius: 10px; background: var(--ds-primary); color: var(--ds-on-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .analysis-dialog { position: fixed; inset: 0; margin: auto; width: min(740px, calc(100% - 32px)); max-height: calc(100dvh - 40px); padding: 20px; border: 1px solid var(--ds-line); border-radius: 20px; background: var(--ds-surface); color: var(--ds-fg); overflow: auto; }
+  .analysis-dialog::backdrop { background: var(--ds-scrim); }
+  .analysis-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
   .analysis-dialog-heading .briefing-icon-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
   .analysis-dialog .analysis-dialog-running { color: var(--ds-fg-2); font-size: var(--ds-text-sm); margin-bottom: var(--ds-space-3); }
   .analysis-dialog .analysis-control { margin: 0; border: 0; padding: 0; }
   .analysis-dialog .analysis-control-main { flex-direction: column; align-items: stretch; gap: 12px; }
   .analysis-dialog .analysis-start-button { align-self: flex-end; }
-  @media (max-width: 768px) { .ds-root .ds-brand { font-size: 13px; gap: 6px; }.ds-root .ds-header { gap: 4px 6px; }.ds-root .ds-header-actions { gap: 4px; }.ds-analysis-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; justify-content: center; border-radius: 12px; font-size: 12px; }.ds-analysis-trigger > span { display: none; }.analysis-dialog { padding: 18px 16px; } }
+  @media (max-width: 768px) { .ds-root .ds-brand { font-size: 13px; gap: 8px; }.ds-root .ds-header { gap: 4px 8px; }.ds-root .ds-header-actions { gap: 4px; }.ds-analysis-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; justify-content: center; border-radius: 12px; font-size: 12px; }.ds-analysis-trigger > span { display: none; }.analysis-dialog { padding: 20px 16px; } }
 }

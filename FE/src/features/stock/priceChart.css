@@ -1,3 +1,4 @@
+/* Hallmark · checked: 2026-10-31 · redesign: polish · stamp and record in styles/theme.css */
 @layer components {
   .price-chart { width: 100%; min-width: 0; font-size: 12px; color: var(--ds-fg); }
   .price-chart-heading { line-height: 1.8; margin: 12px 0 0; }
@@ -6,7 +7,7 @@
   .price-chart [data-chart-viewport] { color: var(--ds-fg); }
   .price-chart-muted { color: var(--ds-fg-2); font-size: 12px; }
   .price-chart-interactive { position: relative; width: 100%; touch-action: pan-y; }
-  .price-chart-tooltip { position: absolute; top: 0; z-index: 1; pointer-events: none; display: grid; gap: 2px; padding: 5px 8px; border: 1px solid var(--ds-line); border-radius: 6px; background: var(--ds-surface); font-size: 12px; line-height: 1.5; }
+  .price-chart-tooltip { position: absolute; top: 0; z-index: 1; pointer-events: none; display: grid; gap: 2px; padding: 4px 8px; border: 1px solid var(--ds-line); border-radius: 6px; background: var(--ds-surface); font-size: 12px; line-height: 1.5; }
   .price-chart-interactive:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; border-radius: 4px; }
   .price-chart-interactive svg { display: block; width: 100%; font: 12px sans-serif; overflow: visible; }
   .price-chart-interactive text { fill: var(--ds-fg-2); }
@@ -14,12 +15,12 @@
   .price-chart-interactive [data-price-last-label] { fill: var(--ds-fg); font-weight: 700; }
 
   /* Toolbar for Zoom & Pan navigation */
-  .price-chart-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; margin: 10px 0 6px; }
-  .price-chart-zoom-group, .price-chart-pan-group { display: inline-flex; gap: 6px; }
+  .price-chart-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; margin: 12px 0 8px; }
+  .price-chart-zoom-group, .price-chart-pan-group { display: inline-flex; gap: 8px; }
   .price-chart-nav button {
-    flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 6px 12px;
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    font-size: 12px; font-weight: 500; font-family: inherit;
+    flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 8px 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 12px; font-weight: 400; font-family: inherit;
     border: 1px solid var(--ds-line); border-radius: 8px;
     background: var(--ds-surface-2); color: var(--ds-fg); cursor: pointer;
   }

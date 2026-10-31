@@ -32,9 +32,9 @@ export function DetailPanel({ code, candidate, candidateMeta, membership, produc
   const analysisMeta = modelOnly ? candidateMeta : candidateMeta ?? (stock.data?.data ? stock.data : undefined), price = quote.isError || quote.data?.source === "sample" ? null : quote.data?.data;
   return <aside id="briefing-detail" className="briefing-card briefing-detail briefing-detail-compact" aria-labelledby="detail-title" data-detail-code={code}>
     <div className="briefing-detail-top"><div><h2 id="detail-title">{detail?.name ?? price?.name ?? code}</h2><p className="briefing-muted briefing-code" data-membership={membership}>{code}{!modelOnly && ` · ${membership === "pending" ? "최종 후보 여부 확인 중" : membership === "unknown" ? "최종 후보 여부 미확인" : membership === "candidate" ? "최종 후보" : "최종 후보 외 종목"}`}</p></div><a className="briefing-back-to-table" href="#candidate-heading">표로 돌아가기</a></div>
-    <div className="briefing-detail-price"><strong data-testid="detail-price">{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><span className={price?.changeRate != null && price.changeRate > 0 ? "briefing-rise" : price?.changeRate != null && price.changeRate < 0 ? "briefing-fall" : ""}>{formatPercent(price?.changeRate, "percent")}</span></div>
+    {quote.isError && !price ? <p className="briefing-detail-price-missing" role="status">시세 조회 실패</p> : <div className="briefing-detail-price"><strong data-testid="detail-price">{quote.isPending ? "조회 중" : formatWon(price?.currentPrice)}</strong><span className={price?.changeRate != null && price.changeRate > 0 ? "briefing-rise" : price?.changeRate != null && price.changeRate < 0 ? "briefing-fall" : ""}>{formatPercent(price?.changeRate, "percent")}</span></div>}
     {quote.data && <><SourceMeta source={quote.data.source} asOf={quote.data.asOf} label="시세" /><PastObservationTag asOf={quote.data.asOf} /></>}
-    {quote.isError && <p className="briefing-footnote" role="status">가격 조회 실패 · —</p>}
+    {quote.isError && price && <p className="briefing-footnote" role="status">이전 조회 결과 · 시세 갱신 실패</p>}
     {stock.isPending && !candidate && <p role="status">종목 분석을 조회하고 있습니다.</p>}
     {stock.isError && <p className="briefing-notice" role="status">{stock.data?.data ? "이전 조회 결과 · 상세 갱신 실패" : candidate ? "상세 조회 실패 · 후보 분석 결과 표시" : "종목 분석 조회 실패"}</p>}
     {detail?.rank != null && detail.poolSize != null ? (
