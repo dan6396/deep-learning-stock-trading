@@ -25,8 +25,10 @@ describe("13:11 generation follow-up regressions", () => {
     expect(selectHeadlineSummary({ code: "030200", text, citations: [id] }, { ...data, newsValidation: "off" }, 0)).toMatchObject({ text, source: "llm" });
   });
   it("uses the exact outlook whitelist, rejecting otherwise valid global macro IDs", () => {
-    const data = input(), row = { stance: "상승 우위", text: "나스닥 관측을 바탕으로 코스피 장 초반은 상승 우위로 판단합니다.", citations: ["M:NASDAQ"] };
+    const data = input(), row = { stance: "중립", text: "나스닥 관측을 바탕으로 코스피 장 초반은 중립으로 판단합니다.", citations: ["M:NASDAQ"] };
     expect(marketOutlookCitationIds(data)).toEqual(["M:NASDAQ"]); expect(validateMarketOutlook(row, data)).toBeNull();
+    // One available indicator cannot license a directional stance.
+    expect(validateMarketOutlook({ ...row, stance: "상승 우위", text: "나스닥 관측을 바탕으로 코스피 장 초반은 상승 우위로 판단합니다." }, data)).toBe("insufficient_indicators");
     for (const id of ["M:KOSPI", "M:SP500", "M:UST10Y", "M:KOSPI200_NIGHT", "NASDAQ"]) expect(validateMarketOutlook({ ...row, citations: [id] }, data)).toBe("invalid_citation");
     const record = narrativeGenerationDiagnostics({ marketOutlook: { ...row, citations: ["M:KOSPI", "NASDAQ", "PRIVATE_TEXT_SENTINEL"] } }, data, templateNarrative(data, null), Date.now());
     expect(record.fields.find(row => row.field === "marketOutlook").citationDiagnostics).toMatchObject({ allowed: ["M:NASDAQ"], submittedKnownIds: ["M:KOSPI"], invalidKnownIds: ["M:KOSPI"] });

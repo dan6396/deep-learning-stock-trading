@@ -10,9 +10,16 @@ import { forbiddenNarrative } from "../../server/briefingValidation";
 import { adaptMacroData, adaptBriefingNarrative } from "../entities/briefing";
 const days = ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-23", "2026-10-26"];
 const history = days.map((date, i) => ({ date, value: 100 + i }));
+const fallingHistory = days.map((date, i) => ({ date, value: 104 - i }));
 function input() {
   const rows = ["NASDAQ", "UST10Y", "USDKRW"].map(id => ({ id, name: id === "NASDAQ" ? "나스닥" : id, unit: id === "UST10Y" ? "%" : id === "USDKRW" ? "KRW" : "pt", status: "ok", source: "yahoo", value: 104, change: 1, changePct: 100 / 103, session: "closed", asOf: "2026-10-26T20:00:00Z", history }));
   return { newsValidation: "on", model: { modelId: "fixture", scoreKind: "rank_zscore", baseDate: "2026-10-26", poolSize: 199, predictionTarget: "next_session_open_to_close", runStartedAt: null }, macro: { asOf: "2026-10-26T20:00:00Z", indicators: rows, preOpen: buildPreOpenIndicators(rows) }, stocks: [{ code: "138930", name: "BNK금융지주", rank: 1, rankScore: 1.71, poolSize: 199, topPercent: 0.5, evidence: [{ id: "E:138930:1", kind: "model", text: "전체 199개 중 1위입니다." }], cautions: [], news: { status: "collected", articles: [{ id: "N:138930:1", title: "BNK금융지주 공시 서비스 공개", source: "경제지", pubDate: "2026-10-26T01:00:00Z", url: "https://example.com/article" }] } }] };
+}
+// NASDAQ rises while rates and USD/KRW fall: three agreeing 상승 요인 signals license 상승 우위.
+function bullishInput() {
+  const data = input();
+  for (const row of data.macro.preOpen) if (row.id === "UST10Y" || row.id === "USDKRW") row.comment = { ...row.comment, band: "하락" };
+  return data;
 }
 const outlook = () => ({ stance: "상승 우위", text: "나스닥의 상승 흐름 때문에 코스피 장 초반 갭은 상승 우위로 판단합니다. 장중 방향으로 일반화하지 않습니다.", citations: ["M:NASDAQ"] });
 const news = () => ({ code: "138930", text: "공시를 다룬 기사입니다. 서비스 공개를 다룬 기사입니다.", citations: ["N:138930:1"] });
@@ -101,8 +108,10 @@ describe("pre-open macro and field-level narrative extensions", () => {
     expect(macroComment({ ...row, history: [history[0]] }).ruleId).toBe("insufficient");
   });
   it("allows market direction and causality only in outlook", () => {
-    const data = input(); expect(validateMarketOutlook(outlook(), data)).toBeNull();
+    const data = bullishInput(); expect(validateMarketOutlook(outlook(), data)).toBeNull();
     expect(validateNarrative({ ...value(), marketNote: outlook().text }, data)).toBe("forbidden_content");
+    // The same 상승 우위 is rejected when rising rates and USD/KRW contradict NASDAQ.
+    expect(validateMarketOutlook(outlook(), input())).toBe("mixed_signals");
   });
   it("allows a factual unavailable-futures notice only in outlook without licensing positive supply claims", () => {
     const data = input(), missing = "코스피200 선물 외국인 순매수 자료가 확인되지 않아 판단을 보류합니다.";
@@ -138,9 +147,9 @@ describe("pre-open macro and field-level narrative extensions", () => {
     const response = value(); response.newsSummaries[0].text = "호재입니다. 매수하세요.";
     const transport = vi.fn(async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(response) }] } }] }) }));
     const env = { PIPELINE_OUTPUT_DIR: "node_modules/.tmp/macro-v2-tests", BRIEFING_NEWS_VALIDATION: "on", GEMINI_API_KEY: "fixture-macro-v2-private" };
-    const first = await createNarrativeStore({ transport }).resolve(input(), true, env);
+    const first = await createNarrativeStore({ transport }).resolve(bullishInput(), true, env);
     expect(first.marketOutlook.source).toBe("llm"); expect(first.newsSummaries[0].source).toBe("template"); expect(first.overview).toBe(response.overview);
-    const next = await createNarrativeStore({ transport }).resolve(input(), false, env);
+    const next = await createNarrativeStore({ transport }).resolve(bullishInput(), false, env);
     expect(next.marketOutlook.source).toBe("llm"); expect(next.newsSummaries[0].source).toBe("template"); expect(transport).toHaveBeenCalledOnce();
   });
   it("adapts old responses unchanged and keeps new fields optional", () => {
@@ -153,7 +162,7 @@ describe("pre-open macro and field-level narrative extensions", () => {
     const response = value(); response.overview = "매수하세요. 권유합니다."; response.marketNote = "99999pt입니다."; response.stocks[0].summary = "매수하세요.";
     const transport = vi.fn(async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(response) }] } }] }) }));
     const env = { PIPELINE_OUTPUT_DIR: "node_modules/.tmp/macro-only-field-tests", BRIEFING_NEWS_VALIDATION: "on", GEMINI_API_KEY: "fixture-macro-v2-private" };
-    const first = await createNarrativeStore({ transport }).resolve(input(), true, env);
+    const first = await createNarrativeStore({ transport }).resolve(bullishInput(), true, env);
     expect(first.marketOutlook.source).toBe("llm"); expect(first.fieldSources.overview).toBe("template");
     for (const [path, body] of disk) { if (!path.endsWith("briefing-narrative.json")) continue;
       const stored = JSON.parse(body);
@@ -161,7 +170,7 @@ describe("pre-open macro and field-level narrative extensions", () => {
       stored.narrative.fieldSources = { overview: "llm", marketNote: "llm" }; stored.narrative.stocks[0].source = "llm";
       disk.set(path, JSON.stringify(stored));
     }
-    const next = await createNarrativeStore({ transport }).resolve(input(), false, env);
+    const next = await createNarrativeStore({ transport }).resolve(bullishInput(), false, env);
     expect(next.status).toBe("llm"); expect(next.marketOutlook.source).toBe("llm"); expect(next.llmModel).toBe(first.llmModel); expect(next.llmModel).not.toBeNull();
     expect(transport).toHaveBeenCalledOnce();
   });
@@ -184,9 +193,9 @@ describe("pre-open macro and field-level narrative extensions", () => {
     expect(validateMarketOutlook({ ...outlook(), text: "비중을 늘리면 수익을 보장합니다. 상승 우위입니다." }, input())).toBe("forbidden_content");
   });
   it("treats indicator aliases as labels and binds each named indicator's numbers", () => {
-    expect(validateMarketOutlook({ ...outlook(), text: "미 10년물과 코스피200 관측을 살펴보며 상승 우위입니다." }, input())).toBeNull();
+    expect(validateMarketOutlook({ ...outlook(), text: "미 10년물과 코스피200 관측을 살펴보며 상승 우위입니다." }, bullishInput())).toBeNull();
     expect(validateMarketOutlook({ ...outlook(), text: "S&P 500 관측을 살펴보며 상승 우위입니다." }, input())).toBe("ungrounded_number");
-    const data = input(); data.macro.preOpen[0].value = 4.99;
+    const data = bullishInput(); data.macro.preOpen[0].value = 4.99;
     expect(validateMarketOutlook({ ...outlook(), text: "나스닥은 4.99%입니다. 상승 우위입니다." }, data)).toBe("ungrounded_number");
     expect(validateMarketOutlook({ ...outlook(), text: "미 10년물은 4.99%입니다. 상승 우위입니다." }, data)).toBeNull();
   });

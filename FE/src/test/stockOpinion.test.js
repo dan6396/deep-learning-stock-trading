@@ -173,9 +173,13 @@ describe("stock insight optional contract", () => {
       const data = input(), narrative = templateNarrative(data, null), generatedAt = narrative.generatedAt;
       narrative.stockOpinions[0] = { ...opinion(), source };
       const result = await service({ ...data, narrative })("005930", {});
-      expect(result.aiOpinion).toEqual({ source, text: opinion().text, citations: opinion().citations, generatedAt });
+      // /stock은 순위·브리핑 시장 의견·뉴스 요약을 합친 통합 문단을 내보내고, 브리핑의 종목 의견 원문은 바꾸지 않는다.
+      expect(result.aiOpinion.text).toMatch(/^트랜스포머 모델 순위는 전체 \d+개 종목 중 \d+위/);
+      expect(result.aiOpinion.citations).toContain("R:005930");
+      expect(result.aiOpinion.generatedAt).toBe(generatedAt);
+      if (source === "template") expect(result.aiOpinion.text).not.toContain(opinion().text);
       expect(adaptStockInsight(result, "005930").aiOpinion).toEqual(result.aiOpinion);
-      expect(adaptBriefingNarrative(narrative).stockOpinions[0]).toEqual({ ...result.aiOpinion, code: "005930", generatedAt: undefined });
+      expect(adaptBriefingNarrative(narrative).stockOpinions[0]).toEqual({ source, text: opinion().text, citations: opinion().citations, code: "005930" });
       expect((await service({ ...data, narrative })("005380", {})).aiOpinion).toBeUndefined();
     }
   });

@@ -1,5 +1,5 @@
 # Current final-model service only (Python 3.10+).
 -r requirements-inference.txt
-pykrx==1.0.45
+pykrx==1.2.9
 requests==2.32.3
 python-dotenv==1.0.1

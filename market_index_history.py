@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import tempfile
 import time
 import warnings
@@ -24,8 +25,27 @@ DEFAULT_CACHE_DIR = ROOT / "outputs" / "market_index_history"
 INDEX_CODES = {"KPI200": "2001", "KOSPI": "0001"}
 API_PATH = "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice"
 TR_ID = "FHKUP03500100"
-KIS_CONFIGURATION_HINT = ("MARKET_INDEX_SOURCE=kis 사용 시 KIS_ENV=real, 유효한 KIS 앱 키·시크릿과 실전 도메인 구성을 확인하세요. "
+KIS_CONFIGURATION_HINT = ("MARKET_INDEX_SOURCE=kis 사용 시 KIS_ENV=mock 또는 real에 맞는 KIS 앱 키·시크릿과 도메인 구성을 확인하세요. "
                           "KRX 인증 환경에서 기존 출처를 사용하려면 MARKET_INDEX_SOURCE=pykrx를 설정하세요. README.md 실행 요건을 참고하세요.")
+
+
+class KisIndexError(RuntimeError):
+    """A failure whose message is built only from fixed text, index codes, dates and
+    provider status codes, so it is safe to surface; never from provider bodies or headers."""
+
+
+_PROVIDER_CODE = re.compile(r"\b(?:EGW|OPSQ|OPSP|IGW|APBK)\d{4,5}\b")
+_HTTP_STATUS = re.compile(r"\b([45]\d\d) (?:Client|Server) Error\b")
+
+
+def _safe_reason(error: BaseException) -> str:
+    """Provider code or HTTP status found in an exception, else only its type name."""
+    text = str(error)
+    code, status = _PROVIDER_CODE.search(text), _HTTP_STATUS.search(text)
+    parts = [f"HTTP {status.group(1)}"] if status else []
+    if code:
+        parts.append(code.group(0))
+    return " ".join(parts) or type(error).__name__
 
 
 def _atomic_text(path: Path, content: str) -> None:
@@ -47,18 +67,24 @@ def _shared_token_manager(env=None):
     # the FE cache before issuance so FE -> Python -> supply uses the same token.
     from config import KISTokenManager, KISCredentials, KIS_BASE_URLS
     env = os.environ if env is None else env
-    if env.get("KIS_ENV", "mock").strip().lower() != "real":
-        raise ValueError("KIS index history requires KIS_ENV=real")
-    key = (env.get("KIS_REAL_APP_KEY") or env.get("KIS_APP_KEY") or env.get("APP_KEY") or "").strip()
-    secret = (env.get("KIS_REAL_APP_SECRET") or env.get("KIS_APP_SECRET") or env.get("APP_SECRET") or "").strip()
+    mode = (env.get("KIS_ENV") or "mock").strip().lower() or "mock"
+    if mode not in {"mock", "real"}:
+        raise ValueError("KIS index environment must be mock or real")
+    prefix = f"KIS_{mode.upper()}"
+    key = (env.get(f"{prefix}_APP_KEY") or env.get("KIS_APP_KEY") or env.get("APP_KEY") or "").strip()
+    secret = (env.get(f"{prefix}_APP_SECRET") or env.get("KIS_APP_SECRET") or env.get("APP_SECRET") or "").strip()
     if not key or not secret:
         raise ValueError("KIS index credentials are missing")
+    base_url = env.get("KIS_BASE_URL", KIS_BASE_URLS[mode]).rstrip("/")
+    other_mode = "real" if mode == "mock" else "mock"
+    if base_url == KIS_BASE_URLS[other_mode]:
+        raise ValueError("KIS index base URL does not match KIS_ENV")
 
     class SharedTokenManager(KISTokenManager):
         def _load_cached_token(self):
             try:
                 data = json.loads((ROOT / "FE" / ".kis-token-cache.json").read_text(encoding="utf-8"))
-                expected = f"real:{self.base_url}:{self.credentials.app_key}"
+                expected = f"{mode}:{self.base_url}:{self.credentials.app_key}"
                 token, expires = data.get("accessToken"), float(data.get("expiresAt", 0)) / 1000
                 if data.get("cacheKey") == expected and isinstance(token, str) and token and math.isfinite(expires) and expires - time.time() > 300:
                     self._access_token = token
@@ -79,12 +105,12 @@ def _shared_token_manager(env=None):
                 _atomic_text(ROOT / "FE" / ".kis-token-cache.json", json.dumps({
                     "accessToken": access_token,
                     "expiresAt": expires_at_epoch * 1000,
-                    "cacheKey": f"real:{self.base_url}:{self.credentials.app_key}",
+                    "cacheKey": f"{mode}:{self.base_url}:{self.credentials.app_key}",
                 }))
             except OSError:
                 pass
 
-    return SharedTokenManager(KISCredentials(key, secret), base_url=env.get("KIS_BASE_URL", KIS_BASE_URLS["real"]).rstrip("/"))
+    return SharedTokenManager(KISCredentials(key, secret), base_url=base_url)
 
 
 class KisIndexClient:
@@ -99,12 +125,19 @@ class KisIndexClient:
         if self.manager is None:
             try:
                 self.manager = _shared_token_manager(self.env)
-            except Exception:
-                raise RuntimeError("KIS index authentication configuration failed") from None
+            except ValueError as error:
+                # Configuration ValueErrors carry fixed text only.
+                reason = str(error) if str(error) in {
+                    "KIS index environment must be mock or real", "KIS index credentials are missing",
+                    "KIS index base URL does not match KIS_ENV",
+                } else "ValueError"
+                raise KisIndexError(f"KIS index authentication configuration failed: {reason}") from None
+            except Exception as error:
+                raise KisIndexError(f"KIS index authentication configuration failed: {type(error).__name__}") from None
         try:
             headers = self.manager.auth_headers(TR_ID)
-        except Exception:
-            raise RuntimeError("KIS index authentication failed") from None
+        except Exception as error:
+            raise KisIndexError(f"KIS index authentication failed: {_safe_reason(error)}") from None
         params = {"FID_COND_MRKT_DIV_CODE": "U", "FID_INPUT_ISCD": code,
                   "FID_INPUT_DATE_1": start.strftime("%Y%m%d"),
                   "FID_INPUT_DATE_2": end.strftime("%Y%m%d"), "FID_PERIOD_DIV_CODE": "D"}
@@ -120,14 +153,16 @@ class KisIndexClient:
                 response.raise_for_status()
                 body = response.json()
                 if not isinstance(body, dict) or body.get("rt_cd") != "0" or not isinstance(body.get("output2"), list):
-                    raise ValueError("invalid_response")
-                return body["output2"]
-            except Exception:
-                # Provider bodies, exceptions and headers can echo secrets.
-                reason = "request_or_response_failed"
-                if attempt < 2:
-                    self.sleep(2 ** attempt)
-        raise RuntimeError(f"KIS index {code} {start.date()}..{end.date()}: {reason} after 3 attempts") from None
+                    provider_code = _PROVIDER_CODE.fullmatch(str(body.get("msg_cd", ""))) if isinstance(body, dict) else None
+                    reason = "request_or_response_failed: invalid_response" + (f" {provider_code.group(0)}" if provider_code else "")
+                else:
+                    return body["output2"]
+            except Exception as error:
+                # Provider bodies, exceptions and headers can echo secrets: keep codes only.
+                reason = "request_or_response_failed: " + _safe_reason(error)
+            if attempt < 2:
+                self.sleep(2 ** attempt)
+        raise KisIndexError(f"KIS index {code} {start.date()}..{end.date()}: {reason} after 3 attempts") from None
 
 
 def _number(value):

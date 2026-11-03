@@ -9,5 +9,6 @@ export function adaptStockAiOpinion(raw: unknown, code: string): StockAiOpinion 
       || !(id === `R:${code}` || new RegExp(`^R:${code}:(?:raw|adjusted|20|120)$`).test(id) || new RegExp(`^E:${code}:feature:(?:f_rsi|f_pct_b|f_high)$`).test(id) || new RegExp(`^[ECN]:${code}:\\d+$`).test(id) || /^M:[A-Z0-9_]+$/.test(id)))) return undefined;
   const generatedAt = textValue(row.generatedAt);
   return { source: row.source as StockAiOpinion["source"], text, citations: [...new Set(row.citations as string[])],
-    ...(generatedAt && Number.isFinite(Date.parse(generatedAt)) ? { generatedAt } : {}) };
+    ...(generatedAt && Number.isFinite(Date.parse(generatedAt)) ? { generatedAt } : {}),
+    ...(row.composition === "ai" || row.composition === "rule" ? { composition: row.composition } : {}) };
 }

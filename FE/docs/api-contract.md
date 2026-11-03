@@ -105,7 +105,7 @@ RSS 기사는 모델 순위를 변경하지 않습니다. 과거 뉴스/LLM 결�
 
 이전 뉴스 학습·보정 실행 및 `/api/stock-analysis/run` 경로는 제거했습니다. 현재 화면에서 관찰 날짜·자료 출처·실행 ID를 확인할 수 있습니다.
 
-분석 실행의 지수 이력은 `MARKET_INDEX_SOURCE=kis`(기본) 또는 `pykrx`를 선택합니다. KIS는 실전 키가 필요하며 `FHKUP03500100`·시장 `U`·업종 `2001`(KPI200)/`0001`(KOSPI)의 2019-06-03 이후 완료 일봉을 수집합니다. 16시 이전에는 전일까지를 대상으로 합니다. 캐시는 `outputs/market_index_history/KPI200.csv`, `KOSPI.csv`이며 날짜·Close·Volume·source·수집시각을 저장합니다. 다음 실행에는 최근 5거래일과 새 날짜만 받아 정정값을 덮어쓰고, 손상된 캐시는 전체 재수집합니다. 두 지수 달력이 다르면 거부하며 임시 파일→rename으로 저장합니다. 최초 실측은 지수별 1,813행·합계 HTTP 109회(재시도 포함)·약 123초였고, 즉시 재실행은 HTTP 2회·약 2.8초였습니다. 기간·통신·재시도에 따라 시간은 달라집니다.
+분석 실행의 지수 이력은 `MARKET_INDEX_SOURCE=kis`(기본) 또는 `pykrx`를 선택합니다. KIS 설정은 선택한 모의투자/실전 환경에 맞춰 도메인·키·토큰 캐시를 구분하도록 구현했습니다. `FHKUP03500100`·시장 `U`·업종 `2001`(KPI200)/`0001`(KOSPI)의 2019-06-03 이후 완료 일봉을 수집합니다. 모의 서버의 이 지수 일봉 지원 및 조회 성공은 미검증이며 운영 검증은 실전 기준입니다. 16시 이전에는 전일까지를 대상으로 합니다. 캐시는 `outputs/market_index_history/KPI200.csv`, `KOSPI.csv`이며 날짜·Close·Volume·source·수집시각을 저장합니다. 다음 실행에는 최근 5거래일과 새 날짜만 받아 정정값을 덮어쓰고, 손상된 캐시는 전체 재수집합니다. 두 지수 달력이 다르면 거부하며 임시 파일→rename으로 저장합니다. 최초 실측은 지수별 1,813행·합계 HTTP 109회(재시도 포함)·약 123초였고, 즉시 재실행은 HTTP 2회·약 2.8초였습니다. 기간·통신·재시도에 따라 시간은 달라집니다.
 
 로그와 `outputs/market_index_history/latest-request.json`의 `market_index_source`가 실제 출처입니다. 이 메타는 현재 FE 응답 필드를 추가하지 않습니다. FE 토큰 캐시를 Python 인증에서 재사용하며 모델 파일·피처·순위 정의는 유지합니다. `pykrx`는 기존 조회 경로를 보존하며 해당 서비스의 인증·접속 환경이 필요할 수 있습니다. 기존 Python 설정은 루트 `.env`를 우선하는 동작이 남아 있습니다. 새 지수 수집기만 dotenv 적용 전 외부 요청 환경의 읽기 전용 스냅샷을 우선하므로, 나머지 수급 단계의 실전/모의 설정까지 자동으로 바꾸지는 않습니다.
 
@@ -312,9 +312,22 @@ type StockAiOpinion = {
   citations: string[];
   generatedAt?: string;
 };
-// StockInsight.aiOpinion?: StockAiOpinion
+// StockInsight.aiOpinion?: StockAiOpinion   (통합 문단, 아래 참조)
 // BriefingNarrative.stockOpinions?: (StockAiOpinion & { code: string })[]
 ```
+
+`StockInsight.aiOpinion`은 `stockOpinions` 원문을 그대로 내보내지 않고, 모델 순위·브리핑 시장 의견·뉴스 요약·종목 분석을 합친 통합 문단을 내보낸다. `composition?: "ai" | "rule"`로 작성 방식을 구분한다.
+
+**AI 통합 문단 (`composition:"ai"`)**: 추가 Gemini 호출은 없다. 기존 브리핑 종합 호출 한 번의 응답 스키마에 `stockSummaries[{code,text}]`를 추가해, 같은 응답에서 정한 marketOutlook·newsSummaries·stockOpinions와 rank·poolSize만으로 종목별 한 문단을 함께 받는다. `applyNarrativeExtensions`가 확정된(검증·대체 후) 시장 의견·뉴스 요약·종목 의견을 조각으로 `integratedSummaryReason`(`server/stockOpinionSummary.ts`) 검증을 하고 통과한 후보만 `narrative.stockSummaries`에 남긴다(공개 응답에 미검증 문장을 싣지 않음). `GET /api/stock-insight`는 /stock이 실제로 보여 주는 조각으로 다시 검증해 쓴다(`server/stockIntegratedSummary.ts`). 검증: 2~6문장·900자 이하, 첫 문장에 입력 순위, 모든 "N위"·"N개 종목"이 입력값과 일치, 인과(`forbiddenCausality`)·권유(`forbiddenInvestmentAdvice` 및 입력에 없는 권유 어휘)·예측(`forbiddenStockNewsForecast`) 금지, stance는 브리핑 stance만, 방향 단어는 시장 지표 주어 문장에서만(종목명·주가·종목 주어 금지), 숫자는 조각에 있는 값만, 조각에서 음수인 값을 '상승'과 함께 쓰면 거부, 조각에 없는 다른 KOSPI200 종목명·6자리 코드·지시문 금지. 후보가 없거나(구형 캐시 포함) 검증에 실패하면 아래 규칙 연결 문단으로 대체한다. 응답이 늘어 maxOutputTokens는 8192(장전 지표 있음)/4096으로 올렸다.
+
+**규칙 연결 문단 (`composition:"rule"`, `server/stockOpinionSummary.ts`)**: 이미 검증을 통과한 조각을 한 문단으로 잇는다. 새 LLM 호출이나 새 사실은 만들지 않는다.
+
+1. 트랜스포머 모델 순위: "트랜스포머 모델 순위는 전체 N개 종목 중 K위"로 시작한다.
+2. 브리핑 시장 의견(`narrative.marketOutlook`): stance를 "브리핑 기준 현재 시장은 '<stance>' 의견입니다"로 인용만 하며, 본문 최대 2문장을 "시장 의견을 보면,"으로 잇는다. `판단 보류`는 "브리핑은 현재 시장 방향 판단을 보류했습니다"로 쓴다.
+3. 뉴스 요약(검증된 llm `newsSummaries`만): 최대 2문장을 "한편 관련 뉴스를 보면,"으로 잇는다.
+4. 종목 분석(llm `stockOpinions`만): 순위 문장을 뺀 최대 2문장을 "또한"으로 잇는다.
+
+연결은 대비("~이나", `하락 우위`·`판단 보류`일 때만)와 병렬("~이며", "한편", "또한") 접속만 쓴다. 조각 중 `forbiddenCausality`·`forbiddenInvestmentAdvice`에 걸리는 문장은 빼며, 종목 자체의 방향 판단은 만들지 않는다. 없는 조각은 생략한다. 사용된 조각 중 LLM 문장이 있으면 `source:"llm"`, 순위만 남으면 `source:"template"`다. citations는 `R:<code>`와 실제로 사용한 조각의 인용(M:·N:·R:·E:)을 합친다. 화면은 이 문단을 "AI 최종 의견"으로 보여 주고, 뉴스 요약 원문은 "관련 뉴스" 카드에 그대로 남긴다.
 
 기존 Gemini 종합 호출 한 번에 `stockOpinions[{code,text,citations}]`를 TOP5 입력 순서로 요청한다. 새 입력에서는 4~6문장으로 모델 결과(순위·모집단·상위%·점수와 20/120일 비교), 입력 지표 위치, 관측된 시장 배경, N: 기사 확인 사항, C: 주의·불확실성을 구성한다. 문장 단위 검증 후 최소 3문장을 유지해야 부분 채택하며, 구형 analysisMetrics 없는 캐시는 기존 최소 2문장을 허용한다. 단순 순위+한 문장으로 축소되는 것을 막고 한 문장 실패로 전부 대체되는 비율을 낮추기 위한 기준이다. 시장 방향을 허용하는 marketOutlook의 예외는 종목 의견에 적용하지 않는다. 종목 방향/stance·행동 권유·목표가·비중·확률·기대수익·보장·순위 재정렬·현물/종목 수급·다른 종목명·숫자 생성·기사 지시 실행을 거부한다. 장전 지표와 외국인 선물 계약 수는 관측 사실 배경만 허용하며 종목 순위와의 인과 및 시장 전망 반복은 금지한다. 기사 속 숫자는 검증 on인 newsSummaries 및 stockOpinions의 기사 귀속 사실 문장에서만 동일 N: 기사의 제목·발췌·본문과 정확히 대조해 허용한다. `BRIEFING_SHOW_SUPPLY` 공개 정책은 바꾸지 않는다.
 

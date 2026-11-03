@@ -52,7 +52,7 @@ npm run dev -- --host 127.0.0.1
 
 현재 실행 경로는 최종 순위 모델과 관련 RSS 기사 수집입니다. 학습·옛 모델 실행·뉴스 학습형 보정 코드는 포함하지 않습니다.
 
-실행 시 지수 일봉은 `MARKET_INDEX_SOURCE=kis`가 기본입니다. 실전 KIS 구성(`KIS_ENV=real`과 기존 앱 키·시크릿)이 필요하며, 종목 OHLCV는 기존 pykrx 경로를 유지합니다. `MARKET_INDEX_SOURCE=pykrx`로 원래 지수 조회 경로를 선택할 수 있습니다. 해당 경로의 KRX 인증 요건은 설치된 pykrx 버전에 따릅니다.
+실행 시 지수 일봉은 `MARKET_INDEX_SOURCE=kis`가 기본입니다. KIS 모의투자(`KIS_ENV=mock`, 미설정 시 기본값)와 실전(`KIS_ENV=real`) 설정에 맞춰 도메인·키·토큰 캐시를 구분하도록 구현했습니다. 다만 모의 서버의 `FHKUP03500100` 지수 일봉 지원 및 조회 성공은 미검증이며, 운영 검증은 실전 기준입니다. 각 환경의 `KIS_MOCK_APP_KEY`·`KIS_MOCK_APP_SECRET` 또는 `KIS_REAL_APP_KEY`·`KIS_REAL_APP_SECRET`을 우선 사용하며, 없으면 공통 `KIS_APP_KEY`·`KIS_APP_SECRET`, `APP_KEY`·`APP_SECRET` 순으로 선택합니다. 종목 OHLCV는 기존 pykrx 경로를 유지합니다. `MARKET_INDEX_SOURCE=pykrx`로 원래 지수 조회 경로를 선택할 수 있습니다. pykrx는 KRX 로그인 지원 버전인 `1.2.9`로 고정하며, 인증이 필요한 조회에는 `KRX_ID`와 `KRX_PW` 환경 변수가 필요합니다. `integrated_pipeline.py`는 pykrx를 가져오기 전에 `python-dotenv`로 환경 변수를 로드합니다. 인증 정보는 저장소나 로그에 공유하지 마세요. pykrx의 로그인 로그에는 ID가 출력될 수 있으므로 실행 로그를 공유하기 전에 개인정보를 제거해야 합니다.
 
 KIS는 2019-06-03부터 완료일(한국 시각 16시 전에는 전일)까지 코스피200·코스피 일봉을 50행씩 날짜를 후진하며 수집합니다. 요청 간격은 최소 0.6초이고 실패하면 지수 백오프로 최대 3회 시도합니다. `outputs/market_index_history/{KPI200,KOSPI}.csv`를 원자적으로 저장하고 이후 실행은 최근 5거래일을 다시 받아 정정값을 덮어쓰며 증분 수집합니다. 손상된 캐시는 전체 재수집합니다. 최초 실행에는 두 지수 합계 약 74회의 시세 조회가 필요합니다. 원본 수집 출처·시각은 캐시 열과 `latest-request.json`에 남습니다. 두 지수 달력이 다르면 추론을 거부합니다.
 

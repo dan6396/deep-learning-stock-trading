@@ -13,6 +13,9 @@ const object = (value: unknown): value is Record<string, unknown> => Boolean(val
 const normalize = (value: string) => value.normalize("NFKC").replace(/[\u200b-\u200f\ufeff]/g, "");
 const compact = (value: string) => normalize(value).replace(/\s/g, "").toLowerCase();
 const featureAliases = { f_rsi: ["상대강도 지표", "상대강도", "RSI"], f_pct_b: ["가격 밴드 내 종가 위치", "밴드 내 종가 위치", "밴드 위치"], f_high: ["전일 종가 대비 고가", "종가 대비 고가"] } as const;
+/** Validator minimum; the prompt cites the same values so it never asks for more than is checkable. */
+export const STOCK_OPINION_MIN_SENTENCES = { withMetrics: 3, withoutMetrics: 2 } as const;
+const minOpinionSentences = (hasMetrics: boolean) => hasMetrics ? STOCK_OPINION_MIN_SENTENCES.withMetrics : STOCK_OPINION_MIN_SENTENCES.withoutMetrics;
 export const opinionSentences = (value: string) => value.trim().split(/(?<=[.!?。])\s+|\n+/).filter(Boolean);
 
 function marketFactsGrounded(text: string, input: BriefingInput): boolean {
@@ -113,7 +116,7 @@ export function validateStockOpinion(value: unknown, input: BriefingInput, index
   if (!object(value) || value.code !== stock.code || typeof value.text !== "string" || !value.text.trim() || value.text.length > 1800
     || Object.keys(value).some(key => !["code", "text", "citations", "source", "generatedAt"].includes(key))) return "invalid_schema";
   const sentences = opinionSentences(value.text);
-  if (sentences.length < (stock.analysisMetrics ? 3 : 2) || sentences.length > 6) return "invalid_schema";
+  if (sentences.length < minOpinionSentences(Boolean(stock.analysisMetrics)) || sentences.length > 6) return "invalid_schema";
   const allowed = stockOpinionCitationIds(input, index);
   if (!Array.isArray(value.citations) || !value.citations.length || value.citations.length > 50 || value.citations.some(id => typeof id !== "string" || !allowed.has(id))) return "invalid_citation";
   // Every summary needs a rank anchor; category mentions also need the matching evidence.
@@ -134,7 +137,7 @@ export function validateStockOpinion(value: unknown, input: BriefingInput, index
   const reason = sentences.map(sentence => stockOpinionSentenceReason(sentence, input, index, new Set(citations))).find(Boolean);
   if (reason) return reason;
   const checks = sentences.map(sentence => checkStockSentence(sentence, stockSentenceContext(input, index, "opinion", citations)));
-  if (new Set(checks.map(stockSentenceFactKey).filter(Boolean)).size < (stock.analysisMetrics ? 3 : 2)) return "insufficient_facts";
+  if (new Set(checks.map(stockSentenceFactKey).filter(Boolean)).size < minOpinionSentences(Boolean(stock.analysisMetrics))) return "insufficient_facts";
   return uniqueStockSentenceIndices(checks).length === sentences.length ? null : "duplicate_sentence";
 }
 

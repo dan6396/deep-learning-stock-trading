@@ -38,6 +38,18 @@ describe("read-only stock insight", () => {
     expect(result.news.summarySource).toBe("template"); expect(result.news.source).toBe("template");
     expect(result.news.summary).not.toContain("사용하면 안 되는 종목 요약");
   });
+  it("merges rank, briefing market outlook and news summary into one AI opinion paragraph", async () => {
+    const data = context();
+    data.narrative.marketOutlook = { stance: "하락 우위", text: "나스닥은 전일 1.2% 하락 마감했습니다.", citations: ["M:NASDAQ"], source: "llm" };
+    data.narrative.stockOpinions = [{ code: "005930", source: "llm", text: "모집단 200개 중 모델 순위 1위입니다. 기사 1건이 확인됩니다.", citations: ["R:005930", "N:005930:1"] }];
+    data.narrative.generatedAt = "2026-11-03T00:00:00Z";
+    const result = await service(data)("005930", { BRIEFING_NEWS_VALIDATION: "on" });
+    expect(result.aiOpinion.text).toBe("트랜스포머 모델 순위는 전체 200개 종목 중 1위이나, 브리핑 기준 현재 시장은 '하락 우위' 의견입니다. 시장 의견을 보면, 나스닥은 전일 1.2% 하락 마감했습니다. 한편 관련 뉴스를 보면, 공시를 다룬 기사입니다. 서비스 공개를 다룬 기사입니다. 또한 기사 1건이 확인됩니다.");
+    expect(result.aiOpinion).toMatchObject({ source: "llm", generatedAt: "2026-11-03T00:00:00Z" });
+    expect(adaptStockInsight(result, "005930").aiOpinion.citations).toEqual(expect.arrayContaining(["R:005930", "M:NASDAQ", "N:005930:1"]));
+    // 근거 카드용 뉴스 요약은 그대로 유지된다.
+    expect(result.news.summary).toBe(data.narrative.newsSummaries[0].text);
+  });
   it("uses the same safe sentence selection as briefing and preserves older adapter payloads", async () => {
     const data = context(); data.narrative.newsSummaries[0].text += " 주가 상승이 예상됩니다.";
     const result = await service(data)("005930", { BRIEFING_NEWS_VALIDATION: "on" });

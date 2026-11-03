@@ -181,6 +181,53 @@ class MarketHistoryTests(unittest.TestCase):
         self.assertNotIn("fixture-secret", str(caught.exception))
         self.assertEqual(client.calls, 6)
 
+    def test_external_value_errors_cannot_impersonate_invalid_response_messages(self):
+        cases = [
+            ("invalid_response fixture-private-marker", "ValueError"),
+            ("invalid_response_like fixture-private-marker", "ValueError"),
+            ("invalid_response EGW00133suffix fixture-private-marker", "ValueError"),
+            ("invalid_response EGW001333 fixture-private-marker", "ValueError"),
+            ("invalid_response EGW00133 fixture-private-marker", "EGW00133"),
+            ("invalid_response 403 Client Error: EGW00133 fixture-private-marker", "HTTP 403 EGW00133"),
+        ]
+        for stage in ("get", "json"):
+            for message, reason in cases:
+                with self.subTest(stage=stage, message=message):
+                    response = Mock()
+                    manager = SimpleNamespace(base_url="https://fixture.invalid", session=Mock(),
+                                              auth_headers=Mock(return_value={}))
+                    manager.session.get.return_value = response
+                    target = manager.session.get if stage == "get" else response.json
+                    target.side_effect = ValueError(message)
+                    client = history.KisIndexClient(manager, sleep=lambda _: None, clock=lambda: 0)
+                    with self.assertRaises(history.KisIndexError) as caught:
+                        client.page("2001", self.dates[0], self.dates[-1])
+                    self.assertEqual(str(caught.exception),
+                        f"KIS index 2001 {self.dates[0].date()}..{self.dates[-1].date()}: "
+                        f"request_or_response_failed: {reason} after 3 attempts")
+                    self.assertNotIn("fixture-private-marker", str(caught.exception))
+                    self.assertEqual(client.calls, 3)
+
+    def test_invalid_response_only_accepts_complete_provider_codes(self):
+        for code, suffix in (("EGW00133", " EGW00133"), ("OPSQ1234", " OPSQ1234"),
+                             ("EGW00133suffix", ""), ("EGW001333", ""),
+                             ("EGW00133 fixture-private-marker", ""),
+                             ("403 Client Error: EGW00133", ""), ("fixture-private-marker", "")):
+            with self.subTest(code=code):
+                response = Mock()
+                response.json.return_value = {"rt_cd": "1", "msg_cd": code,
+                                              "msg1": "fixture-private-marker"}
+                manager = SimpleNamespace(base_url="https://fixture.invalid", session=Mock(),
+                                          auth_headers=Mock(return_value={}))
+                manager.session.get.return_value = response
+                client = history.KisIndexClient(manager, sleep=lambda _: None, clock=lambda: 0)
+                with self.assertRaises(history.KisIndexError) as caught:
+                    client.page("2001", self.dates[0], self.dates[-1])
+                self.assertEqual(str(caught.exception),
+                    f"KIS index 2001 {self.dates[0].date()}..{self.dates[-1].date()}: "
+                    f"request_or_response_failed: invalid_response{suffix} after 3 attempts")
+                self.assertEqual(client.calls, 3)
+
     def test_fe_token_is_reused_without_issuance_and_shared_with_python_supply(self):
         import config
         credentials = config.KISCredentials("fixture-key", "fixture-secret")
@@ -230,9 +277,128 @@ class MarketHistoryTests(unittest.TestCase):
              patch.object(history, "fetch_kis_history", side_effect=RuntimeError("fixture-secret")):
             with self.assertRaisesRegex(RuntimeError, "MARKET_INDEX_SOURCE=kis") as caught:
                 pipeline._fetch_market_history()
-            self.assertIn("KIS_ENV=real", str(caught.exception))
+            self.assertIn("KIS_ENV=mock 또는 real", str(caught.exception))
             self.assertIn("MARKET_INDEX_SOURCE=pykrx", str(caught.exception))
             self.assertNotIn("fixture-secret", str(caught.exception))
+
+
+    def test_kis_failure_reports_safe_reason_codes_only(self):
+        import integrated_pipeline as pipeline
+        manager = SimpleNamespace(base_url="https://fixture.invalid", session=Mock(),
+                                  auth_headers=Mock(side_effect=RuntimeError("403 Client Error: Forbidden fixture-secret EGW00133")))
+        client = history.KisIndexClient(manager, sleep=lambda _: None, clock=lambda: 0)
+        with self.assertRaises(history.KisIndexError) as caught:
+            client.page("2001", self.dates[0], self.dates[-1])
+        self.assertEqual(str(caught.exception), "KIS index authentication failed: HTTP 403 EGW00133")
+        with self.assertRaises(history.KisIndexError) as caught:
+            history.KisIndexClient(env={"KIS_ENV": "mock"}).page("2001", self.dates[0], self.dates[-1])
+        self.assertEqual(str(caught.exception), "KIS index authentication configuration failed: KIS index credentials are missing")
+        bad = Mock(); bad.json.return_value = {"rt_cd": "1", "msg_cd": "EGW00201", "msg1": "fixture-secret"}
+        manager = SimpleNamespace(base_url="https://fixture.invalid", auth_headers=Mock(return_value={}), session=Mock())
+        manager.session.get.return_value = bad
+        with self.assertRaises(history.KisIndexError) as caught:
+            history.KisIndexClient(manager, sleep=lambda _: None, clock=lambda: 0).page("2001", self.dates[0], self.dates[-1])
+        self.assertIn("invalid_response EGW00201 after 3 attempts", str(caught.exception))
+        self.assertIn(f"KIS index 2001 {self.dates[0].date()}..{self.dates[-1].date()}:", str(caught.exception))
+        self.assertNotIn("fixture-secret", str(caught.exception))
+        bad.json.return_value = {"rt_cd": "1", "msg_cd": "fixture-secret"}
+        with self.assertRaises(history.KisIndexError) as caught:
+            history.KisIndexClient(manager, sleep=lambda _: None, clock=lambda: 0).page("2001", self.dates[0], self.dates[-1])
+        self.assertIn(f"KIS index 2001 {self.dates[0].date()}..{self.dates[-1].date()}: request_or_response_failed: invalid_response after 3 attempts", str(caught.exception))
+        self.assertNotIn("fixture-secret", str(caught.exception))
+        with patch.object(pipeline, "_EXTERNAL_MARKET_ENV", {"MARKET_INDEX_SOURCE": "kis"}),              patch.object(history, "fetch_kis_history", side_effect=history.KisIndexError("KIS index authentication failed: HTTP 403 EGW00133")):
+            with self.assertRaisesRegex(RuntimeError, r"KIS 지수 이력 수집 실패 \(KIS index authentication failed: HTTP 403 EGW00133\)"):
+                pipeline._fetch_market_history()
+
+class KisIndexEnvironmentTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / "FE").mkdir()
+
+    def test_environment_selects_its_own_credentials_and_default_server(self):
+        import config
+        for mode in ("mock", "real"):
+            with self.subTest(mode=mode):
+                env = {"KIS_ENV": mode, "KIS_MOCK_APP_KEY": "fixture-mock-key",
+                       "KIS_MOCK_APP_SECRET": "fixture-mock-secret", "KIS_REAL_APP_KEY": "fixture-real-key",
+                       "KIS_REAL_APP_SECRET": "fixture-real-secret", "KIS_APP_KEY": "fixture-generic-key",
+                       "KIS_APP_SECRET": "fixture-generic-secret"}
+                manager = history._shared_token_manager(env)
+                self.assertEqual(manager.base_url, config.KIS_BASE_URLS[mode])
+                self.assertEqual(manager.credentials.app_key, f"fixture-{mode}-key")
+                self.assertEqual(manager.credentials.app_secret, f"fixture-{mode}-secret")
+
+    def test_default_is_mock_and_common_credential_names_still_work(self):
+        import config
+        for key_name, secret_name in (("KIS_APP_KEY", "KIS_APP_SECRET"), ("APP_KEY", "APP_SECRET")):
+            with self.subTest(key_name=key_name):
+                manager = history._shared_token_manager({key_name: "fixture-key", secret_name: "fixture-secret"})
+                self.assertEqual(manager.base_url, config.KIS_BASE_URLS["mock"])
+                self.assertEqual(manager.credentials.app_key, "fixture-key")
+                self.assertEqual(manager.credentials.app_secret, "fixture-secret")
+
+    def test_other_environment_credentials_are_never_used_as_fallback(self):
+        for mode, other in (("mock", "REAL"), ("real", "MOCK")):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "credentials are missing"):
+                history._shared_token_manager({"KIS_ENV": mode, f"KIS_{other}_APP_KEY": "fixture-key",
+                                               f"KIS_{other}_APP_SECRET": "fixture-secret"})
+
+    def test_empty_environment_defaults_to_mock(self):
+        import config
+        for mode in ("", " \t "):
+            with self.subTest(mode=mode):
+                manager = history._shared_token_manager({"KIS_ENV": mode, "KIS_MOCK_APP_KEY": "fixture-mock-key",
+                                                        "KIS_MOCK_APP_SECRET": "fixture-mock-secret",
+                                                        "KIS_REAL_APP_KEY": "fixture-real-key", "KIS_REAL_APP_SECRET": "fixture-real-secret"})
+                self.assertEqual(manager.base_url, config.KIS_BASE_URLS["mock"])
+                self.assertEqual(manager.credentials.app_key, "fixture-mock-key")
+                self.assertEqual(manager.credentials.app_secret, "fixture-mock-secret")
+
+    def test_invalid_environment_and_opposite_official_server_are_rejected(self):
+        import config
+        for mode, url, message in (("typo", "https://fixture.invalid", "environment must be mock or real"),
+                                   ("mock", config.KIS_BASE_URLS["real"], "base URL does not match KIS_ENV"),
+                                   ("real", config.KIS_BASE_URLS["mock"], "base URL does not match KIS_ENV")):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, message):
+                history._shared_token_manager({"KIS_ENV": mode, "KIS_APP_KEY": "fixture-key",
+                                               "KIS_APP_SECRET": "fixture-secret", "KIS_BASE_URL": url})
+
+    def test_mock_index_request_uses_mock_server_and_the_official_tr_id(self):
+        import config
+        manager = history._shared_token_manager({"KIS_ENV": "mock", "KIS_MOCK_APP_KEY": "fixture-key",
+                                                "KIS_MOCK_APP_SECRET": "fixture-secret"})
+        response = Mock()
+        response.json.return_value = {"rt_cd": "0", "output2": [{"stck_bsop_date": "20261030"}]}
+        with patch.object(manager, "auth_headers", return_value={"tr_id": history.TR_ID}) as auth, \
+             patch.object(manager.session, "get", return_value=response) as request:
+            rows = history.KisIndexClient(manager).page("2001", pd.Timestamp("20261001"), pd.Timestamp("20261030"))
+        self.assertEqual(rows, [{"stck_bsop_date": "20261030"}])
+        auth.assert_called_once_with("FHKUP03500100")
+        self.assertEqual(request.call_args.args[0], config.KIS_BASE_URLS["mock"] + history.API_PATH)
+        self.assertEqual(request.call_args.kwargs["params"]["FID_INPUT_ISCD"], "2001")
+
+    def test_fe_tokens_are_reused_only_for_the_selected_environment(self):
+        import config
+        for mode in ("mock", "real"):
+            for cached_mode in ("mock", "real"):
+                with self.subTest(mode=mode, cached_mode=cached_mode):
+                    python_cache = self.root / f"{mode}-{cached_mode}.json"
+                    fe_cache = self.root / "FE" / ".kis-token-cache.json"
+                    fe_cache.write_text(json.dumps({"accessToken": "fixture-cached-token",
+                        "expiresAt": (history.time.time() + 3600) * 1000,
+                        "cacheKey": f"{cached_mode}:https://fixture.invalid:fixture-key"}))
+                    with patch.object(history, "ROOT", self.root), patch.object(config, "TOKEN_CACHE_FILE", python_cache), \
+                         patch.object(config.KISTokenManager, "_issue_token", return_value={
+                             "access_token": "fixture-issued-token", "expires_in": 3600}) as issue:
+                        manager = history._shared_token_manager({"KIS_ENV": mode, "KIS_APP_KEY": "fixture-key",
+                            "KIS_APP_SECRET": "fixture-secret", "KIS_BASE_URL": "https://fixture.invalid"})
+                        token = manager.get_access_token()
+                        self.assertEqual(token, "fixture-cached-token" if mode == cached_mode else "fixture-issued-token")
+                        self.assertEqual(issue.call_count, int(mode != cached_mode))
+                        self.assertEqual(json.loads(fe_cache.read_text())["cacheKey"],
+                                         f"{mode}:https://fixture.invalid:fixture-key")
 
 
 class LocalMarketScalerParityTests(unittest.TestCase):

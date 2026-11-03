@@ -181,12 +181,14 @@ def _fetch_market_history():
     end = now.date() - (timedelta(days=1) if now.hour < 16 else timedelta())
     source = _EXTERNAL_MARKET_ENV.get("MARKET_INDEX_SOURCE", os.getenv("MARKET_INDEX_SOURCE", "kis")).strip().lower()
     print(f"  [시장 이력] market_index_source={source}", flush=True)
-    from market_index_history import fetch_kis_history, record_metadata, KIS_CONFIGURATION_HINT
+    from market_index_history import fetch_kis_history, record_metadata, KIS_CONFIGURATION_HINT, KisIndexError
     if source == "kis":
         try:
             return fetch_kis_history(end, env={**os.environ, **_EXTERNAL_MARKET_ENV})
         except Exception as error:
-            raise RuntimeError(f"KIS 지수 이력 수집 실패 ({type(error).__name__}). {KIS_CONFIGURATION_HINT}") from None
+            # Only KisIndexError text is built from safe parts; anything else reports its type.
+            detail = str(error) if isinstance(error, KisIndexError) else type(error).__name__
+            raise RuntimeError(f"KIS 지수 이력 수집 실패 ({detail}). {KIS_CONFIGURATION_HINT}") from None
     if source != "pykrx":
         raise ValueError("MARKET_INDEX_SOURCE must be kis or pykrx")
     from pykrx import stock

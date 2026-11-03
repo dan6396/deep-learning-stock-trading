@@ -32,3 +32,10 @@ venv-timesfm/
 
 # 주의: shared_*.parquet 은 재현성 위해 커밋 유지 → .gitignore에 넣지 않는다.
 # (과거 *.parquet 일괄 무시 규칙은 제거함)
+
+# 로컬 작업 산출물 (검증본·스크린샷·디자인 메모, 커밋 불필요)
+/node_modules/
+/.local/
+/.impeccable/
+/artifacts/
+FE/.hallmark/

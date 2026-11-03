@@ -8,7 +8,7 @@ describe("opinion source authority", () => {
     const opinion = { source, text: "제공된 모델 관측을 확인했습니다.", citations: ["M:USDKRW"] } as StockAiOpinion;
     render(<StockAiOpinionCard opinion={opinion} targets={new Map()} />);
     expect(screen.getByRole("heading", { name: source === "llm" ? "AI 최종 의견" : "모델·근거 요약" })).toBeInTheDocument();
-    expect(screen.getByText(/투자 권유 아님 · 방향 판단 아님/)).toBeInTheDocument();
+    expect(screen.getByText(/투자 권유 아님 · 종목 방향 판단 아님/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /환율|USDKRW/ })).not.toBeInTheDocument();
   });
 });

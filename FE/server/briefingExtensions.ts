@@ -11,11 +11,27 @@ import { newsValidationEnabled } from "./newsValidation";
 import { stockSentenceContext } from "./stockSentenceContext";
 import { recordStockSentenceRejections } from "./stockSentenceDiagnostics";
 import { OUTLOOK_STANCES, type MarketOutlook, type HeadlineSummary } from "../src/types/preOpenMacro";
+import { integratedSummaryReason } from "./stockOpinionSummary";
+import { macroComment } from "./macroCommentRules";
 
 export const OUTLOOK_CALIBRATION = { conditionalUpPct: 46.6, baselinePct: 50.6,
   note: "팀 재검증에서 직전 나스닥 상승 후 코스피 시가→종가 상승 비율은 46.6%로, 같은 표본의 전체 상승일 비율 50.6%보다 낮았습니다. 이는 일반 방향 일치율이 아닙니다. 장 초반 갭 맥락만 제한적으로 해석하고 장중 수익 방향으로 일반화하지 않습니다.",
   source: "materials/reports/macro-nasdaq-kospi/result.json#briefing_recommendation" } as const;
-type Extensions = { marketOutlook?: MarketOutlook; newsSummaries?: HeadlineSummary[]; stockOpinions?: import("../src/types/stockOpinion").StockOpinion[] };
+type Extensions = { marketOutlook?: MarketOutlook; newsSummaries?: HeadlineSummary[]; stockOpinions?: import("../src/types/stockOpinion").StockOpinion[]; stockSummaries?: StockSummaryCandidate[] };
+/** /stock AI 통합 문단 후보. 같은 Gemini 호출에서 받으며, 사실 검증은 /stock 조회 때 확정된 조각 기준으로 한다. */
+export type StockSummaryCandidate = { code: string; text: string };
+/** 같은 응답에서 확정된 시장 의견·뉴스 요약·종목 의견을 조각으로 검증해 통과한 후보만 남긴다(공개 응답에 미검증 문장을 싣지 않는다). */
+export function stockSummaryCandidates(value: unknown, input: BriefingInput, narrative: BriefingNarrative): StockSummaryCandidate[] {
+  if (!Array.isArray(value)) return [];
+  return input.stocks.slice(0, 5).flatMap(stock => {
+    const row = value.find(item => object(item) && item.code === stock.code), opinion = narrative.stockOpinions?.find(item => item.code === stock.code);
+    if (!object(row) || typeof row.text !== "string" || !opinion) return [];
+    const reason = integratedSummaryReason(row.text, { code: stock.code, name: stock.name, rank: stock.rank, poolSize: stock.poolSize, topPercent: stock.topPercent, metrics: stock.analysisMetrics ?? null, cautions: stock.cautions.map(item => item.text),
+      outlook: narrative.marketOutlook ?? null, news: narrative.newsSummaries?.find(item => item.code === stock.code) ?? null, opinion });
+    if (reason) { console.warn("[briefing] Extension field fallback", { field: `stockSummaries:${stock.code}`, reason }); return []; }
+    return [{ code: stock.code, text: row.text.normalize("NFKC").trim() }];
+  });
+}
 const object = (x: unknown): x is Record<string, any> => Boolean(x) && typeof x === "object" && !Array.isArray(x);
 const ids = (x: unknown): x is string[] => Array.isArray(x) && x.length > 0 && x.length <= 30 && x.every(v => typeof v === "string");
 const content = (x: unknown): x is string => typeof x === "string" && x.trim().length > 0 && x.length <= 1800;
@@ -30,6 +46,9 @@ export function templateExtensions(input: BriefingInput): Extensions {
       citations: stock.news.articles.map(article => article.id), source: "template" })) };
 }
 
+/** Directional stances need this many available pre-open indicators; fewer allow only 중립/판단 보류. */
+export const MIN_DIRECTIONAL_OUTLOOK_INDICATORS = 3;
+
 /** Only this field permits market-level direction/causality. Advice stays forbidden. */
 export function validateMarketOutlook(value: unknown, input: BriefingInput): string | null {
   return marketOutlookReason(value, input, true);
@@ -37,6 +56,34 @@ export function validateMarketOutlook(value: unknown, input: BriefingInput): str
 
 export function marketOutlookCitationIds(input: BriefingInput): string[] {
   return (input.macro.preOpen ?? []).filter(row => row.status === "ok").map(row => `M:${row.id}`);
+}
+
+/** Rising rates and a rising USD/KRW rate weigh on KOSPI; the other indicators point the same way as their band. */
+const INVERSE_OUTLOOK_SIGNAL_IDS = new Set(["UST10Y", "USDKRW"]);
+export type OutlookSignal = { id: string; band: string | null; signal: "상승 요인" | "하락 요인" | "중립" };
+/** Market-implied direction per available indicator, from the team-owned analysis band (not the raw sign). */
+export function marketOutlookSignals(input: BriefingInput): OutlookSignal[] {
+  return (input.macro.preOpen ?? []).filter(row => row.status === "ok").map(row => {
+    // Older cached inputs lack a band; recompute it with the same team-owned rule.
+    const band = row.comment?.band ?? macroComment(row).band ?? null;
+    const raw = band === null || band === "보합" ? 0 : band.includes("상승") ? 1 : -1;
+    const value = INVERSE_OUTLOOK_SIGNAL_IDS.has(row.id) ? -raw : raw;
+    return { id: `M:${row.id}`, band, signal: value > 0 ? "상승 요인" : value < 0 ? "하락 요인" : "중립" };
+  });
+}
+/** A directional stance needs at least MIN_DIRECTIONAL_OUTLOOK_INDICATORS agreeing signals that are also a majority of available ones. */
+export function allowedOutlookStances(input: BriefingInput): string[] {
+  const signals = marketOutlookSignals(input), stances = ["중립", "판단 보류"];
+  for (const [stance, signal] of [["하락 우위", "하락 요인"], ["상승 우위", "상승 요인"]] as const) {
+    const agreeing = signals.filter(row => row.signal === signal).length;
+    if (agreeing >= MIN_DIRECTIONAL_OUTLOOK_INDICATORS && agreeing * 2 > signals.length) stances.unshift(stance);
+  }
+  return stances;
+}
+/** The 46.6%/50.6% calibration is conditional on a prior-session NASDAQ rise. */
+export function outlookCalibrationApplies(input: BriefingInput): boolean {
+  const nasdaq = input.macro.preOpen?.find(row => row.id === "NASDAQ" && row.status === "ok");
+  return Boolean(nasdaq && nasdaq.change !== null && nasdaq.change > 0);
 }
 
 export function marketOutlookReason(value: unknown, input: BriefingInput, requireStance: boolean): string | null {
@@ -66,6 +113,10 @@ export function marketOutlookReason(value: unknown, input: BriefingInput, requir
   const localInput = { ...input, model: null, stocks: [], macro: { ...input.macro, indicators: input.macro.indicators.map(row => ({ ...row, status: "unavailable" as const, value: null, change: null, changePct: null })) } };
   if (!groundedNumbers(normalized, localInput, { outlook: true }) || !locallyGrounded(normalized, localInput)) return "ungrounded_number";
   if (requireStance && !normalized.includes(value.stance) || OUTLOOK_STANCES.some(stance => stance !== value.stance && normalized.includes(stance))) return "stance_mismatch";
+  // Checked last so content-specific reasons stay visible in diagnostics.
+  if (/(?<![\d.])(?:46\.6|50\.6)\s*%/.test(normalized) && !outlookCalibrationApplies(input)) return "calibration_mismatch";
+  if ((value.stance === "상승 우위" || value.stance === "하락 우위") && !allowedOutlookStances(input).includes(value.stance))
+    return available.size < MIN_DIRECTIONAL_OUTLOOK_INDICATORS ? "insufficient_indicators" : "mixed_signals";
   return null;
 }
 
@@ -177,13 +228,17 @@ export function selectHeadlineSummary(value: unknown, input: BriefingInput, inde
 export function applyNarrativeExtensions(base: BriefingNarrative, value: unknown, input: BriefingInput): BriefingNarrative {
   const candidate = object(value) ? value : {}, fallback = templateExtensions(input);
   base = { ...base, stockOpinions: stockOpinions(candidate.stockOpinions, input) };
+  const withSummaries = (result: BriefingNarrative): BriefingNarrative => {
+    const { stockSummaries: _previous, ...rest } = result, stockSummaries = stockSummaryCandidates(candidate.stockSummaries, input, result);
+    return stockSummaries.length ? { ...rest, stockSummaries } : rest;
+  };
   // Optional legacy omissions do not change existing status semantics. Valid new fields
   // still survive even if every older field failed its independent validation.
   const opinionState = (result: BriefingNarrative): BriefingNarrative => base.stockOpinions?.some(row => row.source === "llm")
     ? { ...result, status: "llm", llmModel: base.llmModel,
       fallbackReason: result.status === "template" || base.stockOpinions.some(row => row.source === "template") ? "partial_template" : result.fallbackReason }
     : { ...result, llmModel: result.status === "llm" ? result.llmModel : null };
-  if (!input.macro.preOpen) return opinionState(base);
+  if (!input.macro.preOpen) return withSummaries(opinionState(base));
   const outlook = candidate.marketOutlook;
   const selectedOutlook = selectMarketOutlook(outlook, input);
   const outlookReason = selectedOutlook ? null : validateMarketOutlook(outlook, input);
@@ -200,13 +255,13 @@ export function applyNarrativeExtensions(base: BriefingNarrative, value: unknown
   const sources = [base.fieldSources?.overview ?? (base.status === "llm" ? "llm" : "template"), base.fieldSources?.marketNote ?? (base.status === "llm" ? "llm" : "template"),
     ...base.stocks.map(stock => stock.source ?? (base.status === "llm" ? "llm" : "template")), marketOutlook.source, ...newsSummaries.map(row => row.source)];
   const status = sources.includes("llm") ? "llm" : "template";
-  return opinionState({ ...base, marketOutlook, newsSummaries, status, llmModel: status === "llm" ? base.llmModel : null,
-    fallbackReason: status === "llm" && sources.includes("template") ? "partial_template" : status === "llm" ? null : base.fallbackReason ?? "invalid_schema" });
+  return withSummaries(opinionState({ ...base, marketOutlook, newsSummaries, status, llmModel: status === "llm" ? base.llmModel : null,
+    fallbackReason: status === "llm" && sources.includes("template") ? "partial_template" : status === "llm" ? null : base.fallbackReason ?? "invalid_schema" }));
 }
 
 /** New response keys do not weaken the exact legacy shape check for other fields. */
 export function baseNarrativeCandidate(value: unknown): unknown {
   if (!object(value)) return value;
-  const { marketOutlook: _outlook, newsSummaries: _news, stockOpinions: _opinions, ...base } = value;
+  const { marketOutlook: _outlook, newsSummaries: _news, stockOpinions: _opinions, stockSummaries: _summaries, ...base } = value;
   return base;
 }

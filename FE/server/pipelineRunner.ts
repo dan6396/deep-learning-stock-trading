@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { StringDecoder } from "node:string_decoder";
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pipelineOutputDir, pipelineProjectRoot, writePipelineRunMarker } from "./pipelineFreshness";
@@ -74,9 +75,23 @@ function cleanLogLine(value: string): string {
   return value.replace(/\s+/g, " ").trim().slice(0, 240);
 }
 
-function publicCandidateAnalysisError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/timed out|timeout|시간이 초과/i.test(message)) {
+/**
+ * The line that actually failed. A failed child returns its whole stderr+stdout tail, and progress
+ * banners such as "정렬/현재가 조회 없음" must never decide the category of an unrelated failure.
+ */
+function failureLine(message: string): string {
+  const lines = message.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (lines.length <= 1) return lines[0] ?? "";
+  // integrated_pipeline reports its own failures as "[FATAL] …"; Python tracebacks end in "XxxError: …".
+  return lines.find(line => line.startsWith("[FATAL]")) ?? [...lines].reverse().find(line => /^[A-Za-z_][\w.]*(?:Error|Exception)(?::|$)/.test(line)) ?? "";
+}
+
+export function publicCandidateAnalysisError(error: unknown): string {
+  const message = failureLine(error instanceof Error ? error.message : String(error));
+  if (/KIS 지수 이력 수집 실패/.test(message)) {
+    return "KIS 지수 이력을 가져오지 못했습니다. 현재 모의·실전 환경에 맞는 KIS 인증 설정과 호출 한도를 확인한 뒤 다시 실행하세요.";
+  }
+  if (/AI candidate analysis timed out after|시간이 초과/i.test(message)) {
     return "AI 후보 분석 시간이 초과되었습니다. 잠시 후 다시 실행하거나 서버 콘솔에서 병목 단계를 확인하세요.";
   }
   if (/not found|없음|not updated|찾지 못|결과 파일/i.test(message)) {
@@ -260,6 +275,22 @@ function tail(value: string): string {
   return value.length > MAX_LOG_CHARS ? value.slice(value.length - MAX_LOG_CHARS) : value;
 }
 
+export function sanitizePipelineLog(value: string): string {
+  return value.replace(/로그인[ \t]*ID[ \t]*:[^\r\n]*/g, "로그인 ID: ***");
+}
+
+/** Keep incomplete lines private until a split login label/value can be redacted. */
+export function createPipelineLogSanitizer(): (text: string, final?: boolean) => string {
+  let pending = "";
+  return (text, final = false) => {
+    pending += text;
+    const end = final ? pending.length : pending.lastIndexOf("\n") + 1;
+    const safe = sanitizePipelineLog(pending.slice(0, end));
+    pending = pending.slice(end);
+    return safe;
+  };
+}
+
 function pipelineEnv(env: Record<string, string | undefined>, modelOnly = false): Record<string, string | undefined> {
   const next: Record<string, string | undefined> = {
     ...env,
@@ -326,33 +357,42 @@ function runProcess(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    const stdoutDecoder = new StringDecoder("utf8"), stderrDecoder = new StringDecoder("utf8");
+    const sanitizeStdout = createPipelineLogSanitizer(), sanitizeStderr = createPipelineLogSanitizer();
+    const consume = (text: string, isStderr: boolean) => {
+      if (!text) return;
+      if (isStderr) stderr = tail(stderr + text);
+      else stdout = tail(stdout + text);
+      onOutput?.(text);
+      const trimmed = text.replace(/\s+$/, "");
+      if (trimmed) {
+        if (isStderr) console.error(`[pipeline] ${trimmed}`);
+        else console.log(`[pipeline] ${trimmed}`);
+      }
+    };
+    const flush = () => {
+      consume(sanitizeStdout(stdoutDecoder.end(), true), false);
+      consume(sanitizeStderr(stderrDecoder.end(), true), true);
+    };
 
     const timer = globalThis.setTimeout(() => {
       if (!settled) {
         child.kill("SIGTERM");
+        flush();
         settled = true;
         rejectRun(new Error(`AI candidate analysis timed out after ${timeoutMs}ms.`));
       }
     }, timeoutMs);
 
     child.stdout.on("data", (chunk) => {
-      const text = chunk.toString();
-      stdout = tail(stdout + text);
-      onOutput?.(text);
-      // Stream progress to the dev console so a long run isn't a silent black box.
-      const trimmed = text.replace(/\s+$/, "");
-      if (trimmed) {
-        console.log(`[pipeline] ${trimmed}`);
-      }
+      if (settled) return;
+      consume(sanitizeStdout(stdoutDecoder.write(ArrayBuffer.isView(chunk)
+        ? new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength) : chunk.toString())), false);
     });
     child.stderr.on("data", (chunk) => {
-      const text = chunk.toString();
-      stderr = tail(stderr + text);
-      onOutput?.(text);
-      const trimmed = text.replace(/\s+$/, "");
-      if (trimmed) {
-        console.error(`[pipeline] ${trimmed}`);
-      }
+      if (settled) return;
+      consume(sanitizeStderr(stderrDecoder.write(ArrayBuffer.isView(chunk)
+        ? new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength) : chunk.toString())), true);
     });
 
     child.on("error", (error) => {
@@ -361,7 +401,8 @@ function runProcess(
       }
       settled = true;
       globalThis.clearTimeout(timer);
-      rejectRun(error);
+      flush();
+      rejectRun(new Error(sanitizePipelineLog(error.message)));
     });
 
     child.on("close", (code) => {
@@ -370,6 +411,7 @@ function runProcess(
       }
       settled = true;
       globalThis.clearTimeout(timer);
+      flush();
 
       if (code === 0) {
         resolveRun();
@@ -389,7 +431,7 @@ async function executeCandidateAnalysis(env = process.env, startedAt = Date.now(
     await prepareCompletedResults(env).catch(() => {});
     await beginRun(identity.runId, identity.kind, analysisMode(env), startedAt, env);
     const result = await executeCandidatePipeline(env, startedAt, identity);
-    updateCandidateAnalysisProgress(progressSnapshot(7, 99, "AI 요약 생성 중 · 현재 결과는 그대로 표시합니다."));
+    updateCandidateAnalysisProgress(progressSnapshot(7, 99, "AI 요약 생성 중 · AI가 요약을 생성하고 있습니다."));
     const stagedMarker = { status: "completed" as const, mode: analysisMode(env), ...identity, startedAt, finishedAt: Date.now(), rows: result.rows, newsRows: result.newsRows };
     // The execution lock stays held through this single attempt, including timeout/cooldown fallbacks.
     const prepared = await prepareRunBriefing(stagedMarker, env).catch(() => {
@@ -610,7 +652,7 @@ export function startCandidateAnalysis(env = process.env): CandidateAnalysisStat
         runState = { status: "completed", startedAt, finishedAt: Date.now(), progress, result };
       })
       .catch((error: unknown) => {
-        const privateMessage = error instanceof Error ? error.message : String(error);
+        const privateMessage = sanitizePipelineLog(error instanceof Error ? error.message : String(error));
         const publicMessage = publicCandidateAnalysisError(error);
         console.error(`[pipeline] Candidate analysis failed: ${privateMessage}`);
         const progress =

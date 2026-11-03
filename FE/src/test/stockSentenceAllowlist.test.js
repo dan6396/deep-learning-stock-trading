@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { checkStockSentence, neutralTopicReason, normalizeSentence, STOCK_SENTENCE_FORMS } from "../../server/stockSentenceAllowlist";
 import { stockOpinionSentenceReason } from "../../server/stockOpinion";
 import { headlineSentenceReason, validateMarketOutlook } from "../../server/briefingExtensions";
+import { withOutlookIndicators } from "./fixtures/outlookIndicators";
 
 const stock = { code: "030200", name: "KT", rank: 1, poolSize: 199, topPercent: .5, rankScore: 1.7031,
   evidence: [{ id: "E:030200:1", kind: "model", text: "모델 순위 1위입니다." }], cautions: [{ id: "C:030200:1", kind: "data", text: "모델 기준일은 2026-10-27이며 오늘 날짜와 다릅니다." }],
@@ -85,7 +86,7 @@ describe("additional gate in both production sentence validators", () => {
   });
   it("preserves the direction exception exclusively in marketOutlook", () => {
     const data = { ...input, macro: { indicators: [], preOpen: [{ id: "NASDAQ", name: "나스닥", status: "ok", value: 100, change: 1, changePct: 1, unit: "pt", history: [] }] } };
-    expect(validateMarketOutlook({ stance: "상승 우위", text: "나스닥 관측을 바탕으로 코스피 장 초반은 상승 우위로 판단합니다.", citations: ["M:NASDAQ"] }, data)).toBeNull();
+    expect(validateMarketOutlook({ stance: "상승 우위", text: "나스닥 관측을 바탕으로 코스피 장 초반은 상승 우위로 판단합니다.", citations: ["M:NASDAQ"] }, withOutlookIndicators(data))).toBeNull();
   });
 });
 

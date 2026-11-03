@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const disk = vi.hoisted(() => new Map());
 vi.mock("node:fs/promises", () => { const api = { readFile: vi.fn(async path => { if (!disk.has(path)) throw Error("missing"); return disk.get(path); }), mkdir: vi.fn(), writeFile: vi.fn(async (path, value) => disk.set(path, value)), rename: vi.fn(async (from, to) => { disk.set(to, disk.get(from)); disk.delete(from); }) }; return { ...api, default: api }; });
 import { stockOpinionMetrics } from "../../server/stockOpinionMetrics";
-import { stockOpinionSentenceReason, validateStockOpinion, selectStockOpinion, stockOpinionCitationIds } from "../../server/stockOpinion";
+import { stockOpinionSentenceReason, validateStockOpinion, selectStockOpinion, stockOpinionCitationIds, STOCK_OPINION_MIN_SENTENCES } from "../../server/stockOpinion";
 import { groundedNumbers } from "../../server/briefingValidation";
 import { createNarrativeStore } from "../../server/briefingNarrative";
 import { createStockInsightService } from "../../server/stockInsight";
@@ -62,6 +62,22 @@ describe("expanded stock opinion context", () => {
     expect(stockOpinionSentenceReason("나스닥은 0.13%p 하락했습니다.", data, 0)).toBe("ungrounded_number");
     expect(stockOpinionSentenceReason("금리는 0.13%p 상승했습니다.", data, 0)).toBeNull();
   });
+  it("rounds analysis percentiles in the prompt so the model cannot echo raw floats", async () => {
+    const data = input(), content = { overview: "시장 관측입니다.", marketNote: "자료입니다.", stocks: [{ code: "005930", summary: "모델 순위 1위입니다.", citations: ["R:005930"] }], citations: ["R:005930"], stockOpinions: [opinion()] };
+    data.model = { modelId: "fixture", baseDate: "2026-10-27", poolSize: 199, scoreKind: "rank_zscore", predictionTarget: "next_session_open_to_close", runStartedAt: null };
+    const metrics = data.stocks[0].analysisMetrics;
+    metrics.lookbacks[0].topPercent = 1.0050251256281406; metrics.features[0].percentile = 17.587939698492463; metrics.features[0].tailPercent = 17.587939698492463;
+    const transport = vi.fn(async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(content) }] } }] }) }));
+    await createNarrativeStore({ transport }).resolve(data, true, { PIPELINE_OUTPUT_DIR: "fixture", GEMINI_API_KEY: "fixture" });
+    const sent = JSON.parse(JSON.parse(transport.mock.calls[0][1].body).contents[0].parts[0].text).inputData.stocks[0].analysisMetrics;
+    expect(sent.lookbacks[0].topPercent).toBe(1.01);
+    expect(sent.features[0]).toMatchObject({ percentile: 17.59, tailPercent: 17.59 });
+    for (const value of [...sent.lookbacks.map(row => row.topPercent), ...sent.features.flatMap(row => [row.percentile, row.tailPercent])]) expect(String(value)).toMatch(/^\d+(?:\.\d{1,2})?$/);
+    // The original input is not mutated, and the rounded value the model may quote is accepted.
+    expect(metrics.features[0].percentile).toBe(17.587939698492463);
+    expect(groundedNumbers("상대강도 지표는 하위 17.59%입니다.", data, { stockOpinion: true })).toBe(true);
+    expect(groundedNumbers("상대강도 지표는 하위 17.587939698492463%입니다.", data, { stockOpinion: true })).toBe(false);
+  });
   it("sends expanded context in the existing single call without exposing raw predictions", async () => {
     const data = input(), content = { overview: "시장 관측입니다.", marketNote: "자료입니다.", stocks: [{ code: "005930", summary: "모델 순위 1위입니다.", citations: ["R:005930"] }], citations: ["R:005930"], stockOpinions: [opinion()] };
     data.model = { modelId: "fixture", baseDate: "2026-10-27", poolSize: 200, scoreKind: "rank_zscore", predictionTarget: "next_session_open_to_close", runStartedAt: null };
@@ -74,6 +90,12 @@ describe("expanded stock opinion context", () => {
     expect(body.systemInstruction.parts[0].text).toContain("허용 문형 예시");
     expect(body.systemInstruction.parts[0].text).toContain("해당 기사는 {approvedTopic}를 다룬 기사입니다.");
     expect(body.systemInstruction.parts[0].text).toContain("본문(없으면 발췌, 없으면 제목)");
+    // The prompt must not demand more sentences than the validator requires, and must scope calibration numbers.
+    const instruction = body.systemInstruction.parts[0].text;
+    expect(instruction).toContain(`최소 ${STOCK_OPINION_MIN_SENTENCES.withMetrics}문장(analysisMetrics가 없으면 ${STOCK_OPINION_MIN_SENTENCES.withoutMetrics}문장)까지 허용`);
+    expect(instruction).toContain("이 두 수치는 marketOutlook에서만, 이 비교 형태 그대로 인용할 수 있고 다른 필드에는 쓰지 마세요");
+    expect(instruction).toContain("inputData.outlookCitationIds가 3개 미만이면 상승 우위·하락 우위는 고를 수 없으며 판단 보류를 고르세요");
+    expect(instruction).not.toMatch(/\$\{|분석 의견를|장전 5종/);
   });
   it("retains SP500 as data only and excludes it from every model/citation/template path", async () => {
     const data = input(); data.macro.indicators.push({ id: "SP500", name: "S&P 500", status: "ok", value: 9999, change: 99, changePct: 9, unit: "pt" });

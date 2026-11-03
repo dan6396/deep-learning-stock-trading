@@ -4,6 +4,7 @@ import { headlineSentenceReason, selectHeadlineSummary, validateMarketOutlook } 
 import { forbiddenStockNewsForecast } from "../../server/stockNewsLanguage";
 import { stockFactAnchor } from "../../server/stockFactAnchors";
 import { extractArticleText } from "../../server/articleText";
+import { withOutlookIndicators } from "./fixtures/outlookIndicators";
 
 const id = "N:005930:1", data = { newsValidation: "on", model: null, macro: { indicators: [], preOpen: [{ id: "NASDAQ", name: "나스닥", status: "ok", unit: "pt", value: 100, change: 1, changePct: 1, fiveDayChange: 2, fiveDayChangePct: 2, history: [] }] }, stocks: [{ code: "005930", name: "삼성전자", rank: 1, rankScore: 1.7, poolSize: 200, topPercent: .5, evidence: [{ id: "E:005930:1", kind: "model", text: "모델 순위 1위입니다." }], cautions: [], news: { articles: [{ id, title: "삼성전자 공시 및 서비스 개편 발표", source: "경제지", url: "https://paper.example/a" }] } }] };
 const citations = ["R:005930", "E:005930:1", id, "M:NASDAQ"];
@@ -50,7 +51,7 @@ describe("sentence fact allowlist supplements stock/news deny rules", () => {
     expect(selectHeadlineSummary({ code: "005930", text: "공시를 다룬 기사입니다. 설명입니다.", citations: [id] }, data, 0)).toBeNull();
   });
   it("preserves market-level direction in marketOutlook", () => {
-    expect(validateMarketOutlook({ stance: "상승 우위", text: "나스닥 상승 흐름을 살펴 코스피 장 초반은 상승 우위로 판단합니다.", citations: ["M:NASDAQ"] }, data)).toBeNull();
+    expect(validateMarketOutlook({ stance: "상승 우위", text: "나스닥 상승 흐름을 살펴 코스피 장 초반은 상승 우위로 판단합니다.", citations: ["M:NASDAQ"] }, withOutlookIndicators(data))).toBeNull();
   });
   it("preserves offsets for Unicode casing and treats HTML void elements as void", () => {
     const body = "공시와 서비스 개편을 설명한 기사 본문입니다. ".repeat(12);

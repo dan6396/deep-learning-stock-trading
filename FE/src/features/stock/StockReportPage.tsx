@@ -122,8 +122,8 @@ function StockReport({ code }: { code: string }) {
       <ReportChart key={code} code={code} />
     </section>
 
-    <StockAiOpinionCard opinion={insight.data?.aiOpinion} news={insight.data?.news} targets={citationTargets} />
-    {(detail || insight.data) && <StockNewsCard articles={articles} news={insight.data?.news} targets={citationTargets} showSummary={!insight.data?.aiOpinion} />}
+    <StockAiOpinionCard opinion={insight.data?.aiOpinion} targets={citationTargets} />
+    {(detail || insight.data) && <StockNewsCard articles={articles} news={insight.data?.news} targets={citationTargets} />}
 
     {/* 3. 모델 순위 요약 한 줄 */}
     <section id={`report-model-card-${code}`} tabIndex={-1} className="report-card report-model-card stock-citation-target" data-report-signal={signals ? "model" : undefined} aria-labelledby="report-model-title">

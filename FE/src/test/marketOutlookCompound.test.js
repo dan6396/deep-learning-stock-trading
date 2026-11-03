@@ -3,6 +3,7 @@ import { templateNarrative } from "../../server/briefingNarrative";
 import { describe, expect, it } from "vitest";
 import { futuresSupplyClaimsGrounded, groundedNumbers, supplyClauses } from "../../server/briefingValidation";
 import { validateMarketOutlook, selectMarketOutlook, applyNarrativeExtensions } from "../../server/briefingExtensions";
+import { withOutlookIndicators } from "./fixtures/outlookIndicators";
 
 const sentence = "또한 코스피200 선물 외국인 순매수는 2026-10-27 기준 670계약으로 4거래일 연속 순매수이자 5일 합계 4,218계약 순매수를 기록해 우호적인 수급을 나타냈습니다.";
 function input() { return { model: null, stocks: [], macro: { asOf: null, indicators: [], preOpen: [{ id: "KOSPI200_FOREIGN_FUTURES", name: "코스피200 선물 외국인 순매수", status: "ok", unit: "계약", value: 670, change: null, changePct: null, fiveDayChange: null, fiveDayChangePct: null,
@@ -10,7 +11,7 @@ function input() { return { model: null, stocks: [], macro: { asOf: null, indica
 const opinion = text => ({ stance: "상승 우위", text, citations: ["M:KOSPI200_FOREIGN_FUTURES"] });
 describe("composed foreign futures observations", () => {
   it("keeps metric subjects through dated latest/streak/aggregate clauses", () => {
-    const data = input(), flow = data.macro.preOpen[0];
+    const data = withOutlookIndicators(input()), flow = data.macro.preOpen[0];
     expect(supplyClauses(sentence)).toHaveLength(3);
     expect(futuresSupplyClaimsGrounded(sentence, flow)).toBe(true);
     expect(groundedNumbers(sentence, data, { outlook: true })).toBe(true);
@@ -27,7 +28,7 @@ describe("composed foreign futures observations", () => {
     expect(validateMarketOutlook(opinion(text + " 장 초반은 상승 우위입니다."), input())).not.toBeNull();
   });
   it("removes an unsafe sentence only if two safe sentences including the stance survive", () => {
-    const data = input(), safe = "외국인 선물은 직전일 670계약 순매수입니다. 장 초반은 상승 우위입니다.";
+    const data = withOutlookIndicators(input()), safe = "외국인 선물은 직전일 670계약 순매수입니다. 장 초반은 상승 우위입니다.";
     expect(selectMarketOutlook(opinion(safe + " 외국인 현물도 순매수입니다."), data)).toMatchObject({ source: "llm", text: safe });
     expect(selectMarketOutlook(opinion("외국인 현물도 순매수입니다. 장 초반은 상승 우위입니다."), data)).toBeNull();
     expect(selectMarketOutlook(opinion("외국인 선물은 직전일 670계약 순매수입니다. 관측 자료입니다. 매수해야 상승 우위입니다."), data)).toBeNull();
@@ -35,7 +36,7 @@ describe("composed foreign futures observations", () => {
     expect(selectMarketOutlook({ ...opinion(safe), citations: ["M:missing"] }, data)).toBeNull();
   });
   it("allows qualitative market direction without inventing numerical probability or stock advice", () => {
-    const data = input(), safe = "외국인 선물은 직전일 670계약 순매수로 우호적인 수급을 나타냈습니다. 코스피 장 초반은 상승 우위로 출발할 가능성이 있습니다.";
+    const data = withOutlookIndicators(input()), safe = "외국인 선물은 직전일 670계약 순매수로 우호적인 수급을 나타냈습니다. 코스피 장 초반은 상승 우위로 출발할 가능성이 있습니다.";
     expect(validateMarketOutlook(opinion(safe), data)).toBeNull();
     for (const text of [safe + " 상승 확률은 70%입니다.", safe + " 종목을 매수하세요."]) expect(validateMarketOutlook(opinion(text), data)).not.toBeNull();
   });
