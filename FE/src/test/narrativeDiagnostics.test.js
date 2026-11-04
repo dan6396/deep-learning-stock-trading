@@ -26,6 +26,26 @@ describe("generation diagnostics contain metadata only", () => {
     expect(request.systemInstruction.parts[0].text).toContain("자기 말로 요약");
     expect(request.systemInstruction.parts[0].text).toContain("원문 문장을 길게 그대로 옮기지");
   });
+  it("omits chart history, article URLs and provider names from the prompt only", async () => {
+    const data = input();
+    const point = { date: "2026-10-27", value: 2499.123456 };
+    data.macro.indicators = [{ id: "KOSPI", name: "코스피", value: 2500, change: 1, changePct: .1, unit: "pt", status: "ok", history: [point, point] }];
+    data.macro.preOpen = [{ id: "NASDAQ", name: "나스닥", unit: "pt", status: "ok", value: 18000, change: -100, changePct: -.55, fiveDayChange: -100, fiveDayChangePct: -.55, history: [point], comment: { text: "관측 자료입니다." } }];
+    const before = structuredClone(data);
+    const transport = vi.fn(async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(raw()) }] } }] }) }));
+    await createNarrativeStore({ transport }).resolve(data, true, { PIPELINE_OUTPUT_DIR: dir + "-slim", GEMINI_API_KEY: "fixture" });
+    const request = JSON.parse(transport.mock.calls[0][1].body), sent = JSON.parse(request.contents[0].parts[0].text).inputData;
+    // Kept deliberately: without it, gemini-3.6-flash moved stock-opinion-only metrics into summaries (2026-11-04).
+    expect(request.generationConfig).toMatchObject({ temperature: 0.1, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "LOW" } });
+    expect(sent.macro.indicators[0]).not.toHaveProperty("history"); expect(sent.macro.preOpen[0]).not.toHaveProperty("history");
+    expect(sent.stockOpinionMarketFacts[0]).not.toHaveProperty("history");
+    expect(sent.stocks[0].news.articles[0]).not.toHaveProperty("url");
+    expect(sent.stocks[0].news.articles[0]).toMatchObject({ id, title: expect.any(String) });
+    expect(sent.stocks[0].news.articles[0]).not.toHaveProperty("source");
+    expect(sent.macro.preOpen[0]).not.toHaveProperty("source"); expect(sent.macro.preOpen[0].comment).not.toHaveProperty("ruleId");
+    expect(JSON.stringify(sent)).not.toMatch(/paper\.example|2499\.12/);
+    expect(data).toEqual(before);
+  });
   it("writes an archive per generation and an atomic latest file without private/model/title text", async () => {
     rememberArticleExcerpt(dir, "https://paper.example/private", "PRIVATE_EXCERPT_SENTINEL 계약 규모는 120억원이며 서비스 공개를 발표했다는 검색 결과입니다.");
     const transport = vi.fn(async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(raw()) }] } }] }) }));

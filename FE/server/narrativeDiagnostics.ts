@@ -15,6 +15,23 @@ const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 /** Explicit projection only. Never return model sentences, article titles, body or
  * excerpt strings, source offsets, URLs, directory paths or provider responses. */
 export function narrativeGenerationDiagnostics(value: unknown, input: BriefingInput, result: BriefingNarrative, at: number, failure?: string) {
+  if (result.validation === "off") {
+    const field = (name: string, code: string | null, text: string, source: string) => ({ field: name, code, source,
+      validation: "off", fieldReason: null, modelSentenceCount: opinionSentences(text).length,
+      acceptedSentenceCount: source === "llm" ? opinionSentences(text).length : 0,
+      sentences: opinionSentences(text).slice(0, 20).map((sentence, i) => ({ sentence: i + 1, length: sentence.length,
+        hash: hash(sentence), reason: "validation_disabled", accepted: source === "llm" })) });
+    return { version: 1, policyVersion: "off", generatedAt: new Date(at).toISOString(), inputHash: result.inputHash,
+      generationStatus: failure ?? "completed", excerptLookup: input.articleExcerptLookupStats ?? null, fields: [
+        field("overview", null, result.overview, result.fieldSources?.overview ?? "template"),
+        field("marketNote", null, result.marketNote, result.fieldSources?.marketNote ?? "template"),
+        ...result.stocks.map(row => field("stocks", row.code, row.summary, row.source ?? "template")),
+        ...(result.marketOutlook ? [field("marketOutlook", null, result.marketOutlook.text, result.marketOutlook.source ?? "template")] : []),
+        ...(result.newsSummaries ?? []).map(row => field("newsSummaries", row.code, row.text, row.source ?? "template")),
+        ...(result.stockOpinions ?? []).map(row => field("stockOpinions", row.code, row.text, row.source)),
+        ...(result.stockSummaries ?? []).map(row => field("stockSummaries", row.code, row.text, "llm")),
+      ] };
+  }
   const raw = object(value), passages = createArticlePassageGuard(input);
   const citationDiagnostics = (values: unknown, allowed: string[]) => {
     const known = new Set([...input.macro.indicators, ...(input.macro.preOpen ?? [])].map(row => `M:${row.id}`));

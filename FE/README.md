@@ -1,4 +1,4 @@
-﻿# 최종 모델 웹 화면
+# 최종 모델 웹 화면
 
 ## 운영 서버와 관리자 인증
 
@@ -77,7 +77,9 @@ KIS 공통 스로틀 `KIS_MAX_RPS`는 실전/모의 모두 기본 1건/초이며
 
 지표 ID는 `KOSPI200_NIGHT`이며 `source="kis"`, `unit="pt"`, `session="open"|"closed"|null`을 제공합니다. 야간 범위는 KST 18:00~익일 06:00이며 자정 이후 요청·응답의 24~30시 표기를 정규화합니다. 종료봉 30:00:00까지 허용하고 미래·주간·오래된 관측은 제외합니다.
 
-서버 환경의 `GEMINI_API_KEY`로 Gemini를 활성화하고 `GEMINI_BRIEFING_MODEL`(기본 `gemini-3.8-flash`)로 모델을 지정합니다. 키는 FE 클라이언트 환경 변수에 넣지 않습니다. 매크로 캐시는 `BRIEFING_MACRO_CACHE_TTL_MS`(기본 600000), Gemini 설명 캐시는 실행·TOP5·공개한 수급·주의·기사 상태/id/제목/URL/출처 기준이며 생성 당시 매크로 스냅샷을 `outputs/briefing-narrative.json`에 원자적으로 보관합니다. 새 매크로와 다르면 `macroStale`로 표시하고 성공 후 최소 10분·실패 후 60초 간격을 적용합니다. 자세한 필드와 실패 계약은 [API 계약](docs/api-contract.md)을 따릅니다.
+브리핑의 서버 내용 검증은 기본 해제입니다. 문장 규칙은 `systemInstruction`으로만 전달하고, 생성·캐시·종목 페이지에서 내용 때문에 문장을 제거하거나 템플릿으로 바꾸지 않습니다. JSON 파싱·필수 구조 정규화·키 노출 방지·시간 제한은 유지합니다. `BRIEFING_NARRATIVE_VALIDATION=on`이면 종전 내용 검증을 복구합니다.
+
+서버 환경의 `GEMINI_API_KEY`로 Gemini를 활성화하고 `GEMINI_BRIEFING_MODEL`(기본 `gemini-3.5-flash-lite`)로 모델을 지정합니다. 키는 FE 클라이언트 환경 변수에 넣지 않습니다. 매크로 캐시는 `BRIEFING_MACRO_CACHE_TTL_MS`(기본 600000), Gemini 설명 캐시는 실행·TOP5·공개한 수급·주의·기사 상태/id/제목/URL/출처 기준이며 생성 당시 매크로 스냅샷을 `outputs/briefing-narrative.json`에 원자적으로 보관합니다. 새 매크로와 다르면 `macroStale`로 표시하고 성공 후 최소 10분·실패 후 60초 간격을 적용합니다. 자세한 필드와 실패 계약은 [API 계약](docs/api-contract.md)을 따릅니다.
 
 `narrative.macroAsOf`는 설명 생성에 사용한 매크로 기준 시각, `macroStale`은 현재 관측과 스냅샷의 값·시각·문맥이 다른지 나타냅니다. GET은 오래된 설명도 이 표시와 함께 유지합니다. Gemini는 `thinkingLevel="LOW"`, `includeThoughts=false`, 출력 최대 3072토큰, temperature 0.1이며 호출 최대 35초입니다. POST 전체 예산은 준비 조회·업종을 포함해 45초, FE 요청 제한은 60초입니다. 준비 조회는 최대 9초 후 확보한 데이터·캐시·미수집 기본값을 사용합니다.
 

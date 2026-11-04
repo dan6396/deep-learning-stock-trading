@@ -80,7 +80,9 @@ describe("briefing narrative guard", () => {
     expect(result.overview).toContain("4.95%"); expect(result.stocks[0].source).toBe("llm"); expect(result.marketNote).toBe(value.marketNote);
     const body = JSON.parse(transport.mock.calls[0][1].body), passed = JSON.parse(body.contents[0].parts[0].text).inputData;
     expect(body.systemInstruction.parts[0].text).toContain("환율은 원, 지수는 pt, 금리는 %(소수 2자리)");
-    expect(passed.macro.indicators.find(row => row.id === "UST10Y")).toMatchObject({ value: 4.95, display: { value: "4.95%" } });
+    // Raw numbers are sent once, as display strings.
+    expect(passed.macro.indicators.find(row => row.id === "UST10Y")).toMatchObject({ display: { value: "4.95%" } });
+    expect(passed.macro.indicators.find(row => row.id === "UST10Y")).not.toHaveProperty("value");
     expect(passed.macro.indicators.find(row => row.id === "USDKRW").display.value).toBe("1,324.92원");
     expect(validateNarrative({ ...content(), marketNote: "미국 국채 10년 금리 4.95%, 원·달러 환율 1,324.92원입니다." }, data)).toBeNull();
   });

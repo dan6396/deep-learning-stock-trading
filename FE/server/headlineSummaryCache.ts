@@ -6,11 +6,14 @@ import { pipelineOutputDir } from "./pipelineFreshness";
 import { selectHeadlineSummary } from "./briefingExtensions";
 import { readCachedJsonFile } from "./cachedJsonFile";
 import { articleBodyHashes, articleExcerptHashes, cachedArticleContext } from "./articlePrivacy";
+import { narrativeValidationEnabled } from "./narrativePassthrough";
 
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 /** Both views use the same sentence selection and citation/number checks. */
 export function currentHeadlineSummary(value: unknown, input: BriefingInput, index: number): HeadlineSummary | null {
+  if (object(value) && value.validation === "off" && input.newsValidation !== "on" && value.source === "llm"
+    && value.code === input.stocks[index]?.code && typeof value.text === "string" && value.text.trim()) return value as HeadlineSummary;
   if (object(value) && (input.newsValidation !== "on") !== (value.validation === "off")) return null;
   return object(value) && value.source === "llm" ? selectHeadlineSummary(value, input, index) : null;
 }
@@ -61,7 +64,7 @@ export async function readCachedHeadlineSummaries(input: BriefingInput, env: Rec
 }
 export async function readCachedHeadlineRecord(input: BriefingInput, env: Record<string, string | undefined>): Promise<{ summaries: HeadlineSummary[]; generatedAt: string; llmModel: string | null }> {
   try {
-    input = { ...input, newsValidation: configuredNewsValidation(env), ...await cachedArticleContext(input, pipelineOutputDir(env)) };
+    input = { ...input, newsValidation: narrativeValidationEnabled(env) ? configuredNewsValidation(env) : "off", ...await cachedArticleContext(input, pipelineOutputDir(env)) };
     const value = await readCachedJsonFile(join(pipelineOutputDir(env), "briefing-narrative.json"));
     const narrative = object(value) && object(value.narrative) ? value.narrative : {};
     return { summaries: recoverHeadlineSummaries(value, input), generatedAt: typeof narrative.generatedAt === "string" && Number.isFinite(Date.parse(narrative.generatedAt)) ? narrative.generatedAt : "",

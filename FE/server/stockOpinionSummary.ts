@@ -52,7 +52,9 @@ export function integratedStockOpinion({ code, rank, poolSize, outlook, news, op
 const normalize = (value: string) => value.normalize("NFKC").replace(/[​-‏﻿]/g, "");
 type AnalysisMetrics = NonNullable<import("./briefing").BriefingInput["stocks"][number]["analysisMetrics"]>;
 /** 해설형 문단의 근거 조각. 모델 지표·주의사항까지 넣어 해석 문장도 숫자를 대조할 수 있게 한다. */
-export type IntegratedPieces = IntegratedOpinionInput & { name: string; topPercent?: number; metrics?: AnalysisMetrics | null; cautions?: string[] };
+export type IntegratedPieces = IntegratedOpinionInput & { name: string; topPercent?: number; metrics?: AnalysisMetrics | null; cautions?: string[];
+  /** Briefing generated with content validation off: the candidate paragraph is not rechecked. */
+  unvalidated?: boolean };
 const llmText = (row: { source?: string; text: string } | null | undefined) => row && row.source !== "template" ? row.text : null;
 
 /** 검증 근거 조각. 템플릿(메타 안내) 조각은 근거로 쓰지 않는다. */

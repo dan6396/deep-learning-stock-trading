@@ -88,6 +88,8 @@ function StockReport({ code }: { code: string }) {
     {(candidates.data?.source === "sample" || stock.data?.source === "sample") && <p className="report-notice" role="status">예시 데이터 · 실제 분석 결과가 아닙니다.</p>}
 
     <nav className="report-section-nav" aria-label="리포트 빠른 탐색"><a href="#report-price-title">가격</a>{(detail || insight.data) && <a href="#report-news-title">기사</a>}<a href="#report-model-title">모델 근거</a></nav>
+    <StockAiOpinionCard opinion={insight.data?.aiOpinion} targets={citationTargets} />
+
     {/* Price summary and history share one card. */}
     <section className="report-card report-price-card" aria-labelledby="report-price-title">
       <div className="report-price-summary">
@@ -122,7 +124,6 @@ function StockReport({ code }: { code: string }) {
       <ReportChart key={code} code={code} />
     </section>
 
-    <StockAiOpinionCard opinion={insight.data?.aiOpinion} targets={citationTargets} />
     {(detail || insight.data) && <StockNewsCard articles={articles} news={insight.data?.news} targets={citationTargets} />}
 
     {/* 3. 모델 순위 요약 한 줄 */}

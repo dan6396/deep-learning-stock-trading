@@ -86,7 +86,7 @@ describe("stock report using actual fetch fixtures", () => {
       expect(scroll).toHaveBeenCalledTimes(7);
     } finally { HTMLElement.prototype.scrollIntoView = original; }
   });
-  it.each(["llm", "template"] as const)("renders a disclosed %s opinion before news and keeps news summaries with the articles", async source => {
+  it.each(["llm", "template"] as const)("renders a disclosed %s opinion before price and keeps news summaries with the articles", async source => {
     const body = { ...insightBody(), aiOpinion: { source, text: "동일 기준일 모집단에서 모델 순위를 확인했습니다. 기사 제목에 서비스 개편이 언급되었으며 본문은 수집하지 않았습니다.", citations: ["R:005930", "N:005930:1", "M:NASDAQ", "E:005930:999", "C:005930:999"], generatedAt: "2026-10-07T09:00:00Z" } };
     body.news.source = source;
     body.news.summarySource = source;
@@ -111,8 +111,8 @@ describe("stock report using actual fetch fixtures", () => {
     expect(news.querySelectorAll("li")).toHaveLength(1);
     expect(screen.queryByRole("heading", { name: "뉴스 이슈와 출처" })).not.toBeInTheDocument();
     const price = screen.getByRole("region", { name: "가격" }), model = document.querySelector(".report-model-card")!;
-    expect(price.compareDocumentPosition(opinion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(opinion.compareDocumentPosition(news) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(opinion.compareDocumentPosition(price) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(price.compareDocumentPosition(news) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(news.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(opinion).getAllByRole("button").filter(button => button.hasAttribute("title"))).toHaveLength(2);
     expect(opinion.querySelector('[title="M:NASDAQ"]')).toBeNull();
